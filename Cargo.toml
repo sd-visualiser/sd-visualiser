@@ -1,0 +1,6 @@
+[workspace]
+members = [
+  "sd-core",
+  "sd-graphics",
+  "sd-web",
+]
