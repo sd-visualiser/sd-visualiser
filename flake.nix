@@ -13,14 +13,27 @@
     parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
       imports = [ nci.flakeModule ];
-      perSystem = { config, lib, ... }:
+      perSystem = { config, lib, pkgs, ... }:
         {
           nci = {
             projects."sd".relPath = "";
             crates = {
               "sd-core" = { };
               "sd-visualiser" = { };
-              "sd-web" = { };
+              "sd-web" = {
+                overrides.add-inputs.overrideAttrs = oldAttrs: {
+                  buildInputs = (oldAttrs.buildInputs or [ ]) ++ (with pkgs; [
+                    pkg-config
+                    libsoup
+                    atk
+                    gdk-pixbuf
+                    pango
+                    cairo
+                    gtk3
+                    webkitgtk
+                  ]);
+                };
+              };
             };
             export = true;
           };
