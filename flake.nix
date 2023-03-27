@@ -20,20 +20,30 @@
             crates = {
               "sd-core" = { };
               "sd-visualiser" = { };
-              "sd-web" = {
-                overrides.add-inputs.overrideAttrs = oldAttrs: {
-                  buildInputs = (oldAttrs.buildInputs or [ ]) ++ (with pkgs; [
-                    pkg-config
-                    libsoup
-                    atk
-                    gdk-pixbuf
-                    pango
-                    cairo
-                    gtk3
-                    webkitgtk
-                  ]);
+              "sd-gui" =
+                let
+                  # graphics libraries are loaded at runtime
+                  # see: https://scvalex.net/posts/63/
+                  libPath = with pkgs; lib.makeLibraryPath [
+                    libGL
+                    libxkbcommon
+                    wayland
+                    xorg.libX11
+                    xorg.libXcursor
+                    xorg.libXi
+                    xorg.libXrandr
+                  ];
+                in
+                {
+                  overrides.add-inputs.overrideAttrs = oldAttrs: rec {
+                    nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
+                      pkgsCross.mingwW64.stdenv.cc
+                      wasm-bindgen-cli
+                    ]);
+                    LD_LIBRARY_PATH = libPath;
+                    CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
+                  };
                 };
-              };
             };
             export = true;
           };
