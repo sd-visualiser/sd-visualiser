@@ -1,14 +1,14 @@
 #[derive(Clone, Debug)]
-pub struct Variable(String);
+pub struct Variable(pub String);
 
 #[derive(Clone, Debug)]
 pub enum Term {
     Var(Variable),
-    Op(Vec<Term>, Vec<Thunk>),
+    Op(Vec<Variable>, Vec<Thunk>),
 }
 
 #[derive(Clone, Debug)]
-pub struct Thunk(Vec<Variable>, Expr);
+pub struct Thunk(pub Vec<Variable>, pub Expr);
 
 #[derive(Clone, Debug)]
 pub enum Expr {
