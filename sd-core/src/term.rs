@@ -13,5 +13,5 @@ pub struct Thunk(pub Vec<Variable>, pub Expr);
 #[derive(Clone, Debug)]
 pub enum Expr {
     Term(Term),
-    Bind(Variable, Term, Box<Expr>),
+    Bind(Vec<(Variable, Term)>, Box<Expr>),
 }
