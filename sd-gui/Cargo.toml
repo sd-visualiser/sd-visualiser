@@ -1,5 +1,5 @@
 [package]
-name = "sd-web"
+name = "sd-gui"
 version = "0.1.0"
 authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
 edition = "2021"
@@ -7,5 +7,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-dioxus = "0.3.2"
-dioxus-desktop = "0.3.0"
+eframe = "0.21.3"
+tracing-subscriber = "0.3.16"
