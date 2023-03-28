@@ -1784,6 +1784,7 @@ name = "sd-gui"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "sd-core",
  "tracing-subscriber",
 ]
 
