@@ -2,9 +2,12 @@
 pub struct Variable(pub String);
 
 #[derive(Clone, Debug)]
+pub struct Operation(pub String);
+
+#[derive(Clone, Debug)]
 pub enum Term {
     Var(Variable),
-    Op(String, Vec<Variable>, Vec<Thunk>),
+    App(Operation, Vec<Variable>, Vec<Thunk>),
 }
 
 #[derive(Clone, Debug)]
