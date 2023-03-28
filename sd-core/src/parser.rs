@@ -68,7 +68,7 @@ fn parse_operation(input: Tokens<'_>) -> IResult<Tokens<'_>, Term> {
             separated_list0(token(Token::Comma), parse_thunk),
             token(Token::RightParan),
         )),
-        |(_op, _, vars, _, thunks, _)| Term::Op(vars, thunks),
+        |(op, _, vars, _, thunks, _)| Term::Op(op, vars, thunks),
     )(input)
 }
 
