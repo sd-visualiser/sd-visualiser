@@ -8,4 +8,5 @@ edition = "2021"
 
 [dependencies]
 eframe = "0.21.3"
+sd-core = { path = "../sd-core" }
 tracing-subscriber = "0.3.16"
