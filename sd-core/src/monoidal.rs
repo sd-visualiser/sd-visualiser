@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::expr::Variable;
+use crate::language::grammar::Variable;
 
 #[derive(Clone, Debug)]
 pub struct Slice {
