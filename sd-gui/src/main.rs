@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use eframe::egui;
-use egui::TextEdit;
+use sd_core::language;
 
 fn main() -> Result<(), eframe::Error> {
     // Log to stdout (if you run with `RUST_LOG=debug`).
@@ -26,11 +26,13 @@ struct App {
 
 impl App {
     fn code_ui(&mut self, ui: &mut egui::Ui) {
-        let Self { code, .. } = self;
-        ui.text_edit_multiline(code);
+        ui.text_edit_multiline(&mut self.code);
     }
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
-        ui.label("Graph view TODO");
+        ui.label(format!(
+            "Parse result: {:?}",
+            language::grammar::parse(&self.code)
+        ));
     }
 }
 
