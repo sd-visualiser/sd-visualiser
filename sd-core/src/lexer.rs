@@ -26,6 +26,15 @@ pub enum Token {
     #[token(")")]
     RightParan,
 
+    #[token("PLUS")]
+    Plus,
+
+    #[token("TIMES")]
+    Times,
+
+    #[regex("[0-9]+", |lex| lex.slice().parse())]
+    Integer(usize),
+
     #[regex("[a-zA-Z][a-zA-Z0-9_]*", |lex| lex.slice().to_string())]
     Identifier(String),
 
