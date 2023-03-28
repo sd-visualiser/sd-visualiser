@@ -6,8 +6,11 @@ use nom::{
     IResult, InputLength,
 };
 
-use crate::lexer::{Token, Tokens};
 use crate::term::{Expr, Term, Thunk, Variable};
+use crate::{
+    lexer::{Token, Tokens},
+    term::Operation,
+};
 
 impl<'source> InputLength for Tokens<'source> {
     fn input_len(&self) -> usize {
@@ -55,20 +58,20 @@ fn parse_bind(input: Tokens<'_>) -> IResult<Tokens<'_>, Expr> {
 }
 
 fn parse_term(input: Tokens<'_>) -> IResult<Tokens<'_>, Term> {
-    alt((map(parse_variable, Term::Var), parse_operation))(input)
+    alt((map(parse_variable, Term::Var), parse_app))(input)
 }
 
-fn parse_operation(input: Tokens<'_>) -> IResult<Tokens<'_>, Term> {
+fn parse_app(input: Tokens<'_>) -> IResult<Tokens<'_>, Term> {
     map(
         tuple((
-            identifier,
+            parse_operation,
             token(Token::LeftParan),
             separated_list0(token(Token::Comma), parse_variable),
             token(Token::Semicolon),
             separated_list0(token(Token::Comma), parse_thunk),
             token(Token::RightParan),
         )),
-        |(op, _, vars, _, thunks, _)| Term::Op(op, vars, thunks),
+        |(op, _, vars, _, thunks, _)| Term::App(op, vars, thunks),
     )(input)
 }
 
@@ -80,5 +83,9 @@ fn parse_thunk(input: Tokens<'_>) -> IResult<Tokens<'_>, Thunk> {
 }
 
 fn parse_variable(input: Tokens<'_>) -> IResult<Tokens<'_>, Variable> {
-    map(identifier, |id| Variable(id))(input)
+    map(identifier, |v| Variable(v))(input)
+}
+
+fn parse_operation(input: Tokens<'_>) -> IResult<Tokens<'_>, Operation> {
+    map(identifier, |op| Operation(op))(input)
 }
