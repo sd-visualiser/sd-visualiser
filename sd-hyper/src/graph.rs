@@ -16,19 +16,20 @@ pub enum HyperGraphError {
     UnknownPort(Port),
 }
 
+/// HyperGraph with hyperedges/nodes with weights E and vertices/links with weights V
 #[derive(Debug, Clone)]
-pub struct Graph<E> {
-    nodes: Slab<NodeInfo<E>>,
+pub struct Graph<E, V> {
+    nodes: Slab<NodeInfo<E, V>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct NodeInfo<E> {
+pub struct NodeInfo<E, V> {
     data: E,
     inputs: Vec<Port>,
-    outputs: Vec<BTreeSet<Port>>,
+    outputs: Vec<(BTreeSet<Port>, V)>,
 }
 
-impl<E> Graph<E> {
+impl<E, V> Graph<E, V> {
     /// Generate a new graph
     pub fn new() -> Self {
         Graph { nodes: Slab::new() }
@@ -39,7 +40,7 @@ impl<E> Graph<E> {
         &mut self,
         data: E,
         inputs: Vec<Port>,
-        output_ports: usize,
+        output_ports: Vec<V>,
     ) -> Result<usize, HyperGraphError> {
         let next_node = self.nodes.vacant_key();
 
@@ -52,13 +53,13 @@ impl<E> Graph<E> {
                 .outputs
                 .get_mut(*index)
                 .ok_or(HyperGraphError::UnknownPort(*port))?;
-            port_set.insert(Port {
+            port_set.0.insert(Port {
                 node: next_node,
                 index: i,
             });
         }
 
-        let outputs = vec![BTreeSet::new(); output_ports];
+        let outputs = output_ports.into_iter().map(|x| (BTreeSet::new(), x)).collect();
 
         let info = NodeInfo {
             data,
@@ -71,7 +72,7 @@ impl<E> Graph<E> {
         Ok(idx)
     }
 
-    fn get_info(&self, key: usize) -> Result<&NodeInfo<E>, HyperGraphError> {
+    fn get_info(&self, key: usize) -> Result<&NodeInfo<E, V>, HyperGraphError> {
         self.nodes.get(key).ok_or(HyperGraphError::UnknownNode(key))
     }
 
