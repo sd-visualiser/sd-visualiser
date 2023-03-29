@@ -5,3 +5,10 @@ members = [
   "sd-gui",
   "sd-hyper",
 ]
+
+[patch.crates-io]
+rust-sitter = { git = "https://github.com/calintat/rust-sitter" }
+rust-sitter-tool = { git = "https://github.com/calintat/rust-sitter" }
+tree-sitter-c2rust = { git = "https://github.com/shadaj/tree-sitter-c2rust" }
+tree-sitter-cli = { git = "https://github.com/shadaj/tree-sitter-c2rust" }
+tree-sitter-highlight = { git = "https://github.com/shadaj/tree-sitter-c2rust" }
