@@ -8,6 +8,7 @@ edition = "2021"
 
 [dependencies]
 rust-sitter = "0.3.2"
+tree-sitter-highlight = "0.20.1"
 
 [build-dependencies]
 rust-sitter-tool = "0.3.2"
