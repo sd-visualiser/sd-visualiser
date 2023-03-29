@@ -37,10 +37,10 @@
                 {
                   overrides.add-inputs.overrideAttrs = oldAttrs: rec {
                     nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
-                      pkgsCross.mingwW64.stdenv.cc
                       wasm-bindgen-cli
                     ]);
                     LD_LIBRARY_PATH = libPath;
+                    CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/x86_64-w64-mingw32-gcc";
                     CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
                   };
                 };
