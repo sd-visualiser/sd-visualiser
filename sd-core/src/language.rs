@@ -24,7 +24,7 @@ pub mod grammar {
                 #[rust_sitter::leaf(text = ",")]
                 ()
             )]
-            Vec<Variable>,
+            Vec<Value>,
             #[rust_sitter::leaf(text = ";")] (),
             #[rust_sitter::delimited(
                 #[rust_sitter::leaf(text = ",")]
@@ -45,7 +45,7 @@ pub mod grammar {
                 #[rust_sitter::leaf(text = ",")]
                 ()
             )]
-            Vec<Variable>,
+            Vec<Value>,
             #[rust_sitter::leaf(text = ";")] (),
             #[rust_sitter::delimited(
                 #[rust_sitter::leaf(text = ",")]
