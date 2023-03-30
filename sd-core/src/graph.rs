@@ -50,7 +50,7 @@ impl Expr {
     pub(crate) fn to_hypergraph_from_inputs(
         &self,
         inputs: Vec<Variable>,
-    ) -> Result<HyperGraph, ConvertError>{
+    ) -> Result<HyperGraph, ConvertError> {
         let mut mapping: HashMap<Variable, Port> = HashMap::new();
 
         let mut graph = HyperGraph::new();
@@ -193,7 +193,7 @@ impl Thunk {
 
         self.free_variables(&mut BTreeSet::new(), &mut vars);
 
-	let inputs = vars
+        let inputs = vars
             .iter()
             .map(|v| {
                 mapping
@@ -203,9 +203,9 @@ impl Thunk {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-	let mut vars_vec: Vec<_> = vars.into_iter().collect();
+        let mut vars_vec: Vec<_> = vars.into_iter().collect();
 
-	vars_vec.extend(self.args.clone());
+        vars_vec.extend(self.args.clone());
 
         let graph_inner = self.body.to_hypergraph_from_inputs(vars_vec)?;
 
@@ -293,7 +293,10 @@ mod tests {
     fn hypergraph_test_free_var(free_vars: Result<Expr>) -> Result<()> {
         let graph = free_vars?.to_hypergraph()?;
 
-        assert_eq!(format!("{:#?}\n", graph), include_str!("tests/free_var.txt"));
+        assert_eq!(
+            format!("{:#?}\n", graph),
+            include_str!("tests/free_var.txt")
+        );
 
         Ok(())
     }
