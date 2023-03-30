@@ -1803,7 +1803,7 @@ checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
 [[package]]
 name = "rust-sitter"
 version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter#206ff33a7857db3a7e188d1e55d2bb8d7814704d"
+source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
 dependencies = [
  "rust-sitter-macro",
  "tree-sitter-c2rust",
@@ -1812,7 +1812,7 @@ dependencies = [
 [[package]]
 name = "rust-sitter-common"
 version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter#206ff33a7857db3a7e188d1e55d2bb8d7814704d"
+source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -1821,7 +1821,7 @@ dependencies = [
 [[package]]
 name = "rust-sitter-macro"
 version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter#206ff33a7857db3a7e188d1e55d2bb8d7814704d"
+source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1832,7 +1832,7 @@ dependencies = [
 [[package]]
 name = "rust-sitter-tool"
 version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter#206ff33a7857db3a7e188d1e55d2bb8d7814704d"
+source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
 dependencies = [
  "cc",
  "rust-sitter-common",
@@ -1841,7 +1841,7 @@ dependencies = [
  "syn 1.0.109",
  "syn-inline-mod",
  "tempfile",
- "tree-sitter",
+ "tree-sitter-c2rust",
  "tree-sitter-cli",
 ]
 
@@ -2341,16 +2341,6 @@ dependencies = [
  "thread_local",
  "tracing-core",
  "tracing-log",
-]
-
-[[package]]
-name = "tree-sitter"
-version = "0.20.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4423c784fe11398ca91e505cdc71356b07b1a924fc8735cfab5333afe3e18bc"
-dependencies = [
- "cc",
- "regex",
 ]
 
 [[package]]
