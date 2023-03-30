@@ -1,21 +1,46 @@
 {
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-  inputs.parts.url = "github:hercules-ci/flake-parts";
-  inputs.parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-  inputs.nci.url = "github:yusdacra/nix-cargo-integration?rev=93801e6a0b0790f36b062ee1369e3f674bc941a5"; # TODO(@NickHu): change rev when https://github.com/yusdacra/nix-cargo-integration/pull/119 merged
-  inputs.nci.inputs.nixpkgs.follows = "nixpkgs";
-  inputs.nci.inputs.parts.follows = "parts";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
+    };
+    nci = {
+      url = "github:yusdacra/nix-cargo-integration?rev=44a29689e1b5d7ad415016a81271c40997a9c9d5"; # TODO(@NickHu): change rev when https://github.com/yusdacra/nix-cargo-integration/pull/119 merged
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        parts.follows = "parts";
+      };
+    };
+    pre-commit-hooks = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+  };
 
   outputs =
     inputs @ { parts
     , nci
+    , pre-commit-hooks
     , ...
     }:
     parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" ];
       imports = [ nci.flakeModule ];
-      perSystem = { config, lib, pkgs, ... }:
+      perSystem = { self', config, lib, pkgs, system, ... }:
         {
+          checks = {
+            pre-commit-check = pre-commit-hooks.lib.${system}.run {
+              src = ./.;
+              hooks = {
+                rustfmt.enable = true;
+                clippy.enable = true;
+                cargo-check.enable = true;
+              };
+            };
+          };
           nci = {
             stdenv = pkgs.clangStdenv; # needed for rust-sitter wasm compatibility
             projects."sd".relPath = "";
@@ -52,7 +77,12 @@
             };
             export = true;
           };
-          devShells.default = lib.mkForce config.nci.outputs."sd".devShell;
+          devShells.default = lib.mkForce (config.nci.outputs."sd".devShell.overrideAttrs (oldAttrs: {
+            shellHook = ''
+              ${oldAttrs.shellHook or ""}
+              ${self'.checks.pre-commit-check}
+            '';
+          }));
           packages.default = config.nci.outputs."sd-gui".packages.release;
         };
     };
