@@ -1,3 +1,5 @@
+use crate::language::grammar::{ActiveOp, PassiveOp};
+
 #[derive(Clone, Debug)]
 pub struct Slice {
     pub ops: Vec<MonoidalOp>,
@@ -7,6 +9,12 @@ pub struct Slice {
 pub struct MonoidalGraph {
     pub inputs: usize,
     pub slices: Vec<Slice>,
+}
+
+#[derive(Clone, Debug)]
+pub enum Operation {
+    Active(ActiveOp),
+    Passive(PassiveOp),
 }
 
 #[derive(Clone, Debug)]
@@ -22,7 +30,7 @@ pub enum MonoidalOp {
     // },
     Operation {
         inputs: usize,
-        op_name: (),
+        op_name: Operation,
     },
     Thunk {
         args: usize,
