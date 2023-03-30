@@ -60,7 +60,7 @@ impl MonoidalOp {
             MonoidalOp::Delete => 0,
             // MonoidalOp::Tuple { .. } => 1,
             // MonoidalOp::Untuple { outputs } => *outputs,
-            MonoidalOp::Operation {  .. } => 1,
+            MonoidalOp::Operation { .. } => 1,
             MonoidalOp::Thunk { .. } => 1,
             MonoidalOp::Swap => 2,
         }

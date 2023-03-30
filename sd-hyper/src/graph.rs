@@ -1,8 +1,5 @@
 use slab::Slab;
-use std::{
-    collections::BTreeSet,
-    fmt::Debug,
-};
+use std::{collections::BTreeSet, fmt::Debug};
 use thiserror::Error;
 
 use crate::concat_iter::concat_iter;

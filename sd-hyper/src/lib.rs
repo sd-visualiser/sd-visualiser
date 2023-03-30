@@ -1,2 +1,2 @@
-pub mod graph;
 mod concat_iter;
+pub mod graph;
