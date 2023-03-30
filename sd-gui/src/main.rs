@@ -2,6 +2,7 @@
 
 use eframe::egui;
 use sd_core::language;
+use sd_gui::highlighter;
 
 fn main() -> Result<(), eframe::Error> {
     // Log to stdout (if you run with `RUST_LOG=debug`).
@@ -26,7 +27,16 @@ struct App {
 
 impl App {
     fn code_ui(&mut self, ui: &mut egui::Ui) {
-        ui.text_edit_multiline(&mut self.code);
+        let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
+            let mut layout_job = highlighter::highlight(source);
+            layout_job.wrap.max_width = wrap_width;
+            ui.fonts(|f| f.layout_job(layout_job))
+        };
+        ui.add(
+            egui::TextEdit::multiline(&mut self.code)
+                .font(egui::TextStyle::Monospace)
+                .layouter(&mut layouter),
+        );
     }
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(format!(

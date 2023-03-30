@@ -1,0 +1,637 @@
+{
+  "name": "sdlanguage",
+  "word": null,
+  "rules": {
+    "source_file": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "Expr_Val"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "Expr_Bind"
+        }
+      ]
+    },
+    "Expr_Val": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value"
+          }
+        }
+      ]
+    },
+    "Expr_Bind_0": {
+      "type": "STRING",
+      "value": "bind"
+    },
+    "Expr_Bind_2": {
+      "type": "STRING",
+      "value": "="
+    },
+    "Expr_Bind_4": {
+      "type": "STRING",
+      "value": "in"
+    },
+    "Expr_Bind": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Expr_Bind_0"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Variable"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "2",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Expr_Bind_2"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "3",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Term"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "4",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Expr_Bind_4"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "5",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Expr"
+          }
+        }
+      ]
+    },
+    "Expr": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "Expr_Val"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "Expr_Bind"
+        }
+      ]
+    },
+    "Term_Val": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value"
+          }
+        }
+      ]
+    },
+    "Term_ActiveOp_1": {
+      "type": "STRING",
+      "value": "("
+    },
+    "Term_ActiveOp_2_vec_delimiter": {
+      "type": "STRING",
+      "value": ","
+    },
+    "Term_ActiveOp_2_vec_contents": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "Term_ActiveOp_2_vec_element",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "Term_ActiveOp_2_vec_delimiter"
+              },
+              {
+                "type": "FIELD",
+                "name": "Term_ActiveOp_2_vec_element",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "Value"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Term_ActiveOp_3": {
+      "type": "STRING",
+      "value": ";"
+    },
+    "Term_ActiveOp_4_vec_delimiter": {
+      "type": "STRING",
+      "value": ","
+    },
+    "Term_ActiveOp_4_vec_contents": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "Term_ActiveOp_4_vec_element",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Thunk"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "Term_ActiveOp_4_vec_delimiter"
+              },
+              {
+                "type": "FIELD",
+                "name": "Term_ActiveOp_4_vec_element",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "Thunk"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Term_ActiveOp_5": {
+      "type": "STRING",
+      "value": ")"
+    },
+    "Term_ActiveOp": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "ActiveOp"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Term_ActiveOp_1"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "BLANK"
+            },
+            {
+              "type": "FIELD",
+              "name": "2",
+              "content": {
+                "type": "SYMBOL",
+                "name": "Term_ActiveOp_2_vec_contents"
+              }
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "3",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Term_ActiveOp_3"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "BLANK"
+            },
+            {
+              "type": "FIELD",
+              "name": "4",
+              "content": {
+                "type": "SYMBOL",
+                "name": "Term_ActiveOp_4_vec_contents"
+              }
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "5",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Term_ActiveOp_5"
+          }
+        }
+      ]
+    },
+    "Term": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "Term_Val"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "Term_ActiveOp"
+        }
+      ]
+    },
+    "Value_Var": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Variable"
+          }
+        }
+      ]
+    },
+    "Value_PassiveOp_1": {
+      "type": "STRING",
+      "value": "("
+    },
+    "Value_PassiveOp_2_vec_delimiter": {
+      "type": "STRING",
+      "value": ","
+    },
+    "Value_PassiveOp_2_vec_contents": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "Value_PassiveOp_2_vec_element",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "Value_PassiveOp_2_vec_delimiter"
+              },
+              {
+                "type": "FIELD",
+                "name": "Value_PassiveOp_2_vec_element",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "Value"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Value_PassiveOp_3": {
+      "type": "STRING",
+      "value": ";"
+    },
+    "Value_PassiveOp_4_vec_delimiter": {
+      "type": "STRING",
+      "value": ","
+    },
+    "Value_PassiveOp_4_vec_contents": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "Value_PassiveOp_4_vec_element",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Thunk"
+          }
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "Value_PassiveOp_4_vec_delimiter"
+              },
+              {
+                "type": "FIELD",
+                "name": "Value_PassiveOp_4_vec_element",
+                "content": {
+                  "type": "SYMBOL",
+                  "name": "Thunk"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "Value_PassiveOp_5": {
+      "type": "STRING",
+      "value": ")"
+    },
+    "Value_PassiveOp": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "PassiveOp"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value_PassiveOp_1"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "BLANK"
+            },
+            {
+              "type": "FIELD",
+              "name": "2",
+              "content": {
+                "type": "SYMBOL",
+                "name": "Value_PassiveOp_2_vec_contents"
+              }
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "3",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value_PassiveOp_3"
+          }
+        },
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "BLANK"
+            },
+            {
+              "type": "FIELD",
+              "name": "4",
+              "content": {
+                "type": "SYMBOL",
+                "name": "Value_PassiveOp_4_vec_contents"
+              }
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "5",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Value_PassiveOp_5"
+          }
+        }
+      ]
+    },
+    "Value": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "Value_Var"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "Value_PassiveOp"
+        }
+      ]
+    },
+    "Thunk_args_vec_contents": {
+      "type": "REPEAT1",
+      "content": {
+        "type": "FIELD",
+        "name": "Thunk_args_vec_element",
+        "content": {
+          "type": "SYMBOL",
+          "name": "Variable"
+        }
+      }
+    },
+    "Thunk__dot": {
+      "type": "STRING",
+      "value": "."
+    },
+    "Thunk": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "BLANK"
+            },
+            {
+              "type": "FIELD",
+              "name": "args",
+              "content": {
+                "type": "SYMBOL",
+                "name": "Thunk_args_vec_contents"
+              }
+            }
+          ]
+        },
+        {
+          "type": "FIELD",
+          "name": "_dot",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Thunk__dot"
+          }
+        },
+        {
+          "type": "FIELD",
+          "name": "body",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Expr"
+          }
+        }
+      ]
+    },
+    "ActiveOp_Plus_0": {
+      "type": "STRING",
+      "value": "+"
+    },
+    "ActiveOp_Plus": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "ActiveOp_Plus_0"
+          }
+        }
+      ]
+    },
+    "ActiveOp_Times_0": {
+      "type": "STRING",
+      "value": "*"
+    },
+    "ActiveOp_Times": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "ActiveOp_Times_0"
+          }
+        }
+      ]
+    },
+    "ActiveOp": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "ActiveOp_Plus"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "ActiveOp_Times"
+        }
+      ]
+    },
+    "PassiveOp_Int_0": {
+      "type": "PATTERN",
+      "value": "\\d+"
+    },
+    "PassiveOp_Int": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "0",
+          "content": {
+            "type": "SYMBOL",
+            "name": "PassiveOp_Int_0"
+          }
+        }
+      ]
+    },
+    "PassiveOp": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "PassiveOp_Int"
+        }
+      ]
+    },
+    "Variable_var": {
+      "type": "PATTERN",
+      "value": "[a-zA-Z][a-zA-Z0-9_]*"
+    },
+    "Variable": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "var",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Variable_var"
+          }
+        }
+      ]
+    },
+    "Whitespace__whitespace": {
+      "type": "PATTERN",
+      "value": "\\s"
+    },
+    "Whitespace": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "FIELD",
+          "name": "_whitespace",
+          "content": {
+            "type": "SYMBOL",
+            "name": "Whitespace__whitespace"
+          }
+        }
+      ]
+    }
+  },
+  "extras": [
+    {
+      "type": "SYMBOL",
+      "name": "Whitespace"
+    }
+  ]
+}
