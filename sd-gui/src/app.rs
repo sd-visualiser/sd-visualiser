@@ -10,6 +10,20 @@ pub struct App {
 }
 
 impl App {
+    /// Called once before the first frame.
+    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+        // This is also where you can customize the look and feel of egui using
+        // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
+
+        // Load previous app state (if any).
+        // Note that you must enable the `persistence` feature for this to work.
+        // if let Some(storage) = cc.storage {
+        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        // }
+
+        Default::default()
+    }
+
     fn code_ui(&mut self, ui: &mut egui::Ui) {
         let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
             let mut layout_job = highlighter::highlight(source);
@@ -22,6 +36,7 @@ impl App {
                 .layouter(&mut layouter),
         );
     }
+
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
         ui.label(format!(
             "Parse result: {:?}",

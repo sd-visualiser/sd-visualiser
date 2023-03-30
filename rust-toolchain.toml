@@ -1,4 +1,4 @@
 [toolchain]
 channel = "stable"
 components = ["rust-analyzer", "rust-src"]
-targets = ["x86_64-pc-windows-gnu"]
+targets = ["wasm32-unknown-unknown", "x86_64-pc-windows-gnu"]

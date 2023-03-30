@@ -146,30 +146,33 @@
         "nixpkgs": [
           "nixpkgs"
         ],
-        "parts": "parts",
+        "parts": [
+          "parts"
+        ],
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1679897506,
-        "narHash": "sha256-UPJozoYRKpUsEZeg/rHGvtWL702zi/z5YhOHiCDuJF0=",
+        "lastModified": 1680191475,
+        "narHash": "sha256-VPhDfJ5UFHQG5o1KIGxdsZQiz9lIEsLHnh+DxFyTGz4=",
         "owner": "yusdacra",
         "repo": "nix-cargo-integration",
-        "rev": "64916b6ca5066d0357fd941847ec258a98359819",
+        "rev": "93801e6a0b0790f36b062ee1369e3f674bc941a5",
         "type": "github"
       },
       "original": {
         "owner": "yusdacra",
         "repo": "nix-cargo-integration",
+        "rev": "93801e6a0b0790f36b062ee1369e3f674bc941a5",
         "type": "github"
       }
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1679865578,
-        "narHash": "sha256-sYQmxxqIYL3QFsRYjW0AufhGur8qWfwoOGPGHRJZlGc=",
+        "lastModified": 1679944645,
+        "narHash": "sha256-e5Qyoe11UZjVfgRfwNoSU57ZeKuEmjYb77B9IVW7L/M=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "4361baa782dc3d3b35fd455a1adc370681d9187c",
+        "rev": "4bb072f0a8b267613c127684e099a70e1f6ff106",
         "type": "github"
       },
       "original": {
@@ -197,27 +200,6 @@
     "parts": {
       "inputs": {
         "nixpkgs-lib": [
-          "nci",
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1679737941,
-        "narHash": "sha256-srSD9CwsVPnUMsIZ7Kt/UegkKUEBcTyU1Rev7mO45S0=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "3502ee99d6dade045bdeaf7b0cd8ec703484c25c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "parts_2": {
-      "inputs": {
-        "nixpkgs-lib": [
           "nixpkgs"
         ]
       },
@@ -239,7 +221,7 @@
       "inputs": {
         "nci": "nci",
         "nixpkgs": "nixpkgs",
-        "parts": "parts_2"
+        "parts": "parts"
       }
     },
     "rust-overlay": {
