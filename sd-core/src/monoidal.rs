@@ -1,7 +1,3 @@
-use std::rc::Rc;
-
-use crate::language::grammar::Variable;
-
 #[derive(Clone, Debug)]
 pub struct Slice {
     pub ops: Vec<MonoidalOp>,
@@ -9,77 +5,56 @@ pub struct Slice {
 
 #[derive(Clone, Debug)]
 pub struct MonoidalGraph {
-    pub inputs: Vec<Variable>,
+    pub inputs: usize,
     pub slices: Vec<Slice>,
 }
 
 #[derive(Clone, Debug)]
 pub enum MonoidalOp {
-    Id {
-        name: Rc<Variable>,
-    },
-    Copy {
-        input: Rc<Variable>,
-        copies: usize,
-    },
+    Id,
+    Copy { copies: usize },
     Delete,
     // Tuple {
     //     inputs: usize,
-    //     name: Rc<Variable>,
     // },
     // Untuple {
-    //     outputs: Vec<Rc<Variable>>,
+    //     outputs: usize,
     // },
     Operation {
         inputs: usize,
-        op_name: Rc<Variable>,
-        name: Rc<Variable>,
+        op_name: (),
     },
     Thunk {
-        inputs: usize,
-        args: Vec<Rc<Variable>>,
+        args: usize,
         body: MonoidalGraph,
-        name: Rc<Variable>,
     },
-    Swap {
-        first: Rc<Variable>,
-        second: Rc<Variable>,
-    },
+    Swap,
 }
 
 impl MonoidalOp {
+    /// Returns number of inputs of an operation
     pub fn number_of_inputs(&self) -> usize {
         match self {
-            Self::Id { .. } => 1,
+            Self::Id => 1,
             Self::Copy { .. } => 1,
             Self::Delete => 1,
             Self::Operation { inputs, .. } => *inputs,
-            Self::Thunk { inputs, .. } => *inputs,
-            Self::Swap { .. } => 2,
+            Self::Thunk { args, body } => body.inputs - args,
+            Self::Swap => 2,
         }
     }
 
     /// Returns number of outputs of an operation
-    pub fn outputs(&self) -> Vec<Rc<Variable>> {
+    pub fn number_of_outputs(&self) -> usize {
         match self {
-            MonoidalOp::Id { name } => vec![name.clone()],
-            MonoidalOp::Copy { input, copies } => {
-                std::iter::repeat(input.clone()).take(*copies).collect()
-            }
-            MonoidalOp::Delete => vec![],
-            // MonoidalOp::Tuple { name, .. } => vec![name.clone()],
-            // MonoidalOp::Untuple { outputs } => outputs.iter().cloned().collect(),
-            MonoidalOp::Operation { name, .. } => vec![name.clone()],
-            MonoidalOp::Thunk { name, .. } => vec![name.clone()],
-            MonoidalOp::Swap { first, second } => vec![second.clone(), first.clone()],
+            MonoidalOp::Id => 1,
+            MonoidalOp::Copy { copies } => *copies,
+            MonoidalOp::Delete => 0,
+            // MonoidalOp::Tuple { .. } => 1,
+            // MonoidalOp::Untuple { outputs } => *outputs,
+            MonoidalOp::Operation {  .. } => 1,
+            MonoidalOp::Thunk { .. } => 1,
+            MonoidalOp::Swap => 2,
         }
     }
 }
-
-impl MonoidalGraph {}
-
-// impl From<MonoidalGraph> for Expr {
-//     fn from(term: MonoidalGraph) -> Self {
-
-//     }
-// }
