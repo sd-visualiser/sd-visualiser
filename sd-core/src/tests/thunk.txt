@@ -1,0 +1,179 @@
+Hypergraph {
+    nodes: [
+        (
+            0,
+            Input,
+        ),
+        (
+            1,
+            Thunk(
+                Hypergraph {
+                    nodes: [
+                        (
+                            0,
+                            Input,
+                        ),
+                        (
+                            1,
+                            Passive(
+                                Int(
+                                    1,
+                                ),
+                            ),
+                        ),
+                        (
+                            2,
+                            Output,
+                        ),
+                    ],
+                    edges: [
+                        (
+                            Port {
+                                node: 0,
+                                index: 0,
+                            },
+                            {},
+                        ),
+                        (
+                            Port {
+                                node: 1,
+                                index: 0,
+                            },
+                            {
+                                Port {
+                                    node: 2,
+                                    index: 0,
+                                },
+                            },
+                        ),
+                    ],
+                },
+            ),
+        ),
+        (
+            2,
+            Thunk(
+                Hypergraph {
+                    nodes: [
+                        (
+                            0,
+                            Input,
+                        ),
+                        (
+                            1,
+                            Active(
+                                Plus(
+                                    (),
+                                ),
+                            ),
+                        ),
+                        (
+                            2,
+                            Output,
+                        ),
+                    ],
+                    edges: [
+                        (
+                            Port {
+                                node: 0,
+                                index: 0,
+                            },
+                            {
+                                Port {
+                                    node: 1,
+                                    index: 1,
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: 0,
+                                index: 1,
+                            },
+                            {
+                                Port {
+                                    node: 1,
+                                    index: 0,
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: 1,
+                                index: 0,
+                            },
+                            {
+                                Port {
+                                    node: 2,
+                                    index: 0,
+                                },
+                            },
+                        ),
+                    ],
+                },
+            ),
+        ),
+        (
+            3,
+            Active(
+                Plus(
+                    (),
+                ),
+            ),
+        ),
+        (
+            4,
+            Output,
+        ),
+    ],
+    edges: [
+        (
+            Port {
+                node: 0,
+                index: 0,
+            },
+            {
+                Port {
+                    node: 2,
+                    index: 0,
+                },
+            },
+        ),
+        (
+            Port {
+                node: 1,
+                index: 0,
+            },
+            {
+                Port {
+                    node: 3,
+                    index: 0,
+                },
+            },
+        ),
+        (
+            Port {
+                node: 2,
+                index: 0,
+            },
+            {
+                Port {
+                    node: 3,
+                    index: 1,
+                },
+            },
+        ),
+        (
+            Port {
+                node: 3,
+                index: 0,
+            },
+            {
+                Port {
+                    node: 4,
+                    index: 0,
+                },
+            },
+        ),
+    ],
+}

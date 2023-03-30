@@ -1,11 +1,16 @@
 use slab::Slab;
-use std::collections::BTreeSet;
+use std::{
+    collections::BTreeSet,
+    fmt::Debug,
+};
 use thiserror::Error;
+
+use crate::concat_iter::concat_iter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Port {
-    node: usize,
-    index: usize,
+    pub node: usize,
+    pub index: usize,
 }
 
 #[derive(Debug, Error)]
@@ -16,20 +21,20 @@ pub enum HyperGraphError {
     UnknownPort(Port),
 }
 
-/// HyperGraph with hyperedges/nodes with weights E and vertices/links with weights V
-#[derive(Debug, Clone)]
-pub struct Graph<E, V> {
-    nodes: Slab<NodeInfo<E, V>>,
+/// HyperGraph with hyperedges/nodes with weights E and vertices/wires
+#[derive(Clone)]
+pub struct Graph<E> {
+    nodes: Slab<NodeInfo<E>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct NodeInfo<E, V> {
+pub struct NodeInfo<E> {
     data: E,
     inputs: Vec<Port>,
-    outputs: Vec<(BTreeSet<Port>, V)>,
+    outputs: Vec<BTreeSet<Port>>,
 }
 
-impl<E, V> Graph<E, V> {
+impl<E> Graph<E> {
     /// Generate a new graph
     pub fn new() -> Self {
         Graph { nodes: Slab::new() }
@@ -40,7 +45,7 @@ impl<E, V> Graph<E, V> {
         &mut self,
         data: E,
         inputs: Vec<Port>,
-        output_ports: Vec<V>,
+        output_ports: usize,
     ) -> Result<usize, HyperGraphError> {
         let next_node = self.nodes.vacant_key();
 
@@ -53,16 +58,13 @@ impl<E, V> Graph<E, V> {
                 .outputs
                 .get_mut(*index)
                 .ok_or(HyperGraphError::UnknownPort(*port))?;
-            port_set.0.insert(Port {
+            port_set.insert(Port {
                 node: next_node,
                 index: i,
             });
         }
 
-        let outputs = output_ports
-            .into_iter()
-            .map(|x| (BTreeSet::new(), x))
-            .collect();
+        let outputs = vec![BTreeSet::new(); output_ports];
 
         let info = NodeInfo {
             data,
@@ -75,7 +77,7 @@ impl<E, V> Graph<E, V> {
         Ok(idx)
     }
 
-    fn get_info(&self, key: usize) -> Result<&NodeInfo<E, V>, HyperGraphError> {
+    fn get_info(&self, key: usize) -> Result<&NodeInfo<E>, HyperGraphError> {
         self.nodes.get(key).ok_or(HyperGraphError::UnknownNode(key))
     }
 
@@ -90,5 +92,27 @@ impl<E, V> Graph<E, V> {
     ) -> Result<impl Iterator<Item = Port> + '_, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.inputs.iter().copied())
+    }
+
+    pub fn nodes(&self) -> impl Iterator<Item = (usize, &E)> {
+        self.nodes.iter().map(|(x, d)| (x, &d.data))
+    }
+
+    pub fn edges(&self) -> impl Iterator<Item = (Port, &BTreeSet<Port>)> {
+        concat_iter(self.nodes.iter().map(|(node, d)| {
+            d.outputs
+                .iter()
+                .enumerate()
+                .map(move |(index, targets)| (Port { node, index }, targets))
+        }))
+    }
+}
+
+impl<E: Debug> Debug for Graph<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Hypergraph")
+            .field("nodes", &self.nodes().collect::<Vec<_>>())
+            .field("edges", &self.edges().collect::<Vec<_>>())
+            .finish()
     }
 }
