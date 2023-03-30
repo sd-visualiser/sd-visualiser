@@ -10,3 +10,4 @@ edition = "2021"
 eframe = "0.21.3"
 sd-core = { path = "../sd-core" }
 tracing-subscriber = "0.3.16"
+tree-sitter-highlight = "0.20.1"

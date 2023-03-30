@@ -87,3 +87,31 @@ pub mod grammar {
         _whitespace: (),
     }
 }
+
+pub const HIGHLIGHT_QUERY: &'static str = include_str!("../../highlights.scm");
+
+pub fn highlight(source: &str) -> Vec<tree_sitter_highlight::HighlightEvent> {
+    use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
+
+    let highlight_names = &[
+        "keyword",
+        "operator",
+        "variable",
+        "punctuation.bracket",
+        "punctuation.delimiter",
+    ];
+
+    let mut config = HighlightConfiguration::new(
+        crate::language::grammar::language(),
+        HIGHLIGHT_QUERY,
+        "",
+        "",
+    )
+    .unwrap();
+    config.configure(highlight_names);
+    Highlighter::new()
+        .highlight(&config, source.as_bytes(), None, |_| None)
+        .unwrap()
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+}

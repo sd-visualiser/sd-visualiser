@@ -59,7 +59,10 @@ impl<E, V> Graph<E, V> {
             });
         }
 
-        let outputs = output_ports.into_iter().map(|x| (BTreeSet::new(), x)).collect();
+        let outputs = output_ports
+            .into_iter()
+            .map(|x| (BTreeSet::new(), x))
+            .collect();
 
         let info = NodeInfo {
             data,
