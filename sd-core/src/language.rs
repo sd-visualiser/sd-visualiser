@@ -64,18 +64,18 @@ pub mod grammar {
         pub body: Expr,
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub enum ActiveOp {
         Plus(#[rust_sitter::leaf(text = "+")] ()),
         Times(#[rust_sitter::leaf(text = "*")] ()),
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Copy, Debug)]
     pub enum PassiveOp {
         Int(#[rust_sitter::leaf(pattern = r"\d+", transform = |v| v.parse().unwrap())] usize),
     }
 
-    #[derive(Clone, Debug)]
+    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct Variable {
         #[rust_sitter::leaf(pattern = r"[a-zA-Z][a-zA-Z0-9_]*", transform = |v| v.to_string())]
         pub var: String,

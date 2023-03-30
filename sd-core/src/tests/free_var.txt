@@ -1,0 +1,33 @@
+Hypergraph {
+    nodes: [
+        (
+            0,
+            Input,
+        ),
+        (
+            1,
+            Output,
+        ),
+    ],
+    edges: [
+        (
+            Port {
+                node: 0,
+                index: 0,
+            },
+            {},
+        ),
+        (
+            Port {
+                node: 0,
+                index: 1,
+            },
+            {
+                Port {
+                    node: 1,
+                    index: 0,
+                },
+            },
+        ),
+    ],
+}
