@@ -6,7 +6,7 @@ use eframe::{
 use sd_core::language;
 use tree_sitter_highlight::{Highlight, HighlightEvent};
 
-pub fn highlight(source: &str) -> LayoutJob {
+pub(crate) fn highlight(source: &str) -> LayoutJob {
     let mut job = LayoutJob::default();
     let mut highlight: Option<Highlight> = None;
     for event in language::highlight(source) {

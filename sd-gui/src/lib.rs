@@ -1,2 +1,5 @@
-pub mod app;
-pub mod highlighter;
+#![warn(clippy::all, rust_2018_idioms)]
+mod app;
+pub(crate) mod highlighter;
+
+pub use app::App;

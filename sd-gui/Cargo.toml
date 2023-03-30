@@ -4,10 +4,15 @@ version = "0.1.0"
 authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 eframe = "0.21.3"
 sd-core = { path = "../sd-core" }
-tracing-subscriber = "0.3.16"
 tree-sitter-highlight = "0.20.1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+tracing-subscriber = "0.3.16"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.7"
+tracing-wasm = "0.2.1"
+wasm-bindgen-futures = "0.4.34"
