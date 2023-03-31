@@ -1,5 +1,8 @@
-use eframe::egui;
-use sd_core::language;
+use eframe::{
+    egui, emath,
+    epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
+};
+use sd_core::examples;
 
 use crate::highlighter;
 
@@ -38,10 +41,26 @@ impl App {
     }
 
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
-        ui.label(format!(
-            "Parse result: {:?}",
-            language::grammar::parse(&self.code)
+        // TODO(calintat): Replace when the translation is ready.
+        let graph = examples::copy();
+
+        let (response, painter) = ui.allocate_painter(
+            Vec2::new(ui.available_width(), ui.available_height()),
+            egui::Sense::drag(),
+        );
+        let to_screen = emath::RectTransform::from_to(
+            Rect::from_min_size(Pos2::ZERO, response.rect.size()),
+            response.rect,
+        );
+
+        // Background
+        painter.add(Shape::rect_filled(
+            response.rect,
+            Rounding::none(),
+            Color32::WHITE,
         ));
+        painter
+            .extend(sd_graphics::render::render(graph, response.rect.size(), to_screen).unwrap());
     }
 }
 

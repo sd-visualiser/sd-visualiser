@@ -7,7 +7,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+epaint = "0.21.0"
 good_lp = { version = "1.4.0", features = ["minilp"], default-features = false }
+itertools = "0.10.5"
 sd-core = { path = "../sd-core" }
 thiserror = "1.0.40"
 

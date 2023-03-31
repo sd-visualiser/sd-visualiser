@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 eframe = "0.21.3"
 sd-core = { path = "../sd-core" }
+sd-graphics = { path = "../sd-graphics" }
 tree-sitter-highlight = "0.20.1"
 
 [dev-dependencies]
