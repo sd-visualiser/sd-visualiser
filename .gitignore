@@ -7,3 +7,4 @@ dist/
 **/*.rs.bk
 
 .direnv
+.pre-commit-config.yaml
