@@ -12,23 +12,23 @@ pub enum LayoutError {
 
 pub struct Layout {
     pub width: f64,
-    pub nodes: Vec<Vec<f64>>,
+    pub slices: Vec<Vec<f64>>,
 }
 
-pub fn layout(graph: MonoidalGraph) -> Result<Layout, LayoutError> {
+pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
     let mut problem = ProblemVariables::new();
     let mut constraints = Vec::<Constraint>::new();
 
     let width = problem.add(variable().min(0.0));
-    let mut nodes = vec![problem.add_vector(variable().min(0.0), graph.inputs)];
+    let mut slices = vec![problem.add_vector(variable().min(0.0), graph.inputs)];
 
     // Distance constraints
-    for xs in nodes[0].windows(2) {
+    for xs in slices[0].windows(2) {
         constraints.push((xs[1] - xs[0]).geq(1.0));
     }
 
     // Width constraints
-    if let Some(x) = nodes[0].last().copied() {
+    if let Some(x) = slices[0].last().copied() {
         constraints.push((width - x).geq(0.0));
     }
 
@@ -45,7 +45,7 @@ pub fn layout(graph: MonoidalGraph) -> Result<Layout, LayoutError> {
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
-            let local_inputs = &nodes[i][offset..offset + ni];
+            let local_inputs = &slices[i][offset..offset + ni];
             let local_outputs = problem.add_vector(variable().min(0.0), no);
 
             // Distance constraints
@@ -78,10 +78,10 @@ pub fn layout(graph: MonoidalGraph) -> Result<Layout, LayoutError> {
             outputs.push(local_outputs);
         }
 
-        nodes.push(outputs.concat());
+        slices.push(outputs.concat());
 
         // Width constraints
-        if let Some(x) = nodes[i + 1].last().copied() {
+        if let Some(x) = slices[i + 1].last().copied() {
             constraints.push((width - x).geq(0.0));
         }
     }
@@ -95,7 +95,7 @@ pub fn layout(graph: MonoidalGraph) -> Result<Layout, LayoutError> {
 
     Ok(Layout {
         width: solution.value(width),
-        nodes: nodes
+        slices: slices
             .into_iter()
             .map(|xs| xs.into_iter().map(|x| solution.value(x)).collect())
             .collect(),
@@ -104,29 +104,16 @@ pub fn layout(graph: MonoidalGraph) -> Result<Layout, LayoutError> {
 
 #[cfg(test)]
 mod tests {
-    use sd_core::monoidal::{MonoidalGraph, MonoidalOp, Slice};
+    use sd_core::examples;
 
     use super::layout;
 
     #[test]
     fn copy() {
-        use MonoidalOp::*;
-
-        let graph = MonoidalGraph {
-            inputs: 2,
-            slices: vec![
-                Slice {
-                    ops: vec![Copy { copies: 2 }, Id],
-                },
-                Slice {
-                    ops: vec![Copy { copies: 2 }, Id, Id],
-                },
-            ],
-        };
-        let layout = layout(graph).expect("Layout failed");
+        let layout = layout(&examples::copy()).expect("Layout failed");
         assert_eq!(layout.width, 3.0);
         assert_eq!(
-            layout.nodes,
+            layout.slices,
             vec![
                 vec![1.25, 3.0],
                 vec![0.5, 2.0, 3.0],
