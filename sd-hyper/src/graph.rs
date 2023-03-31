@@ -19,7 +19,7 @@ pub enum HyperGraphError {
 }
 
 /// HyperGraph with hyperedges/nodes with weights E and vertices/wires
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Graph<E> {
     nodes: Slab<NodeInfo<E>>,
 }

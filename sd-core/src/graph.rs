@@ -191,7 +191,7 @@ impl Thunk {
     ) -> Result<Port, ConvertError> {
         let mut vars = BTreeSet::new();
 
-        self.free_variables(&mut BTreeSet::new(), &mut vars);
+        self.free_variables(&BTreeSet::new(), &mut vars);
 
         let inputs = vars
             .iter()
