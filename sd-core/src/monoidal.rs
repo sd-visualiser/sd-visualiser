@@ -28,14 +28,8 @@ pub enum MonoidalOp {
     // Untuple {
     //     outputs: usize,
     // },
-    Operation {
-        inputs: usize,
-        op_name: Operation,
-    },
-    Thunk {
-        args: usize,
-        body: MonoidalGraph,
-    },
+    Operation { inputs: usize, op_name: Operation },
+    Thunk { args: usize, body: MonoidalGraph },
     Swap,
 }
 

@@ -56,6 +56,7 @@ pub mod grammar {
         ),
     }
 
+    #[allow(clippy::manual_non_exhaustive)]
     #[derive(Clone, Debug)]
     pub struct Thunk {
         pub args: Vec<Variable>,
@@ -88,7 +89,7 @@ pub mod grammar {
     }
 }
 
-pub const HIGHLIGHT_QUERY: &'static str = include_str!("../../highlights.scm");
+pub const HIGHLIGHT_QUERY: &str = include_str!("../../highlights.scm");
 
 pub fn highlight(source: &str) -> Vec<tree_sitter_highlight::HighlightEvent> {
     use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
