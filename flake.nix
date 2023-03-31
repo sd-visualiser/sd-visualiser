@@ -80,8 +80,7 @@
           devShells.default = lib.mkForce (config.nci.outputs."sd".devShell.overrideAttrs (oldAttrs: {
             shellHook = ''
               ${oldAttrs.shellHook or ""}
-              ${self'.checks.pre-commit-check}
-            '';
+            ''; # ${self'.checks.pre-commit-check}
           }));
           packages.default = config.nci.outputs."sd-gui".packages.release;
         };
