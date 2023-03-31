@@ -484,6 +484,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cargo-husky"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b02b629252fe8ef6460461409564e2c21d0c8e77e0944f3d189ff06c4e932ad"
+
+[[package]]
 name = "cc"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2085,6 +2091,7 @@ name = "sd-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "cargo-husky",
  "rstest",
  "rust-sitter",
  "rust-sitter-tool",
@@ -2097,6 +2104,7 @@ dependencies = [
 name = "sd-graphics"
 version = "0.1.0"
 dependencies = [
+ "cargo-husky",
  "good_lp",
  "sd-core",
  "thiserror",
@@ -2106,6 +2114,7 @@ dependencies = [
 name = "sd-gui"
 version = "0.1.0"
 dependencies = [
+ "cargo-husky",
  "console_error_panic_hook",
  "eframe",
  "sd-core",
@@ -2119,6 +2128,7 @@ dependencies = [
 name = "sd-hyper"
 version = "0.1.0"
 dependencies = [
+ "cargo-husky",
  "slab",
  "thiserror",
 ]

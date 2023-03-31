@@ -9,6 +9,9 @@ eframe = "0.21.3"
 sd-core = { path = "../sd-core" }
 tree-sitter-highlight = "0.20.1"
 
+[dev-dependencies]
+cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
+
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tracing-subscriber = "0.3.16"
 

@@ -10,3 +10,6 @@ edition = "2021"
 good_lp = { version = "1.4.0", features = ["minilp"], default-features = false }
 sd-core = { path = "../sd-core" }
 thiserror = "1.0.40"
+
+[dev-dependencies]
+cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
