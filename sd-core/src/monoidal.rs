@@ -1,23 +1,23 @@
 use crate::language::grammar::{ActiveOp, PassiveOp};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Slice {
     pub ops: Vec<MonoidalOp>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MonoidalGraph {
     pub inputs: usize,
     pub slices: Vec<Slice>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Operation {
     Active(ActiveOp),
     Passive(PassiveOp),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MonoidalOp {
     Copy { copies: usize },
     // Tuple {

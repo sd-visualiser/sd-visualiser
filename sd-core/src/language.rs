@@ -65,13 +65,13 @@ pub mod grammar {
         pub body: Expr,
     }
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum ActiveOp {
         Plus(#[rust_sitter::leaf(text = "+")] ()),
         Times(#[rust_sitter::leaf(text = "*")] ()),
     }
 
-    #[derive(Clone, Copy, Debug)]
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
     pub enum PassiveOp {
         Int(#[rust_sitter::leaf(pattern = r"\d+", transform = |v| v.parse().unwrap())] usize),
     }
