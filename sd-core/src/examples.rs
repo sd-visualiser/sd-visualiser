@@ -1,4 +1,4 @@
-use crate::monoidal::{MonoidalGraph, MonoidalOp, Slice};
+use crate::monoidal::{MonoidalGraph, MonoidalOp, Slice, ID};
 
 pub fn copy() -> MonoidalGraph {
     use MonoidalOp::*;
@@ -7,10 +7,10 @@ pub fn copy() -> MonoidalGraph {
         inputs: 2,
         slices: vec![
             Slice {
-                ops: vec![Copy { copies: 2 }, Copy { copies: 1 }],
+                ops: vec![Copy { copies: 2 }, ID],
             },
             Slice {
-                ops: vec![Copy { copies: 2 }, Copy { copies: 1 }, Copy { copies: 1 }],
+                ops: vec![Copy { copies: 2 }, ID, ID],
             },
         ],
     }
