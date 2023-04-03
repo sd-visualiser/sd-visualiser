@@ -19,9 +19,7 @@ pub enum Operation {
 
 #[derive(Clone, Debug)]
 pub enum MonoidalOp {
-    Id,
     Copy { copies: usize },
-    Delete,
     // Tuple {
     //     inputs: usize,
     // },
@@ -37,9 +35,7 @@ impl MonoidalOp {
     /// Returns number of inputs of an operation
     pub fn number_of_inputs(&self) -> usize {
         match self {
-            Self::Id => 1,
             Self::Copy { .. } => 1,
-            Self::Delete => 1,
             Self::Operation { inputs, .. } => *inputs,
             Self::Thunk { args, body } => body.inputs - args,
             Self::Swap => 2,
@@ -49,9 +45,7 @@ impl MonoidalOp {
     /// Returns number of outputs of an operation
     pub fn number_of_outputs(&self) -> usize {
         match self {
-            MonoidalOp::Id => 1,
             MonoidalOp::Copy { copies } => *copies,
-            MonoidalOp::Delete => 0,
             // MonoidalOp::Tuple { .. } => 1,
             // MonoidalOp::Untuple { outputs } => *outputs,
             MonoidalOp::Operation { .. } => 1,
