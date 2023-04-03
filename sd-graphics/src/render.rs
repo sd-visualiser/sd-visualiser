@@ -1,4 +1,4 @@
-use epaint::{emath::RectTransform, Color32, Pos2, Rect, Rounding, Shape, Stroke, Vec2};
+use epaint::{emath::RectTransform, Color32, CubicBezierShape, Pos2, Shape, Stroke, Vec2};
 use itertools::Itertools;
 use sd_core::monoidal::MonoidalGraph;
 use thiserror::Error;
@@ -34,21 +34,6 @@ pub fn render(
 
     let mut shapes: Vec<Shape> = Vec::new();
 
-    for &x in &layout.slices[0] {
-        let start = transform(Pos2 {
-            x: x as f32,
-            y: -0.25,
-        });
-        let end = transform(Pos2 {
-            x: x as f32,
-            y: 0.25,
-        });
-        shapes.push(Shape::line_segment(
-            [start, end],
-            Stroke::new(STROKE_WIDTH, Color32::BLACK),
-        ));
-    }
-
     for (y, slice) in graph.slices.iter().enumerate() {
         let mut offset_i = 0;
         let mut offset_o = 0;
@@ -67,33 +52,36 @@ pub fn render(
                 .into_option()
                 .expect("Scalars are not allowed!");
 
-            let min = transform(Pos2 {
-                x: min_x as f32 - 0.25,
-                y: y as f32 + 0.25,
+            let center = transform(Pos2 {
+                x: (min_x + max_x) as f32 / 2.0,
+                y: 2.0 * y as f32 + 1.0,
             });
-            let max = transform(Pos2 {
-                x: max_x as f32 + 0.25,
-                y: y as f32 + 0.75,
-            });
-            shapes.push(Shape::rect_stroke(
-                Rect::from_min_max(min, max),
-                Rounding::none(),
-                Stroke::new(STROKE_WIDTH, Color32::BLACK),
-            ));
+            shapes.push(Shape::circle_filled(center, 5.0, Color32::BLACK));
+
+            for &x in input_wires {
+                let input = transform(Pos2 {
+                    x: x as f32,
+                    y: 2.0 * y as f32,
+                });
+                shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
+                    bezier_curve_forward(input, center),
+                    false,
+                    Color32::TRANSPARENT,
+                    Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                )));
+            }
 
             for &x in output_wires {
-                let start = transform(Pos2 {
+                let output = transform(Pos2 {
                     x: x as f32,
-                    y: y as f32 + 0.75,
+                    y: 2.0 * y as f32 + 2.0,
                 });
-                let end = transform(Pos2 {
-                    x: x as f32,
-                    y: y as f32 + 1.25,
-                });
-                shapes.push(Shape::line_segment(
-                    [start, end],
+                shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
+                    bezier_curve_backward(center, output),
+                    false,
+                    Color32::TRANSPARENT,
                     Stroke::new(STROKE_WIDTH, Color32::BLACK),
-                ));
+                )));
             }
 
             offset_i += ni;
@@ -102,4 +90,22 @@ pub fn render(
     }
 
     Ok(shapes)
+}
+
+fn bezier_curve_forward(start: Pos2, end: Pos2) -> [Pos2; 4] {
+    [
+        start,
+        Pos2::new(start.x, 0.2 * start.y + 0.8 * end.y),
+        Pos2::new(0.6 * start.x + 0.4 * end.x, end.y),
+        end,
+    ]
+}
+
+fn bezier_curve_backward(start: Pos2, end: Pos2) -> [Pos2; 4] {
+    [
+        start,
+        Pos2::new(0.4 * start.x + 0.6 * end.x, start.y),
+        Pos2::new(end.x, 0.8 * start.y + 0.2 * end.y),
+        end,
+    ]
 }
