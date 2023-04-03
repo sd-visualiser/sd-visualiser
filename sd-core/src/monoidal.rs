@@ -54,3 +54,7 @@ impl MonoidalOp {
         }
     }
 }
+
+pub const ID: MonoidalOp = MonoidalOp::Copy { copies: 1 };
+
+pub const DELETE: MonoidalOp = MonoidalOp::Copy { copies: 0 };
