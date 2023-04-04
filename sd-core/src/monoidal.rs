@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Slice {
-    pub ops: Vec<MonoidalOp>,
+    pub ops: Vec<(MonoidalOp, Vec<NodeIndex>)>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -59,73 +59,73 @@ impl MonoidalOp {
     }
 }
 
-pub const ID: MonoidalOp = MonoidalOp::Copy { copies: 1 };
+pub const ID: (MonoidalOp, Vec<NodeIndex>) = (MonoidalOp::Copy { copies: 1 }, vec![]);
 
-pub const DELETE: MonoidalOp = MonoidalOp::Copy { copies: 0 };
+pub const DELETE: (MonoidalOp, Vec<NodeIndex>) = (MonoidalOp::Copy { copies: 0 }, vec![]);
 
 // Unfolding
 
-impl MonoidalGraph {
-    pub fn unfold(self) -> Self {
-        Self {
-            inputs: self.inputs,
-            slices: self
-                .slices
-                .into_iter()
-                .flat_map(|slice| {
-                    // Turn each operation into a list of slices.
-                    let sss = slice
-                        .ops
-                        .into_iter()
-                        .map(|op| match op {
-                            MonoidalOp::Thunk { args, body } => {
-                                // Unfold the body of the thunk and add an extra slice at the start.
-                                let mut slices = body.slices;
-                                slices.insert(
-                                    0,
-                                    Slice {
-                                        ops: std::iter::repeat(ID)
-                                            .take(body.inputs - args)
-                                            .chain(std::iter::repeat(MonoidalOp::Unit).take(args))
-                                            .collect(),
-                                    },
-                                );
-                                slices
-                            }
-                            _ => vec![Slice { ops: vec![op] }],
-                        })
-                        .collect::<Vec<_>>();
+// impl MonoidalGraph {
+//     pub fn unfold(self) -> Self {
+//         Self {
+//             inputs: self.inputs,
+//             slices: self
+//                 .slices
+//                 .into_iter()
+//                 .flat_map(|slice| {
+//                     // Turn each operation into a list of slices.
+//                     let sss = slice
+//                         .ops
+//                         .into_iter()
+//                         .map(|op| match op {
+//                             MonoidalOp::Thunk { args, body } => {
+//                                 // Unfold the body of the thunk and add an extra slice at the start.
+//                                 let mut slices = body.slices;
+//                                 slices.insert(
+//                                     0,
+//                                     Slice {
+//                                         ops: std::iter::repeat(ID)
+//                                             .take(body.inputs - args)
+//                                             .chain(std::iter::repeat(MonoidalOp::Unit).take(args))
+//                                             .collect(),
+//                                     },
+//                                 );
+//                                 slices
+//                             }
+//                             _ => vec![Slice { ops: vec![op] }],
+//                         })
+//                         .collect::<Vec<_>>();
 
-                    let max_height = sss.iter().map(|ss| ss.len()).max().unwrap();
-                    let mut slices = Vec::with_capacity(max_height);
-                    for i in 0..max_height {
-                        slices.push(Slice {
-                            ops: sss
-                                .iter()
-                                .flat_map(|ss| {
-                                    ss.get(i)
-                                        .cloned()
-                                        .unwrap_or_else(|| {
-                                            let n = ss
-                                                .last()
-                                                .unwrap()
-                                                .ops
-                                                .iter()
-                                                .map(MonoidalOp::number_of_outputs)
-                                                .sum();
-                                            Slice { ops: vec![ID; n] }
-                                        })
-                                        .ops
-                                })
-                                .collect(),
-                        });
-                    }
-                    slices
-                })
-                .collect(),
-        }
-    }
-}
+//                     let max_height = sss.iter().map(|ss| ss.len()).max().unwrap();
+//                     let mut slices = Vec::with_capacity(max_height);
+//                     for i in 0..max_height {
+//                         slices.push(Slice {
+//                             ops: sss
+//                                 .iter()
+//                                 .flat_map(|ss| {
+//                                     ss.get(i)
+//                                         .cloned()
+//                                         .unwrap_or_else(|| {
+//                                             let n = ss
+//                                                 .last()
+//                                                 .unwrap()
+//                                                 .ops
+//                                                 .iter()
+//                                                 .map(MonoidalOp::number_of_outputs)
+//                                                 .sum();
+//                                             Slice { ops: vec![ID; n] }
+//                                         })
+//                                         .ops
+//                                 })
+//                                 .collect(),
+//                         });
+//                     }
+//                     slices
+//                 })
+//                 .collect(),
+//         }
+//     }
+// }
 
 #[derive(Debug, Error)]
 pub enum FromHyperError {
@@ -151,7 +151,7 @@ fn permutation_to_swaps(mut permutation: Vec<usize>) -> Vec<Slice> {
                 slice_ops.push(ID);
             } else {
                 finished = false;
-                slice_ops.push(MonoidalOp::Swap);
+                slice_ops.push((MonoidalOp::Swap, vec![]));
                 permutation.swap(i, i + 1);
                 i += 2;
             }
@@ -258,34 +258,49 @@ impl MonoidalGraph {
                     let inputs: Vec<_> = graph.input_ports(node)?.collect();
                     let outputs = graph.number_of_outputs(node)?;
                     let ops = match graph.get(node)? {
-                        Op::Passive(p) => vec![MonoidalOp::Operation {
-                            inputs: inputs.len(),
-                            op_name: Operation::Passive(*p),
-                        }],
-                        Op::Active(a) => vec![MonoidalOp::Operation {
-                            inputs: inputs.len(),
-                            op_name: Operation::Active(*a),
-                        }],
+                        Op::Passive(p) => vec![(
+                            MonoidalOp::Operation {
+                                inputs: inputs.len(),
+                                op_name: Operation::Passive(*p),
+                            },
+                            vec![node],
+                        )],
+                        Op::Active(a) => vec![(
+                            MonoidalOp::Operation {
+                                inputs: inputs.len(),
+                                op_name: Operation::Active(*a),
+                            },
+                            vec![node],
+                        )],
                         Op::Input => vec![ID; outputs],
                         Op::Output => vec![],
-                        Op::Thunk { args, body } => vec![MonoidalOp::Thunk {
-                            args: *args,
-                            body: MonoidalGraph::from_hypergraph(body)?,
-                        }],
+                        Op::Thunk { args, body } => vec![(
+                            MonoidalOp::Thunk {
+                                args: *args,
+                                body: MonoidalGraph::from_hypergraph(body)?,
+                            },
+                            vec![node],
+                        )],
                     };
                     op_slice.extend(ops);
                     for i in 0..outputs {
-                        copy_slice.push(MonoidalOp::Copy {
-                            copies: part.get(&PortIndex(i)).map(|x| x.len()).unwrap_or(0),
-                        })
+                        copy_slice.push((
+                            MonoidalOp::Copy {
+                                copies: part.get(&PortIndex(i)).map(|x| x.len()).unwrap_or(0),
+                            },
+                            vec![],
+                        ))
                     }
                     rank.remove(&node);
                     open_wires.extend(inputs);
                 } else {
                     for (index, wires) in part {
-                        copy_slice.push(MonoidalOp::Copy {
-                            copies: wires.len(),
-                        });
+                        copy_slice.push((
+                            MonoidalOp::Copy {
+                                copies: wires.len(),
+                            },
+                            vec![],
+                        ));
                         op_slice.push(ID);
                         open_wires.push(Port { node, index })
                     }
@@ -297,20 +312,29 @@ impl MonoidalGraph {
                 let inputs: Vec<_> = graph.input_ports(remaining)?.collect();
                 let outputs = graph.number_of_outputs(remaining)?;
                 let ops = match graph.get(remaining)? {
-                    Op::Passive(p) => vec![MonoidalOp::Operation {
-                        inputs: inputs.len(),
-                        op_name: Operation::Passive(*p),
-                    }],
-                    Op::Active(a) => vec![MonoidalOp::Operation {
-                        inputs: inputs.len(),
-                        op_name: Operation::Active(*a),
-                    }],
+                    Op::Passive(p) => vec![(
+                        MonoidalOp::Operation {
+                            inputs: inputs.len(),
+                            op_name: Operation::Passive(*p),
+                        },
+                        vec![remaining],
+                    )],
+                    Op::Active(a) => vec![(
+                        MonoidalOp::Operation {
+                            inputs: inputs.len(),
+                            op_name: Operation::Active(*a),
+                        },
+                        vec![remaining],
+                    )],
                     Op::Input => vec![ID; outputs],
                     Op::Output => vec![],
-                    Op::Thunk { args, body } => vec![MonoidalOp::Thunk {
-                        args: *args,
-                        body: MonoidalGraph::from_hypergraph(body)?,
-                    }],
+                    Op::Thunk { args, body } => vec![(
+                        MonoidalOp::Thunk {
+                            args: *args,
+                            body: MonoidalGraph::from_hypergraph(body)?,
+                        },
+                        vec![remaining],
+                    )],
                 };
                 op_slice.extend(ops);
                 for _ in 0..outputs {
@@ -321,14 +345,14 @@ impl MonoidalGraph {
 
             if copy_slice
                 .iter()
-                .any(|x| x != &MonoidalOp::Copy { copies: 1 })
+                .any(|x| x.0 != MonoidalOp::Copy { copies: 1 })
             {
                 slices.push(Slice { ops: copy_slice });
             }
 
             if op_slice
                 .iter()
-                .any(|x| x != &MonoidalOp::Copy { copies: 1 })
+                .any(|x| x.0 != MonoidalOp::Copy { copies: 1 })
             {
                 slices.push(Slice { ops: op_slice });
             }
@@ -352,8 +376,8 @@ mod tests {
 
     #[rstest]
     #[case(vec![0,1], vec![])]
-    #[case(vec![1,0], vec![Slice { ops: vec![MonoidalOp::Swap]}])]
-    #[case(vec![1,2,0], vec![Slice { ops: vec![ID,MonoidalOp::Swap]}, Slice { ops: vec![MonoidalOp::Swap, ID]}])]
+    #[case(vec![1,0], vec![Slice { ops: vec![(MonoidalOp::Swap, vec![])]}])]
+    #[case(vec![1,2,0], vec![Slice { ops: vec![ID,(MonoidalOp::Swap, vec![])]}, Slice { ops: vec![(MonoidalOp::Swap, vec![]), ID]}])]
     fn test_permutation(#[case] permutation: Vec<usize>, #[case] result: Vec<Slice>) -> Result<()> {
         assert_eq!(permutation_to_swaps(permutation), result);
         Ok(())

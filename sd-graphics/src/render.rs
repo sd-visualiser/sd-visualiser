@@ -76,7 +76,7 @@ pub fn render(
     for (y, slice) in graph.slices.iter().enumerate() {
         let mut offset_i = 0;
         let mut offset_o = 0;
-        for op in slice.ops.iter() {
+        for (op, _) in slice.ops.iter() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
