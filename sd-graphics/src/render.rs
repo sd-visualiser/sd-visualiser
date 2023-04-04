@@ -16,6 +16,10 @@ pub const RADIUS_UNIT: f32 = 2.5;
 pub const RADIUS_COPY: f32 = 5.0;
 pub const RADIUS_OPERATION: f32 = 10.0;
 
+pub fn default_stroke() -> Stroke {
+    Stroke::new(STROKE_WIDTH, Color32::BLACK)
+}
+
 #[derive(Debug, Error)]
 pub enum RenderError {
     #[error(transparent)]
@@ -27,10 +31,11 @@ pub fn render(
     bounds: Vec2,
     transform: RectTransform,
 ) -> Result<Vec<Shape>, RenderError> {
+    let len = graph.slices.len();
     let layout = layout(&graph)?;
 
     let width = layout.width as f32;
-    let height = layout.slices.len() as f32;
+    let height = len as f32 + 1.0;
 
     // Scale by a constant and translate to the centre of the bounding box.
     let transform = |pos: Pos2| {
@@ -41,6 +46,32 @@ pub fn render(
     };
 
     let mut shapes: Vec<Shape> = Vec::new();
+
+    // Source
+    for &x in layout.slices.first().unwrap() {
+        let start = transform(Pos2 {
+            x: x as f32,
+            y: 0.0,
+        });
+        let end = transform(Pos2 {
+            x: x as f32,
+            y: 0.5,
+        });
+        shapes.push(Shape::line_segment([start, end], default_stroke()));
+    }
+
+    // Target
+    for &x in layout.slices.last().unwrap() {
+        let start = transform(Pos2 {
+            x: x as f32,
+            y: len as f32 + 0.5,
+        });
+        let end = transform(Pos2 {
+            x: x as f32,
+            y: len as f32 + 1.0,
+        });
+        shapes.push(Shape::line_segment([start, end], default_stroke()));
+    }
 
     for (y, slice) in graph.slices.iter().enumerate() {
         let mut offset_i = 0;
@@ -62,53 +93,53 @@ pub fn render(
 
             match op {
                 MonoidalOp::Swap => {
-                    let start_l = transform(Pos2::new(input_wires[0] as f32, 2.0 * y as f32));
-                    let start_r = transform(Pos2::new(input_wires[1] as f32, 2.0 * y as f32));
-                    let end_l = transform(Pos2::new(output_wires[0] as f32, 2.0 * y as f32 + 2.0));
-                    let end_r = transform(Pos2::new(output_wires[1] as f32, 2.0 * y as f32 + 2.0));
+                    let start_l = transform(Pos2::new(input_wires[0] as f32, y as f32 + 0.5));
+                    let start_r = transform(Pos2::new(input_wires[1] as f32, y as f32 + 0.5));
+                    let end_l = transform(Pos2::new(output_wires[0] as f32, y as f32 + 1.5));
+                    let end_r = transform(Pos2::new(output_wires[1] as f32, y as f32 + 1.5));
 
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(start_l, end_r),
                         false,
                         Color32::TRANSPARENT,
-                        Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                        default_stroke(),
                     )));
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(start_r, end_l),
                         false,
                         Color32::TRANSPARENT,
-                        Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                        default_stroke(),
                     )));
                 }
                 _ => {
                     let center = transform(Pos2 {
                         x: (min_x + max_x) as f32 / 2.0,
-                        y: 2.0 * y as f32 + 1.0,
+                        y: y as f32 + 1.0,
                     });
 
                     for &x in input_wires {
                         let input = transform(Pos2 {
                             x: x as f32,
-                            y: 2.0 * y as f32,
+                            y: y as f32 + 0.5,
                         });
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
                             false,
                             Color32::TRANSPARENT,
-                            Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                            default_stroke(),
                         )));
                     }
 
                     for &x in output_wires {
                         let output = transform(Pos2 {
                             x: x as f32,
-                            y: 2.0 * y as f32 + 2.0,
+                            y: y as f32 + 1.5,
                         });
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
                             false,
                             Color32::TRANSPARENT,
-                            Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                            default_stroke(),
                         )));
                     }
 
@@ -123,13 +154,13 @@ pub fn render(
                             center,
                             radius: RADIUS_OPERATION,
                             fill: Color32::WHITE,
-                            stroke: Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                            stroke: default_stroke(),
                         })),
                         MonoidalOp::Thunk { .. } => shapes.push(Shape::Rect(RectShape {
                             rect: Rect::from_center_size(center, BOX_SIZE),
                             rounding: Rounding::none(),
                             fill: Color32::WHITE,
-                            stroke: Stroke::new(STROKE_WIDTH, Color32::BLACK),
+                            stroke: default_stroke(),
                         })),
                         _ => (),
                     }
