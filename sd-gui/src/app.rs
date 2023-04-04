@@ -2,7 +2,7 @@ use eframe::{
     egui, emath,
     epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
 };
-use sd_core::{examples, language, monoidal::MonoidalGraph};
+use sd_core::{language, monoidal::MonoidalGraph};
 
 use crate::highlighter;
 
@@ -47,6 +47,8 @@ impl App {
             MonoidalGraph::from_hypergraph(&hypergraph).ok()
         };
         let Some(graph) = block() else { return };
+
+        let graph = graph.unfold();
 
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height()),
