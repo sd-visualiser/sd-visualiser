@@ -1963,8 +1963,8 @@ dependencies = [
 
 [[package]]
 name = "rust-sitter"
-version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
+version = "0.3.3"
+source = "git+https://github.com/calintat/rust-sitter?branch=main#b9ca04faf0a1fe69a57bb56a9d792f5f2d5d9f29"
 dependencies = [
  "rust-sitter-macro",
  "tree-sitter-c2rust",
@@ -1972,8 +1972,8 @@ dependencies = [
 
 [[package]]
 name = "rust-sitter-common"
-version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
+version = "0.3.3"
+source = "git+https://github.com/calintat/rust-sitter?branch=main#b9ca04faf0a1fe69a57bb56a9d792f5f2d5d9f29"
 dependencies = [
  "quote",
  "syn 1.0.109",
@@ -1981,8 +1981,8 @@ dependencies = [
 
 [[package]]
 name = "rust-sitter-macro"
-version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
+version = "0.3.3"
+source = "git+https://github.com/calintat/rust-sitter?branch=main#b9ca04faf0a1fe69a57bb56a9d792f5f2d5d9f29"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1992,8 +1992,8 @@ dependencies = [
 
 [[package]]
 name = "rust-sitter-tool"
-version = "0.3.2"
-source = "git+https://github.com/calintat/rust-sitter?branch=fix#d2394355303357f2a210959f95decae07e592242"
+version = "0.3.3"
+source = "git+https://github.com/calintat/rust-sitter?branch=main#b9ca04faf0a1fe69a57bb56a9d792f5f2d5d9f29"
 dependencies = [
  "cc",
  "rust-sitter-common",
