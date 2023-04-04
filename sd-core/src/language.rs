@@ -25,14 +25,9 @@ pub mod grammar {
                 ()
             )]
             Vec<Value>,
-            #[rust_sitter::leaf(text = ";")] (),
-            #[rust_sitter::delimited(
-                #[rust_sitter::leaf(text = ",")]
-                ()
-            )]
-            Vec<Thunk>,
             #[rust_sitter::leaf(text = ")")] (),
         ),
+        Thunk(Box<Thunk>),
     }
 
     #[derive(Clone, Debug)]
@@ -46,12 +41,6 @@ pub mod grammar {
                 ()
             )]
             Vec<Value>,
-            #[rust_sitter::leaf(text = ";")] (),
-            #[rust_sitter::delimited(
-                #[rust_sitter::leaf(text = ",")]
-                ()
-            )]
-            Vec<Thunk>,
             #[rust_sitter::leaf(text = ")")] (),
         ),
     }

@@ -106,14 +106,12 @@ impl Term {
     pub(crate) fn free_variables(&self, bound: &BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
         match self {
             Term::Val(v) => v.free_variables(bound, vars),
-            Term::ActiveOp(_, _, vs, _, thunks, _) => {
+            Term::ActiveOp(_, _, vs, _) => {
                 for v in vs {
                     v.free_variables(bound, vars);
                 }
-                for v in thunks {
-                    v.free_variables(bound, vars)
-                }
             }
+            Term::Thunk(thunk) => thunk.free_variables(bound, vars),
         }
     }
 
@@ -124,13 +122,10 @@ impl Term {
     ) -> Result<Port, ConvertError> {
         match self {
             Term::Val(v) => v.process(graph, mapping),
-            Term::ActiveOp(op, _, vals, _, thunks, _) => {
+            Term::ActiveOp(op, _, vals, _) => {
                 let mut inputs = vec![];
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
-                }
-                for t in thunks {
-                    inputs.push(t.process(graph, mapping)?);
                 }
                 let node = graph.add_node(Op::Active(*op), inputs, 1)?;
                 Ok(Port {
@@ -138,6 +133,7 @@ impl Term {
                     index: PortIndex(0),
                 })
             }
+            Term::Thunk(thunk) => thunk.process(graph, mapping),
         }
     }
 }
@@ -150,12 +146,9 @@ impl Value {
                     vars.insert(v.clone());
                 }
             }
-            Value::PassiveOp(_, _, vs, _, thunks, _) => {
+            Value::PassiveOp(_, _, vs, _) => {
                 for v in vs {
                     v.free_variables(bound, vars)
-                }
-                for th in thunks {
-                    th.free_variables(bound, vars)
                 }
             }
         }
@@ -171,13 +164,10 @@ impl Value {
                 .get(v)
                 .copied()
                 .ok_or(ConvertError::VariableError(v.clone())),
-            Value::PassiveOp(op, _, vals, _, thunks, _) => {
+            Value::PassiveOp(op, _, vals, _) => {
                 let mut inputs = vec![];
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
-                }
-                for t in thunks {
-                    inputs.push(t.process(graph, mapping)?);
                 }
                 let node = graph.add_node(Op::Passive(*op), inputs, 1)?;
                 Ok(Port {
@@ -261,7 +251,7 @@ mod tests {
 
     #[fixture]
     fn basic_program() -> Result<Expr> {
-        parse("bind x = 1(;) in x")
+        parse("bind x = 1() in x")
             .map_err(|x| anyhow!("{:?}", x))
             .context("Could not parse basic program")
     }
@@ -276,7 +266,7 @@ mod tests {
     // Make this something meaningful
     #[fixture]
     fn thunks() -> Result<Expr> {
-        parse("bind x = +(; x0.1(;) , x0.bind z = +(x0,y;) in z ) in x")
+        parse("bind a = x0.1() in bind b = x0.bind z = +(x0,y) in z in bind x = +(a,b) in x")
             .map_err(|x| anyhow!("{:?}", x))
             .context("Could not parse thunk program")
     }
