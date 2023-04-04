@@ -11,11 +11,12 @@ rust-sitter = "0.3.2"
 tree-sitter-highlight = "0.20.1"
 sd-hyper = { path = "../sd-hyper" }
 thiserror = "1.0.40"
+anyhow = "1.0.70"
+itertools = "0.10.5"
 
 [build-dependencies]
 rust-sitter-tool = "0.3.2"
 
 [dev-dependencies]
-anyhow = "1.0.70"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 rstest = "0.17.0"

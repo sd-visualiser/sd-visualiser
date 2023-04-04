@@ -2044,6 +2044,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cargo-husky",
+ "itertools",
  "rstest",
  "rust-sitter",
  "rust-sitter-tool",
