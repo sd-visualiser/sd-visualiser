@@ -10,10 +10,10 @@ pub fn copy() -> MonoidalGraph {
         inputs: 2,
         slices: vec![
             Slice {
-                ops: vec![Copy { copies: 2 }, ID],
+                ops: vec![(Copy { copies: 2 }, vec![]), ID],
             },
             Slice {
-                ops: vec![Copy { copies: 2 }, ID, ID],
+                ops: vec![(Copy { copies: 2 }, vec![]), ID, ID],
             },
         ],
     }
@@ -25,10 +25,13 @@ pub fn thunk() -> MonoidalGraph {
     let plus = MonoidalGraph {
         inputs: 2,
         slices: vec![Slice {
-            ops: vec![Operation {
-                inputs: 2,
-                op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
-            }],
+            ops: vec![(
+                Operation {
+                    inputs: 2,
+                    op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
+                },
+                vec![],
+            )],
         }],
     };
 
@@ -36,14 +39,20 @@ pub fn thunk() -> MonoidalGraph {
         inputs: 3,
         slices: vec![Slice {
             ops: vec![
-                Thunk {
-                    args: 1,
-                    body: plus,
-                },
-                Operation {
-                    inputs: 2,
-                    op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
-                },
+                (
+                    Thunk {
+                        args: 1,
+                        body: plus,
+                    },
+                    vec![],
+                ),
+                (
+                    Operation {
+                        inputs: 2,
+                        op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
+                    },
+                    vec![],
+                ),
             ],
         }],
     }

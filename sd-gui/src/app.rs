@@ -48,7 +48,7 @@ impl App {
         };
         let Some(graph) = block() else { return };
 
-        let graph = graph.unfold();
+        // let graph = graph.unfold();
 
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height()),

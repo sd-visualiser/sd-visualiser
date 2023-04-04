@@ -39,7 +39,7 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
         let mut offset = 0;
         let mut outputs = Vec::new();
 
-        for op in &slice.ops {
+        for (op, _) in &slice.ops {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
