@@ -42,7 +42,7 @@ impl App {
 
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
         // TODO(calintat): Replace when the translation is ready.
-        let graph = examples::thunk();
+        let graph = examples::thunk().unfold();
 
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height()),

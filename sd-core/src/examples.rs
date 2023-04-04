@@ -33,12 +33,18 @@ pub fn thunk() -> MonoidalGraph {
     };
 
     MonoidalGraph {
-        inputs: 1,
+        inputs: 3,
         slices: vec![Slice {
-            ops: vec![Thunk {
-                args: 1,
-                body: plus,
-            }],
+            ops: vec![
+                Thunk {
+                    args: 1,
+                    body: plus,
+                },
+                Operation {
+                    inputs: 2,
+                    op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
+                },
+            ],
         }],
     }
 }
