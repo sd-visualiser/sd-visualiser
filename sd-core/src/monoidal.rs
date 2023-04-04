@@ -230,11 +230,11 @@ impl MonoidalGraph {
                     &(l1.iter()
                         .map(|(_, x)| x.iter().sum::<usize>())
                         .sum::<usize>()
-                        * l2.len()),
+                        * l2.iter().map(|(_, x)| x.len()).sum::<usize>()),
                     &(l2.iter()
                         .map(|(_, x)| x.iter().sum::<usize>())
                         .sum::<usize>()
-                        * l1.len()),
+                        * l1.iter().map(|(_, x)| x.len()).sum::<usize>()),
                 )
             });
 
