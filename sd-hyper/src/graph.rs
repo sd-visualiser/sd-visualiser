@@ -51,6 +51,7 @@ impl<E> Graph<E> {
                 .nodes
                 .get_mut(*node)
                 .ok_or(HyperGraphError::UnknownNode(*node))?;
+
             let port_set = input
                 .outputs
                 .get_mut(*index)
@@ -83,6 +84,19 @@ impl<E> Graph<E> {
         Ok(&info.data)
     }
 
+    pub fn get_outputs(
+        &self,
+        key: usize,
+    ) -> Result<impl Iterator<Item = &BTreeSet<Port>>, HyperGraphError> {
+        let info = self.get_info(key)?;
+        Ok(info.outputs.iter())
+    }
+
+    pub fn number_of_outputs(&self, key: usize) -> Result<usize, HyperGraphError> {
+        let info = self.get_info(key)?;
+        Ok(info.outputs.len())
+    }
+
     pub fn input_ports(
         &self,
         key: usize,
@@ -102,6 +116,30 @@ impl<E> Graph<E> {
                 .enumerate()
                 .map(move |(index, targets)| (Port { node, index }, targets))
         }))
+    }
+
+    pub fn ranks_from_end(&self) -> Vec<BTreeSet<usize>> {
+        let mut nodes: BTreeSet<(usize, &Vec<BTreeSet<Port>>)> =
+            self.nodes.iter().map(|(x, d)| (x, &d.outputs)).collect();
+        let mut ranks: Vec<BTreeSet<usize>> = vec![];
+        let mut collected: BTreeSet<usize> = BTreeSet::new();
+
+        while !nodes.is_empty() {
+            let mut next_rank = BTreeSet::new();
+            for (n, o) in nodes.iter() {
+                if concat_iter(o.iter().map(|x| x.iter().map(|y| y.node)))
+                    .all(|z| collected.contains(&z))
+                {
+                    collected.insert(*n);
+                    next_rank.insert(*n);
+                }
+            }
+            nodes.retain(|x| !next_rank.contains(&x.0));
+
+            ranks.push(next_rank);
+        }
+
+        ranks
     }
 }
 

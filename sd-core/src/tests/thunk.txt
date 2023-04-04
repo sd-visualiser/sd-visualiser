@@ -6,8 +6,9 @@ Hypergraph {
         ),
         (
             1,
-            Thunk(
-                Hypergraph {
+            Thunk {
+                args: 1,
+                body: Hypergraph {
                     nodes: [
                         (
                             0,
@@ -48,12 +49,13 @@ Hypergraph {
                         ),
                     ],
                 },
-            ),
+            },
         ),
         (
             2,
-            Thunk(
-                Hypergraph {
+            Thunk {
+                args: 1,
+                body: Hypergraph {
                     nodes: [
                         (
                             0,
@@ -111,7 +113,7 @@ Hypergraph {
                         ),
                     ],
                 },
-            ),
+            },
         ),
         (
             3,

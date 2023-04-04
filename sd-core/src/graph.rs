@@ -10,7 +10,17 @@ pub enum Op {
     Active(ActiveOp),
     Input,
     Output,
-    Thunk(Box<HyperGraph>),
+    Thunk { args: usize, body: Box<HyperGraph> },
+}
+
+impl Op {
+    pub fn is_input(&self) -> bool {
+        matches!(self, Op::Input)
+    }
+
+    pub fn is_output(&self) -> bool {
+        matches!(self, Op::Output)
+    }
 }
 
 pub type HyperGraph = Graph<Op>;
@@ -209,7 +219,14 @@ impl Thunk {
 
         let graph_inner = self.body.to_hypergraph_from_inputs(vars_vec)?;
 
-        let node = graph.add_node(Op::Thunk(Box::new(graph_inner)), inputs, 1)?;
+        let node = graph.add_node(
+            Op::Thunk {
+                args: self.args.len(),
+                body: Box::new(graph_inner),
+            },
+            inputs,
+            1,
+        )?;
 
         Ok(Port { node, index: 0 })
     }
