@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashMap};
 use thiserror::Error;
 
 use crate::language::grammar::{ActiveOp, Expr, PassiveOp, Term, Thunk, Value, Variable};
-use sd_hyper::graph::{Graph, HyperGraphError, Port};
+use sd_hyper::graph::{Graph, HyperGraphError, Port, PortIndex};
 
 #[derive(Clone, Debug)]
 pub enum Op {
@@ -72,7 +72,7 @@ impl Expr {
                 var,
                 Port {
                     node: input_node,
-                    index: i,
+                    index: PortIndex(i),
                 },
             );
         }
@@ -133,7 +133,10 @@ impl Term {
                     inputs.push(t.process(graph, mapping)?);
                 }
                 let node = graph.add_node(Op::Active(*op), inputs, 1)?;
-                Ok(Port { node, index: 0 })
+                Ok(Port {
+                    node,
+                    index: PortIndex(0),
+                })
             }
         }
     }
@@ -177,7 +180,10 @@ impl Value {
                     inputs.push(t.process(graph, mapping)?);
                 }
                 let node = graph.add_node(Op::Passive(*op), inputs, 1)?;
-                Ok(Port { node, index: 0 })
+                Ok(Port {
+                    node,
+                    index: PortIndex(0),
+                })
             }
         }
     }
@@ -228,7 +234,10 @@ impl Thunk {
             1,
         )?;
 
-        Ok(Port { node, index: 0 })
+        Ok(Port {
+            node,
+            index: PortIndex(0),
+        })
     }
 }
 
@@ -245,6 +254,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     use anyhow::{anyhow, Context, Result};
+    use insta::assert_debug_snapshot;
     use rstest::{fixture, rstest};
 
     use crate::language::grammar::{parse, Expr, Variable};
@@ -301,7 +311,7 @@ mod tests {
     fn hypergraph_test_basic(basic_program: Result<Expr>) -> Result<()> {
         let graph = basic_program?.to_hypergraph()?;
 
-        assert_eq!(format!("{:#?}\n", graph), include_str!("tests/basic.txt"));
+        assert_debug_snapshot!(graph);
 
         Ok(())
     }
@@ -310,10 +320,7 @@ mod tests {
     fn hypergraph_test_free_var(free_vars: Result<Expr>) -> Result<()> {
         let graph = free_vars?.to_hypergraph()?;
 
-        assert_eq!(
-            format!("{:#?}\n", graph),
-            include_str!("tests/free_var.txt")
-        );
+        assert_debug_snapshot!(graph);
 
         Ok(())
     }
@@ -322,7 +329,7 @@ mod tests {
     fn hypergraph_test_thunk(thunks: Result<Expr>) -> Result<()> {
         let graph = thunks?.to_hypergraph()?;
 
-        assert_eq!(format!("{:#?}\n", graph), include_str!("tests/thunk.txt"));
+        assert_debug_snapshot!(graph);
 
         Ok(())
     }

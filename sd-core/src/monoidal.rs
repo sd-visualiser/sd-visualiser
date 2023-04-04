@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
-use sd_hyper::graph::{HyperGraphError, Port};
+use sd_hyper::graph::{HyperGraphError, NodeIndex, Port, PortIndex};
 use thiserror::Error;
 
 use crate::{
@@ -175,7 +175,7 @@ impl MonoidalGraph {
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
         let (ranks, input_wires, output_wires) = {
             let mut r = graph.ranks_from_end();
-            let mut inputs: BTreeSet<usize> = BTreeSet::new();
+            let mut inputs: BTreeSet<NodeIndex> = BTreeSet::new();
             let mut input_wires: usize = 0;
             let mut output_wires: Vec<Port> = Vec::new();
             for x in r.iter_mut() {
@@ -185,7 +185,7 @@ impl MonoidalGraph {
                         let e = graph.get(*x)?;
                         Ok((*x, e))
                     })
-                    .collect::<Result<Vec<(usize, &Op)>, FromHyperError>>()?;
+                    .collect::<Result<Vec<(NodeIndex, &Op)>, FromHyperError>>()?;
 
                 for (y, _) in items.iter().filter(|(_, e)| e.is_input()) {
                     inputs.insert(*y);
@@ -208,7 +208,7 @@ impl MonoidalGraph {
 
         for r in ranks {
             // Gather up wires by port
-            let mut by_node: BTreeMap<usize, BTreeMap<usize, Vec<usize>>> = BTreeMap::new();
+            let mut by_node: BTreeMap<NodeIndex, BTreeMap<PortIndex, Vec<usize>>> = BTreeMap::new();
 
             for (wire, Port { node, index }) in open_wires.into_iter().enumerate() {
                 by_node
@@ -276,7 +276,7 @@ impl MonoidalGraph {
                     op_slice.extend(ops);
                     for i in 0..outputs {
                         copy_slice.push(MonoidalOp::Copy {
-                            copies: part.get(&i).map(|x| x.len()).unwrap_or(0),
+                            copies: part.get(&PortIndex(i)).map(|x| x.len()).unwrap_or(0),
                         })
                     }
                     rank.remove(&node);

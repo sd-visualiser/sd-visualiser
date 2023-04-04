@@ -1,0 +1,53 @@
+---
+source: sd-core/src/graph.rs
+assertion_line: 305
+expression: graph
+---
+Hypergraph {
+    nodes: [
+        (
+            NodeIndex(
+                0,
+            ),
+            Input,
+        ),
+        (
+            NodeIndex(
+                1,
+            ),
+            Passive(
+                Int(
+                    1,
+                ),
+            ),
+        ),
+        (
+            NodeIndex(
+                2,
+            ),
+            Output,
+        ),
+    ],
+    edges: [
+        (
+            Port {
+                node: NodeIndex(
+                    1,
+                ),
+                index: PortIndex(
+                    0,
+                ),
+            },
+            {
+                Port {
+                    node: NodeIndex(
+                        2,
+                    ),
+                    index: PortIndex(
+                        0,
+                    ),
+                },
+            },
+        ),
+    ],
+}

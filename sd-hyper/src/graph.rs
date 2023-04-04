@@ -5,16 +5,31 @@ use thiserror::Error;
 use crate::concat_iter::concat_iter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct NodeIndex(usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PortIndex(pub usize);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Port {
-    pub node: usize,
-    pub index: usize,
+    pub node: NodeIndex,
+    pub index: PortIndex,
+}
+
+impl From<(usize, usize)> for Port {
+    fn from(value: (usize, usize)) -> Self {
+        Port {
+            node: NodeIndex(value.0),
+            index: PortIndex(value.1),
+        }
+    }
 }
 
 #[derive(Debug, Error)]
 pub enum HyperGraphError {
-    #[error("No node at index `{0}`")]
-    UnknownNode(usize),
-    #[error("Node `{}` has no port `{}`", .0.node, .0.index)]
+    #[error("No node at index `{0:?}`")]
+    UnknownNode(NodeIndex),
+    #[error("Node `{:?}` has no port `{:?}`", .0.node, .0.index)]
     UnknownPort(Port),
 }
 
@@ -43,23 +58,20 @@ impl<E> Graph<E> {
         data: E,
         inputs: Vec<Port>,
         output_ports: usize,
-    ) -> Result<usize, HyperGraphError> {
+    ) -> Result<NodeIndex, HyperGraphError> {
         let next_node = self.nodes.vacant_key();
 
         for (i, port @ Port { node, index }) in inputs.iter().enumerate() {
             let input = self
                 .nodes
-                .get_mut(*node)
+                .get_mut(node.0)
                 .ok_or(HyperGraphError::UnknownNode(*node))?;
 
             let port_set = input
                 .outputs
-                .get_mut(*index)
+                .get_mut(index.0)
                 .ok_or(HyperGraphError::UnknownPort(*port))?;
-            port_set.insert(Port {
-                node: next_node,
-                index: i,
-            });
+            port_set.insert((next_node, i).into());
         }
 
         let outputs = vec![BTreeSet::new(); output_ports];
@@ -72,41 +84,43 @@ impl<E> Graph<E> {
 
         let idx = self.nodes.insert(info);
 
-        Ok(idx)
+        Ok(NodeIndex(idx))
     }
 
-    fn get_info(&self, key: usize) -> Result<&NodeInfo<E>, HyperGraphError> {
-        self.nodes.get(key).ok_or(HyperGraphError::UnknownNode(key))
+    fn get_info(&self, key: NodeIndex) -> Result<&NodeInfo<E>, HyperGraphError> {
+        self.nodes
+            .get(key.0)
+            .ok_or(HyperGraphError::UnknownNode(key))
     }
 
-    pub fn get(&self, key: usize) -> Result<&E, HyperGraphError> {
+    pub fn get(&self, key: NodeIndex) -> Result<&E, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(&info.data)
     }
 
     pub fn get_outputs(
         &self,
-        key: usize,
+        key: NodeIndex,
     ) -> Result<impl Iterator<Item = &BTreeSet<Port>>, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.outputs.iter())
     }
 
-    pub fn number_of_outputs(&self, key: usize) -> Result<usize, HyperGraphError> {
+    pub fn number_of_outputs(&self, key: NodeIndex) -> Result<usize, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.outputs.len())
     }
 
     pub fn input_ports(
         &self,
-        key: usize,
+        key: NodeIndex,
     ) -> Result<impl Iterator<Item = Port> + '_, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.inputs.iter().copied())
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = (usize, &E)> {
-        self.nodes.iter().map(|(x, d)| (x, &d.data))
+    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &E)> {
+        self.nodes.iter().map(|(x, d)| (NodeIndex(x), &d.data))
     }
 
     pub fn edges(&self) -> impl Iterator<Item = (Port, &BTreeSet<Port>)> {
@@ -114,15 +128,18 @@ impl<E> Graph<E> {
             d.outputs
                 .iter()
                 .enumerate()
-                .map(move |(index, targets)| (Port { node, index }, targets))
+                .map(move |(index, targets)| ((node, index).into(), targets))
         }))
     }
 
-    pub fn ranks_from_end(&self) -> Vec<BTreeSet<usize>> {
-        let mut nodes: BTreeSet<(usize, &Vec<BTreeSet<Port>>)> =
-            self.nodes.iter().map(|(x, d)| (x, &d.outputs)).collect();
-        let mut ranks: Vec<BTreeSet<usize>> = vec![];
-        let mut collected: BTreeSet<usize> = BTreeSet::new();
+    pub fn ranks_from_end(&self) -> Vec<BTreeSet<NodeIndex>> {
+        let mut nodes: BTreeSet<(NodeIndex, &Vec<BTreeSet<Port>>)> = self
+            .nodes
+            .iter()
+            .map(|(x, d)| (NodeIndex(x), &d.outputs))
+            .collect();
+        let mut ranks: Vec<BTreeSet<NodeIndex>> = vec![];
+        let mut collected: BTreeSet<NodeIndex> = BTreeSet::new();
 
         while !nodes.is_empty() {
             let mut next_rank = BTreeSet::new();
