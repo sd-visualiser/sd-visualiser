@@ -2,7 +2,7 @@ use eframe::{
     egui, emath,
     epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
 };
-use sd_core::examples;
+use sd_core::{examples, language, monoidal::MonoidalGraph};
 
 use crate::highlighter;
 
@@ -41,8 +41,12 @@ impl App {
     }
 
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
-        // TODO(calintat): Replace when the translation is ready.
-        let graph = examples::thunk().unfold();
+        let block = || {
+            let expr = language::grammar::parse(&self.code).ok()?;
+            let hypergraph = expr.to_hypergraph().ok()?;
+            MonoidalGraph::from_hypergraph(&hypergraph).ok()
+        };
+        let Some(graph) = block() else { return };
 
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height()),
