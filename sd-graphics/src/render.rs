@@ -29,7 +29,7 @@ pub enum RenderError {
 pub fn render(
     graph: MonoidalGraph,
     bounds: Vec2,
-    transform: RectTransform,
+    to_screen: RectTransform,
 ) -> Result<Vec<Shape>, RenderError> {
     let len = graph.slices.len();
     let layout = layout(&graph)?;
@@ -38,65 +38,49 @@ pub fn render(
     let height = len as f32 + 1.0;
 
     // Scale by a constant and translate to the centre of the bounding box.
-    let transform = |pos: Pos2| {
-        transform.transform_pos(Pos2 {
-            x: pos.x * SCALE + (bounds.x - width * SCALE) / 2.0,
-            y: pos.y * SCALE + (bounds.y - height * SCALE) / 2.0,
-        })
+    let pos2 = |x: f32, y: f32| {
+        to_screen.transform_pos(Pos2::new(
+            x * SCALE + (bounds.x - width * SCALE) / 2.0,
+            y * SCALE + (bounds.y - height * SCALE) / 2.0,
+        ))
     };
 
     let mut shapes: Vec<Shape> = Vec::new();
 
     // Source
     for &x in layout.slices.first().unwrap() {
-        let start = transform(Pos2 {
-            x: x as f32,
-            y: 0.0,
-        });
-        let end = transform(Pos2 {
-            x: x as f32,
-            y: 0.5,
-        });
+        let start = pos2(x as f32, 0.0);
+        let end = pos2(x as f32, 0.5);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     // Target
     for &x in layout.slices.last().unwrap() {
-        let start = transform(Pos2 {
-            x: x as f32,
-            y: len as f32 + 0.5,
-        });
-        let end = transform(Pos2 {
-            x: x as f32,
-            y: len as f32 + 1.0,
-        });
+        let start = pos2(x as f32, len as f32 + 0.5);
+        let end = pos2(x as f32, len as f32 + 1.0);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
-    for (y, slice) in graph.slices.iter().enumerate() {
+    for (j, slice) in graph.slices.iter().enumerate() {
         let mut offset_i = 0;
         let mut offset_o = 0;
         for (op, _) in slice.ops.iter() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
-            let input_wires = &layout.slices[y][offset_i..offset_i + ni];
-            let output_wires = &layout.slices[y + 1][offset_o..offset_o + no];
+            let input_wires = &layout.slices[j][offset_i..offset_i + ni];
+            let output_wires = &layout.slices[j + 1][offset_o..offset_o + no];
 
-            // Find the horizontal range that this operation covers.
-            let (&min_x, &max_x) = input_wires
-                .iter()
-                .chain(output_wires)
-                .minmax_by(|x, y| x.partial_cmp(y).unwrap())
-                .into_option()
-                .expect("Scalars are not allowed!");
+            let op_y = j as f32 + 1.0;
+            let input_y = j as f32 + 0.5;
+            let output_y = j as f32 + 1.5;
 
             match op {
                 MonoidalOp::Swap => {
-                    let start_l = transform(Pos2::new(input_wires[0] as f32, y as f32 + 0.5));
-                    let start_r = transform(Pos2::new(input_wires[1] as f32, y as f32 + 0.5));
-                    let end_l = transform(Pos2::new(output_wires[0] as f32, y as f32 + 1.5));
-                    let end_r = transform(Pos2::new(output_wires[1] as f32, y as f32 + 1.5));
+                    let start_l = pos2(input_wires[0] as f32, input_y);
+                    let start_r = pos2(input_wires[1] as f32, input_y);
+                    let end_l = pos2(output_wires[0] as f32, output_y);
+                    let end_r = pos2(output_wires[1] as f32, output_y);
 
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(start_l, end_r),
@@ -112,16 +96,18 @@ pub fn render(
                     )));
                 }
                 _ => {
-                    let center = transform(Pos2 {
-                        x: (min_x + max_x) as f32 / 2.0,
-                        y: y as f32 + 1.0,
-                    });
+                    // Find the horizontal range that this operation covers.
+                    let (&min_x, &max_x) = input_wires
+                        .iter()
+                        .chain(output_wires)
+                        .minmax_by(|x, y| x.partial_cmp(y).unwrap())
+                        .into_option()
+                        .expect("Scalars are not allowed!");
+
+                    let center = pos2((min_x + max_x) as f32 / 2.0, op_y);
 
                     for &x in input_wires {
-                        let input = transform(Pos2 {
-                            x: x as f32,
-                            y: y as f32 + 0.5,
-                        });
+                        let input = pos2(x as f32, input_y);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
                             false,
@@ -131,10 +117,7 @@ pub fn render(
                     }
 
                     for &x in output_wires {
-                        let output = transform(Pos2 {
-                            x: x as f32,
-                            y: y as f32 + 1.5,
-                        });
+                        let output = pos2(x as f32, output_y);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
                             false,
