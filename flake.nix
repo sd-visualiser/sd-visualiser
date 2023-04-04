@@ -45,6 +45,7 @@
                       nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
                         trunk
                         wasm-bindgen-cli
+                        cbc
                       ]);
                     };
                   };
