@@ -99,9 +99,9 @@ impl Display for grammar::PassiveOp {
 
 pub const HIGHLIGHT_QUERY: &str = include_str!("../../highlights.scm");
 
-pub fn highlight(source: &str) -> Vec<tree_sitter_highlight::HighlightEvent> {
-    use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
+use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
 
+pub fn highlighter_config() -> HighlightConfiguration {
     let highlight_names = &[
         "keyword",
         "operator",
@@ -118,8 +118,15 @@ pub fn highlight(source: &str) -> Vec<tree_sitter_highlight::HighlightEvent> {
     )
     .unwrap();
     config.configure(highlight_names);
+    config
+}
+
+pub fn highlight(
+    config: &HighlightConfiguration,
+    source: &str,
+) -> Vec<tree_sitter_highlight::HighlightEvent> {
     Highlighter::new()
-        .highlight(&config, source.as_bytes(), None, |_| None)
+        .highlight(config, source.as_bytes(), None, |_| None)
         .unwrap()
         .collect::<Result<Vec<_>, _>>()
         .unwrap()

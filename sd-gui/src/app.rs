@@ -4,7 +4,7 @@ use eframe::{
 };
 use sd_core::{language, monoidal::MonoidalGraph};
 
-use crate::highlighter;
+use crate::highlighter::Highlighter;
 
 #[derive(Default)]
 pub struct App {
@@ -29,7 +29,7 @@ impl App {
 
     fn code_ui(&mut self, ui: &mut egui::Ui) {
         let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
-            let mut layout_job = highlighter::highlight(source);
+            let mut layout_job = Highlighter::highlight(ui.ctx(), source);
             layout_job.wrap.max_width = wrap_width;
             ui.fonts(|f| f.layout_job(layout_job))
         };
