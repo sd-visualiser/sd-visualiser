@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 use itertools::{concat, Itertools};
 use sd_hyper::graph::{GraphNode, HyperGraphError, NodeIndex, Port, PortIndex};
@@ -177,31 +177,18 @@ impl MonoidalGraph {
 
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
         let (ranks, input_wires, output_wires) = {
-            let mut r = graph.ranks_from_end();
-            let mut inputs: BTreeSet<NodeIndex> = BTreeSet::new();
-            let mut input_wires: usize = 0;
-            let mut output_wires: Vec<Port> = Vec::new();
-            for x in r.iter_mut() {
-                let items = x
-                    .iter()
-                    .map(|x| {
-                        let e = graph.get(*x)?;
-                        Ok((*x, e))
-                    })
-                    .collect::<Result<Vec<(NodeIndex, &GraphNode<Op>)>, FromHyperError>>()?;
+            let (inputs, r, outputs) = graph.ranks_from_end();
 
-                for (y, _) in items.iter().filter(|(_, e)| e.is_input()) {
-                    inputs.insert(*y);
-                    input_wires += graph.number_of_outputs(*y)?;
-                    x.remove(y);
-                }
+            let input_wires = inputs
+                .iter()
+                .map(|x| graph.number_of_outputs(*x).expect("Oh no"))
+                .sum();
 
-                for (y, _) in items.iter().filter(|(_, e)| e.is_output()) {
-                    output_wires.extend(graph.input_ports(*y)?);
-                    x.remove(y);
-                }
-            }
-            r.push(inputs);
+            let output_wires = outputs
+                .iter()
+                .map(|x| graph.input_ports(*x).expect("Oh no").collect_vec())
+                .concat();
+
             (r, input_wires, output_wires)
         };
 

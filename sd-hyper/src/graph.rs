@@ -1,5 +1,8 @@
 use slab::Slab;
-use std::{collections::BTreeSet, fmt::Debug};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Debug,
+};
 use thiserror::Error;
 
 use crate::concat_iter::concat_iter;
@@ -154,31 +157,46 @@ impl<E> Graph<E> {
         }))
     }
 
-    pub fn ranks_from_end(&self) -> Vec<BTreeSet<NodeIndex>> {
-        let mut nodes: BTreeSet<(NodeIndex, &Vec<BTreeSet<Port>>)> = self
-            .nodes
+    pub fn ranks_from_end(
+        &self,
+    ) -> (
+        BTreeSet<NodeIndex>,
+        Vec<BTreeSet<NodeIndex>>,
+        BTreeSet<NodeIndex>,
+    ) {
+        let mut nodes: BTreeMap<NodeIndex, &NodeInfo<E>> =
+            self.nodes.iter().map(|(x, d)| (NodeIndex(x), d)).collect();
+
+        let inputs: BTreeSet<NodeIndex> = nodes
             .iter()
-            .map(|(x, d)| (NodeIndex(x), &d.outputs))
+            .filter_map(|(x, d)| if d.data.is_input() { Some(*x) } else { None })
             .collect();
+        let outputs: BTreeSet<NodeIndex> = nodes
+            .iter()
+            .filter_map(|(x, d)| if d.data.is_output() { Some(*x) } else { None })
+            .collect();
+
+        nodes.retain(|x, _| !inputs.contains(x) && !outputs.contains(x));
+
         let mut ranks: Vec<BTreeSet<NodeIndex>> = vec![];
-        let mut collected: BTreeSet<NodeIndex> = BTreeSet::new();
+        let mut collected: BTreeSet<NodeIndex> = outputs.clone();
 
         while !nodes.is_empty() {
             let mut next_rank = BTreeSet::new();
             for (n, o) in nodes.iter() {
-                if concat_iter(o.iter().map(|x| x.iter().map(|y| y.node)))
+                if concat_iter(o.outputs.iter().map(|x| x.iter().map(|y| y.node)))
                     .all(|z| collected.contains(&z))
                 {
                     collected.insert(*n);
                     next_rank.insert(*n);
                 }
             }
-            nodes.retain(|x| !next_rank.contains(&x.0));
+            nodes.retain(|x, _| !next_rank.contains(x));
 
             ranks.push(next_rank);
         }
 
-        ranks
+        (inputs, ranks, outputs)
     }
 }
 
