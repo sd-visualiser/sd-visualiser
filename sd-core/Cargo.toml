@@ -3,21 +3,21 @@ name = "sd-core"
 version = "0.1.0"
 authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "BSD-3-Clause"
+repository = "https://github.com/calintat/sd-visualiser"
 
 [dependencies]
+itertools = "0.10.5"
 rust-sitter = "0.3.2"
-tree-sitter-highlight = "0.20.1"
 sd-hyper = { path = "../sd-hyper" }
 thiserror = "1.0.40"
-anyhow = "1.0.70"
-itertools = "0.10.5"
+tree-sitter-highlight = "0.20.1"
 
 [build-dependencies]
 rust-sitter-tool = "0.3.2"
 
 [dev-dependencies]
+anyhow = "1.0.70"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 insta = "1.29.0"
 rstest = "0.17.0"
