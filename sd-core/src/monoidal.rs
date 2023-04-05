@@ -12,6 +12,16 @@ pub struct Slice {
     pub ops: Vec<(MonoidalOp, Vec<NodeIndex>)>,
 }
 
+impl Slice {
+    pub fn number_of_inputs(&self) -> usize {
+        self.ops.iter().map(|(op, _)| op.number_of_inputs()).sum()
+    }
+
+    pub fn number_of_outputs(&self) -> usize {
+        self.ops.iter().map(|(op, _)| op.number_of_outputs()).sum()
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Default, Hash)]
 pub struct MonoidalGraph {
     pub inputs: usize,

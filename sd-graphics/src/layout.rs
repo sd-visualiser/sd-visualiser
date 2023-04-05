@@ -1,4 +1,5 @@
 use good_lp::{variable, Expression, ResolutionError, Solution};
+use itertools::Itertools;
 use sd_core::monoidal::MonoidalGraph;
 use thiserror::Error;
 
@@ -10,110 +11,92 @@ pub enum LayoutError {
     ResolutionError(#[from] ResolutionError),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Layout {
-    pub width: f64,
-    pub slices: Vec<Vec<f64>>,
+    pub min: f64,
+    pub max: f64,
+    pub nodes: Vec<Vec<f64>>,
+    pub wires: Vec<Vec<f64>>,
 }
 
 pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
-    let width = problem.add_variable(variable().min(0.0));
-    let mut slices = vec![problem.add_variables(variable().min(0.0), graph.inputs)];
+    // STEP 1. Generate variables for each layer.
+    let min = problem.add_variable(variable().min(0.0));
+    let max = problem.add_variable(variable().min(0.0));
 
-    // Distance constraints
-    for xs in slices[0].windows(2) {
-        problem.add_constraint((xs[1] - xs[0]).geq(1.0));
+    let mut nodes = Vec::default();
+    let mut wires = Vec::default();
+
+    let mut mk_variables = |len| {
+        let variables = problem.add_variables(variable().min(0.0), len);
+        for (x, y) in std::iter::once(min)
+            .chain(variables.iter().copied())
+            .chain(std::iter::once(max))
+            .tuple_windows()
+        {
+            problem.add_constraint((y - x).geq(1.0));
+        }
+        variables
+    };
+
+    wires.push(mk_variables(graph.inputs));
+    for slice in &graph.slices {
+        nodes.push(mk_variables(slice.ops.len()));
+        wires.push(mk_variables(slice.number_of_outputs()));
     }
 
-    // Width constraints
-    if let Some(x) = slices[0].last().copied() {
-        problem.add_constraint((width - x).geq(0.0));
-    }
-
-    for (i, slice) in graph.slices.iter().enumerate() {
-        let mut prev_in = None;
-        let mut prev_out = None;
-
-        let mut offset = 0;
-        let mut outputs = Vec::new();
-
-        for (op, _) in &slice.ops {
+    // STEP 2. Add constraints between layers.
+    for (j, slice) in graph.slices.iter().enumerate() {
+        let mut offset_i = 0;
+        let mut offset_o = 0;
+        for (i, (op, _)) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
-            let local_inputs = &slices[i][offset..offset + ni];
-            let local_outputs = problem.add_variables(variable().min(0.0), no);
-
-            // Distance constraints
-            for xs in local_outputs.windows(2) {
-                problem.add_constraint((xs[1] - xs[0]).geq(1.0));
-            }
-            if let Some(y) = local_inputs.first().copied() {
-                if let Some(x) = prev_out {
-                    problem.add_constraint((y - x).geq(1.0));
-                }
-            }
-            if let Some(y) = local_outputs.first().copied() {
-                if let Some(x) = prev_in {
-                    problem.add_constraint((y - x).geq(1.0));
-                }
-                if let Some(x) = prev_out {
-                    problem.add_constraint((y - x).geq(1.0));
-                }
-            }
+            let op = nodes[j][i];
+            let ins = &wires[j][offset_i..offset_i + ni];
+            let outs = &wires[j + 1][offset_o..offset_o + no];
 
             // Fair averaging constraints
-            let sum_i: Expression = local_inputs.iter().sum();
-            let sum_o: Expression = local_outputs.iter().sum();
-            problem.add_constraint((sum_i * no as f64 - sum_o * ni as f64).eq(0.0));
+            let sum_ins: Expression = ins.iter().sum();
+            let sum_outs: Expression = outs.iter().sum();
+            problem.add_constraint((op * ni as f64 - sum_ins).eq(0.0));
+            problem.add_constraint((op * no as f64 - sum_outs).eq(0.0));
 
-            prev_in = local_inputs.last().copied();
-            prev_out = local_outputs.last().copied();
-
-            offset += ni;
-            outputs.push(local_outputs);
-        }
-
-        slices.push(outputs.concat());
-
-        // Width constraints
-        if let Some(x) = slices[i + 1].last().copied() {
-            problem.add_constraint((width - x).geq(0.0));
+            offset_i += ni;
+            offset_o += no;
         }
     }
 
-    let solution = problem.minimise(width, good_lp::default_solver)?;
+    let solution = problem.minimise(max, good_lp::default_solver)?;
 
     Ok(Layout {
-        width: solution.value(width),
-        slices: slices
+        min: solution.value(min),
+        max: solution.value(max),
+        nodes: nodes
             .into_iter()
-            .map(|xs| xs.into_iter().map(|x| solution.value(x)).collect())
+            .map(|vs| vs.into_iter().map(|v| solution.value(v)).collect())
+            .collect(),
+        wires: wires
+            .into_iter()
+            .map(|vs| vs.into_iter().map(|v| solution.value(v)).collect())
             .collect(),
     })
 }
 
 #[cfg(test)]
 mod tests {
+    use insta::assert_debug_snapshot;
     use sd_core::examples;
 
     use super::layout;
 
     #[test]
     fn copy() {
-        let layout = layout(&examples::copy()).expect("Layout failed");
-        assert_eq!(layout.width, 3.0);
-        assert_eq!(
-            layout.slices,
-            vec![
-                vec![1.25, 3.0],
-                vec![0.5, 2.0, 3.0],
-                vec![0.0, 1.0, 2.0, 3.0]
-            ]
-        );
+        assert_debug_snapshot!(layout(&examples::copy()).expect("Layout failed"));
     }
 }
