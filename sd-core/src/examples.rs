@@ -7,13 +7,13 @@ pub fn copy() -> MonoidalGraph {
     use MonoidalOp::*;
 
     MonoidalGraph {
-        inputs: 2,
+        inputs: 1,
         slices: vec![
             Slice {
-                ops: vec![(Copy { copies: 2 }, vec![]), ID],
+                ops: vec![(Copy { copies: 2 }, vec![])],
             },
             Slice {
-                ops: vec![(Copy { copies: 2 }, vec![]), ID, ID],
+                ops: vec![(Copy { copies: 2 }, vec![]), ID],
             },
         ],
     }

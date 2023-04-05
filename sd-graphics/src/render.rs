@@ -3,7 +3,6 @@ use epaint::{
     vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, RectShape, Rounding, Shape,
     Stroke, Vec2,
 };
-use itertools::Itertools;
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 
 use crate::layout::Layout;
@@ -29,13 +28,14 @@ pub fn render(
 ) -> Vec<Shape> {
     let len = graph.slices.len();
 
-    let width = layout.width as f32;
+    let min_x = layout.min as f32;
+    let max_x = layout.max as f32;
     let height = len as f32 + 1.0;
 
     // Scale by a constant and translate to the centre of the bounding box.
     let pos2 = |x: f32, y: f32| {
         to_screen.transform_pos(Pos2::new(
-            x * SCALE + (bounds.x - width * SCALE) / 2.0,
+            (x - min_x) * SCALE + (bounds.x - (max_x - min_x) * SCALE) / 2.0,
             y * SCALE + (bounds.y - height * SCALE) / 2.0,
         ))
     };
@@ -43,14 +43,14 @@ pub fn render(
     let mut shapes: Vec<Shape> = Vec::new();
 
     // Source
-    for &x in layout.slices.first().unwrap() {
+    for &x in layout.wires.first().unwrap() {
         let start = pos2(x as f32, 0.0);
         let end = pos2(x as f32, 0.5);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     // Target
-    for &x in layout.slices.last().unwrap() {
+    for &x in layout.wires.last().unwrap() {
         let start = pos2(x as f32, len as f32 + 0.5);
         let end = pos2(x as f32, len as f32 + 1.0);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
@@ -59,50 +59,43 @@ pub fn render(
     for (j, slice) in graph.slices.iter().enumerate() {
         let mut offset_i = 0;
         let mut offset_o = 0;
-        for (op, _) in slice.ops.iter() {
+        for (i, (op, _)) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
-            let input_wires = &layout.slices[j][offset_i..offset_i + ni];
-            let output_wires = &layout.slices[j + 1][offset_o..offset_o + no];
+            let x_op = layout.nodes[j][i];
+            let x_ins = &layout.wires[j][offset_i..offset_i + ni];
+            let x_outs = &layout.wires[j + 1][offset_o..offset_o + no];
 
-            let op_y = j as f32 + 1.0;
-            let input_y = j as f32 + 0.5;
-            let output_y = j as f32 + 1.5;
+            let y_op = j as f32 + 1.0;
+            let y_in = j as f32 + 0.5;
+            let y_out = j as f32 + 1.5;
 
             match op {
                 MonoidalOp::Swap => {
-                    let start_l = pos2(input_wires[0] as f32, input_y);
-                    let start_r = pos2(input_wires[1] as f32, input_y);
-                    let end_l = pos2(output_wires[0] as f32, output_y);
-                    let end_r = pos2(output_wires[1] as f32, output_y);
+                    let in1 = pos2(x_ins[0] as f32, y_in);
+                    let in2 = pos2(x_ins[1] as f32, y_in);
+                    let out1 = pos2(x_outs[0] as f32, y_out);
+                    let out2 = pos2(x_outs[1] as f32, y_out);
 
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
-                        vertical_out_vertical_in(start_l, end_r),
+                        vertical_out_vertical_in(in1, out2),
                         false,
                         Color32::TRANSPARENT,
                         default_stroke(),
                     )));
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
-                        vertical_out_vertical_in(start_r, end_l),
+                        vertical_out_vertical_in(in2, out1),
                         false,
                         Color32::TRANSPARENT,
                         default_stroke(),
                     )));
                 }
                 _ => {
-                    // Find the horizontal range that this operation covers.
-                    let (&min_x, &max_x) = input_wires
-                        .iter()
-                        .chain(output_wires)
-                        .minmax_by(|x, y| x.partial_cmp(y).unwrap())
-                        .into_option()
-                        .expect("Scalars are not allowed!");
+                    let center = pos2(x_op as f32, y_op);
 
-                    let center = pos2((min_x + max_x) as f32 / 2.0, op_y);
-
-                    for &x in input_wires {
-                        let input = pos2(x as f32, input_y);
+                    for &x in x_ins {
+                        let input = pos2(x as f32, y_in);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
                             false,
@@ -111,8 +104,8 @@ pub fn render(
                         )));
                     }
 
-                    for &x in output_wires {
-                        let output = pos2(x as f32, output_y);
+                    for &x in x_outs {
+                        let output = pos2(x as f32, y_out);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
                             false,

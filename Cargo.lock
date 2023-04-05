@@ -2099,6 +2099,7 @@ dependencies = [
  "cargo-husky",
  "epaint",
  "good_lp",
+ "insta",
  "itertools",
  "sd-core",
  "thiserror",
