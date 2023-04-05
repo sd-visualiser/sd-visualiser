@@ -1,6 +1,7 @@
 use epaint::{
-    emath::RectTransform, vec2, CircleShape, Color32, CubicBezierShape, Pos2, Rect, RectShape,
-    Rounding, Shape, Stroke, Vec2,
+    emath::{Align2, RectTransform},
+    vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, RectShape, Rounding, Shape,
+    Stroke, Vec2,
 };
 use itertools::Itertools;
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
@@ -28,6 +29,7 @@ pub enum RenderError {
 
 pub fn render(
     graph: MonoidalGraph,
+    fonts: &Fonts,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Result<Vec<Shape>, RenderError> {
@@ -133,12 +135,22 @@ pub fn render(
                         MonoidalOp::Unit => {
                             shapes.push(Shape::circle_filled(center, RADIUS_UNIT, Color32::BLACK))
                         }
-                        MonoidalOp::Operation { .. } => shapes.push(Shape::Circle(CircleShape {
-                            center,
-                            radius: RADIUS_OPERATION,
-                            fill: Color32::WHITE,
-                            stroke: default_stroke(),
-                        })),
+                        MonoidalOp::Operation { op_name, .. } => {
+                            shapes.push(Shape::Circle(CircleShape {
+                                center,
+                                radius: RADIUS_OPERATION,
+                                fill: Color32::WHITE,
+                                stroke: default_stroke(),
+                            }));
+                            shapes.push(Shape::text(
+                                fonts,
+                                center,
+                                Align2::CENTER_CENTER,
+                                op_name,
+                                Default::default(),
+                                Color32::BLACK,
+                            ))
+                        }
                         MonoidalOp::Thunk { .. } => shapes.push(Shape::Rect(RectShape {
                             rect: Rect::from_center_size(center, BOX_SIZE),
                             rounding: Rounding::none(),

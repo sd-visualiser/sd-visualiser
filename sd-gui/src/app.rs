@@ -65,8 +65,9 @@ impl App {
             Rounding::none(),
             Color32::WHITE,
         ));
-        painter
-            .extend(sd_graphics::render::render(graph, response.rect.size(), to_screen).unwrap());
+        painter.extend(ui.fonts(|fonts| {
+            sd_graphics::render::render(graph, fonts, response.rect.size(), to_screen).unwrap()
+        }));
     }
 }
 
