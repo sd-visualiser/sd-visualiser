@@ -1,8 +1,8 @@
-use good_lp::{
-    variable, Constraint, Expression, ProblemVariables, ResolutionError, Solution, SolverModel,
-};
+use good_lp::{variable, Expression, ResolutionError, Solution};
 use sd_core::monoidal::MonoidalGraph;
 use thiserror::Error;
+
+use crate::lp::LpProblem;
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
@@ -17,20 +17,19 @@ pub struct Layout {
 }
 
 pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
-    let mut problem = ProblemVariables::new();
-    let mut constraints = Vec::<Constraint>::new();
+    let mut problem = LpProblem::default();
 
-    let width = problem.add(variable().min(0.0));
-    let mut slices = vec![problem.add_vector(variable().min(0.0), graph.inputs)];
+    let width = problem.add_variable(variable().min(0.0));
+    let mut slices = vec![problem.add_variables(variable().min(0.0), graph.inputs)];
 
     // Distance constraints
     for xs in slices[0].windows(2) {
-        constraints.push((xs[1] - xs[0]).geq(1.0));
+        problem.add_constraint((xs[1] - xs[0]).geq(1.0));
     }
 
     // Width constraints
     if let Some(x) = slices[0].last().copied() {
-        constraints.push((width - x).geq(0.0));
+        problem.add_constraint((width - x).geq(0.0));
     }
 
     for (i, slice) in graph.slices.iter().enumerate() {
@@ -47,30 +46,30 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
             let local_inputs = &slices[i][offset..offset + ni];
-            let local_outputs = problem.add_vector(variable().min(0.0), no);
+            let local_outputs = problem.add_variables(variable().min(0.0), no);
 
             // Distance constraints
             for xs in local_outputs.windows(2) {
-                constraints.push((xs[1] - xs[0]).geq(1.0));
+                problem.add_constraint((xs[1] - xs[0]).geq(1.0));
             }
             if let Some(y) = local_inputs.first().copied() {
                 if let Some(x) = prev_out {
-                    constraints.push((y - x).geq(1.0));
+                    problem.add_constraint((y - x).geq(1.0));
                 }
             }
             if let Some(y) = local_outputs.first().copied() {
                 if let Some(x) = prev_in {
-                    constraints.push((y - x).geq(1.0));
+                    problem.add_constraint((y - x).geq(1.0));
                 }
                 if let Some(x) = prev_out {
-                    constraints.push((y - x).geq(1.0));
+                    problem.add_constraint((y - x).geq(1.0));
                 }
             }
 
             // Fair averaging constraints
             let sum_i: Expression = local_inputs.iter().sum();
             let sum_o: Expression = local_outputs.iter().sum();
-            constraints.push((sum_i * no as f64 - sum_o * ni as f64).eq(0.0));
+            problem.add_constraint((sum_i * no as f64 - sum_o * ni as f64).eq(0.0));
 
             prev_in = local_inputs.last().copied();
             prev_out = local_outputs.last().copied();
@@ -83,16 +82,11 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
 
         // Width constraints
         if let Some(x) = slices[i + 1].last().copied() {
-            constraints.push((width - x).geq(0.0));
+            problem.add_constraint((width - x).geq(0.0));
         }
     }
 
-    let mut model = problem.minimise(width).using(good_lp::default_solver);
-    for c in constraints {
-        model.add_constraint(c);
-    }
-
-    let solution = model.solve()?;
+    let solution = problem.minimise(width, good_lp::default_solver)?;
 
     Ok(Layout {
         width: solution.value(width),
