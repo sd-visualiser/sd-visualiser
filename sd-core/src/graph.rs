@@ -1,27 +1,48 @@
-use std::collections::{BTreeSet, HashMap};
+use std::{
+    collections::{BTreeSet, HashMap},
+    fmt::Display,
+};
 use thiserror::Error;
 
 use crate::language::grammar::{ActiveOp, Expr, PassiveOp, Term, Thunk, Value, Variable};
-use sd_hyper::graph::{Graph, HyperGraphError, Port, PortIndex};
+use sd_hyper::graph::{Graph, GraphNode, HyperGraphError, Port, PortIndex};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq)]
 pub enum Op {
     Passive(PassiveOp),
     Active(ActiveOp),
-    Input,
-    Output,
-    Thunk { args: usize, body: Box<HyperGraph> },
 }
 
-impl Op {
-    pub fn is_input(&self) -> bool {
-        matches!(self, Op::Input)
-    }
-
-    pub fn is_output(&self) -> bool {
-        matches!(self, Op::Output)
+impl Display for Op {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Active(op) => op.fmt(f),
+            Self::Passive(op) => op.fmt(f),
+        }
     }
 }
+
+impl From<PassiveOp> for Op {
+    fn from(p: PassiveOp) -> Self {
+        Op::Passive(p)
+    }
+}
+
+impl From<ActiveOp> for Op {
+    fn from(a: ActiveOp) -> Self {
+        Op::Active(a)
+    }
+}
+
+// impl Op {
+//     pub fn is_input(&self) -> bool {
+//         matches!(self, Op::Input)
+//     }
+
+//     pub fn is_output(&self) -> bool {
+//         matches!(self, Op::Output)
+//     }
+// }
 
 pub type HyperGraph = Graph<Op>;
 
@@ -65,7 +86,7 @@ impl Expr {
 
         let mut graph = HyperGraph::new();
 
-        let input_node = graph.add_node(Op::Input, vec![], inputs.len())?;
+        let input_node = graph.add_node(GraphNode::Input, vec![], inputs.len())?;
 
         for (i, var) in inputs.into_iter().enumerate() {
             mapping.insert(
@@ -90,7 +111,7 @@ impl Expr {
         match self {
             Expr::Val(v) => {
                 let port = v.process(graph, mapping)?;
-                graph.add_node(Op::Output, vec![port], 0)?;
+                graph.add_node(GraphNode::Output, vec![port], 0)?;
             }
             Expr::Bind(_, var, _, term, _, expr) => {
                 let port = term.process(graph, mapping)?;
@@ -127,7 +148,7 @@ impl Term {
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
                 }
-                let node = graph.add_node(Op::Active(*op), inputs, 1)?;
+                let node = graph.add_node(GraphNode::w(*op), inputs, 1)?;
                 Ok(Port {
                     node,
                     index: PortIndex(0),
@@ -169,7 +190,7 @@ impl Value {
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
                 }
-                let node = graph.add_node(Op::Passive(*op), inputs, 1)?;
+                let node = graph.add_node(GraphNode::w(*op), inputs, 1)?;
                 Ok(Port {
                     node,
                     index: PortIndex(0),
@@ -216,7 +237,7 @@ impl Thunk {
         let graph_inner = self.body.to_hypergraph_from_inputs(vars_vec)?;
 
         let node = graph.add_node(
-            Op::Thunk {
+            GraphNode::Thunk {
                 args: self.args.len(),
                 body: Box::new(graph_inner),
             },

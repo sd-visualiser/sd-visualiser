@@ -40,8 +40,30 @@ pub struct Graph<E> {
 }
 
 #[derive(Debug, Clone)]
+pub enum GraphNode<E> {
+    Weight(E),
+    Input,
+    Output,
+    Thunk { args: usize, body: Box<Graph<E>> },
+}
+
+impl<E> GraphNode<E> {
+    pub fn w<F: Into<E>>(weight: F) -> Self {
+        GraphNode::Weight(weight.into())
+    }
+
+    pub fn is_input(&self) -> bool {
+        matches!(self, GraphNode::Input)
+    }
+
+    pub fn is_output(&self) -> bool {
+        matches!(self, GraphNode::Output)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct NodeInfo<E> {
-    data: E,
+    data: GraphNode<E>,
     inputs: Vec<Port>,
     outputs: Vec<BTreeSet<Port>>,
 }
@@ -55,7 +77,7 @@ impl<E> Graph<E> {
     /// Adds a new node to a graph with specified node data, a list of ports to obtain inputs from
     pub fn add_node(
         &mut self,
-        data: E,
+        data: GraphNode<E>,
         inputs: Vec<Port>,
         output_ports: usize,
     ) -> Result<NodeIndex, HyperGraphError> {
@@ -93,7 +115,7 @@ impl<E> Graph<E> {
             .ok_or(HyperGraphError::UnknownNode(key))
     }
 
-    pub fn get(&self, key: NodeIndex) -> Result<&E, HyperGraphError> {
+    pub fn get(&self, key: NodeIndex) -> Result<&GraphNode<E>, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(&info.data)
     }
@@ -119,7 +141,7 @@ impl<E> Graph<E> {
         Ok(info.inputs.iter().copied())
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &E)> {
+    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &GraphNode<E>)> {
         self.nodes.iter().map(|(x, d)| (NodeIndex(x), &d.data))
     }
 

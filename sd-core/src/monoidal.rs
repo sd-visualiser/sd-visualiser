@@ -1,16 +1,10 @@
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::Display,
-};
+use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::{concat, Itertools};
-use sd_hyper::graph::{HyperGraphError, NodeIndex, Port, PortIndex};
+use sd_hyper::graph::{GraphNode, HyperGraphError, NodeIndex, Port, PortIndex};
 use thiserror::Error;
 
-use crate::{
-    graph::{HyperGraph, Op},
-    language::grammar::{ActiveOp, PassiveOp},
-};
+use crate::graph::{HyperGraph, Op};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Slice {
@@ -24,27 +18,12 @@ pub struct MonoidalGraph {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Operation {
-    Active(ActiveOp),
-    Passive(PassiveOp),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MonoidalOp {
     Copy { copies: usize },
     Unit,
-    Operation { inputs: usize, op_name: Operation },
+    Operation { inputs: usize, op_name: Op },
     Thunk { args: usize, body: MonoidalGraph },
     Swap,
-}
-
-impl Display for Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Active(op) => op.fmt(f),
-            Self::Passive(op) => op.fmt(f),
-        }
-    }
 }
 
 impl MonoidalOp {
@@ -209,7 +188,7 @@ impl MonoidalGraph {
                         let e = graph.get(*x)?;
                         Ok((*x, e))
                     })
-                    .collect::<Result<Vec<(NodeIndex, &Op)>, FromHyperError>>()?;
+                    .collect::<Result<Vec<(NodeIndex, &GraphNode<Op>)>, FromHyperError>>()?;
 
                 for (y, _) in items.iter().filter(|(_, e)| e.is_input()) {
                     inputs.insert(*y);
@@ -282,23 +261,16 @@ impl MonoidalGraph {
                     let inputs: Vec<_> = graph.input_ports(node)?.collect();
                     let outputs = graph.number_of_outputs(node)?;
                     let ops = match graph.get(node)? {
-                        Op::Passive(p) => vec![(
+                        GraphNode::Weight(w) => vec![(
                             MonoidalOp::Operation {
                                 inputs: inputs.len(),
-                                op_name: Operation::Passive(*p),
+                                op_name: *w,
                             },
                             vec![node],
                         )],
-                        Op::Active(a) => vec![(
-                            MonoidalOp::Operation {
-                                inputs: inputs.len(),
-                                op_name: Operation::Active(*a),
-                            },
-                            vec![node],
-                        )],
-                        Op::Input => vec![ID; outputs],
-                        Op::Output => vec![],
-                        Op::Thunk { args, body } => vec![(
+                        GraphNode::Input => vec![ID; outputs],
+                        GraphNode::Output => vec![],
+                        GraphNode::Thunk { args, body } => vec![(
                             MonoidalOp::Thunk {
                                 args: *args,
                                 body: MonoidalGraph::from_hypergraph(body)?,
@@ -336,23 +308,16 @@ impl MonoidalGraph {
                 let inputs: Vec<_> = graph.input_ports(remaining)?.collect();
                 let outputs = graph.number_of_outputs(remaining)?;
                 let ops = match graph.get(remaining)? {
-                    Op::Passive(p) => vec![(
+                    GraphNode::Weight(w) => vec![(
                         MonoidalOp::Operation {
                             inputs: inputs.len(),
-                            op_name: Operation::Passive(*p),
+                            op_name: *w,
                         },
                         vec![remaining],
                     )],
-                    Op::Active(a) => vec![(
-                        MonoidalOp::Operation {
-                            inputs: inputs.len(),
-                            op_name: Operation::Active(*a),
-                        },
-                        vec![remaining],
-                    )],
-                    Op::Input => vec![ID; outputs],
-                    Op::Output => vec![],
-                    Op::Thunk { args, body } => vec![(
+                    GraphNode::Input => vec![ID; outputs],
+                    GraphNode::Output => vec![],
+                    GraphNode::Thunk { args, body } => vec![(
                         MonoidalOp::Thunk {
                             args: *args,
                             body: MonoidalGraph::from_hypergraph(body)?,

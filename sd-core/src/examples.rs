@@ -1,6 +1,6 @@
 use crate::{
     language::grammar::ActiveOp,
-    monoidal::{self, MonoidalGraph, MonoidalOp, Slice, ID},
+    monoidal::{MonoidalGraph, MonoidalOp, Slice, ID},
 };
 
 pub fn copy() -> MonoidalGraph {
@@ -28,7 +28,7 @@ pub fn thunk() -> MonoidalGraph {
             ops: vec![(
                 Operation {
                     inputs: 2,
-                    op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
+                    op_name: ActiveOp::Plus(()).into(),
                 },
                 vec![],
             )],
@@ -49,7 +49,7 @@ pub fn thunk() -> MonoidalGraph {
                 (
                     Operation {
                         inputs: 2,
-                        op_name: monoidal::Operation::Active(ActiveOp::Plus(())),
+                        op_name: ActiveOp::Plus(()).into(),
                     },
                     vec![],
                 ),
