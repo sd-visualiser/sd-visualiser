@@ -35,7 +35,7 @@ impl App {
         };
         ui.add(
             egui::TextEdit::multiline(&mut self.code)
-                .font(egui::TextStyle::Monospace)
+                .code_editor()
                 .layouter(&mut layouter),
         );
     }
