@@ -3,6 +3,8 @@ name = "sd-gui"
 version = "0.1.0"
 authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
 edition = "2021"
+license = "BSD-3-Clause"
+repository = "https://github.com/calintat/sd-visualiser"
 
 [dependencies]
 eframe = "0.21.3"
