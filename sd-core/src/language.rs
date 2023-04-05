@@ -1,3 +1,5 @@
+use std::fmt::{Display, Write};
+
 #[rust_sitter::grammar("sdlanguage")]
 pub mod grammar {
     #[rust_sitter::language]
@@ -75,6 +77,23 @@ pub mod grammar {
     struct Whitespace {
         #[rust_sitter::leaf(pattern = r"\s")]
         _whitespace: (),
+    }
+}
+
+impl Display for grammar::ActiveOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Plus(()) => f.write_char('+'),
+            Self::Times(()) => f.write_char('x'),
+        }
+    }
+}
+
+impl Display for grammar::PassiveOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Int(n) => f.write_str(&n.to_string()),
+        }
     }
 }
 

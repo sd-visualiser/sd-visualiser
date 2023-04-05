@@ -1,4 +1,7 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    fmt::Display,
+};
 
 use itertools::{concat, Itertools};
 use sd_hyper::graph::{HyperGraphError, NodeIndex, Port, PortIndex};
@@ -33,6 +36,15 @@ pub enum MonoidalOp {
     Operation { inputs: usize, op_name: Operation },
     Thunk { args: usize, body: MonoidalGraph },
     Swap,
+}
+
+impl Display for Operation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Active(op) => op.fmt(f),
+            Self::Passive(op) => op.fmt(f),
+        }
+    }
 }
 
 impl MonoidalOp {
