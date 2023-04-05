@@ -1,6 +1,5 @@
 ---
 source: sd-core/src/graph.rs
-assertion_line: 323
 expression: graph
 ---
 Hypergraph {
@@ -29,9 +28,11 @@ Hypergraph {
                             NodeIndex(
                                 1,
                             ),
-                            Passive(
-                                Int(
-                                    1,
+                            Weight(
+                                Passive(
+                                    Int(
+                                        1,
+                                    ),
                                 ),
                             ),
                         ),
@@ -96,9 +97,11 @@ Hypergraph {
                             NodeIndex(
                                 1,
                             ),
-                            Active(
-                                Plus(
-                                    (),
+                            Weight(
+                                Active(
+                                    Plus(
+                                        (),
+                                    ),
                                 ),
                             ),
                         ),
@@ -178,9 +181,11 @@ Hypergraph {
             NodeIndex(
                 3,
             ),
-            Active(
-                Plus(
-                    (),
+            Weight(
+                Active(
+                    Plus(
+                        (),
+                    ),
                 ),
             ),
         ),
