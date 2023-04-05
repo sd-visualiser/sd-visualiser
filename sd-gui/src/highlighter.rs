@@ -7,6 +7,7 @@ use eframe::{
     epaint::{text::LayoutJob, Color32, Stroke},
 };
 use sd_core::language::{self, highlighter_config};
+use tracing::{event, Level};
 use tree_sitter_highlight::{Highlight, HighlightConfiguration, HighlightEvent};
 
 pub struct Highlighter {
@@ -15,6 +16,7 @@ pub struct Highlighter {
 
 impl ComputerMut<&str, LayoutJob> for Highlighter {
     fn compute(&mut self, source: &str) -> LayoutJob {
+        event!(Level::DEBUG, "Highlighting");
         highlight(&self.config, source)
     }
 }

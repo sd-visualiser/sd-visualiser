@@ -2112,6 +2112,7 @@ dependencies = [
  "eframe",
  "sd-core",
  "sd-graphics",
+ "tracing",
  "tracing-subscriber",
  "tracing-wasm",
  "tree-sitter-highlight",
