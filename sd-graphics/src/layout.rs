@@ -49,6 +49,9 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
 
     // STEP 2. Add constraints between layers.
     for (j, slice) in graph.slices.iter().enumerate() {
+        let mut prev_op = None;
+        let mut prev_in = None;
+        let mut prev_out = None;
         let mut offset_i = 0;
         let mut offset_o = 0;
         for (i, (op, _)) in slice.ops.iter().enumerate() {
@@ -61,11 +64,28 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
             let ins = &wires[j][offset_i..offset_i + ni];
             let outs = &wires[j + 1][offset_o..offset_o + no];
 
+            // Distance constraints
+            let constraints = [
+                (prev_in, Some(op)),
+                (prev_out, Some(op)),
+                (prev_op, ins.first().copied()),
+                (prev_op, outs.first().copied()),
+                (prev_in, outs.first().copied()),
+                (prev_out, ins.first().copied()),
+            ];
+            for (x, y) in constraints.into_iter().filter_map(|(x, y)| x.zip(y)) {
+                problem.add_constraint((y - x).geq(1.0));
+            }
+
             // Fair averaging constraints
             let sum_ins: Expression = ins.iter().sum();
             let sum_outs: Expression = outs.iter().sum();
             problem.add_constraint((op * ni as f64 - sum_ins).eq(0.0));
             problem.add_constraint((op * no as f64 - sum_outs).eq(0.0));
+
+            prev_op = Some(op);
+            prev_in = ins.last().copied();
+            prev_out = outs.last().copied();
 
             offset_i += ni;
             offset_o += no;
