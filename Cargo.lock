@@ -2088,6 +2088,7 @@ dependencies = [
  "rust-sitter-tool",
  "sd-hyper",
  "thiserror",
+ "tracing",
  "tree-sitter-highlight",
 ]
 
