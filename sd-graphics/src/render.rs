@@ -11,7 +11,6 @@ pub const SCALE: f32 = 50.0;
 pub const STROKE_WIDTH: f32 = 1.0;
 
 pub const BOX_SIZE: Vec2 = vec2(20.0, 20.0);
-pub const RADIUS_UNIT: f32 = 2.5;
 pub const RADIUS_COPY: f32 = 5.0;
 pub const RADIUS_OPERATION: f32 = 10.0;
 
@@ -140,9 +139,6 @@ pub fn render(
                     match op {
                         MonoidalOp::Copy { copies } if *copies != 1 => {
                             shapes.push(Shape::circle_filled(center, RADIUS_COPY, Color32::BLACK))
-                        }
-                        MonoidalOp::Unit => {
-                            shapes.push(Shape::circle_filled(center, RADIUS_UNIT, Color32::BLACK))
                         }
                         MonoidalOp::Operation { op_name, .. } => {
                             shapes.push(Shape::Circle(CircleShape {
