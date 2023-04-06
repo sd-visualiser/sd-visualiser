@@ -94,7 +94,30 @@ pub fn render(
                         default_stroke(),
                     )));
                 }
+                MonoidalOp::Thunk { .. } => {
+                    let x_op = x_op.unwrap_right();
+                    for &x in x_ins {
+                        let thunk = pos2(x as f32, y_op);
+                        let input = pos2(x as f32, y_in);
+                        shapes.push(Shape::line_segment([input, thunk], default_stroke()));
+                    }
+                    for &x in x_outs {
+                        let thunk = pos2(x as f32, y_op);
+                        let output = pos2(x as f32, y_out);
+                        shapes.push(Shape::line_segment([thunk, output], default_stroke()));
+                    }
+                    shapes.push(Shape::Rect(RectShape {
+                        rect: Rect::from_min_max(
+                            pos2(x_op.min() as f32, y_op) - BOX_SIZE / 2.0,
+                            pos2(x_op.max() as f32, y_op) + BOX_SIZE / 2.0,
+                        ),
+                        rounding: Rounding::none(),
+                        fill: Color32::WHITE,
+                        stroke: default_stroke(),
+                    }));
+                }
                 _ => {
+                    let x_op = x_op.unwrap_left();
                     let center = pos2(x_op as f32, y_op);
 
                     for &x in x_ins {
@@ -140,12 +163,6 @@ pub fn render(
                                 Color32::BLACK,
                             ))
                         }
-                        MonoidalOp::Thunk { .. } => shapes.push(Shape::Rect(RectShape {
-                            rect: Rect::from_center_size(center, BOX_SIZE),
-                            rounding: Rounding::none(),
-                            fill: Color32::WHITE,
-                            stroke: default_stroke(),
-                        })),
                         _ => (),
                     }
                 }
