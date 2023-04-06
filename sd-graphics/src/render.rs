@@ -28,8 +28,8 @@ pub fn render(
 ) -> Vec<Shape> {
     let n = graph.slices.len();
 
-    let min_x = layout.min as f32;
-    let max_x = layout.max as f32;
+    let min_x = layout.min;
+    let max_x = layout.max;
     let height = n as f32 + 1.0;
 
     // Scale by a constant and translate to the centre of the bounding box.
@@ -44,15 +44,15 @@ pub fn render(
 
     // Source
     for &x in layout.inputs() {
-        let start = pos2(x as f32, 0.0);
-        let end = pos2(x as f32, 0.5);
+        let start = pos2(x, 0.0);
+        let end = pos2(x, 0.5);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     // Target
     for &x in layout.outputs() {
-        let start = pos2(x as f32, n as f32 + 0.5);
-        let end = pos2(x as f32, n as f32 + 1.0);
+        let start = pos2(x, n as f32 + 0.5);
+        let end = pos2(x, n as f32 + 1.0);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
@@ -73,10 +73,10 @@ pub fn render(
 
             match op {
                 MonoidalOp::Swap => {
-                    let in1 = pos2(x_ins[0] as f32, y_in);
-                    let in2 = pos2(x_ins[1] as f32, y_in);
-                    let out1 = pos2(x_outs[0] as f32, y_out);
-                    let out2 = pos2(x_outs[1] as f32, y_out);
+                    let in1 = pos2(x_ins[0], y_in);
+                    let in2 = pos2(x_ins[1], y_in);
+                    let out1 = pos2(x_outs[0], y_out);
+                    let out2 = pos2(x_outs[1], y_out);
 
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(in1, out2),
@@ -94,19 +94,19 @@ pub fn render(
                 MonoidalOp::Thunk { .. } => {
                     let x_op = x_op.unwrap_thunk();
                     for &x in x_ins {
-                        let thunk = pos2(x as f32, y_op);
-                        let input = pos2(x as f32, y_in);
+                        let thunk = pos2(x, y_op);
+                        let input = pos2(x, y_in);
                         shapes.push(Shape::line_segment([input, thunk], default_stroke()));
                     }
                     for &x in x_outs {
-                        let thunk = pos2(x as f32, y_op);
-                        let output = pos2(x as f32, y_out);
+                        let thunk = pos2(x, y_op);
+                        let output = pos2(x, y_out);
                         shapes.push(Shape::line_segment([thunk, output], default_stroke()));
                     }
                     shapes.push(Shape::Rect(RectShape {
                         rect: Rect::from_min_max(
-                            pos2(x_op.min as f32, y_op) - BOX_SIZE / 2.0,
-                            pos2(x_op.max as f32, y_op) + BOX_SIZE / 2.0,
+                            pos2(x_op.min, y_op) - BOX_SIZE / 2.0,
+                            pos2(x_op.max, y_op) + BOX_SIZE / 2.0,
                         ),
                         rounding: Rounding::none(),
                         fill: Color32::WHITE,
@@ -115,10 +115,10 @@ pub fn render(
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
-                    let center = pos2(x_op as f32, y_op);
+                    let center = pos2(x_op, y_op);
 
                     for &x in x_ins {
-                        let input = pos2(x as f32, y_in);
+                        let input = pos2(x, y_in);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
                             false,
@@ -128,7 +128,7 @@ pub fn render(
                     }
 
                     for &x in x_outs {
-                        let output = pos2(x as f32, y_out);
+                        let output = pos2(x, y_out);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
                             false,

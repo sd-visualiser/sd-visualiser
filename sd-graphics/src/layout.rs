@@ -67,20 +67,20 @@ impl<T> LayoutInternal<T> {
     }
 }
 
-pub type Layout = LayoutInternal<f64>;
+pub type Layout = LayoutInternal<f32>;
 
 impl Layout {
     fn from_solution(layout: LayoutInternal<Variable>, solution: &impl Solution) -> Self {
         Layout {
-            min: solution.value(layout.min),
-            max: solution.value(layout.max),
+            min: solution.value(layout.min) as f32,
+            max: solution.value(layout.max) as f32,
             nodes: layout
                 .nodes
                 .into_iter()
                 .map(|ns| {
                     ns.into_iter()
                         .map(|n| match n {
-                            Node::Atom(x) => Node::Atom(solution.value(x)),
+                            Node::Atom(x) => Node::Atom(solution.value(x) as f32),
                             Node::Thunk(layout) => {
                                 Node::Thunk(Self::from_solution(layout, solution))
                             }
@@ -91,7 +91,7 @@ impl Layout {
             wires: layout
                 .wires
                 .into_iter()
-                .map(|vs| vs.into_iter().map(|v| solution.value(v)).collect())
+                .map(|vs| vs.into_iter().map(|v| solution.value(v) as f32).collect())
                 .collect(),
         }
     }
