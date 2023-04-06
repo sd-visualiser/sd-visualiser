@@ -191,8 +191,8 @@ fn horizontal_out_vertical_in(start: Pos2, end: Pos2) -> [Pos2; 4] {
 fn vertical_out_vertical_in(start: Pos2, end: Pos2) -> [Pos2; 4] {
     [
         start,
-        Pos2::new(start.x, 0.2 * start.y + 0.8 * end.y),
-        Pos2::new(end.x, 0.8 * start.y + 0.2 * end.y),
+        Pos2::new(start.x, 0.5 * start.y + 0.5 * end.y),
+        Pos2::new(end.x, 0.5 * start.y + 0.5 * end.y),
         end,
     ]
 }
