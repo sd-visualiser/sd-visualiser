@@ -7,7 +7,7 @@ use thiserror::Error;
 use crate::language::grammar::{ActiveOp, Expr, PassiveOp, Term, Thunk, Value, Variable};
 use sd_hyper::graph::{Graph, GraphNode, HyperGraphError, Port, PortIndex};
 
-#[derive(Clone, Debug, Copy, PartialEq, Eq)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
     Passive(PassiveOp),
     Active(ActiveOp),

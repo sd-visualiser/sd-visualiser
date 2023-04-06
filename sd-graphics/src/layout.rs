@@ -4,12 +4,13 @@ use good_lp::{
 use sd_core::monoidal::MonoidalGraph;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum LayoutError {
     #[error("An error occurred when solving the problem: {0}")]
     ResolutionError(#[from] ResolutionError),
 }
 
+#[derive(Clone)]
 pub struct Layout {
     pub width: f64,
     pub slices: Vec<Vec<f64>>,
