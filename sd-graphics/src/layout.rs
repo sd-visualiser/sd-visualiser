@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::Debug, sync::Arc};
 
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::{Either, Itertools};
@@ -15,7 +15,7 @@ pub enum LayoutError {
 
 pub struct Layout {
     internal: LayoutInternal,
-    solution: HashMap<Variable, f64>,
+    solution: Arc<HashMap<Variable, f64>>,
 }
 
 #[derive(Clone, Debug)]
@@ -48,7 +48,7 @@ impl Layout {
             Node::Op(v) => Either::Left(self.solution[v]),
             Node::Thunk(layout) => Either::Right(Layout {
                 internal: layout.clone(),
-                solution: self.solution.clone(), // TODO(@calintat): THIS IS VERY BAD!
+                solution: self.solution.clone(),
             }),
         }
     }
@@ -258,7 +258,7 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
 
     Ok(Layout {
         internal: layout,
-        solution: fake_solution,
+        solution: Arc::new(fake_solution),
     })
 }
 
