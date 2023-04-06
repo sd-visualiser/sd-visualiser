@@ -6,18 +6,18 @@ use thiserror::Error;
 
 use crate::graph::{HyperGraph, Op};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Slice {
     pub ops: Vec<(MonoidalOp, Vec<NodeIndex>)>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Default, Hash)]
 pub struct MonoidalGraph {
     pub inputs: usize,
     pub slices: Vec<Slice>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum MonoidalOp {
     Copy { copies: usize },
     Unit,

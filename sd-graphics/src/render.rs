@@ -5,9 +5,8 @@ use epaint::{
 };
 use itertools::Itertools;
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
-use thiserror::Error;
 
-use crate::layout::{layout, LayoutError};
+use crate::layout::Layout;
 
 pub const SCALE: f32 = 50.0;
 pub const STROKE_WIDTH: f32 = 1.0;
@@ -21,20 +20,14 @@ pub fn default_stroke() -> Stroke {
     Stroke::new(STROKE_WIDTH, Color32::BLACK)
 }
 
-#[derive(Debug, Error)]
-pub enum RenderError {
-    #[error(transparent)]
-    LayoutError(#[from] LayoutError),
-}
-
 pub fn render(
+    layout: &Layout,
     graph: &MonoidalGraph,
     fonts: &Fonts,
     bounds: Vec2,
     to_screen: RectTransform,
-) -> Result<Vec<Shape>, RenderError> {
+) -> Vec<Shape> {
     let len = graph.slices.len();
-    let layout = layout(graph)?;
 
     let width = layout.width as f32;
     let height = len as f32 + 1.0;
@@ -167,7 +160,7 @@ pub fn render(
         }
     }
 
-    Ok(shapes)
+    shapes
 }
 
 fn vertical_out_horizontal_in(start: Pos2, end: Pos2) -> [Pos2; 4] {

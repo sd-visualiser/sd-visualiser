@@ -6,7 +6,7 @@ use eframe::{
 use sd_core::{graph::HyperGraph, language, monoidal::MonoidalGraph};
 use tracing::{debug_span, event, Level};
 
-use crate::highlighter::Highlighter;
+use crate::{highlighter::Highlighter, layout::Layouter};
 
 #[derive(Default)]
 pub struct App {
@@ -74,9 +74,15 @@ impl App {
             Rounding::none(),
             Color32::WHITE,
         ));
+        let layout = Layouter::layout(ui.ctx(), &self.monoidal_term).unwrap();
         painter.extend(ui.fonts(|fonts| {
-            sd_graphics::render::render(&self.monoidal_term, fonts, response.rect.size(), to_screen)
-                .unwrap()
+            sd_graphics::render::render(
+                &layout,
+                &self.monoidal_term,
+                fonts,
+                response.rect.size(),
+                to_screen,
+            )
         }));
     }
 }
