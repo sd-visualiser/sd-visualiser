@@ -1,7 +1,7 @@
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 use thiserror::Error;
 
@@ -13,118 +13,91 @@ pub enum LayoutError {
     ResolutionError(#[from] ResolutionError),
 }
 
-pub struct Layout {
-    internal: LayoutInternal,
-    solution: Arc<HashMap<Variable, f64>>,
-}
-
 #[derive(Clone, Debug)]
-struct LayoutInternal {
-    min: Variable,
-    max: Variable,
-    nodes: Vec<Vec<Node>>,
-    wires: Vec<Vec<Variable>>,
+pub enum Node<T> {
+    Atom(T),
+    Thunk(LayoutInternal<T>),
 }
 
-impl Layout {
-    pub fn min(&self) -> f64 {
-        self.solution[&self.internal.min]
+impl<T> Node<T> {
+    pub fn min(&self) -> &T {
+        match self {
+            Self::Atom(x) => x,
+            Self::Thunk(layout) => &layout.min,
+        }
     }
 
-    pub fn max(&self) -> f64 {
-        self.solution[&self.internal.max]
+    pub fn max(&self) -> &T {
+        match self {
+            Self::Atom(x) => x,
+            Self::Thunk(layout) => &layout.max,
+        }
     }
 
-    pub fn wire(&self, j: usize, i: usize) -> f64 {
-        self.solution[&self.internal.wires[j][i]]
+    pub fn unwrap_atom(&self) -> &T {
+        match self {
+            Self::Atom(x) => x,
+            Self::Thunk(_layout) => panic!(),
+        }
     }
 
-    pub fn wires(&self, j: usize) -> impl Iterator<Item = f64> + '_ {
-        self.internal.wires[j].iter().map(|v| self.solution[v])
-    }
-
-    pub fn node(&self, j: usize, i: usize) -> Either<f64, Layout> {
-        match &self.internal.nodes[j][i] {
-            Node::Op(v) => Either::Left(self.solution[v]),
-            Node::Thunk(layout) => Either::Right(Layout {
-                internal: layout.clone(),
-                solution: self.solution.clone(),
-            }),
+    pub fn unwrap_thunk(&self) -> &LayoutInternal<T> {
+        match self {
+            Self::Atom(_x) => panic!(),
+            Self::Thunk(layout) => layout,
         }
     }
 }
 
-impl LayoutInternal {
-    fn inputs(&self) -> &[Variable] {
-        &self.wires[0]
+#[derive(Clone, Debug)]
+pub struct LayoutInternal<T> {
+    pub min: T,
+    pub max: T,
+    pub nodes: Vec<Vec<Node<T>>>,
+    pub wires: Vec<Vec<T>>,
+}
+
+impl<T> LayoutInternal<T> {
+    pub fn inputs(&self) -> &[T] {
+        self.wires.first().unwrap()
     }
 
-    fn outputs(&self) -> &[Variable] {
+    pub fn outputs(&self) -> &[T] {
         self.wires.last().unwrap()
     }
 }
 
-impl Debug for Layout {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        #[allow(dead_code)]
-        #[derive(Debug)]
-        struct Layout {
-            min: f64,
-            max: f64,
-            nodes: Vec<Vec<f64>>,
-            wires: Vec<Vec<f64>>,
-        }
-        let layout = Layout {
-            min: self.min(),
-            max: self.max(),
-            nodes: self
-                .internal
+pub type Layout = LayoutInternal<f64>;
+
+impl Layout {
+    fn from_solution(layout: LayoutInternal<Variable>, solution: &impl Solution) -> Self {
+        Layout {
+            min: solution.value(layout.min),
+            max: solution.value(layout.max),
+            nodes: layout
                 .nodes
-                .iter()
-                .map(|vs| {
-                    vs.iter()
-                        .map(|v| match v {
-                            Node::Op(v) => self.solution[v],
-                            Node::Thunk(_layout) => unimplemented!(),
+                .into_iter()
+                .map(|ns| {
+                    ns.into_iter()
+                        .map(|n| match n {
+                            Node::Atom(x) => Node::Atom(solution.value(x)),
+                            Node::Thunk(layout) => {
+                                Node::Thunk(Self::from_solution(layout, solution))
+                            }
                         })
                         .collect()
                 })
                 .collect(),
-            wires: self
-                .internal
+            wires: layout
                 .wires
-                .iter()
-                .map(|vs| vs.iter().map(|v| self.solution[v]).collect())
+                .into_iter()
+                .map(|vs| vs.into_iter().map(|v| solution.value(v)).collect())
                 .collect(),
-        };
-        layout.fmt(f)
-    }
-}
-
-/// Represents the layout information for a node in the graph.
-#[derive(Clone, Debug)]
-enum Node {
-    Op(Variable),
-    Thunk(LayoutInternal),
-}
-
-impl Node {
-    pub fn min(&self) -> Variable {
-        match self {
-            Self::Op(v) => *v,
-            Self::Thunk(layout) => layout.min,
-        }
-    }
-
-    pub fn max(&self) -> Variable {
-        match self {
-            Self::Op(v) => *v,
-            Self::Thunk(layout) => layout.max,
         }
     }
 }
 
-fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInternal {
+fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInternal<Variable> {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
     let max = problem.add_variable(variable().min(0.0));
@@ -148,13 +121,13 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
     macro_rules! add_constraints_nodes {
         ($ns:expr) => {
             if let Some(x) = $ns.first() {
-                problem.add_constraint((x.min() - min).geq(0.0));
+                problem.add_constraint((*x.min() - min).geq(0.0));
             }
             if let Some(x) = $ns.last() {
-                problem.add_constraint((max - x.max()).geq(0.0));
+                problem.add_constraint((max - *x.max()).geq(0.0));
             }
             for (x, y) in $ns.iter().tuple_windows() {
-                problem.add_constraint((y.min() - x.max()).geq(1.0));
+                problem.add_constraint((*y.min() - *x.max()).geq(1.0));
             }
         };
     }
@@ -174,7 +147,7 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
                 if let MonoidalOp::Thunk { body, .. } = op {
                     Node::Thunk(layout_internal(body, problem))
                 } else {
-                    Node::Op(problem.add_variable(variable().min(0.0)))
+                    Node::Atom(problem.add_variable(variable().min(0.0)))
                 }
             })
             .collect_vec();
@@ -201,8 +174,8 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
 
             // Distance constraints
             let constraints = [
-                (prev_in, Some(op.min())),
-                (prev_out, Some(op.min())),
+                (prev_in, Some(*op.min())),
+                (prev_out, Some(*op.min())),
                 (prev_op, ins.first().copied()),
                 (prev_op, outs.first().copied()),
                 (prev_in, outs.first().copied()),
@@ -213,7 +186,7 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
             }
 
             match op {
-                Node::Op(op) => {
+                Node::Atom(op) => {
                     // Fair averaging constraints
                     let sum_ins: Expression = ins.iter().sum();
                     let sum_outs: Expression = outs.iter().sum();
@@ -231,7 +204,7 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
                 }
             }
 
-            prev_op = Some(op.max());
+            prev_op = Some(*op.max());
             prev_in = ins.last().copied();
             prev_out = outs.last().copied();
 
@@ -252,14 +225,9 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
     let layout = layout_internal(graph, &mut problem);
-    let variables = problem.variables();
     let solution = problem.minimise(layout.max, good_lp::default_solver)?;
-    let fake_solution = HashMap::from_iter(variables.into_iter().map(|v| (v, solution.value(v))));
 
-    Ok(Layout {
-        internal: layout,
-        solution: Arc::new(fake_solution),
-    })
+    Ok(Layout::from_solution(layout, &solution))
 }
 
 #[cfg(test)]

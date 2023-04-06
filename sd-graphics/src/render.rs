@@ -3,7 +3,6 @@ use epaint::{
     vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, RectShape, Rounding, Shape,
     Stroke, Vec2,
 };
-use itertools::Itertools;
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 
 use crate::layout::Layout;
@@ -29,8 +28,8 @@ pub fn render(
 ) -> Vec<Shape> {
     let n = graph.slices.len();
 
-    let min_x = layout.min() as f32;
-    let max_x = layout.max() as f32;
+    let min_x = layout.min as f32;
+    let max_x = layout.max as f32;
     let height = n as f32 + 1.0;
 
     // Scale by a constant and translate to the centre of the bounding box.
@@ -44,31 +43,29 @@ pub fn render(
     let mut shapes: Vec<Shape> = Vec::new();
 
     // Source
-    for x in layout.wires(0) {
+    for &x in layout.inputs() {
         let start = pos2(x as f32, 0.0);
         let end = pos2(x as f32, 0.5);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     // Target
-    for x in layout.wires(n) {
+    for &x in layout.outputs() {
         let start = pos2(x as f32, n as f32 + 0.5);
         let end = pos2(x as f32, n as f32 + 1.0);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     for (j, slice) in graph.slices.iter().enumerate() {
-        let x_ins = layout.wires(j).collect_vec();
-        let x_outs = layout.wires(j + 1).collect_vec();
         let mut offset_i = 0;
         let mut offset_o = 0;
         for (i, (op, _)) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
-            let x_op = layout.node(j, i);
-            let x_ins = &x_ins[offset_i..offset_i + ni];
-            let x_outs = &x_outs[offset_o..offset_o + no];
+            let x_op = &layout.nodes[j][i];
+            let x_ins = &layout.wires[j][offset_i..offset_i + ni];
+            let x_outs = &layout.wires[j + 1][offset_o..offset_o + no];
 
             let y_op = j as f32 + 1.0;
             let y_in = j as f32 + 0.5;
@@ -95,7 +92,7 @@ pub fn render(
                     )));
                 }
                 MonoidalOp::Thunk { .. } => {
-                    let x_op = x_op.unwrap_right();
+                    let x_op = x_op.unwrap_thunk();
                     for &x in x_ins {
                         let thunk = pos2(x as f32, y_op);
                         let input = pos2(x as f32, y_in);
@@ -108,8 +105,8 @@ pub fn render(
                     }
                     shapes.push(Shape::Rect(RectShape {
                         rect: Rect::from_min_max(
-                            pos2(x_op.min() as f32, y_op) - BOX_SIZE / 2.0,
-                            pos2(x_op.max() as f32, y_op) + BOX_SIZE / 2.0,
+                            pos2(x_op.min as f32, y_op) - BOX_SIZE / 2.0,
+                            pos2(x_op.max as f32, y_op) + BOX_SIZE / 2.0,
                         ),
                         rounding: Rounding::none(),
                         fill: Color32::WHITE,
@@ -117,7 +114,7 @@ pub fn render(
                     }));
                 }
                 _ => {
-                    let x_op = x_op.unwrap_left();
+                    let x_op = *x_op.unwrap_atom();
                     let center = pos2(x_op as f32, y_op);
 
                     for &x in x_ins {
