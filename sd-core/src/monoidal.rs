@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use itertools::{concat, Itertools};
 use sd_hyper::graph::{GraphNode, HyperGraphError, NodeIndex, Port, PortIndex};
 use thiserror::Error;
+use tracing::{debug, debug_span};
 
 use crate::graph::{HyperGraph, Op};
 
@@ -171,26 +172,39 @@ fn permutation_to_swaps(mut permutation: Vec<usize>) -> Vec<Slice> {
     slices
 }
 
+// This can be made a lot nicer
 impl MonoidalGraph {
     pub fn from_hypergraph(graph: &HyperGraph) -> Result<Self, FromHyperError> {
         // List of open ports we have left to process
 
+        debug_span!("From hypergraph");
+        debug!("To Process: {:?}", graph);
+
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
         let (ranks, input_wires, output_wires) = {
-            let (inputs, r, outputs) = graph.ranks_from_end();
+            let (inputs, mut r, outputs) = graph.ranks_from_end();
+
+            debug!("Inputs: {:?}", inputs);
+            debug!("Ranks: {:?}", r);
+            debug!("Outputs: {:?}", outputs);
 
             let input_wires = inputs
                 .iter()
-                .map(|x| graph.number_of_outputs(*x).expect("Oh no"))
+                .map(|x| graph.number_of_outputs(*x).unwrap())
                 .sum();
 
             let output_wires = outputs
                 .iter()
-                .map(|x| graph.input_ports(*x).expect("Oh no").collect_vec())
+                .map(|x| graph.input_ports(*x).unwrap().collect_vec())
                 .concat();
+
+            r.push(inputs);
 
             (r, input_wires, output_wires)
         };
+
+        debug!("Input wires: {:?}", input_wires);
+        debug!("Output wires: {:?}", output_wires);
 
         let mut open_wires: Vec<Port> = output_wires;
 
