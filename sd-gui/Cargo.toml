@@ -9,6 +9,7 @@ repository = "https://github.com/calintat/sd-visualiser"
 [dependencies]
 anyhow = "1.0.70"
 eframe = "0.21.3"
+rust-sitter = "0.3.3"
 sd-core = { path = "../sd-core" }
 sd-graphics = { path = "../sd-graphics" }
 tracing = "0.1.37"

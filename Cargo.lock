@@ -2113,6 +2113,7 @@ dependencies = [
  "cargo-husky",
  "console_error_panic_hook",
  "eframe",
+ "rust-sitter",
  "sd-core",
  "sd-graphics",
  "tracing",
