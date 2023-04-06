@@ -2,6 +2,7 @@ use good_lp::{
     Constraint, IntoAffineExpression, ProblemVariables, Solver, SolverModel, Variable,
     VariableDefinition,
 };
+use itertools::Itertools;
 
 #[derive(Default)]
 pub(crate) struct LpProblem {
@@ -39,5 +40,12 @@ impl LpProblem {
             model.add_constraint(c);
         }
         model.solve()
+    }
+
+    pub(crate) fn variables(&self) -> Vec<Variable> {
+        self.problem
+            .iter_variables_with_def()
+            .map(|(var, _)| var)
+            .collect_vec()
     }
 }
