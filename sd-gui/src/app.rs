@@ -3,19 +3,13 @@ use eframe::{
     egui, emath,
     epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
 };
-use rust_sitter::errors::ParseError;
-use sd_core::{
-    graph::HyperGraph,
-    language::{self, grammar::Expr},
-    monoidal::MonoidalGraph,
-};
+use sd_core::{graph::HyperGraph, monoidal::MonoidalGraph};
 use tracing::{debug_span, event, Level};
 
-use crate::{highlighter::Highlighter, layout::Layouter};
+use crate::{highlighter::Highlighter, layout::Layouter, parser::Parser};
 
 pub struct App {
     code: String,
-    expr: Result<Expr, Vec<ParseError>>,
     hypergraph: HyperGraph,
     monoidal_term: MonoidalGraph,
 }
@@ -34,7 +28,6 @@ impl App {
 
         App {
             code: Default::default(),
-            expr: Err(vec![]),
             hypergraph: Default::default(),
             monoidal_term: Default::default(),
         }
@@ -46,22 +39,18 @@ impl App {
             layout_job.wrap.max_width = wrap_width;
             ui.fonts(|f| f.layout_job(layout_job))
         };
-        let response = ui.add(
-            egui::TextEdit::multiline(&mut self.code)
-                .code_editor()
-                .layouter(&mut layouter),
-        );
+        let text_edit_out = egui::TextEdit::multiline(&mut self.code)
+            .code_editor()
+            .layouter(&mut layouter)
+            .show(ui);
         debug_span!("Processing graph");
-        if response.changed() {
+        if text_edit_out.response.changed() {
             event!(Level::DEBUG, "Reparsing");
-            self.expr = language::grammar::parse(&self.code);
             let block = |app: &mut App| -> anyhow::Result<()> {
+                let parse = Parser::parse(ui.ctx(), &app.code);
+                let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
                 event!(Level::DEBUG, "Converting to hypergraph");
-                app.hypergraph = app
-                    .expr
-                    .as_ref()
-                    .map_err(|e| anyhow!("{:?}", e))?
-                    .to_hypergraph()?;
+                app.hypergraph = expr.to_hypergraph()?;
                 event!(Level::DEBUG, "Converting to monoidal term");
                 app.monoidal_term = MonoidalGraph::from_hypergraph(&app.hypergraph)?;
                 Ok(())
