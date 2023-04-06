@@ -3,6 +3,7 @@ use epaint::{
     vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, RectShape, Rounding, Shape,
     Stroke, Vec2,
 };
+use itertools::Itertools;
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 
 use crate::layout::Layout;
@@ -26,11 +27,11 @@ pub fn render(
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape> {
-    let len = graph.slices.len();
+    let n = graph.slices.len();
 
-    let min_x = layout.min as f32;
-    let max_x = layout.max as f32;
-    let height = len as f32 + 1.0;
+    let min_x = layout.min() as f32;
+    let max_x = layout.max() as f32;
+    let height = n as f32 + 1.0;
 
     // Scale by a constant and translate to the centre of the bounding box.
     let pos2 = |x: f32, y: f32| {
@@ -43,29 +44,31 @@ pub fn render(
     let mut shapes: Vec<Shape> = Vec::new();
 
     // Source
-    for &x in layout.wires.first().unwrap() {
+    for x in layout.wires(0) {
         let start = pos2(x as f32, 0.0);
         let end = pos2(x as f32, 0.5);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     // Target
-    for &x in layout.wires.last().unwrap() {
-        let start = pos2(x as f32, len as f32 + 0.5);
-        let end = pos2(x as f32, len as f32 + 1.0);
+    for x in layout.wires(n) {
+        let start = pos2(x as f32, n as f32 + 0.5);
+        let end = pos2(x as f32, n as f32 + 1.0);
         shapes.push(Shape::line_segment([start, end], default_stroke()));
     }
 
     for (j, slice) in graph.slices.iter().enumerate() {
+        let x_ins = layout.wires(j).collect_vec();
+        let x_outs = layout.wires(j + 1).collect_vec();
         let mut offset_i = 0;
         let mut offset_o = 0;
         for (i, (op, _)) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
-            let x_op = layout.nodes[j][i];
-            let x_ins = &layout.wires[j][offset_i..offset_i + ni];
-            let x_outs = &layout.wires[j + 1][offset_o..offset_o + no];
+            let x_op = layout.node(j, i);
+            let x_ins = &x_ins[offset_i..offset_i + ni];
+            let x_outs = &x_outs[offset_o..offset_o + no];
 
             let y_op = j as f32 + 1.0;
             let y_in = j as f32 + 0.5;

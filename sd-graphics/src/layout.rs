@@ -1,4 +1,6 @@
-use good_lp::{variable, Expression, ResolutionError, Solution};
+use std::{collections::HashMap, fmt::Debug};
+
+use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::monoidal::MonoidalGraph;
 use thiserror::Error;
@@ -11,17 +13,72 @@ pub enum LayoutError {
     ResolutionError(#[from] ResolutionError),
 }
 
-#[derive(Clone, Debug)]
 pub struct Layout {
-    pub min: f64,
-    pub max: f64,
-    pub nodes: Vec<Vec<f64>>,
-    pub wires: Vec<Vec<f64>>,
+    internal: LayoutInternal,
+    solution: HashMap<Variable, f64>,
 }
 
-pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
-    let mut problem = LpProblem::default();
+#[derive(Clone, Debug)]
+struct LayoutInternal {
+    pub min: Variable,
+    pub max: Variable,
+    pub nodes: Vec<Vec<Variable>>,
+    pub wires: Vec<Vec<Variable>>,
+}
 
+impl Layout {
+    pub fn min(&self) -> f64 {
+        self.solution[&self.internal.min]
+    }
+
+    pub fn max(&self) -> f64 {
+        self.solution[&self.internal.max]
+    }
+
+    pub fn wire(&self, j: usize, i: usize) -> f64 {
+        self.solution[&self.internal.wires[j][i]]
+    }
+
+    pub fn wires(&self, j: usize) -> impl Iterator<Item = f64> + '_ {
+        self.internal.wires[j].iter().map(|v| self.solution[v])
+    }
+
+    pub fn node(&self, j: usize, i: usize) -> f64 {
+        self.solution[&self.internal.nodes[j][i]]
+    }
+}
+
+impl Debug for Layout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[allow(dead_code)]
+        #[derive(Debug)]
+        struct Layout {
+            min: f64,
+            max: f64,
+            nodes: Vec<Vec<f64>>,
+            wires: Vec<Vec<f64>>,
+        }
+        let layout = Layout {
+            min: self.min(),
+            max: self.max(),
+            nodes: self
+                .internal
+                .nodes
+                .iter()
+                .map(|vs| vs.iter().map(|v| self.solution.value(*v)).collect())
+                .collect(),
+            wires: self
+                .internal
+                .wires
+                .iter()
+                .map(|vs| vs.iter().map(|v| self.solution.value(*v)).collect())
+                .collect(),
+        };
+        layout.fmt(f)
+    }
+}
+
+fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInternal {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
     let max = problem.add_variable(variable().min(0.0));
@@ -92,19 +149,25 @@ pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
         }
     }
 
-    let solution = problem.minimise(max, good_lp::default_solver)?;
+    LayoutInternal {
+        min,
+        max,
+        nodes,
+        wires,
+    }
+}
+
+pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
+    let mut problem = LpProblem::default();
+
+    let layout = layout_internal(graph, &mut problem);
+    let variables = problem.variables();
+    let solution = problem.minimise(layout.max, good_lp::default_solver)?;
+    let fake_solution = HashMap::from_iter(variables.into_iter().map(|v| (v, solution.value(v))));
 
     Ok(Layout {
-        min: solution.value(min),
-        max: solution.value(max),
-        nodes: nodes
-            .into_iter()
-            .map(|vs| vs.into_iter().map(|v| solution.value(v)).collect())
-            .collect(),
-        wires: wires
-            .into_iter()
-            .map(|vs| vs.into_iter().map(|v| solution.value(v)).collect())
-            .collect(),
+        internal: layout,
+        solution: fake_solution,
     })
 }
 
