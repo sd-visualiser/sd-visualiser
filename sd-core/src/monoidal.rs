@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use itertools::{concat, Itertools};
+use itertools::Itertools;
 use sd_hyper::graph::{GraphNode, HyperGraphError, NodeIndex, Port, PortIndex};
 use thiserror::Error;
 use tracing::{debug, debug_span};
@@ -31,7 +31,6 @@ pub struct MonoidalGraph {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum MonoidalOp {
     Copy { copies: usize },
-    Unit,
     Operation { inputs: usize, op_name: Op },
     Thunk { args: usize, body: MonoidalGraph },
     Swap,
@@ -42,7 +41,6 @@ impl MonoidalOp {
     pub fn number_of_inputs(&self) -> usize {
         match self {
             Self::Copy { .. } => 1,
-            Self::Unit => 0,
             Self::Operation { inputs, .. } => *inputs,
             Self::Thunk { args, body } => body.inputs - args,
             Self::Swap => 2,
@@ -52,11 +50,10 @@ impl MonoidalOp {
     /// Returns number of outputs of an operation
     pub fn number_of_outputs(&self) -> usize {
         match self {
-            MonoidalOp::Copy { copies } => *copies,
-            MonoidalOp::Unit => 1,
-            MonoidalOp::Operation { .. } => 1,
-            MonoidalOp::Thunk { .. } => 1,
-            MonoidalOp::Swap => 2,
+            Self::Copy { copies } => *copies,
+            Self::Operation { .. } => 1,
+            Self::Thunk { .. } => 1,
+            Self::Swap => 2,
         }
     }
 }
@@ -64,82 +61,6 @@ impl MonoidalOp {
 pub const ID: (MonoidalOp, Vec<NodeIndex>) = (MonoidalOp::Copy { copies: 1 }, vec![]);
 
 pub const DELETE: (MonoidalOp, Vec<NodeIndex>) = (MonoidalOp::Copy { copies: 0 }, vec![]);
-
-// Unfolding
-
-impl MonoidalGraph {
-    pub fn unfold(self, thunk: &[NodeIndex]) -> Self {
-        Self {
-            inputs: self.inputs,
-            slices: self
-                .slices
-                .into_iter()
-                .flat_map(|slice| {
-                    // Turn each operation into a list of slices.
-                    let sss = slice
-                        .ops
-                        .into_iter()
-                        .map(|(op, name)| match op {
-                            MonoidalOp::Thunk { args, body } if name == thunk => {
-                                // Unfold the body of the thunk and add an extra slice at the start.
-                                let mut slices = vec![];
-                                slices.push(Slice {
-                                    ops: std::iter::repeat((
-                                        MonoidalOp::Copy { copies: 1 },
-                                        name.clone(),
-                                    ))
-                                    .take(body.inputs - args)
-                                    .chain(
-                                        std::iter::repeat((MonoidalOp::Unit, name.clone()))
-                                            .take(args),
-                                    )
-                                    .collect(),
-                                });
-                                for slice in body.slices {
-                                    let mut ops = vec![];
-                                    for (op, subname) in slice.ops {
-                                        ops.push((op, concat([name.clone(), subname])));
-                                    }
-                                    slices.push(Slice { ops });
-                                }
-                                slices
-                            }
-                            _ => vec![Slice {
-                                ops: vec![(op, name)],
-                            }],
-                        })
-                        .collect::<Vec<_>>();
-
-                    let max_height = sss.iter().map(|ss| ss.len()).max().unwrap();
-                    let mut slices = Vec::with_capacity(max_height);
-                    for i in 0..max_height {
-                        slices.push(Slice {
-                            ops: sss
-                                .iter()
-                                .flat_map(|ss| {
-                                    ss.get(i)
-                                        .cloned()
-                                        .unwrap_or_else(|| {
-                                            let n = ss
-                                                .last()
-                                                .unwrap()
-                                                .ops
-                                                .iter()
-                                                .map(|(op, _)| op.number_of_outputs())
-                                                .sum();
-                                            Slice { ops: vec![ID; n] }
-                                        })
-                                        .ops
-                                })
-                                .collect(),
-                        });
-                    }
-                    slices
-                })
-                .collect(),
-        }
-    }
-}
 
 #[derive(Debug, Error)]
 pub enum FromHyperError {
