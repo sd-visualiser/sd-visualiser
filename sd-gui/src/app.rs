@@ -3,14 +3,19 @@ use eframe::{
     egui, emath,
     epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
 };
-use sd_core::{graph::HyperGraph, language, monoidal::MonoidalGraph};
+use rust_sitter::errors::ParseError;
+use sd_core::{
+    graph::HyperGraph,
+    language::{self, grammar::Expr},
+    monoidal::MonoidalGraph,
+};
 use tracing::{debug_span, event, Level};
 
 use crate::{highlighter::Highlighter, layout::Layouter};
 
-#[derive(Default)]
 pub struct App {
     code: String,
+    expr: Result<Expr, Vec<ParseError>>,
     hypergraph: HyperGraph,
     monoidal_term: MonoidalGraph,
 }
@@ -27,7 +32,12 @@ impl App {
         //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         // }
 
-        Default::default()
+        App {
+            code: Default::default(),
+            expr: Err(vec![]),
+            hypergraph: Default::default(),
+            monoidal_term: Default::default(),
+        }
     }
 
     fn code_ui(&mut self, ui: &mut egui::Ui) {
@@ -43,11 +53,15 @@ impl App {
         );
         debug_span!("Processing graph");
         if response.changed() {
+            event!(Level::DEBUG, "Reparsing");
+            self.expr = language::grammar::parse(&self.code);
             let block = |app: &mut App| -> anyhow::Result<()> {
-                event!(Level::DEBUG, "Reparsing");
-                let expr = language::grammar::parse(&app.code).map_err(|e| anyhow!("{:?}", e))?;
                 event!(Level::DEBUG, "Converting to hypergraph");
-                app.hypergraph = expr.to_hypergraph()?;
+                app.hypergraph = app
+                    .expr
+                    .as_ref()
+                    .map_err(|e| anyhow!("{:?}", e))?
+                    .to_hypergraph()?;
                 event!(Level::DEBUG, "Converting to monoidal term");
                 app.monoidal_term = MonoidalGraph::from_hypergraph(&app.hypergraph)?;
                 Ok(())
