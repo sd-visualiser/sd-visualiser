@@ -1,8 +1,8 @@
 use std::{collections::HashMap, fmt::Debug};
 
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
-use itertools::Itertools;
-use sd_core::monoidal::MonoidalGraph;
+use itertools::{Either, Itertools};
+use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 use thiserror::Error;
 
 use crate::lp::LpProblem;
@@ -20,10 +20,10 @@ pub struct Layout {
 
 #[derive(Clone, Debug)]
 struct LayoutInternal {
-    pub min: Variable,
-    pub max: Variable,
-    pub nodes: Vec<Vec<Variable>>,
-    pub wires: Vec<Vec<Variable>>,
+    min: Variable,
+    max: Variable,
+    nodes: Vec<Vec<Node>>,
+    wires: Vec<Vec<Variable>>,
 }
 
 impl Layout {
@@ -43,8 +43,24 @@ impl Layout {
         self.internal.wires[j].iter().map(|v| self.solution[v])
     }
 
-    pub fn node(&self, j: usize, i: usize) -> f64 {
-        self.solution[&self.internal.nodes[j][i]]
+    pub fn node(&self, j: usize, i: usize) -> Either<f64, Layout> {
+        match &self.internal.nodes[j][i] {
+            Node::Op(v) => Either::Left(self.solution[v]),
+            Node::Thunk(layout) => Either::Right(Layout {
+                internal: layout.clone(),
+                solution: self.solution.clone(), // TODO(@calintat): THIS IS VERY BAD!
+            }),
+        }
+    }
+}
+
+impl LayoutInternal {
+    fn inputs(&self) -> &[Variable] {
+        &self.wires[0]
+    }
+
+    fn outputs(&self) -> &[Variable] {
+        self.wires.last().unwrap()
     }
 }
 
@@ -65,16 +81,46 @@ impl Debug for Layout {
                 .internal
                 .nodes
                 .iter()
-                .map(|vs| vs.iter().map(|v| self.solution.value(*v)).collect())
+                .map(|vs| {
+                    vs.iter()
+                        .map(|v| match v {
+                            Node::Op(v) => self.solution[v],
+                            Node::Thunk(_layout) => unimplemented!(),
+                        })
+                        .collect()
+                })
                 .collect(),
             wires: self
                 .internal
                 .wires
                 .iter()
-                .map(|vs| vs.iter().map(|v| self.solution.value(*v)).collect())
+                .map(|vs| vs.iter().map(|v| self.solution[v]).collect())
                 .collect(),
         };
         layout.fmt(f)
+    }
+}
+
+/// Represents the layout information for a node in the graph.
+#[derive(Clone, Debug)]
+enum Node {
+    Op(Variable),
+    Thunk(LayoutInternal),
+}
+
+impl Node {
+    pub fn min(&self) -> Variable {
+        match self {
+            Self::Op(v) => *v,
+            Self::Thunk(layout) => layout.min,
+        }
+    }
+
+    pub fn max(&self) -> Variable {
+        match self {
+            Self::Op(v) => *v,
+            Self::Thunk(layout) => layout.max,
+        }
     }
 }
 
@@ -86,22 +132,54 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
     let mut nodes = Vec::default();
     let mut wires = Vec::default();
 
-    let mut mk_variables = |len| {
-        let variables = problem.add_variables(variable().min(0.0), len);
-        for (x, y) in std::iter::once(min)
-            .chain(variables.iter().copied())
-            .chain(std::iter::once(max))
-            .tuple_windows()
-        {
-            problem.add_constraint((y - x).geq(1.0));
-        }
-        variables
-    };
+    macro_rules! add_constraints_wires {
+        ($vs:expr) => {
+            if let Some(x) = $vs.first().copied() {
+                problem.add_constraint((x - min).geq(0.0));
+            }
+            if let Some(x) = $vs.last().copied() {
+                problem.add_constraint((max - x).geq(0.0));
+            }
+            for (x, y) in $vs.iter().copied().tuple_windows() {
+                problem.add_constraint((y - x).geq(1.0));
+            }
+        };
+    }
+    macro_rules! add_constraints_nodes {
+        ($ns:expr) => {
+            if let Some(x) = $ns.first() {
+                problem.add_constraint((x.min() - min).geq(0.0));
+            }
+            if let Some(x) = $ns.last() {
+                problem.add_constraint((max - x.max()).geq(0.0));
+            }
+            for (x, y) in $ns.iter().tuple_windows() {
+                problem.add_constraint((y.min() - x.max()).geq(1.0));
+            }
+        };
+    }
 
-    wires.push(mk_variables(graph.inputs));
+    let inputs = problem.add_variables(variable().min(0.0), graph.inputs);
+    add_constraints_wires!(&inputs);
+    wires.push(inputs);
     for slice in &graph.slices {
-        nodes.push(mk_variables(slice.ops.len()));
-        wires.push(mk_variables(slice.number_of_outputs()));
+        let outputs = problem.add_variables(variable().min(0.0), slice.number_of_outputs());
+        add_constraints_wires!(&outputs);
+        wires.push(outputs);
+
+        let ns = slice
+            .ops
+            .iter()
+            .map(|(op, _)| {
+                if let MonoidalOp::Thunk { body, .. } = op {
+                    Node::Thunk(layout_internal(body, problem))
+                } else {
+                    Node::Op(problem.add_variable(variable().min(0.0)))
+                }
+            })
+            .collect_vec();
+        add_constraints_nodes!(&ns);
+        nodes.push(ns);
     }
 
     // STEP 2. Add constraints between layers.
@@ -117,14 +195,14 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
-            let op = nodes[j][i];
+            let op = &nodes[j][i];
             let ins = &wires[j][offset_i..offset_i + ni];
             let outs = &wires[j + 1][offset_o..offset_o + no];
 
             // Distance constraints
             let constraints = [
-                (prev_in, Some(op)),
-                (prev_out, Some(op)),
+                (prev_in, Some(op.min())),
+                (prev_out, Some(op.min())),
                 (prev_op, ins.first().copied()),
                 (prev_op, outs.first().copied()),
                 (prev_in, outs.first().copied()),
@@ -134,13 +212,26 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
                 problem.add_constraint((y - x).geq(1.0));
             }
 
-            // Fair averaging constraints
-            let sum_ins: Expression = ins.iter().sum();
-            let sum_outs: Expression = outs.iter().sum();
-            problem.add_constraint((op * ni as f64 - sum_ins).eq(0.0));
-            problem.add_constraint((op * no as f64 - sum_outs).eq(0.0));
+            match op {
+                Node::Op(op) => {
+                    // Fair averaging constraints
+                    let sum_ins: Expression = ins.iter().sum();
+                    let sum_outs: Expression = outs.iter().sum();
+                    problem.add_constraint((*op * ni as f64 - sum_ins).eq(0.0));
+                    problem.add_constraint((*op * no as f64 - sum_outs).eq(0.0));
+                }
+                Node::Thunk(layout) => {
+                    // Align internal wires with the external ones.
+                    for (&x, &y) in ins.iter().zip(layout.inputs()) {
+                        problem.add_constraint((x - y).eq(0.0));
+                    }
+                    for (&x, &y) in outs.iter().zip(layout.outputs()) {
+                        problem.add_constraint((x - y).eq(0.0));
+                    }
+                }
+            }
 
-            prev_op = Some(op);
+            prev_op = Some(op.max());
             prev_in = ins.last().copied();
             prev_out = outs.last().copied();
 
