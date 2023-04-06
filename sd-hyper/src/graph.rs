@@ -37,9 +37,18 @@ pub enum HyperGraphError {
 }
 
 /// HyperGraph with hyperedges/nodes with weights E and vertices/wires
-#[derive(Clone, Default)]
+#[derive(Clone)]
 pub struct Graph<E> {
     nodes: Slab<NodeInfo<E>>,
+}
+
+impl<E> Default for Graph<E> {
+    fn default() -> Self {
+        let mut g = Self::new();
+        g.add_node(GraphNode::Input, vec![], 0).unwrap();
+        g.add_node(GraphNode::Output, vec![], 0).unwrap();
+        g
+    }
 }
 
 #[derive(Debug, Clone)]

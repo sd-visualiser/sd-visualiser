@@ -1,15 +1,18 @@
+use anyhow::anyhow;
 use eframe::{
     egui, emath,
     epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
 };
-use sd_core::{language, monoidal::MonoidalGraph};
+use sd_core::{graph::HyperGraph, language, monoidal::MonoidalGraph};
+use tracing::{debug_span, event, Level};
 
 use crate::highlighter::Highlighter;
 
 #[derive(Default)]
 pub struct App {
     code: String,
-    // TODO: eventually want to store monoidal representation too
+    hypergraph: HyperGraph,
+    monoidal_term: MonoidalGraph,
 }
 
 impl App {
@@ -33,23 +36,29 @@ impl App {
             layout_job.wrap.max_width = wrap_width;
             ui.fonts(|f| f.layout_job(layout_job))
         };
-        ui.add(
+        let response = ui.add(
             egui::TextEdit::multiline(&mut self.code)
                 .code_editor()
                 .layouter(&mut layouter),
         );
+        debug_span!("Processing graph");
+        if response.changed() {
+            let block = |app: &mut App| -> anyhow::Result<()> {
+                event!(Level::DEBUG, "Reparsing");
+                let expr = language::grammar::parse(&app.code).map_err(|e| anyhow!("{:?}", e))?;
+                event!(Level::DEBUG, "Converting to hypergraph");
+                app.hypergraph = expr.to_hypergraph()?;
+                event!(Level::DEBUG, "Converting to monoidal term");
+                app.monoidal_term = MonoidalGraph::from_hypergraph(&app.hypergraph)?;
+                Ok(())
+            };
+            if block(self).is_err() {
+                // Display error to user?
+            }
+        }
     }
 
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
-        let block = || {
-            let expr = language::grammar::parse(&self.code).ok()?;
-            let hypergraph = expr.to_hypergraph().ok()?;
-            MonoidalGraph::from_hypergraph(&hypergraph).ok()
-        };
-        let Some(graph) = block() else { return };
-
-        // let graph = graph.unfold();
-
         let (response, painter) = ui.allocate_painter(
             Vec2::new(ui.available_width(), ui.available_height()),
             egui::Sense::drag(),
@@ -66,7 +75,8 @@ impl App {
             Color32::WHITE,
         ));
         painter.extend(ui.fonts(|fonts| {
-            sd_graphics::render::render(graph, fonts, response.rect.size(), to_screen).unwrap()
+            sd_graphics::render::render(&self.monoidal_term, fonts, response.rect.size(), to_screen)
+                .unwrap()
         }));
     }
 }

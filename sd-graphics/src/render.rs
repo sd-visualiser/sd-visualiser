@@ -28,13 +28,13 @@ pub enum RenderError {
 }
 
 pub fn render(
-    graph: MonoidalGraph,
+    graph: &MonoidalGraph,
     fonts: &Fonts,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Result<Vec<Shape>, RenderError> {
     let len = graph.slices.len();
-    let layout = layout(&graph)?;
+    let layout = layout(graph)?;
 
     let width = layout.width as f32;
     let height = len as f32 + 1.0;

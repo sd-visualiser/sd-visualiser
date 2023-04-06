@@ -11,7 +11,7 @@ pub struct Slice {
     pub ops: Vec<(MonoidalOp, Vec<NodeIndex>)>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct MonoidalGraph {
     pub inputs: usize,
     pub slices: Vec<Slice>,
