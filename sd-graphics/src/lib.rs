@@ -1,3 +1,3 @@
 pub mod layout;
-pub mod lp;
+pub(crate) mod lp;
 pub mod render;
