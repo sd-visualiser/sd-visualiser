@@ -30,19 +30,28 @@ pub struct MonoidalGraph {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum MonoidalOp {
-    Copy { copies: usize },
-    Operation { inputs: usize, op_name: Op },
-    Thunk { args: usize, body: MonoidalGraph },
+    Copy {
+        copies: usize,
+    },
+    Operation {
+        inputs: usize,
+        op_name: Op,
+    },
+    Thunk {
+        args: usize,
+        body: MonoidalGraph,
+        expanded: bool,
+    },
     Swap,
 }
 
 impl MonoidalOp {
-    /// Returns number of inputs of an operation
+    /// Returns number of cinputs of an operation
     pub fn number_of_inputs(&self) -> usize {
         match self {
             Self::Copy { .. } => 1,
             Self::Operation { inputs, .. } => *inputs,
-            Self::Thunk { args, body } => body.inputs - args,
+            Self::Thunk { args, body, .. } => body.inputs - args,
             Self::Swap => 2,
         }
     }
@@ -206,6 +215,7 @@ impl MonoidalGraph {
                             MonoidalOp::Thunk {
                                 args: *args,
                                 body: MonoidalGraph::from_hypergraph(body)?,
+                                expanded: true, // TODO(@calintat): This should probably be false.
                             },
                             vec![node],
                         )],
@@ -253,6 +263,7 @@ impl MonoidalGraph {
                         MonoidalOp::Thunk {
                             args: *args,
                             body: MonoidalGraph::from_hypergraph(body)?,
+                            expanded: true, // TODO(@calintat): This should probably be false.
                         },
                         vec![remaining],
                     )],
