@@ -3,8 +3,11 @@ use eframe::{
     egui, emath,
     epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
 };
-use sd_core::{graph::HyperGraph, monoidal::MonoidalGraph};
-use tracing::{debug_span, event, Level};
+use sd_core::{
+    graph::HyperGraph,
+    monoidal::{MonoidalGraph, MonoidalWiredGraph},
+};
+use tracing::{event, Level};
 
 use crate::{
     highlighter::{CodeTheme, Highlighter},
@@ -16,7 +19,8 @@ pub struct App {
     code: String,
     parsed: bool,
     hypergraph: HyperGraph,
-    monoidal_term: MonoidalGraph,
+    monoidal_term: MonoidalWiredGraph,
+    monoidal_graph: MonoidalGraph,
     panzoom: Panzoom,
 }
 
@@ -51,6 +55,7 @@ impl App {
             parsed: Default::default(),
             hypergraph: Default::default(),
             monoidal_term: Default::default(),
+            monoidal_graph: Default::default(),
             panzoom: Default::default(),
         }
     }
@@ -66,7 +71,6 @@ impl App {
             .code_editor()
             .layouter(&mut layouter)
             .show(ui);
-        debug_span!("Processing graph");
         if text_edit_out.response.changed() {
             event!(Level::DEBUG, "Reparsing");
             let block = |app: &mut App| -> anyhow::Result<()> {
@@ -76,7 +80,11 @@ impl App {
                 event!(Level::DEBUG, "Converting to hypergraph");
                 app.hypergraph = expr.to_hypergraph()?;
                 event!(Level::DEBUG, "Converting to monoidal term");
-                app.monoidal_term = MonoidalGraph::from_hypergraph(&app.hypergraph)?;
+                app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph, &[])?;
+                event!(Level::DEBUG, "Got term {:?}", app.monoidal_term);
+                event!(Level::DEBUG, "Inserting swaps and copies");
+                app.monoidal_graph = app.monoidal_term.to_graph(&[])?;
+                event!(Level::DEBUG, "Got graph {:?}", app.monoidal_graph);
                 Ok(())
             };
             if block(self).is_err() {
@@ -109,11 +117,11 @@ impl App {
                 Color32::GRAY
             },
         ));
-        let layout = Layouter::layout(ui.ctx(), &self.monoidal_term).unwrap();
+        let layout = Layouter::layout(ui.ctx(), &self.monoidal_graph).unwrap();
         painter.extend(ui.fonts(|fonts| {
             sd_graphics::render::render(
                 &layout,
-                &self.monoidal_term,
+                &self.monoidal_graph,
                 fonts,
                 response.rect.size(),
                 to_screen,

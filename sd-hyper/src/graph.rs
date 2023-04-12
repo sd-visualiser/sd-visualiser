@@ -10,10 +10,10 @@ use crate::concat_iter::concat_iter;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NodeIndex(usize);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PortIndex(pub usize);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Port {
     pub node: NodeIndex,
     pub index: PortIndex,
@@ -28,7 +28,7 @@ impl From<(usize, usize)> for Port {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, Clone)]
 pub enum HyperGraphError {
     #[error("No node at index `{0:?}`")]
     UnknownNode(NodeIndex),
@@ -145,12 +145,17 @@ impl<E> Graph<E> {
         Ok(info.outputs.len())
     }
 
-    pub fn input_ports(
+    pub fn get_inputs(
         &self,
         key: NodeIndex,
     ) -> Result<impl Iterator<Item = Port> + '_, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.inputs.iter().copied())
+    }
+
+    pub fn number_of_inputs(&self, key: NodeIndex) -> Result<usize, HyperGraphError> {
+        let info = self.get_info(key)?;
+        Ok(info.inputs.len())
     }
 
     pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &GraphNode<E>)> {
