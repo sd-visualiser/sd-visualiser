@@ -108,10 +108,10 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
     macro_rules! add_constraints_wires {
         ($vs:expr) => {
             if let Some(x) = $vs.first().copied() {
-                problem.add_constraint((x - min).geq(0.0));
+                problem.add_constraint((x - min).geq(0.5));
             }
             if let Some(x) = $vs.last().copied() {
-                problem.add_constraint((max - x).geq(0.0));
+                problem.add_constraint((max - x).geq(0.5));
             }
             for (x, y) in $vs.iter().copied().tuple_windows() {
                 problem.add_constraint((y - x).geq(1.0));
@@ -121,10 +121,10 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
     macro_rules! add_constraints_nodes {
         ($ns:expr) => {
             if let Some(x) = $ns.first() {
-                problem.add_constraint((*x.min() - min).geq(0.0));
+                problem.add_constraint((*x.min() - min).geq(0.5));
             }
             if let Some(x) = $ns.last() {
-                problem.add_constraint((max - *x.max()).geq(0.0));
+                problem.add_constraint((max - *x.max()).geq(0.5));
             }
             for (x, y) in $ns.iter().tuple_windows() {
                 problem.add_constraint((*y.min() - *x.max()).geq(1.0));
