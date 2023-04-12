@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
-use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
+use sd_core::monoidal::{FromHyperError, MonoidalGraph, MonoidalOp};
 use thiserror::Error;
 
 use crate::lp::LpProblem;
@@ -11,6 +11,8 @@ use crate::lp::LpProblem;
 pub enum LayoutError {
     #[error("An error occurred when solving the problem: {0}")]
     ResolutionError(#[from] ResolutionError),
+    #[error("An error occurred when converting from hypergraph: {0}")]
+    FromHyperError(#[from] FromHyperError),
 }
 
 #[derive(Clone, Debug)]

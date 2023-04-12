@@ -30,7 +30,15 @@
             crates = {
               "sd-core" = { };
               "sd-hyper" = { };
-              "sd-graphics" = { };
+              "sd-graphics" = {
+                overrides = {
+                  add-inputs.overrideAttrs = oldAttrs: rec {
+                    nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
+                      cbc
+                    ]);
+                  };
+                };
+              };
               "sd-gui" =
                 {
                   runtimeLibs = with pkgs; [

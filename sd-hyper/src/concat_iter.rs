@@ -1,4 +1,4 @@
-pub(crate) struct ConcatIter<I: Iterator> {
+pub struct ConcatIter<I: Iterator> {
     iter: I,
     sub_iter: Option<<I as Iterator>::Item>,
 }
@@ -28,7 +28,7 @@ where
     }
 }
 
-pub(crate) fn concat_iter<I: Iterator>(iter: I) -> ConcatIter<I> {
+pub fn concat_iter<I: Iterator>(iter: I) -> ConcatIter<I> {
     ConcatIter {
         iter,
         sub_iter: None,

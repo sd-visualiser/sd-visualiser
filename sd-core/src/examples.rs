@@ -13,7 +13,7 @@ pub fn copy() -> MonoidalGraph {
                 ops: vec![(Copy { copies: 2 }, vec![])],
             },
             Slice {
-                ops: vec![(Copy { copies: 2 }, vec![]), ID],
+                ops: vec![(Copy { copies: 2 }, vec![]), (ID, vec![])],
             },
         ],
     }
