@@ -166,12 +166,11 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
         let ns = slice
             .ops
             .iter()
-            .map(|(op, _)| {
-                if let MonoidalOp::Thunk { body, .. } = op {
+            .map(|(op, _)| match op {
+                MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
                     Node::Thunk(layout_internal(body, problem))
-                } else {
-                    Node::Atom(problem.add_variable(variable().min(0.0)))
                 }
+                _ => Node::Atom(problem.add_variable(variable().min(0.0))),
             })
             .collect_vec();
         add_constraints_nodes!(&ns);

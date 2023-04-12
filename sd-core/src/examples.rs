@@ -43,6 +43,7 @@ pub fn thunk() -> MonoidalGraph {
                     Thunk {
                         args: 1,
                         body: plus,
+                        expanded: true,
                     },
                     vec![],
                 ),

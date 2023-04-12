@@ -1,6 +1,7 @@
 use epaint::{
     emath::{Align2, RectTransform},
-    vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, Rounding, Shape, Stroke, Vec2,
+    vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, RectShape, Rounding, Shape,
+    Stroke, Vec2,
 };
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 
@@ -9,6 +10,7 @@ use crate::layout::Layout;
 pub const SCALE: f32 = 50.0;
 pub const STROKE_WIDTH: f32 = 1.0;
 
+pub const BOX_SIZE: Vec2 = vec2(20.0, 20.0);
 pub const RADIUS_ARG: f32 = 2.5;
 pub const RADIUS_COPY: f32 = 5.0;
 pub const RADIUS_OPERATION: f32 = 10.0;
@@ -103,7 +105,11 @@ fn generate_shapes(
                         default_stroke(),
                     )));
                 }
-                MonoidalOp::Thunk { args, body } => {
+                MonoidalOp::Thunk {
+                    args,
+                    body,
+                    expanded,
+                } if *expanded => {
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_in + diff;
@@ -176,6 +182,14 @@ fn generate_shapes(
                                 Default::default(),
                                 Color32::BLACK,
                             ))
+                        }
+                        MonoidalOp::Thunk { .. } => {
+                            shapes.push(Shape::Rect(RectShape {
+                                rect: Rect::from_center_size(center, BOX_SIZE),
+                                rounding: Rounding::none(),
+                                fill: Color32::WHITE,
+                                stroke: default_stroke(),
+                            }));
                         }
                         _ => (),
                     }
