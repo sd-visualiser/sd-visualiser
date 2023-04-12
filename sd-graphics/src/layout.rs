@@ -70,6 +70,29 @@ impl<T> LayoutInternal<T> {
 pub type Layout = LayoutInternal<f32>;
 
 impl Layout {
+    pub fn width(&self) -> f32 {
+        self.max - self.min
+    }
+
+    pub fn height(&self) -> f32 {
+        (0..self.nodes.len())
+            .map(|j| self.slice_height(j))
+            .sum::<f32>()
+            + 1.0
+    }
+
+    pub fn slice_height(&self, j: usize) -> f32 {
+        self.nodes[j]
+            .iter()
+            .map(|n| match n {
+                Node::Atom(_) => 0.0,
+                Node::Thunk(body) => body.height(),
+            })
+            .max_by(|x, y| x.partial_cmp(y).unwrap())
+            .unwrap()
+            + 1.0
+    }
+
     fn from_solution(layout: LayoutInternal<Variable>, solution: &impl Solution) -> Self {
         Layout {
             min: solution.value(layout.min) as f32,
