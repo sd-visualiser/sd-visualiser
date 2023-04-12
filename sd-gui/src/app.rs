@@ -6,7 +6,11 @@ use eframe::{
 use sd_core::{graph::HyperGraph, monoidal::MonoidalGraph};
 use tracing::{debug_span, event, Level};
 
-use crate::{highlighter::Highlighter, layout::Layouter, parser::Parser};
+use crate::{
+    highlighter::{CodeTheme, Highlighter},
+    layout::Layouter,
+    parser::Parser,
+};
 
 pub struct App {
     code: String,
@@ -37,7 +41,8 @@ impl App {
 
     fn code_ui(&mut self, ui: &mut egui::Ui) {
         let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
-            let mut layout_job = Highlighter::highlight(ui.ctx(), source);
+            let theme = CodeTheme::from_style(ui.style());
+            let mut layout_job = Highlighter::highlight(ui.ctx(), theme, source);
             layout_job.wrap.max_width = wrap_width;
             ui.fonts(|f| f.layout_job(layout_job))
         };
