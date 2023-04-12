@@ -104,7 +104,7 @@ fn generate_shapes(
                 }
                 MonoidalOp::Thunk { body, .. } => {
                     let x_op = x_op.unwrap_thunk();
-                    let diff = (slice_height - x_op.height()) as f32 / 2.0;
+                    let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_in + diff;
                     let y_max = y_out - diff;
                     for &x in x_ins {
