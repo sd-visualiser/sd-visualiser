@@ -105,6 +105,14 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::TopBottomPanel::top("menu").show(ctx, |ui| {
+            egui::trace!(ui);
+            ui.horizontal_wrapped(|ui| {
+                ui.visuals_mut().button_frame = false;
+                egui::widgets::global_dark_light_mode_switch(ui);
+            });
+        });
+
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.columns(2, |columns| {
                 egui::ScrollArea::vertical()
