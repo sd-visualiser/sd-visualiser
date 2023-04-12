@@ -4,34 +4,34 @@ expression: "layout(&examples::copy()).expect(\"Layout failed\")"
 ---
 LayoutInternal {
     min: 0.0,
-    max: 2.0,
+    max: 3.0,
     nodes: [
         [
             Atom(
-                1.25,
+                1.75,
             ),
         ],
         [
             Atom(
-                0.5,
+                1.0,
             ),
             Atom(
-                2.0,
+                2.5,
             ),
         ],
     ],
     wires: [
         [
-            1.25,
+            1.75,
+        ],
+        [
+            1.0,
+            2.5,
         ],
         [
             0.5,
-            2.0,
-        ],
-        [
-            0.0,
-            1.0,
-            2.0,
+            1.5,
+            2.5,
         ],
     ],
 }
