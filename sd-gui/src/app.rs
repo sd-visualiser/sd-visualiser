@@ -17,6 +17,21 @@ pub struct App {
     parsed: bool,
     hypergraph: HyperGraph,
     monoidal_term: MonoidalGraph,
+    panzoom: Panzoom,
+}
+
+struct Panzoom {
+    translation: Vec2,
+    zoom: f32,
+}
+
+impl Default for Panzoom {
+    fn default() -> Self {
+        Self {
+            translation: Default::default(),
+            zoom: 1.0,
+        }
+    }
 }
 
 impl App {
@@ -36,6 +51,7 @@ impl App {
             parsed: Default::default(),
             hypergraph: Default::default(),
             monoidal_term: Default::default(),
+            panzoom: Default::default(),
         }
     }
 
@@ -71,14 +87,17 @@ impl App {
     }
 
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
-        let (response, painter) = ui.allocate_painter(
-            Vec2::new(ui.available_width(), ui.available_height()),
-            egui::Sense::drag(),
-        );
+        let (response, painter) =
+            ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
         let to_screen = emath::RectTransform::from_to(
             Rect::from_min_size(Pos2::ZERO, response.rect.size()),
-            response.rect,
+            response
+                .rect
+                .translate(self.panzoom.translation)
+                .expand(self.panzoom.zoom),
         );
+        self.panzoom.translation += response.drag_delta();
+        self.panzoom.zoom += ui.input(|i| i.scroll_delta.y);
 
         // Background
         painter.add(Shape::rect_filled(
