@@ -10,6 +10,7 @@ use crate::{highlighter::Highlighter, layout::Layouter, parser::Parser};
 
 pub struct App {
     code: String,
+    parsed: bool,
     hypergraph: HyperGraph,
     monoidal_term: MonoidalGraph,
 }
@@ -28,6 +29,7 @@ impl App {
 
         App {
             code: Default::default(),
+            parsed: Default::default(),
             hypergraph: Default::default(),
             monoidal_term: Default::default(),
         }
@@ -49,6 +51,7 @@ impl App {
             let block = |app: &mut App| -> anyhow::Result<()> {
                 let parse = Parser::parse(ui.ctx(), &app.code);
                 let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
+                app.parsed = true;
                 event!(Level::DEBUG, "Converting to hypergraph");
                 app.hypergraph = expr.to_hypergraph()?;
                 event!(Level::DEBUG, "Converting to monoidal term");
@@ -57,6 +60,7 @@ impl App {
             };
             if block(self).is_err() {
                 // Display error to user?
+                self.parsed = false;
             }
         }
     }
@@ -75,7 +79,11 @@ impl App {
         painter.add(Shape::rect_filled(
             response.rect,
             Rounding::none(),
-            Color32::WHITE,
+            if self.parsed {
+                Color32::WHITE
+            } else {
+                Color32::GRAY
+            },
         ));
         let layout = Layouter::layout(ui.ctx(), &self.monoidal_term).unwrap();
         painter.extend(ui.fonts(|fonts| {
