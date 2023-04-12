@@ -266,6 +266,7 @@ impl MonoidalWiredGraph {
 
         struct OpData {
             op: Option<MonoidalWiredOp>,
+            outputs: usize,
             addr: Vec<NodeIndex>,
             node: NodeIndex,
             weight: Ratio<usize>,
@@ -277,6 +278,7 @@ impl MonoidalWiredGraph {
                 if !r.contains(&node) {
                     ops.push(OpData {
                         op: Some(MonoidalWiredOp::Id { port }),
+                        outputs: 1,
                         addr: prefix.to_vec(),
                         node,
                         weight: i.into(),
@@ -309,6 +311,7 @@ impl MonoidalWiredGraph {
                 } else {
                     Ratio::new_raw(sum, count)
                 };
+                let outputs = graph.number_of_outputs(node)?;
                 let op = match graph.get(node)? {
                     GraphNode::Weight(op) => Some(MonoidalWiredOp::Operation {
                         inputs: graph.get_inputs(node)?.collect(),
@@ -324,18 +327,19 @@ impl MonoidalWiredGraph {
                 };
                 ops.push(OpData {
                     op,
+                    outputs,
                     addr,
                     node,
                     weight,
                 })
             }
 
-            let number_of_out_ports = r.iter().map(|x| graph.number_of_outputs(*x).unwrap()).sum();
+            let number_of_out_ports = ops.iter().map(|data| data.outputs).sum();
 
             ops.sort_by_key(|data| data.weight);
 
             let out_nodes: BTreeMap<Port, usize> = concat_iter(ops.iter().map(|data| {
-                (0..graph.number_of_outputs(data.node).unwrap()).map(|index| Port {
+                (0..data.outputs).map(|index| Port {
                     node: data.node,
                     index: PortIndex(index),
                 })
