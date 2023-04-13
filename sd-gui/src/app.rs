@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use eframe::{
     egui, emath,
-    epaint::{Color32, Pos2, Rect, Rounding, Shape, Vec2},
+    epaint::{Pos2, Rect, Rounding, Shape, Vec2},
 };
 use sd_core::{
     graph::HyperGraph,
@@ -112,22 +112,17 @@ impl App {
         painter.add(Shape::rect_filled(
             response.rect,
             Rounding::none(),
-            if self.parsed {
-                Color32::WHITE
-            } else {
-                Color32::GRAY
-            },
+            ui.visuals().faint_bg_color,
         ));
         let layout = Layouter::layout(ui.ctx(), &self.monoidal_graph).unwrap();
-        painter.extend(ui.fonts(|fonts| {
-            sd_graphics::render::render(
-                &layout,
-                &self.monoidal_graph,
-                fonts,
-                response.rect.size(),
-                to_screen,
-            )
-        }));
+        painter.extend(sd_graphics::render::render(
+            ui,
+            &response,
+            &layout,
+            &mut self.monoidal_graph,
+            response.rect.size(),
+            to_screen,
+        ));
     }
 }
 

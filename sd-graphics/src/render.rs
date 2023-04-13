@@ -1,7 +1,7 @@
-use epaint::{
-    emath::{Align2, RectTransform},
-    vec2, CircleShape, Color32, CubicBezierShape, Fonts, Pos2, Rect, RectShape, Rounding, Shape,
-    Stroke, Vec2,
+use egui::{
+    emath::RectTransform,
+    epaint::{CircleShape, CubicBezierShape, RectShape},
+    vec2, Align2, Color32, Pos2, Rect, Response, Rounding, Sense, Shape, Vec2,
 };
 use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 
@@ -14,10 +14,6 @@ pub const BOX_SIZE: Vec2 = vec2(20.0, 20.0);
 pub const RADIUS_ARG: f32 = 2.5;
 pub const RADIUS_COPY: f32 = 5.0;
 pub const RADIUS_OPERATION: f32 = 10.0;
-
-pub fn default_stroke() -> Stroke {
-    Stroke::new(STROKE_WIDTH, Color32::BLACK)
-}
 
 // Specifies how to transform a layout position to a screen position.
 struct Transform {
@@ -36,9 +32,10 @@ impl Transform {
 }
 
 pub fn render(
+    ui: &egui::Ui,
+    response: &Response,
     layout: &Layout,
-    graph: &MonoidalGraph,
-    fonts: &Fonts,
+    graph: &mut MonoidalGraph,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape> {
@@ -49,41 +46,47 @@ pub fn render(
     };
 
     let mut shapes = Vec::default();
-    generate_shapes(&mut shapes, 0.0, layout, graph, fonts, &transform);
+    generate_shapes(ui, response, &mut shapes, 0.0, layout, graph, &transform);
     shapes
 }
 
 fn generate_shapes(
+    ui: &egui::Ui,
+    response: &Response,
     shapes: &mut Vec<Shape>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &MonoidalGraph,
-    fonts: &Fonts,
+    graph: &mut MonoidalGraph,
     transform: &Transform,
 ) {
+    let default_stroke = ui.visuals().noninteractive().fg_stroke;
+    let default_color = default_stroke.color;
+
     // Source
     for &x in layout.inputs() {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
-        shapes.push(Shape::line_segment([start, end], default_stroke()));
+        shapes.push(Shape::line_segment([start, end], default_stroke));
     }
 
     y_offset += 0.5;
 
-    for (j, slice) in graph.slices.iter().enumerate() {
+    for (j, slice) in graph.slices.iter_mut().enumerate() {
         let slice_height = layout.slice_height(j);
         let y_in = y_offset;
         let y_out = y_offset + slice_height;
 
         let mut offset_i = 0;
         let mut offset_o = 0;
-        for (i, (op, _)) in slice.ops.iter().enumerate() {
+        for (i, (op, _)) in slice.ops.iter_mut().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
             let x_op = &layout.nodes[j][i];
             let x_ins = &layout.wires[j][offset_i..offset_i + ni];
             let x_outs = &layout.wires[j + 1][offset_o..offset_o + no];
+
+            let id = response.id.with((j, i));
 
             match op {
                 MonoidalOp::Swap => {
@@ -96,13 +99,13 @@ fn generate_shapes(
                         vertical_out_vertical_in(in1, out2),
                         false,
                         Color32::TRANSPARENT,
-                        default_stroke(),
+                        default_stroke,
                     )));
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(in2, out1),
                         false,
                         Color32::TRANSPARENT,
-                        default_stroke(),
+                        default_stroke,
                     )));
                 }
                 MonoidalOp::Thunk {
@@ -117,26 +120,31 @@ fn generate_shapes(
                     for &x in x_ins {
                         let thunk = transform.apply(x, y_min);
                         let input = transform.apply(x, y_in);
-                        shapes.push(Shape::line_segment([input, thunk], default_stroke()));
+                        shapes.push(Shape::line_segment([input, thunk], default_stroke));
                     }
                     for &x in x_outs {
                         let thunk = transform.apply(x, y_max);
                         let output = transform.apply(x, y_out);
-                        shapes.push(Shape::line_segment([thunk, output], default_stroke()));
+                        shapes.push(Shape::line_segment([thunk, output], default_stroke));
+                    }
+                    let thunk_rect = Rect::from_min_max(
+                        transform.apply(x_op.min, y_min),
+                        transform.apply(x_op.max, y_max),
+                    );
+                    let thunk_response = ui.interact(thunk_rect, id, Sense::click());
+                    if thunk_response.clicked() {
+                        *expanded = false;
                     }
                     shapes.push(Shape::rect_stroke(
-                        Rect::from_min_max(
-                            transform.apply(x_op.min, y_min),
-                            transform.apply(x_op.max, y_max),
-                        ),
+                        thunk_rect,
                         Rounding::none(),
-                        default_stroke(),
+                        ui.style().interact(&thunk_response).fg_stroke,
                     ));
                     for &x in x_op.inputs().iter().rev().take(*args) {
                         let dot = transform.apply(x, y_min);
-                        shapes.push(Shape::circle_filled(dot, RADIUS_ARG, Color32::BLACK))
+                        shapes.push(Shape::circle_filled(dot, RADIUS_ARG, default_color))
                     }
-                    generate_shapes(shapes, y_min, x_op, body, fonts, transform);
+                    generate_shapes(ui, &thunk_response, shapes, y_min, x_op, body, transform);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
@@ -149,7 +157,7 @@ fn generate_shapes(
                             vertical_out_horizontal_in(input, center),
                             false,
                             Color32::TRANSPARENT,
-                            default_stroke(),
+                            default_stroke,
                         )));
                     }
 
@@ -159,36 +167,45 @@ fn generate_shapes(
                             horizontal_out_vertical_in(center, output),
                             false,
                             Color32::TRANSPARENT,
-                            default_stroke(),
+                            default_stroke,
                         )));
                     }
 
                     match op {
                         MonoidalOp::Copy { copies } if *copies != 1 => {
-                            shapes.push(Shape::circle_filled(center, RADIUS_COPY, Color32::BLACK))
+                            shapes.push(Shape::circle_filled(center, RADIUS_COPY, default_color))
                         }
                         MonoidalOp::Operation { op_name, .. } => {
+                            let op_rect = Rect::from_center_size(center, BOX_SIZE);
+                            let op_response = ui.interact(op_rect, id, Sense::click());
                             shapes.push(Shape::Circle(CircleShape {
                                 center,
                                 radius: RADIUS_OPERATION,
-                                fill: Color32::WHITE,
-                                stroke: default_stroke(),
+                                fill: ui.style().interact(&op_response).bg_fill,
+                                stroke: ui.style().interact(&op_response).fg_stroke,
                             }));
-                            shapes.push(Shape::text(
-                                fonts,
-                                center,
-                                Align2::CENTER_CENTER,
-                                op_name,
-                                Default::default(),
-                                Color32::BLACK,
-                            ))
+                            ui.fonts(|fonts| {
+                                shapes.push(Shape::text(
+                                    fonts,
+                                    center,
+                                    Align2::CENTER_CENTER,
+                                    op_name,
+                                    Default::default(),
+                                    ui.visuals().strong_text_color(),
+                                ));
+                            });
                         }
-                        MonoidalOp::Thunk { .. } => {
+                        MonoidalOp::Thunk { expanded, .. } => {
+                            let thunk_rect = Rect::from_center_size(center, BOX_SIZE);
+                            let thunk_response = ui.interact(thunk_rect, id, Sense::click());
+                            if thunk_response.clicked() {
+                                *expanded = true;
+                            }
                             shapes.push(Shape::Rect(RectShape {
-                                rect: Rect::from_center_size(center, BOX_SIZE),
+                                rect: thunk_rect,
                                 rounding: Rounding::none(),
-                                fill: Color32::WHITE,
-                                stroke: default_stroke(),
+                                fill: ui.style().interact(&thunk_response).bg_fill,
+                                stroke: ui.style().interact(&thunk_response).fg_stroke,
                             }));
                         }
                         _ => (),
@@ -207,7 +224,7 @@ fn generate_shapes(
     for &x in layout.outputs() {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
-        shapes.push(Shape::line_segment([start, end], default_stroke()));
+        shapes.push(Shape::line_segment([start, end], default_stroke));
     }
 }
 
