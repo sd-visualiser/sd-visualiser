@@ -264,13 +264,14 @@ impl MonoidalWiredGraph {
         let mut slices: Vec<WiredSlice> = Vec::new();
         let mut wirings: Vec<Wiring> = Vec::new();
 
+        #[derive(Debug)]
         struct OpData {
             op: Option<MonoidalWiredOp>,
-            outputs: usize,
+            outputs: Vec<Port>,
             addr: Vec<NodeIndex>,
-            node: NodeIndex,
             weight: Ratio<usize>,
         }
+
         for r in ranks {
             let mut ops: Vec<OpData> = Vec::new();
 
@@ -278,15 +279,15 @@ impl MonoidalWiredGraph {
                 if !r.contains(&node) {
                     ops.push(OpData {
                         op: Some(MonoidalWiredOp::Id { port }),
-                        outputs: 1,
+                        outputs: vec![port],
                         addr: prefix.to_vec(),
-                        node,
                         weight: i.into(),
                     });
                 }
             }
 
             for node in r.iter() {
+                debug!("Processing node {:?}", node);
                 let node = *node;
                 let addr = {
                     let mut temp = prefix.to_vec();
@@ -311,7 +312,12 @@ impl MonoidalWiredGraph {
                 } else {
                     Ratio::new_raw(sum, count)
                 };
-                let outputs = graph.number_of_outputs(node)?;
+                let outputs = (0..graph.number_of_outputs(node)?)
+                    .map(|index| Port {
+                        node,
+                        index: PortIndex(index),
+                    })
+                    .collect();
                 let op = match graph.get(node)? {
                     GraphNode::Weight(op) => Some(MonoidalWiredOp::Operation {
                         inputs: graph.get_inputs(node)?.collect(),
@@ -329,30 +335,31 @@ impl MonoidalWiredGraph {
                     op,
                     outputs,
                     addr,
-                    node,
                     weight,
                 })
             }
 
-            let number_of_out_ports = ops.iter().map(|data| data.outputs).sum();
-
             ops.sort_by_key(|data| data.weight);
 
-            let out_nodes: BTreeMap<Port, usize> = concat_iter(ops.iter().map(|data| {
-                (0..data.outputs).map(|index| Port {
-                    node: data.node,
-                    index: PortIndex(index),
-                })
-            }))
-            .enumerate()
-            .map(|(x, y)| (y, x))
-            .collect();
+            debug!("Operation layer generated: {:?}", ops);
+
+            let out_nodes: BTreeMap<Port, usize> =
+                concat_iter(ops.iter().map(|data| data.outputs.iter().copied()))
+                    .enumerate()
+                    .map(|(x, y)| (y, x))
+                    .collect();
+
+            let number_of_out_ports = out_nodes.len();
+
+            debug!("Out nodes: {:?}", out_nodes);
 
             let mut wiring = Wiring::new(number_of_out_ports);
 
             for p in open_wires {
                 wiring.add_wire(*out_nodes.get(&p).ok_or(HyperGraphError::UnknownPort(p))?);
             }
+
+            debug!("Wiring generated");
 
             open_wires = ops
                 .iter()
