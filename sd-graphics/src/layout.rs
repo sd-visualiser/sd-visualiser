@@ -212,10 +212,14 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
             match op {
                 Node::Atom(op) => {
                     // Fair averaging constraints
-                    let sum_ins: Expression = ins.iter().sum();
-                    let sum_outs: Expression = outs.iter().sum();
-                    problem.add_constraint((*op * ni as f64 - sum_ins).eq(0.0));
-                    problem.add_constraint((*op * no as f64 - sum_outs).eq(0.0));
+                    if ni > 0 {
+                        let sum_ins: Expression = ins.iter().sum();
+                        problem.add_constraint((*op * ni as f64).eq(sum_ins));
+                    }
+                    if no > 0 {
+                        let sum_outs: Expression = outs.iter().sum();
+                        problem.add_constraint((*op * no as f64).eq(sum_outs));
+                    }
                 }
                 Node::Thunk(layout) => {
                     // Align internal wires with the external ones.
@@ -260,6 +264,11 @@ mod tests {
     use sd_core::examples;
 
     use super::layout;
+
+    #[test]
+    fn int() {
+        assert_debug_snapshot!(layout(&examples::int()).expect("Layout failed"));
+    }
 
     #[test]
     fn copy() {
