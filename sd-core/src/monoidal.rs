@@ -274,17 +274,7 @@ impl MonoidalWiredGraph {
 
         for r in ranks {
             let mut ops: Vec<OpData> = Vec::new();
-
-            for (i, port @ Port { node, index: _ }) in open_wires.iter().copied().enumerate() {
-                if !r.contains(&node) {
-                    ops.push(OpData {
-                        op: Some(MonoidalWiredOp::Id { port }),
-                        outputs: vec![port],
-                        addr: prefix.to_vec(),
-                        weight: i.into(),
-                    });
-                }
-            }
+            let mut gathered_ports: BTreeSet<Port> = BTreeSet::new();
 
             for node in r.iter() {
                 debug!("Processing node {:?}", node);
@@ -318,6 +308,8 @@ impl MonoidalWiredGraph {
                         index: PortIndex(index),
                     })
                     .collect();
+
+                gathered_ports.extend(&outputs);
                 let op = match graph.get(node)? {
                     GraphNode::Weight(op) => Some(MonoidalWiredOp::Operation {
                         inputs: graph.get_inputs(node)?.collect(),
@@ -339,6 +331,18 @@ impl MonoidalWiredGraph {
                 })
             }
 
+            for (i, port) in open_wires.iter().copied().enumerate() {
+                if !gathered_ports.contains(&port) {
+                    gathered_ports.insert(port);
+                    ops.push(OpData {
+                        op: Some(MonoidalWiredOp::Id { port }),
+                        outputs: vec![port],
+                        addr: prefix.to_vec(),
+                        weight: i.into(),
+                    });
+                }
+            }
+
             ops.sort_by_key(|data| data.weight);
 
             debug!("Operation layer generated: {:?}", ops);
@@ -349,7 +353,7 @@ impl MonoidalWiredGraph {
                     .map(|(x, y)| (y, x))
                     .collect();
 
-            let number_of_out_ports = out_nodes.len();
+            let number_of_out_ports = gathered_ports.len();
 
             debug!("Out nodes: {:?}", out_nodes);
 
@@ -370,6 +374,8 @@ impl MonoidalWiredGraph {
                         .unwrap_or_default()
                 })
                 .concat();
+
+            debug!("Open wires: {:?}", open_wires);
 
             if let Some(ops) = ops
                 .into_iter()
