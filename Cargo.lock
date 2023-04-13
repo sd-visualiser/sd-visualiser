@@ -2233,7 +2233,7 @@ name = "sd-graphics"
 version = "0.1.0"
 dependencies = [
  "cargo-husky",
- "epaint",
+ "egui",
  "good_lp",
  "insta",
  "itertools",
