@@ -70,6 +70,7 @@ impl App {
         let text_edit_out = egui::TextEdit::multiline(&mut self.code)
             .code_editor()
             .layouter(&mut layouter)
+            .min_size(ui.available_size())
             .show(ui);
         if text_edit_out.response.changed() {
             event!(Level::DEBUG, "Reparsing");
