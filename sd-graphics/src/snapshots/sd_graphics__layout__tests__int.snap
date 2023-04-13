@@ -1,0 +1,21 @@
+---
+source: sd-graphics/src/layout.rs
+expression: "layout(&examples::int()).expect(\"Layout failed\")"
+---
+LayoutInternal {
+    min: 0.0,
+    max: 1.0,
+    nodes: [
+        [
+            Atom(
+                0.5,
+            ),
+        ],
+    ],
+    wires: [
+        [],
+        [
+            0.5,
+        ],
+    ],
+}

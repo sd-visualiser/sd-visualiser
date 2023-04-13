@@ -1,7 +1,25 @@
 use crate::{
-    language::grammar::ActiveOp,
+    language::grammar::{ActiveOp, PassiveOp},
     monoidal::{MonoidalGraph, MonoidalOp, Slice, ID},
 };
+
+/// Corrresponds to the program `bind x = 1() in x`.
+pub fn int() -> MonoidalGraph {
+    use MonoidalOp::*;
+
+    MonoidalGraph {
+        inputs: 0,
+        slices: vec![Slice {
+            ops: vec![(
+                Operation {
+                    inputs: 0,
+                    op_name: PassiveOp::Int(1).into(),
+                },
+                vec![],
+            )],
+        }],
+    }
+}
 
 pub fn copy() -> MonoidalGraph {
     use MonoidalOp::*;
