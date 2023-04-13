@@ -7,16 +7,14 @@ use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
 
 use crate::layout::Layout;
 
-pub const SCALE: f32 = 50.0;
-pub const STROKE_WIDTH: f32 = 1.0;
-
-pub const BOX_SIZE: Vec2 = vec2(20.0, 20.0);
-pub const RADIUS_ARG: f32 = 2.5;
-pub const RADIUS_COPY: f32 = 5.0;
-pub const RADIUS_OPERATION: f32 = 10.0;
+pub const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
+pub const RADIUS_ARG: f32 = 0.05;
+pub const RADIUS_COPY: f32 = 0.1;
+pub const RADIUS_OPERATION: f32 = 0.2;
 
 // Specifies how to transform a layout position to a screen position.
 struct Transform {
+    scale: f32,
     layout_bounds: Vec2,
     bounds: Vec2,
     to_screen: RectTransform,
@@ -26,7 +24,8 @@ impl Transform {
     fn apply(&self, x: f32, y: f32) -> Pos2 {
         // Scale by a constant and translate to the centre of the bounding box.
         self.to_screen.transform_pos(
-            Pos2::new(x * SCALE, y * SCALE) + (self.bounds - self.layout_bounds * SCALE) / 2.0,
+            Pos2::new(x * self.scale, y * self.scale)
+                + (self.bounds - self.layout_bounds * self.scale) / 2.0,
         )
     }
 }
@@ -35,11 +34,13 @@ pub fn render(
     ui: &egui::Ui,
     response: &Response,
     layout: &Layout,
+    scale: f32,
     graph: &mut MonoidalGraph,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape> {
     let transform = Transform {
+        scale,
         bounds,
         to_screen,
         layout_bounds: vec2(layout.width(), layout.height()),
@@ -142,7 +143,11 @@ fn generate_shapes(
                     ));
                     for &x in x_op.inputs().iter().rev().take(*args) {
                         let dot = transform.apply(x, y_min);
-                        shapes.push(Shape::circle_filled(dot, RADIUS_ARG, default_color))
+                        shapes.push(Shape::circle_filled(
+                            dot,
+                            RADIUS_ARG * transform.scale,
+                            default_color,
+                        ))
                     }
                     generate_shapes(ui, &thunk_response, shapes, y_min, x_op, body, transform);
                 }
@@ -173,14 +178,19 @@ fn generate_shapes(
 
                     match op {
                         MonoidalOp::Copy { copies } if *copies != 1 => {
-                            shapes.push(Shape::circle_filled(center, RADIUS_COPY, default_color))
+                            shapes.push(Shape::circle_filled(
+                                center,
+                                RADIUS_COPY * transform.scale,
+                                default_color,
+                            ))
                         }
                         MonoidalOp::Operation { op_name, .. } => {
-                            let op_rect = Rect::from_center_size(center, BOX_SIZE);
+                            let op_rect =
+                                Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let op_response = ui.interact(op_rect, id, Sense::click());
                             shapes.push(Shape::Circle(CircleShape {
                                 center,
-                                radius: RADIUS_OPERATION,
+                                radius: RADIUS_OPERATION * transform.scale,
                                 fill: ui.style().interact(&op_response).bg_fill,
                                 stroke: ui.style().interact(&op_response).fg_stroke,
                             }));
@@ -196,7 +206,8 @@ fn generate_shapes(
                             });
                         }
                         MonoidalOp::Thunk { expanded, .. } => {
-                            let thunk_rect = Rect::from_center_size(center, BOX_SIZE);
+                            let thunk_rect =
+                                Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let thunk_response = ui.interact(thunk_rect, id, Sense::click());
                             if thunk_response.clicked() {
                                 *expanded = true;

@@ -33,7 +33,7 @@ impl Default for Panzoom {
     fn default() -> Self {
         Self {
             translation: Default::default(),
-            zoom: 1.0,
+            zoom: 50.0,
         }
     }
 }
@@ -101,9 +101,7 @@ impl App {
             ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
         let to_screen = emath::RectTransform::from_to(
             Rect::from_min_size(Pos2::ZERO, response.rect.size()),
-            response
-                .rect
-                .translate(self.panzoom.translation)
+            response.rect.translate(self.panzoom.translation),
         );
         self.panzoom.translation += response.drag_delta();
 
@@ -118,6 +116,7 @@ impl App {
             ui,
             &response,
             &layout,
+            self.panzoom.zoom,
             &mut self.monoidal_graph,
             response.rect.size(),
             to_screen,
@@ -137,6 +136,12 @@ impl eframe::App for App {
 
                 if ui.button("Reset").clicked() {
                     self.panzoom = Default::default();
+                }
+                if ui.button("Zoom In").clicked() {
+                    self.panzoom.zoom *= 1.25;
+                }
+                if ui.button("Zoom Out").clicked() {
+                    self.panzoom.zoom /= 1.25;
                 }
             });
         });
