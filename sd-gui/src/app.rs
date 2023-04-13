@@ -7,7 +7,7 @@ use sd_core::{
     graph::HyperGraph,
     monoidal::{MonoidalGraph, MonoidalWiredGraph},
 };
-use tracing::{event, Level};
+use tracing::{debug, event, Level};
 
 use crate::{
     highlighter::{CodeTheme, Highlighter},
@@ -87,7 +87,8 @@ impl App {
                 event!(Level::DEBUG, "Got graph {:?}", app.monoidal_graph);
                 Ok(())
             };
-            if block(self).is_err() {
+            if let Err(e) = block(self) {
+                debug!("{:?}", e);
                 // Display error to user?
                 self.parsed = false;
             }
