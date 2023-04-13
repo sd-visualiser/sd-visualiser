@@ -104,10 +104,8 @@ impl App {
             response
                 .rect
                 .translate(self.panzoom.translation)
-                .expand(self.panzoom.zoom),
         );
         self.panzoom.translation += response.drag_delta();
-        self.panzoom.zoom += ui.input(|i| i.scroll_delta.y);
 
         // Background
         painter.add(Shape::rect_filled(
@@ -134,6 +132,12 @@ impl eframe::App for App {
             ui.horizontal_wrapped(|ui| {
                 ui.visuals_mut().button_frame = false;
                 egui::widgets::global_dark_light_mode_switch(ui);
+
+                ui.separator();
+
+                if ui.button("Reset").clicked() {
+                    self.panzoom = Default::default();
+                }
             });
         });
 
