@@ -3,7 +3,10 @@ use std::ops::Range;
 use eframe::{
     egui,
     egui::TextFormat,
-    epaint::text::{LayoutJob, LayoutSection},
+    epaint::{
+        text::{LayoutJob, LayoutSection},
+        FontId,
+    },
 };
 use syntect::{
     easy::HighlightLines,
@@ -138,6 +141,7 @@ impl Highlighter {
                     leading_space: 0.0,
                     byte_range: as_byte_range(code, range),
                     format: TextFormat {
+                        font_id: FontId::monospace(12.0),
                         color: text_color,
                         italics,
                         underline,
