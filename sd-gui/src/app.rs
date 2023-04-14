@@ -115,7 +115,7 @@ impl App {
                     if is_in_line(cursor.rcursor.row, &err.line_col) {
                         show_tooltip_at_pointer(ui.ctx(), Id::new("hover_tooltip"), |ui| {
                             ui.label(
-                                RichText::new(format!("{}", err)).font(FontId::monospace(12.0)),
+                                RichText::new(format!("{}", err)).font(FontId::monospace(13.5)),
                             )
                         });
                     }
