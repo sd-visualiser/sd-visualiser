@@ -12,7 +12,7 @@ use sd_core::{
 use tracing::{debug, event, Level};
 
 use crate::{
-    highlighter::{CodeTheme, Highlighter},
+    highlighter::{highlight, CodeTheme},
     layout::Layouter,
     parser::{ParseError, Parser},
 };
@@ -74,7 +74,7 @@ impl App {
         let theme = CodeTheme::from_style(ui.style());
 
         let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
-            let mut layout_job = Highlighter::highlight(ui.ctx(), theme, source);
+            let mut layout_job = highlight(ui.ctx(), &theme, source, "sd");
             layout_job.wrap.max_width = wrap_width;
             ui.fonts(|f| f.layout_job(layout_job))
         };

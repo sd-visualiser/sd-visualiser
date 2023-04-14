@@ -1,84 +1,50 @@
+use std::ops::Range;
+
 use eframe::{
-    egui::{
-        util::cache::{ComputerMut, FrameCache},
-        Context, Style,
-    },
-    epaint::{text::LayoutJob, Color32, FontId},
+    egui,
+    egui::TextFormat,
+    epaint::text::{LayoutJob, LayoutSection},
 };
-use tracing::{event, Level};
+use syntect::{
+    easy::HighlightLines,
+    highlighting::{FontStyle, ThemeSet},
+    parsing::{SyntaxDefinition, SyntaxSet, SyntaxSetBuilder},
+    util::LinesWithEndings,
+};
 
-pub struct Highlighter {
-    // config: HighlightConfiguration,
-}
-
-impl ComputerMut<(CodeTheme, &str), LayoutJob> for Highlighter {
-    fn compute(&mut self, (theme, source): (CodeTheme, &str)) -> LayoutJob {
-        event!(Level::DEBUG, "Highlighting");
-        highlight(theme, source)
-    }
-}
-
-type HighlightCache<'a> = FrameCache<LayoutJob, Highlighter>;
-
-impl Highlighter {
-    pub fn new() -> Self {
-        Highlighter {
-            // config: highlighter_config(),
+/// Memoized syntax highlighting
+pub fn highlight(ctx: &egui::Context, theme: &CodeTheme, code: &str, language: &str) -> LayoutJob {
+    impl egui::util::cache::ComputerMut<(&CodeTheme, &str, &str), LayoutJob> for Highlighter {
+        fn compute(&mut self, (theme, code, language): (&CodeTheme, &str, &str)) -> LayoutJob {
+            self.highlight(theme, code, language)
         }
     }
 
-    pub fn highlight(ctx: &Context, theme: CodeTheme, source: &str) -> LayoutJob {
-        ctx.memory_mut(|mem| {
-            mem.caches
-                .cache::<HighlightCache<'_>>()
-                .get((theme, source))
-        })
-    }
+    type HighlightCache = egui::util::cache::FrameCache<LayoutJob, Highlighter>;
+
+    ctx.memory_mut(|mem| {
+        mem.caches
+            .cache::<HighlightCache>()
+            .get((theme, code, language))
+    })
 }
 
-impl Default for Highlighter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// ----------------------------------------------------------------------------
 
-fn highlight(theme: CodeTheme, source: &str) -> LayoutJob {
-    // let job = LayoutJob::default();
-    // let mut highlight: Option<Highlight> = None;
-    // for event in language::highlight(config, source) {
-    //     match event {
-    //         HighlightEvent::HighlightStart(h) => highlight = Some(h),
-    //         HighlightEvent::HighlightEnd => highlight = None,
-    //         HighlightEvent::Source { start, end } => {
-    //             job.append(
-    //                 &source[start..end],
-    //                 0.0,
-    //                 highlight
-    //                     .map(|highlight| theme.format_from_highlight(highlight))
-    //                     .unwrap_or_default(),
-    //             );
-    //         }
-    //     }
-    // }
-    // job
-    LayoutJob::simple(
-        source.to_string(),
-        FontId::default(),
-        theme.keyword_color,
-        0.0,
-    )
-}
-
-#[derive(Copy, Clone, Hash, Debug)]
+#[derive(Clone, Hash, Debug)]
 pub struct CodeTheme {
-    keyword_color: Color32,
-    operator_color: Color32,
-    variable_color: Color32,
-    punctuation_color: Color32,
+    dark_mode: bool,
+    syntect_theme: String,
+}
+
+impl Default for CodeTheme {
+    fn default() -> Self {
+        Self::dark()
+    }
 }
 
 impl CodeTheme {
-    pub fn from_style(style: &Style) -> Self {
+    pub fn from_style(style: &egui::Style) -> Self {
         if style.visuals.dark_mode {
             Self::dark()
         } else {
@@ -88,39 +54,108 @@ impl CodeTheme {
 
     pub fn dark() -> Self {
         Self {
-            keyword_color: Color32::from_rgb(255, 100, 100),
-            operator_color: Color32::LIGHT_GRAY,
-            variable_color: Color32::from_rgb(87, 165, 171),
-            punctuation_color: Color32::LIGHT_GRAY,
+            dark_mode: true,
+            syntect_theme: "Solarized (dark)".to_string(),
         }
     }
 
     pub fn light() -> Self {
         Self {
-            keyword_color: Color32::from_rgb(235, 0, 0),
-            operator_color: Color32::DARK_GRAY,
-            variable_color: Color32::from_rgb(153, 134, 255),
-            punctuation_color: Color32::DARK_GRAY,
+            dark_mode: false,
+            syntect_theme: "Solarized (light)".to_string(),
         }
     }
+}
 
-    // fn format_from_highlight(&self, highlight: Highlight) -> TextFormat {
-    //     let color = match highlight.0 {
-    //         0 => self.keyword_color,
-    //         1 => self.operator_color,
-    //         2 => self.variable_color,
-    //         3 | 4 => self.punctuation_color,
-    //         _ => panic!("Unexpected highlight"),
-    //     };
+// ----------------------------------------------------------------------------
 
-    //     TextFormat {
-    //         font_id: Default::default(),
-    //         color,
-    //         background: Color32::TRANSPARENT,
-    //         italics: false,
-    //         underline: Stroke::NONE,
-    //         strikethrough: Stroke::NONE,
-    //         valign: Align::BOTTOM,
-    //     }
-    // }
+pub const SYNTAX: &str = include_str!("sd.sublime-syntax");
+
+struct Highlighter {
+    themes: ThemeSet,
+    syntaxes: SyntaxSet,
+}
+
+impl Default for Highlighter {
+    fn default() -> Self {
+        let syntaxes = {
+            let mut builder = SyntaxSetBuilder::new();
+            builder.add(SyntaxDefinition::load_from_str(SYNTAX, true, None).unwrap());
+            builder.build()
+        };
+
+        Self {
+            syntaxes,
+            themes: ThemeSet::load_defaults(),
+        }
+    }
+}
+
+impl Highlighter {
+    fn highlight(&self, theme: &CodeTheme, code: &str, language: &str) -> LayoutJob {
+        self.highlight_impl(theme, code, language)
+            .unwrap_or_else(|| {
+                // Fallback:
+                LayoutJob::simple(
+                    code.into(),
+                    Default::default(),
+                    if theme.dark_mode {
+                        egui::Color32::LIGHT_GRAY
+                    } else {
+                        egui::Color32::DARK_GRAY
+                    },
+                    f32::INFINITY,
+                )
+            })
+    }
+
+    fn highlight_impl(&self, theme: &CodeTheme, code: &str, language: &str) -> Option<LayoutJob> {
+        let syntax = self
+            .syntaxes
+            .find_syntax_by_name(language)
+            .or_else(|| self.syntaxes.find_syntax_by_extension(language))?;
+
+        let theme = &theme.syntect_theme;
+        let mut h = HighlightLines::new(syntax, &self.themes.themes[theme]);
+
+        let mut job = LayoutJob {
+            text: code.into(),
+            ..Default::default()
+        };
+
+        for line in LinesWithEndings::from(code) {
+            for (style, range) in h.highlight_line(line, &self.syntaxes).ok()? {
+                let fg = style.foreground;
+                let text_color = egui::Color32::from_rgb(fg.r, fg.g, fg.b);
+                let italics = style.font_style.contains(FontStyle::ITALIC);
+                let underline = style.font_style.contains(FontStyle::ITALIC);
+                let underline = if underline {
+                    egui::Stroke::new(1.0, text_color)
+                } else {
+                    egui::Stroke::NONE
+                };
+                job.sections.push(LayoutSection {
+                    leading_space: 0.0,
+                    byte_range: as_byte_range(code, range),
+                    format: TextFormat {
+                        color: text_color,
+                        italics,
+                        underline,
+                        ..Default::default()
+                    },
+                });
+            }
+        }
+
+        Some(job)
+    }
+}
+
+fn as_byte_range(whole: &str, range: &str) -> Range<usize> {
+    let whole_start = whole.as_ptr() as usize;
+    let range_start = range.as_ptr() as usize;
+    assert!(whole_start <= range_start);
+    assert!(range_start + range.len() <= whole_start + whole.len());
+    let offset = range_start - whole_start;
+    offset..offset + range.len()
 }
