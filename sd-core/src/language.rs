@@ -1,133 +1,89 @@
+#![allow(clippy::clone_on_copy)]
+
 use std::fmt::{Display, Write};
 
-#[rust_sitter::grammar("sdlanguage")]
-pub mod grammar {
-    #[rust_sitter::language]
-    #[derive(Clone, Debug)]
-    pub enum Expr {
-        Val(Value),
-        Bind(
-            #[rust_sitter::leaf(text = "bind")] (),
-            Variable,
-            #[rust_sitter::leaf(text = "=")] (),
-            Term,
-            #[rust_sitter::leaf(text = "in")] (),
-            Box<Expr>,
-        ),
-    }
+use pest::Span;
+use pest_ast::FromPest;
+use pest_derive::Parser;
 
-    #[derive(Clone, Debug)]
-    pub enum Term {
-        Val(Value),
-        ActiveOp(
-            ActiveOp,
-            #[rust_sitter::leaf(text = "(")] (),
-            #[rust_sitter::delimited(
-                #[rust_sitter::leaf(text = ",")]
-                ()
-            )]
-            Vec<Value>,
-            #[rust_sitter::leaf(text = ")")] (),
-        ),
-        Thunk(Box<Thunk>),
-    }
+#[derive(Parser)]
+#[grammar = "language.pest"]
+pub struct SDParser;
 
-    #[derive(Clone, Debug)]
-    pub enum Value {
-        Var(Variable),
-        PassiveOp(
-            PassiveOp,
-            #[rust_sitter::leaf(text = "(")] (),
-            #[rust_sitter::delimited(
-                #[rust_sitter::leaf(text = ",")]
-                ()
-            )]
-            Vec<Value>,
-            #[rust_sitter::leaf(text = ")")] (),
-        ),
-    }
-
-    #[allow(clippy::manual_non_exhaustive)]
-    #[derive(Clone, Debug)]
-    pub struct Thunk {
-        pub args: Vec<Variable>,
-        #[rust_sitter::leaf(text = ".")]
-        _dot: (),
-        pub body: Expr,
-    }
-
-    #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-    pub enum ActiveOp {
-        Plus(#[rust_sitter::leaf(text = "+")] ()),
-        Times(#[rust_sitter::leaf(text = "*")] ()),
-    }
-
-    #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
-    pub enum PassiveOp {
-        Int(#[rust_sitter::leaf(pattern = r"\d+", transform = |v| v.parse().unwrap())] usize),
-    }
-
-    #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub struct Variable {
-        #[rust_sitter::leaf(pattern = r"[a-zA-Z][a-zA-Z0-9_]*", transform = |v| v.to_string())]
-        pub var: String,
-    }
-
-    #[rust_sitter::extra]
-    struct Whitespace {
-        #[rust_sitter::leaf(pattern = r"\s")]
-        _whitespace: (),
-    }
+fn span_into_str(span: Span) -> &str {
+    span.as_str()
 }
 
-impl Display for grammar::ActiveOp {
+#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[pest_ast(rule(Rule::expr))]
+pub struct Expr {
+    pub binds: Vec<BindClause>,
+    pub value: Value,
+}
+
+#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[pest_ast(rule(Rule::bind_clause))]
+pub struct BindClause {
+    pub var: Variable,
+    pub term: Term,
+}
+
+#[derive(Clone, Debug, FromPest, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[pest_ast(rule(Rule::variable))]
+pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+
+#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[pest_ast(rule(Rule::term))]
+pub enum Term {
+    Thunk(Thunk),
+    ActiveOp(ActiveOp, Vec<Value>),
+    Value(Value),
+}
+
+#[derive(Clone, Copy, Debug, FromPest, PartialEq, Eq, Hash)]
+#[pest_ast(rule(Rule::active_op))]
+pub enum ActiveOp {
+    Plus,
+}
+
+#[derive(Clone, Copy, Debug, FromPest, PartialEq, Eq, Hash)]
+#[pest_ast(rule(Rule::passive_op))]
+pub enum PassiveOp {
+    Int(#[pest_ast(outer(with(span_into_str), with(str::parse), with(Result::unwrap)))] usize),
+}
+
+#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[pest_ast(rule(Rule::value))]
+pub enum Value {
+    PassiveOp(PassiveOp, Vec<Value>),
+    Var(Variable),
+}
+
+#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[pest_ast(rule(Rule::thunk))]
+pub struct Thunk {
+    pub args: Vec<Variable>,
+    pub body: Expr,
+}
+
+impl Display for ActiveOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Plus(()) => f.write_char('+'),
-            Self::Times(()) => f.write_char('x'),
+            ActiveOp::Plus => f.write_char('+'),
         }
     }
 }
 
-impl Display for grammar::PassiveOp {
+impl Display for PassiveOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Int(n) => f.write_str(&n.to_string()),
+            PassiveOp::Int(d) => f.write_str(&d.to_string()),
         }
     }
 }
 
-pub const HIGHLIGHT_QUERY: &str = include_str!("../../highlights.scm");
-
-use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
-
-pub fn highlighter_config() -> HighlightConfiguration {
-    let highlight_names = &[
-        "keyword",
-        "operator",
-        "variable",
-        "punctuation.bracket",
-        "punctuation.delimiter",
-    ];
-
-    let mut config = HighlightConfiguration::new(
-        crate::language::grammar::language(),
-        HIGHLIGHT_QUERY,
-        "",
-        "",
-    )
-    .unwrap();
-    config.configure(highlight_names);
-    config
-}
-
-pub fn highlight(
-    config: &HighlightConfiguration,
-    source: &str,
-) -> Vec<tree_sitter_highlight::HighlightEvent> {
-    Highlighter::new()
-        .highlight(config, source.as_bytes(), None, |_| None)
-        .unwrap()
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap()
+impl Display for Variable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
 }

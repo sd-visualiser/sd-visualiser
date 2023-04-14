@@ -4,7 +4,7 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::language::grammar::{ActiveOp, Expr, PassiveOp, Term, Thunk, Value, Variable};
+use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 use sd_hyper::graph::{Graph, GraphNode, HyperGraphError, Port, PortIndex};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
@@ -34,23 +34,13 @@ impl From<ActiveOp> for Op {
     }
 }
 
-// impl Op {
-//     pub fn is_input(&self) -> bool {
-//         matches!(self, Op::Input)
-//     }
-
-//     pub fn is_output(&self) -> bool {
-//         matches!(self, Op::Output)
-//     }
-// }
-
 pub type HyperGraph = Graph<Op>;
 
 #[derive(Debug, Error)]
 pub enum ConvertError {
     #[error("Error constructing hypergraph")]
     HyperGraphError(#[from] HyperGraphError),
-    #[error("Couldn't find location of variable `{}`", .0.var)]
+    #[error("Couldn't find location of variable `{0}`")]
     VariableError(Variable),
 }
 
@@ -60,14 +50,10 @@ impl Expr {
         bound: &mut BTreeSet<Variable>,
         vars: &mut BTreeSet<Variable>,
     ) {
-        match self {
-            Expr::Val(v) => v.free_variables(bound, vars),
-            Expr::Bind(_, var, _, term, _, expr) => {
-                term.free_variables(bound, vars);
-                bound.insert(var.clone());
-                expr.free_variables(bound, vars);
-            }
+        for bc in &self.binds {
+            bc.free_variables(bound, vars);
         }
+        self.value.free_variables(bound, vars);
     }
 
     pub fn to_hypergraph(&self) -> Result<HyperGraph, ConvertError> {
@@ -108,17 +94,32 @@ impl Expr {
         graph: &mut HyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<(), ConvertError> {
-        match self {
-            Expr::Val(v) => {
-                let port = v.process(graph, mapping)?;
-                graph.add_node(GraphNode::Output, vec![port], 0)?;
-            }
-            Expr::Bind(_, var, _, term, _, expr) => {
-                let port = term.process(graph, mapping)?;
-                mapping.insert(var.clone(), port);
-                expr.process(graph, mapping)?;
-            }
+        for bc in &self.binds {
+            bc.process(graph, mapping)?;
         }
+        let port = self.value.process(graph, mapping)?;
+        graph.add_node(GraphNode::Output, vec![port], 0)?;
+        Ok(())
+    }
+}
+
+impl BindClause {
+    pub(crate) fn free_variables(
+        &self,
+        bound: &mut BTreeSet<Variable>,
+        vars: &mut BTreeSet<Variable>,
+    ) {
+        self.term.free_variables(bound, vars);
+        bound.insert(self.var.clone());
+    }
+
+    pub(crate) fn process(
+        &self,
+        graph: &mut HyperGraph,
+        mapping: &mut HashMap<Variable, Port>,
+    ) -> Result<(), ConvertError> {
+        let port = self.term.process(graph, mapping)?;
+        mapping.insert(self.var.clone(), port);
         Ok(())
     }
 }
@@ -126,8 +127,8 @@ impl Expr {
 impl Term {
     pub(crate) fn free_variables(&self, bound: &BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
         match self {
-            Term::Val(v) => v.free_variables(bound, vars),
-            Term::ActiveOp(_, _, vs, _) => {
+            Term::Value(v) => v.free_variables(bound, vars),
+            Term::ActiveOp(_, vs) => {
                 for v in vs {
                     v.free_variables(bound, vars);
                 }
@@ -142,8 +143,8 @@ impl Term {
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Port, ConvertError> {
         match self {
-            Term::Val(v) => v.process(graph, mapping),
-            Term::ActiveOp(op, _, vals, _) => {
+            Term::Value(v) => v.process(graph, mapping),
+            Term::ActiveOp(op, vals) => {
                 let mut inputs = vec![];
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
@@ -167,7 +168,7 @@ impl Value {
                     vars.insert(v.clone());
                 }
             }
-            Value::PassiveOp(_, _, vs, _) => {
+            Value::PassiveOp(_, vs) => {
                 for v in vs {
                     v.free_variables(bound, vars)
                 }
@@ -185,7 +186,7 @@ impl Value {
                 .get(v)
                 .copied()
                 .ok_or(ConvertError::VariableError(v.clone())),
-            Value::PassiveOp(op, _, vals, _) => {
+            Value::PassiveOp(op, vals) => {
                 let mut inputs = vec![];
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
@@ -254,9 +255,7 @@ impl Thunk {
 
 impl From<&str> for Variable {
     fn from(value: &str) -> Self {
-        Variable {
-            var: value.to_string(),
-        }
+        Variable(value.to_string())
     }
 }
 
@@ -264,32 +263,37 @@ impl From<&str> for Variable {
 mod tests {
     use std::collections::BTreeSet;
 
-    use anyhow::{anyhow, Context, Result};
+    use anyhow::{Context, Result};
+    use from_pest::FromPest;
     use insta::assert_debug_snapshot;
+    use pest::Parser;
     use rstest::{fixture, rstest};
 
-    use crate::language::grammar::{parse, Expr, Variable};
+    use crate::language::{Expr, Rule, SDParser, Variable};
 
     #[fixture]
     fn basic_program() -> Result<Expr> {
-        parse("bind x = 1() in x")
-            .map_err(|x| anyhow!("{:?}", x))
-            .context("Could not parse basic program")
+        let mut pairs = SDParser::parse(Rule::program, "bind x = 1() in x")
+            .context("Could not parse basic program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
     #[fixture]
     fn free_vars() -> Result<Expr> {
-        parse("bind x = y in z")
-            .map_err(|x| anyhow!("{:?}", x))
-            .context("Could not parse free variable program")
+        let mut pairs = SDParser::parse(Rule::program, "bind x = y in z")
+            .context("Could not parse free variable program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
     // Make this something meaningful
     #[fixture]
     fn thunks() -> Result<Expr> {
-        parse("bind a = x0.1() in bind b = x0.bind z = +(x0,y) in z in bind x = +(a,b) in x")
-            .map_err(|x| anyhow!("{:?}", x))
-            .context("Could not parse thunk program")
+        let mut pairs = SDParser::parse(
+            Rule::program,
+            "bind a = x0.1() in bind b = x0.bind z = +(x0,y) in z in bind x = +(a,b) in x",
+        )
+        .context("Could not parse thunk program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
     #[rstest]

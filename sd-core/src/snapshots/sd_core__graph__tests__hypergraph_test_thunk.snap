@@ -99,9 +99,7 @@ Hypergraph {
                             ),
                             Weight(
                                 Active(
-                                    Plus(
-                                        (),
-                                    ),
+                                    Plus,
                                 ),
                             ),
                         ),
@@ -183,9 +181,7 @@ Hypergraph {
             ),
             Weight(
                 Active(
-                    Plus(
-                        (),
-                    ),
+                    Plus,
                 ),
             ),
         ),
