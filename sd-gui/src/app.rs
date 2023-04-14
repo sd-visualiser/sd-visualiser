@@ -2,7 +2,7 @@ use anyhow::anyhow;
 use eframe::{
     egui::{self, show_tooltip_at_pointer, FontDefinitions, Id, RichText},
     emath,
-    epaint::{FontId, Pos2, Rect, Rounding, Shape, Vec2},
+    epaint::{Color32, FontId, Pos2, QuadraticBezierShape, Rect, Rounding, Shape, Stroke, Vec2},
 };
 use pest::error::LineColLocation;
 use sd_core::{
@@ -45,6 +45,13 @@ fn is_in_line(cursor: usize, line_col: &LineColLocation) -> bool {
     match line_col {
         LineColLocation::Pos((l, _)) => l - 1 == cursor,
         LineColLocation::Span((l1, _), (l2, _)) => l1 - 1 <= cursor && l2 - 1 <= cursor,
+    }
+}
+
+fn lines_contained(line_col: &LineColLocation) -> Vec<usize> {
+    match line_col {
+        LineColLocation::Pos((l, _)) => vec![l - 1],
+        LineColLocation::Span((l1, _), (l2, _)) => (*l1..=*l2).collect(),
     }
 }
 
@@ -104,14 +111,47 @@ impl App {
 
         let parse = Parser::parse(ui.ctx(), &self.code);
 
-        if let Some(x) = text_edit_out.response.hover_pos() {
-            let pos = x - text_edit_out.text_draw_pos;
+        if let Err(ParseError::PError(err)) = parse.as_ref() {
+            let painter = ui.ctx().layer_painter(text_edit_out.response.layer_id);
+            for l in lines_contained(&err.line_col) {
+                if let Some(row) = text_edit_out.galley.rows.get(l) {
+                    // Draw squiggly line under error line
+                    const SQUIGGLE_HEIGHT: f32 = 5.0;
+                    const SQUIGGLES_PER_CHAR: usize = 3;
+                    let left = row.rect.min.x;
+                    let right = row.rect.max.x;
+                    let base = row.rect.max.y;
+                    let count = row.glyphs.len() * SQUIGGLES_PER_CHAR;
+                    // Takes weighted average of 'left' and 'right' where
+                    // 0 <= i <= count
+                    let w_avg = |i: f32| {
+                        let count_f = count as f32;
+                        (left * (count_f - i) + right * i) / count_f
+                    };
+                    for i in 0..count {
+                        let start: Pos2 = Pos2::from((w_avg(i as f32), base))
+                            + text_edit_out.text_draw_pos.to_vec2();
+                        let control: Pos2 = Pos2::from((
+                            w_avg(i as f32 + 0.5),
+                            base + SQUIGGLE_HEIGHT * (((i + 1) % 2) as f32 - 0.5),
+                        )) + text_edit_out.text_draw_pos.to_vec2();
+                        let end: Pos2 = Pos2::from((w_avg((i + 1) as f32), base))
+                            + text_edit_out.text_draw_pos.to_vec2();
+                        painter.add(QuadraticBezierShape {
+                            points: [start, control, end],
+                            closed: false,
+                            fill: Color32::TRANSPARENT,
+                            stroke: Stroke::new(1.0, ui.style().visuals.error_fg_color),
+                        });
+                    }
+                }
+            }
 
-            if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
-                let cursor = text_edit_out.galley.cursor_from_pos(pos);
-                event!(Level::DEBUG, "{:?}", cursor);
-                if let Err(ParseError::PError(err)) = parse.as_ref() {
-                    event!(Level::DEBUG, "{:?}", err);
+            if let Some(x) = text_edit_out.response.hover_pos() {
+                let pos = x - text_edit_out.text_draw_pos;
+
+                if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
+                    let cursor = text_edit_out.galley.cursor_from_pos(pos);
                     if is_in_line(cursor.rcursor.row, &err.line_col) {
                         show_tooltip_at_pointer(ui.ctx(), Id::new("hover_tooltip"), |ui| {
                             ui.label(
