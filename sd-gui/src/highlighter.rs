@@ -141,7 +141,7 @@ impl Highlighter {
                     leading_space: 0.0,
                     byte_range: as_byte_range(code, range),
                     format: TextFormat {
-                        font_id: FontId::monospace(12.0),
+                        font_id: FontId::monospace(13.5),
                         color: text_color,
                         italics,
                         underline,
