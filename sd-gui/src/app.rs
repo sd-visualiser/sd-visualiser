@@ -164,7 +164,7 @@ impl eframe::App for App {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
                 ui.visuals_mut().button_frame = false;
-                egui::widgets::global_dark_light_mode_switch(ui);
+                egui::widgets::global_dark_light_mode_buttons(ui);
 
                 ui.separator();
 
