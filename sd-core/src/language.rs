@@ -2,6 +2,7 @@
 
 use std::fmt::{Display, Write};
 
+use from_pest::Void;
 use pest::Span;
 use pest_ast::FromPest;
 use pest_derive::Parser;
@@ -40,10 +41,37 @@ pub enum Term {
     Value(Value),
 }
 
-#[derive(Clone, Copy, Debug, FromPest, PartialEq, Eq, Hash)]
-#[pest_ast(rule(Rule::active_op))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ActiveOp {
     Plus,
+    Minus,
+    Times,
+    Eq,
+    If,
+    App,
+    Lambda,
+    Rec,
+}
+
+impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(
+        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        match pest.next().map(|pair| pair.as_str()) {
+            Some("plus") => Ok(Self::Plus),
+            Some("minus") => Ok(Self::Minus),
+            Some("times") => Ok(Self::Times),
+            Some("eq") => Ok(Self::Eq),
+            Some("if") => Ok(Self::If),
+            Some("app") => Ok(Self::App),
+            Some("lambda") => Ok(Self::Lambda),
+            Some("rec") => Ok(Self::Rec),
+            _ => Err(from_pest::ConversionError::NoMatch),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, FromPest, PartialEq, Eq, Hash)]
@@ -69,7 +97,14 @@ pub struct Thunk {
 impl Display for ActiveOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ActiveOp::Plus => f.write_char('+'),
+            Self::Plus => f.write_char('+'),
+            Self::Minus => f.write_char('-'),
+            Self::Times => f.write_char('×'),
+            Self::Eq => f.write_char('='),
+            Self::If => f.write_str("if"),
+            Self::App => f.write_char('@'),
+            Self::Lambda => f.write_char('λ'),
+            Self::Rec => f.write_char('μ'),
         }
     }
 }

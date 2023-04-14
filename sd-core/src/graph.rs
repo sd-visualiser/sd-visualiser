@@ -290,7 +290,7 @@ mod tests {
     fn thunks() -> Result<Expr> {
         let mut pairs = SDParser::parse(
             Rule::program,
-            "bind a = x0.1() in bind b = x0.bind z = +(x0,y) in z in bind x = +(a,b) in x",
+            "bind a = x0.1() in bind b = x0.bind z = plus(x0,y) in z in bind x = plus(a,b) in x",
         )
         .context("Could not parse thunk program")?;
         Ok(Expr::from_pest(&mut pairs).unwrap())

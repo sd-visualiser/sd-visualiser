@@ -1,5 +1,5 @@
-bind thunk1 = y z . bind a  = +(x, y) in bind b = +(a, z) in b in
-bind thunk2 = y z u . bind a  = +(x, y) in bind b = +(a, z) in bind c = +(b, u) in c in
-bind thunk3 = y z u v . bind a  = +(x, y) in bind b = +(a, z) in bind c = +(b, u) in bind d = +(c, v) in d in
-bind a = +(thunk1, thunk2, thunk3) in
+bind thunk1 = y z . bind a  = plus(x, y) in bind b = plus(a, z) in b in
+bind thunk2 = y z u . bind a  = plus(x, y) in bind b = plus(a, z) in bind c = plus(b, u) in c in
+bind thunk3 = y z u v . bind a  = plus(x, y) in bind b = plus(a, z) in bind c = plus(b, u) in bind d = plus(c, v) in d in
+bind a = plus(thunk1, thunk2, thunk3) in
 a
