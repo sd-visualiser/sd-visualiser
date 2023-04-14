@@ -4,7 +4,28 @@ name: SD
 file_extensions: [sd]
 scope: source.sd
 
+variables:
+  identifier: '[a-zA-Z][a-zA-Z0-9_]*'
+
 contexts:
   main:
-    - match: \b(bind|in)\b
-      scope: keyword
+    - match: '\b(bind)\b'
+      scope: keyword.sd
+      push:
+        - match: '(=)'
+          scope: keyword.operator.sd
+        - match: '\b(in)\b'
+          scope: keyword.sd
+          pop: true
+    - match: '\('
+      scope: punctuation.section.group.begin.sd
+      push:
+        - match: '\)'
+          scope: punctuation.section.group.end.sd
+          pop: true
+    - match: '\${{identifier}}'
+      scope: variable.sd
+    - match: '.'
+      scope: punctuation.separator.sd
+    - match: '.'
+      scope: punctuation.separator.sd
