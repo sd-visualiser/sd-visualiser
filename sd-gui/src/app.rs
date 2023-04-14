@@ -1,8 +1,10 @@
 use anyhow::anyhow;
 use eframe::{
-    egui, emath,
-    epaint::{Pos2, Rect, Rounding, Shape, Vec2},
+    egui::{self, show_tooltip_at_pointer, Id, RichText},
+    emath,
+    epaint::{FontId, Pos2, Rect, Rounding, Shape, Vec2},
 };
+use pest::error::LineColLocation;
 use sd_core::{
     graph::HyperGraph,
     monoidal::{MonoidalGraph, MonoidalWiredGraph},
@@ -12,7 +14,7 @@ use tracing::{debug, event, Level};
 use crate::{
     highlighter::{CodeTheme, Highlighter},
     layout::Layouter,
-    parser::Parser,
+    parser::{ParseError, Parser},
 };
 
 pub struct App {
@@ -35,6 +37,14 @@ impl Default for Panzoom {
             translation: Default::default(),
             zoom: 50.0,
         }
+    }
+}
+
+fn is_in_line(cursor: usize, line_col: &LineColLocation) -> bool {
+    // Pest lines are 1 indexed, egui are 0 ☹
+    match line_col {
+        LineColLocation::Pos((l, _)) => l - 1 == cursor,
+        LineColLocation::Span((l1, _), (l2, _)) => l1 - 1 <= cursor && l2 - 1 <= cursor,
     }
 }
 
@@ -61,17 +71,41 @@ impl App {
     }
 
     fn code_ui(&mut self, ui: &mut egui::Ui) {
+        let theme = CodeTheme::from_style(ui.style());
+
         let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
-            let theme = CodeTheme::from_style(ui.style());
             let mut layout_job = Highlighter::highlight(ui.ctx(), theme, source);
             layout_job.wrap.max_width = wrap_width;
             ui.fonts(|f| f.layout_job(layout_job))
         };
+
         let text_edit_out = egui::TextEdit::multiline(&mut self.code)
             .code_editor()
             .layouter(&mut layouter)
             .min_size(ui.available_size())
             .show(ui);
+
+        let parse = Parser::parse(ui.ctx(), &self.code);
+
+        if let Some(x) = text_edit_out.response.hover_pos() {
+            let pos = x - text_edit_out.text_draw_pos;
+
+            if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
+                let cursor = text_edit_out.galley.cursor_from_pos(pos);
+                event!(Level::DEBUG, "{:?}", cursor);
+                if let Err(ParseError::PError(err)) = parse.as_ref() {
+                    event!(Level::DEBUG, "{:?}", err);
+                    if is_in_line(cursor.rcursor.row, &err.line_col) {
+                        show_tooltip_at_pointer(ui.ctx(), Id::new("hover_tooltip"), |ui| {
+                            ui.label(
+                                RichText::new(format!("{}", err)).font(FontId::monospace(12.0)),
+                            )
+                        });
+                    }
+                }
+            }
+        }
+
         if text_edit_out.response.changed() {
             event!(Level::DEBUG, "Reparsing");
             let block = |app: &mut App| -> anyhow::Result<()> {

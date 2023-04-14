@@ -1,4 +1,4 @@
-variable = @{ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
+variable = @{ !("bind" | "in") ~ ASCII_ALPHA ~ ASCII_ALPHANUMERIC* }
 bind_clause = { "bind" ~ variable ~ "=" ~ term ~ "in" }
 expr = { bind_clause* ~ value }
 term = { thunk | (active_op ~ "(" ~ args ~ ")") | value }
