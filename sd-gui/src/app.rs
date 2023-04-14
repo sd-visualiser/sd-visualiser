@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use eframe::{
-    egui::{self, show_tooltip_at_pointer, Id, RichText},
+    egui::{self, show_tooltip_at_pointer, FontDefinitions, Id, RichText},
     emath,
     epaint::{FontId, Pos2, Rect, Rounding, Shape, Vec2},
 };
@@ -50,7 +50,7 @@ fn is_in_line(cursor: usize, line_col: &LineColLocation) -> bool {
 
 impl App {
     /// Called once before the first frame.
-    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
@@ -59,6 +59,23 @@ impl App {
         // if let Some(storage) = cc.storage {
         //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
         // }
+
+        let font_name = "mono_font".to_owned();
+
+        let mut font_definitions = FontDefinitions::default();
+
+        font_definitions.font_data.insert(
+            font_name.clone(),
+            egui::FontData::from_static(include_bytes!("../assets/JetBrainsMonoNL-Regular.ttf")),
+        );
+
+        font_definitions
+            .families
+            .entry(egui::FontFamily::Monospace)
+            .or_default()
+            .insert(0, font_name);
+
+        cc.egui_ctx.set_fonts(font_definitions);
 
         App {
             code: Default::default(),
