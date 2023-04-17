@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use egui::{
     emath::RectTransform,
     epaint::{CircleShape, CubicBezierShape, RectShape},
@@ -30,12 +32,12 @@ impl Transform {
     }
 }
 
-pub fn render(
+pub fn render<O: Display>(
     ui: &egui::Ui,
     response: &Response,
     layout: &Layout,
     scale: f32,
-    graph: &mut MonoidalGraph,
+    graph: &mut MonoidalGraph<O>,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape> {
@@ -51,13 +53,13 @@ pub fn render(
     shapes
 }
 
-fn generate_shapes(
+fn generate_shapes<O: Display>(
     ui: &egui::Ui,
     response: &Response,
     shapes: &mut Vec<Shape>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &mut MonoidalGraph,
+    graph: &mut MonoidalGraph<O>,
     transform: &Transform,
 ) {
     let default_stroke = ui.visuals().noninteractive().fg_stroke;

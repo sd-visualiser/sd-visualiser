@@ -5,7 +5,7 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::concat_iter::concat_iter;
+use crate::utils::concat_iter;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NodeIndex(usize);
@@ -38,11 +38,11 @@ pub enum HyperGraphError {
 
 /// HyperGraph with hyperedges/nodes with weights E and vertices/wires
 #[derive(Clone)]
-pub struct Graph<E> {
+pub struct HyperGraph<E> {
     nodes: Slab<NodeInfo<E>>,
 }
 
-impl<E> Default for Graph<E> {
+impl<E> Default for HyperGraph<E> {
     fn default() -> Self {
         let mut g = Self::new();
         g.add_node(GraphNode::Input, vec![], 0).unwrap();
@@ -56,7 +56,10 @@ pub enum GraphNode<E> {
     Weight(E),
     Input,
     Output,
-    Thunk { args: usize, body: Box<Graph<E>> },
+    Thunk {
+        args: usize,
+        body: Box<HyperGraph<E>>,
+    },
 }
 
 impl<E> GraphNode<E> {
@@ -80,10 +83,10 @@ pub struct NodeInfo<E> {
     outputs: Vec<BTreeSet<Port>>,
 }
 
-impl<E> Graph<E> {
+impl<E> HyperGraph<E> {
     /// Generate a new graph
     pub fn new() -> Self {
-        Graph { nodes: Slab::new() }
+        HyperGraph { nodes: Slab::new() }
     }
 
     /// Adds a new node to a graph with specified node data, a list of ports to obtain inputs from
@@ -214,7 +217,7 @@ impl<E> Graph<E> {
     }
 }
 
-impl<E: Debug> Debug for Graph<E> {
+impl<E: Debug> Debug for HyperGraph<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Hypergraph")
             .field("nodes", &self.nodes().collect::<Vec<_>>())

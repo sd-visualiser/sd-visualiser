@@ -3,5 +3,4 @@ members = [
   "sd-core",
   "sd-graphics",
   "sd-gui",
-  "sd-hyper",
 ]

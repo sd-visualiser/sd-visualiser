@@ -2300,7 +2300,7 @@ dependencies = [
  "pest-ast",
  "pest_derive",
  "rstest",
- "sd-hyper",
+ "slab",
  "thiserror",
  "tracing",
 ]
@@ -2336,15 +2336,6 @@ dependencies = [
  "tracing-subscriber",
  "tracing-wasm",
  "wasm-bindgen-futures",
-]
-
-[[package]]
-name = "sd-hyper"
-version = "0.1.0"
-dependencies = [
- "cargo-husky",
- "slab",
- "thiserror",
 ]
 
 [[package]]

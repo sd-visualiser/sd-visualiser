@@ -4,8 +4,8 @@ use std::{
 };
 use thiserror::Error;
 
+use crate::hypergraph::{GraphNode, HyperGraph, HyperGraphError, Port, PortIndex};
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
-use sd_hyper::graph::{Graph, GraphNode, HyperGraphError, Port, PortIndex};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
@@ -34,7 +34,7 @@ impl From<ActiveOp> for Op {
     }
 }
 
-pub type HyperGraph = Graph<Op>;
+pub type HyperGraphOp = HyperGraph<Op>;
 
 #[derive(Debug, Error)]
 pub enum ConvertError {
@@ -56,7 +56,7 @@ impl Expr {
         self.value.free_variables(bound, vars);
     }
 
-    pub fn to_hypergraph(&self) -> Result<HyperGraph, ConvertError> {
+    pub fn to_hypergraph(&self) -> Result<HyperGraphOp, ConvertError> {
         let mut vars = BTreeSet::new();
 
         self.free_variables(&mut BTreeSet::new(), &mut vars);
@@ -67,10 +67,10 @@ impl Expr {
     pub(crate) fn to_hypergraph_from_inputs(
         &self,
         inputs: Vec<Variable>,
-    ) -> Result<HyperGraph, ConvertError> {
+    ) -> Result<HyperGraphOp, ConvertError> {
         let mut mapping: HashMap<Variable, Port> = HashMap::new();
 
-        let mut graph = HyperGraph::new();
+        let mut graph = HyperGraphOp::new();
 
         let input_node = graph.add_node(GraphNode::Input, vec![], inputs.len())?;
 
@@ -91,7 +91,7 @@ impl Expr {
 
     pub(crate) fn process(
         &self,
-        graph: &mut HyperGraph,
+        graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<(), ConvertError> {
         for bc in &self.binds {
@@ -115,7 +115,7 @@ impl BindClause {
 
     pub(crate) fn process(
         &self,
-        graph: &mut HyperGraph,
+        graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<(), ConvertError> {
         let port = self.term.process(graph, mapping)?;
@@ -139,7 +139,7 @@ impl Term {
 
     pub(crate) fn process(
         &self,
-        graph: &mut HyperGraph,
+        graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Port, ConvertError> {
         match self {
@@ -178,7 +178,7 @@ impl Value {
 
     pub(crate) fn process(
         &self,
-        graph: &mut HyperGraph,
+        graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Port, ConvertError> {
         match self {
@@ -214,7 +214,7 @@ impl Thunk {
 
     pub(crate) fn process(
         &self,
-        graph: &mut HyperGraph,
+        graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Port, ConvertError> {
         let mut vars = BTreeSet::new();
