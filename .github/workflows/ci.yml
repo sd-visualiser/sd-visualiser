@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  CARGO_HUSKY_DONT_INSTALL_HOOKS: true
+  FLAKE: 'github:calintat/sd-visualiser?rev=${{ github.sha }}'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v20
+        with:
+          extra_nix_config: |
+            max-jobs = 4
+      - name: Setup cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: sd-visualiser
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      - name: Run lint
+        run: |
+          nix flake check $FLAKE
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [linux, windows, web]
+    steps:
+      - name: Install Nix
+        uses: cachix/install-nix-action@v20
+        with:
+          extra_nix_config: |
+            max-jobs = 4
+      - name: Setup cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: sd-visualiser
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+      # https://github.com/actions/upload-artifact/issues/92#issuecomment-1080347032
+      - name: Build
+        run: |
+          nix build -L --show-trace "$FLAKE#sd-gui-${{ matrix.target }}-release"
+          echo "UPLOAD_PATH=$(readlink -f result)" >> $GITHUB_ENV
+      - name: Archive build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.UPLOAD_PATH }}
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build]
+    if: github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: web
+          path: result
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4.4.1
+        with:
+          branch: gh-pages
+          folder: result
