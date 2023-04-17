@@ -8,5 +8,5 @@ passive_op = { number }
 number = _{ ASCII_DIGIT+ }
 args = _{ value ~ ("," ~ value)* | "" }
 program = _{ SOI ~ expr ~ EOI }
-WHITESPACE = _{ " " | "\n" }
+WHITESPACE = _{ " " | "\t" | "\n" }
 thunk = { variable* ~ "." ~ expr }
