@@ -18,14 +18,8 @@
         {
           nci = {
             projects."sd" =
-              let set-stdenv = {
-                override = old: { stdenv = pkgs.clangStdenv; };
-              };
-              in
               {
                 relPath = "";
-                depsOverrides = { inherit set-stdenv; };
-                overrides = { inherit set-stdenv; };
               };
             crates = {
               "sd-core" = { };
