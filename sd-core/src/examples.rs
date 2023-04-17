@@ -1,10 +1,11 @@
 use crate::{
+    graph::Op,
     language::{ActiveOp, PassiveOp},
-    monoidal::{MonoidalGraph, MonoidalOp, Slice, ID},
+    monoidal::{MonoidalGraph, MonoidalOp, Slice},
 };
 
 /// Corrresponds to the program `bind x = 1() in x`.
-pub fn int() -> MonoidalGraph {
+pub fn int() -> MonoidalGraph<Op> {
     use MonoidalOp::*;
 
     MonoidalGraph {
@@ -21,7 +22,7 @@ pub fn int() -> MonoidalGraph {
     }
 }
 
-pub fn copy() -> MonoidalGraph {
+pub fn copy() -> MonoidalGraph<Op> {
     use MonoidalOp::*;
 
     MonoidalGraph {
@@ -31,13 +32,13 @@ pub fn copy() -> MonoidalGraph {
                 ops: vec![(Copy { copies: 2 }, vec![])],
             },
             Slice {
-                ops: vec![(Copy { copies: 2 }, vec![]), (ID, vec![])],
+                ops: vec![(Copy { copies: 2 }, vec![]), (MonoidalOp::ID, vec![])],
             },
         ],
     }
 }
 
-pub fn thunk() -> MonoidalGraph {
+pub fn thunk() -> MonoidalGraph<Op> {
     use MonoidalOp::*;
 
     let plus = MonoidalGraph {

@@ -122,7 +122,10 @@ impl Layout {
     }
 }
 
-fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInternal<Variable> {
+fn layout_internal<O>(
+    graph: &MonoidalGraph<O>,
+    problem: &mut LpProblem,
+) -> LayoutInternal<Variable> {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
     let max = problem.add_variable(variable().min(0.0));
@@ -249,7 +252,7 @@ fn layout_internal(graph: &MonoidalGraph, problem: &mut LpProblem) -> LayoutInte
     }
 }
 
-pub fn layout(graph: &MonoidalGraph) -> Result<Layout, LayoutError> {
+pub fn layout<O>(graph: &MonoidalGraph<O>) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
     let layout = layout_internal(graph, &mut problem);

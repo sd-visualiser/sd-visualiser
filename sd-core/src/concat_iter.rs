@@ -1,3 +1,5 @@
+// Split into utils crate?
+
 pub struct ConcatIter<I: Iterator> {
     iter: I,
     sub_iter: Option<<I as Iterator>::Item>,

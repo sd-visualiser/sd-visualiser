@@ -6,7 +6,7 @@ use eframe::{
 };
 use pest::error::LineColLocation;
 use sd_core::{
-    graph::HyperGraph,
+    graph::{HyperGraphOp, Op},
     monoidal::{MonoidalGraph, MonoidalWiredGraph},
 };
 use tracing::{debug, event, Level};
@@ -20,9 +20,9 @@ use crate::{
 pub struct App {
     code: String,
     parsed: bool,
-    hypergraph: HyperGraph,
-    monoidal_term: MonoidalWiredGraph,
-    monoidal_graph: MonoidalGraph,
+    hypergraph: HyperGraphOp,
+    monoidal_term: MonoidalWiredGraph<Op>,
+    monoidal_graph: MonoidalGraph<Op>,
     panzoom: Panzoom,
 }
 
