@@ -47,6 +47,9 @@ pub enum ActiveOp {
     Minus,
     Times,
     Eq,
+    And,
+    Or,
+    Not,
     If,
     App,
     Lambda,
@@ -65,6 +68,9 @@ impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
             Some("minus") => Ok(Self::Minus),
             Some("times") => Ok(Self::Times),
             Some("eq") => Ok(Self::Eq),
+            Some("and") => Ok(Self::And),
+            Some("or") => Ok(Self::Or),
+            Some("not") => Ok(Self::Not),
             Some("if") => Ok(Self::If),
             Some("app") => Ok(Self::App),
             Some("lambda") => Ok(Self::Lambda),
@@ -74,10 +80,28 @@ impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
     }
 }
 
-#[derive(Clone, Copy, Debug, FromPest, PartialEq, Eq, Hash)]
-#[pest_ast(rule(Rule::passive_op))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum PassiveOp {
-    Int(#[pest_ast(outer(with(span_into_str), with(str::parse), with(Result::unwrap)))] usize),
+    Int(usize),
+    Bool(bool),
+}
+
+impl<'pest> from_pest::FromPest<'pest> for PassiveOp {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(
+        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        match pest.next().map(|pair| pair.as_str()) {
+            Some("true") => Ok(Self::Bool(true)),
+            Some("false") => Ok(Self::Bool(false)),
+            Some(str) => str::parse(str)
+                .map(Self::Int)
+                .map_err(|_err| from_pest::ConversionError::NoMatch),
+            _ => Err(from_pest::ConversionError::NoMatch),
+        }
+    }
 }
 
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
@@ -101,6 +125,9 @@ impl Display for ActiveOp {
             Self::Minus => f.write_char('-'),
             Self::Times => f.write_char('×'),
             Self::Eq => f.write_char('='),
+            Self::And => f.write_str("and"),
+            Self::Or => f.write_str("or"),
+            Self::Not => f.write_str("not"),
             Self::If => f.write_str("if"),
             Self::App => f.write_char('@'),
             Self::Lambda => f.write_char('λ'),
@@ -113,6 +140,7 @@ impl Display for PassiveOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             PassiveOp::Int(d) => f.write_str(&d.to_string()),
+            PassiveOp::Bool(b) => f.write_str(&b.to_string()),
         }
     }
 }
