@@ -9,4 +9,5 @@ number = @{ ASCII_DIGIT+ }
 args = _{ value ~ ("," ~ value)* | "" }
 program = _{ SOI ~ expr ~ EOI }
 WHITESPACE = _{ " " | "\t" | "\n" }
+COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 thunk = { variable* ~ "." ~ expr }

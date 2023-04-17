@@ -9,6 +9,8 @@ variables:
 
 contexts:
   main:
+    - match: '#.*$'
+      scope: comment
     - match: '\b(bind|in)\b'
       scope: keyword
     - match: '(=)'
