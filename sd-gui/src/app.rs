@@ -170,7 +170,7 @@ impl App {
                 let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
                 app.parsed = true;
                 event!(Level::DEBUG, "Converting to hypergraph");
-                app.hypergraph = expr.to_hypergraph()?;
+                app.hypergraph = HyperGraphOp::try_from(expr)?;
                 event!(Level::DEBUG, "Converting to monoidal term");
                 app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph, &[])?;
                 event!(Level::DEBUG, "Got term {:?}", app.monoidal_term);
