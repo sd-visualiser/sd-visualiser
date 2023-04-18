@@ -44,4 +44,4 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Build devShell
         run: |
-          nix develop --build github:calintat/sd-visualiser/update_flake_lock_action
+          nix develop --build github:sd-visualiser/sd-visualiser/update_flake_lock_action
