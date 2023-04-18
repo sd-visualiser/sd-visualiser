@@ -5,8 +5,6 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::utils::concat_iter;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct NodeIndex(usize);
 
@@ -166,12 +164,12 @@ impl<E> HyperGraph<E> {
     }
 
     pub fn edges(&self) -> impl Iterator<Item = (Port, &BTreeSet<Port>)> {
-        concat_iter(self.nodes.iter().map(|(node, d)| {
+        self.nodes.iter().flat_map(|(node, d)| {
             d.outputs
                 .iter()
                 .enumerate()
                 .map(move |(index, targets)| ((node, index).into(), targets))
-        }))
+        })
     }
 
     pub fn ranks_from_end(
@@ -201,7 +199,9 @@ impl<E> HyperGraph<E> {
         while !nodes.is_empty() {
             let mut next_rank = BTreeSet::new();
             for (n, o) in nodes.iter() {
-                if concat_iter(o.outputs.iter().map(|x| x.iter().map(|y| y.node)))
+                if o.outputs
+                    .iter()
+                    .flat_map(|x| x.iter().map(|y| y.node))
                     .all(|z| collected.contains(&z))
                 {
                     collected.insert(*n);
