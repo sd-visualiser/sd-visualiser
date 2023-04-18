@@ -7,7 +7,7 @@ license = "BSD-3-Clause"
 repository = "https://github.com/calintat/sd-visualiser"
 
 [dependencies]
-from-pest = "0.3.1"
+from-pest = "0.3.2"
 itertools = "0.10.5"
 num = "0.4.0"
 pest = "2.5.7"

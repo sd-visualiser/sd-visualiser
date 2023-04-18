@@ -991,10 +991,11 @@ dependencies = [
 
 [[package]]
 name = "from-pest"
-version = "0.3.1"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aba9389cedcba1fb3a2aa2ed00f584f2606bce8e0106614a17327a24513bc60f"
+checksum = "d3380d8b4f459e3bb35904036044393332e71d5316be9061d9b545c44b6064db"
 dependencies = [
+ "log",
  "pest",
  "void",
 ]
