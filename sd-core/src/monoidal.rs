@@ -3,10 +3,7 @@ use std::{
     fmt::Debug,
 };
 
-use crate::{
-    hypergraph::{GraphNode, HyperGraph, HyperGraphError, NodeIndex, Port, PortIndex},
-    utils::concat_iter,
-};
+use crate::hypergraph::{GraphNode, HyperGraph, HyperGraphError, NodeIndex, Port, PortIndex};
 use itertools::Itertools;
 use num::rational::Ratio;
 use thiserror::Error;
@@ -357,11 +354,12 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
 
             debug!("Operation layer generated: {:?}", ops);
 
-            let out_nodes: BTreeMap<Port, usize> =
-                concat_iter(ops.iter().map(|data| data.outputs.iter().copied()))
-                    .enumerate()
-                    .map(|(x, y)| (y, x))
-                    .collect();
+            let out_nodes: BTreeMap<Port, usize> = ops
+                .iter()
+                .flat_map(|data| data.outputs.iter().copied())
+                .enumerate()
+                .map(|(x, y)| (y, x))
+                .collect();
 
             let number_of_out_ports = gathered_ports.len();
 
