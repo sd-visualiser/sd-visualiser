@@ -472,7 +472,7 @@ mod tests {
         #[case] permutation: Vec<usize>,
         #[case] result: Vec<Slice<Op>>,
     ) -> Result<()> {
-        assert_eq!(Slice::permutation_to_swaps(permutation, &vec![]), result);
+        assert_eq!(Slice::permutation_to_swaps(permutation, &[]), result);
         Ok(())
     }
 }

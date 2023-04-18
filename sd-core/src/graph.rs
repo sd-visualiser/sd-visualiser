@@ -44,56 +44,39 @@ pub enum ConvertError {
     VariableError(Variable),
 }
 
-impl Expr {
-    pub(crate) fn free_variables(
+pub(crate) trait Syntax {
+    /// This piece of syntax generates both bound and free variables.
+    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>);
+
+    type ProcessOutput;
+
+    /// Insert this piece of syntax into a hypergraph and update the mapping of variables to ports.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if variables are malformed.
+    fn process(
         &self,
-        bound: &mut BTreeSet<Variable>,
-        vars: &mut BTreeSet<Variable>,
-    ) {
+        graph: &mut HyperGraphOp,
+        mapping: &mut HashMap<Variable, Port>,
+    ) -> Result<Self::ProcessOutput, ConvertError>;
+}
+
+impl Syntax for Expr {
+    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
         for bc in &self.binds {
             bc.free_variables(bound, vars);
         }
         self.value.free_variables(bound, vars);
     }
 
-    pub fn to_hypergraph(&self) -> Result<HyperGraphOp, ConvertError> {
-        let mut vars = BTreeSet::new();
+    type ProcessOutput = ();
 
-        self.free_variables(&mut BTreeSet::new(), &mut vars);
-
-        self.to_hypergraph_from_inputs(vars.into_iter().collect())
-    }
-
-    pub(crate) fn to_hypergraph_from_inputs(
-        &self,
-        inputs: Vec<Variable>,
-    ) -> Result<HyperGraphOp, ConvertError> {
-        let mut mapping: HashMap<Variable, Port> = HashMap::new();
-
-        let mut graph = HyperGraphOp::new();
-
-        let input_node = graph.add_node(GraphNode::Input, vec![], inputs.len())?;
-
-        for (i, var) in inputs.into_iter().enumerate() {
-            mapping.insert(
-                var,
-                Port {
-                    node: input_node,
-                    index: PortIndex(i),
-                },
-            );
-        }
-
-        self.process(&mut graph, &mut mapping)?;
-
-        Ok(graph)
-    }
-
-    pub(crate) fn process(
+    fn process(
         &self,
         graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
-    ) -> Result<(), ConvertError> {
+    ) -> Result<Self::ProcessOutput, ConvertError> {
         for bc in &self.binds {
             bc.process(graph, mapping)?;
         }
@@ -103,29 +86,27 @@ impl Expr {
     }
 }
 
-impl BindClause {
-    pub(crate) fn free_variables(
-        &self,
-        bound: &mut BTreeSet<Variable>,
-        vars: &mut BTreeSet<Variable>,
-    ) {
+impl Syntax for BindClause {
+    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
         self.term.free_variables(bound, vars);
         bound.insert(self.var.clone());
     }
 
-    pub(crate) fn process(
+    type ProcessOutput = ();
+
+    fn process(
         &self,
         graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
-    ) -> Result<(), ConvertError> {
+    ) -> Result<Self::ProcessOutput, ConvertError> {
         let port = self.term.process(graph, mapping)?;
         mapping.insert(self.var.clone(), port);
         Ok(())
     }
 }
 
-impl Term {
-    pub(crate) fn free_variables(&self, bound: &BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+impl Syntax for Term {
+    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
         match self {
             Term::Value(v) => v.free_variables(bound, vars),
             Term::ActiveOp(_, vs) => {
@@ -137,11 +118,13 @@ impl Term {
         }
     }
 
-    pub(crate) fn process(
+    type ProcessOutput = Port;
+
+    fn process(
         &self,
         graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
-    ) -> Result<Port, ConvertError> {
+    ) -> Result<Self::ProcessOutput, ConvertError> {
         match self {
             Term::Value(v) => v.process(graph, mapping),
             Term::ActiveOp(op, vals) => {
@@ -160,8 +143,8 @@ impl Term {
     }
 }
 
-impl Value {
-    pub(crate) fn free_variables(&self, bound: &BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+impl Syntax for Value {
+    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
         match self {
             Value::Var(v) => {
                 if !bound.contains(v) {
@@ -176,11 +159,13 @@ impl Value {
         }
     }
 
-    pub(crate) fn process(
+    type ProcessOutput = Port;
+
+    fn process(
         &self,
         graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
-    ) -> Result<Port, ConvertError> {
+    ) -> Result<Self::ProcessOutput, ConvertError> {
         match self {
             Value::Var(v) => mapping
                 .get(v)
@@ -201,9 +186,9 @@ impl Value {
     }
 }
 
-impl Thunk {
-    pub(crate) fn free_variables(&self, bound: &BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
-        let mut bound = bound.clone();
+impl Syntax for Thunk {
+    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+        let mut bound = bound.clone(); // create new scope for bound variables in thunk
 
         for arg in &self.args {
             bound.insert(arg.clone());
@@ -212,14 +197,16 @@ impl Thunk {
         self.body.free_variables(&mut bound, vars);
     }
 
-    pub(crate) fn process(
+    type ProcessOutput = Port;
+
+    fn process(
         &self,
         graph: &mut HyperGraphOp,
         mapping: &mut HashMap<Variable, Port>,
-    ) -> Result<Port, ConvertError> {
+    ) -> Result<Self::ProcessOutput, ConvertError> {
         let mut vars = BTreeSet::new();
 
-        self.free_variables(&BTreeSet::new(), &mut vars);
+        self.free_variables(&mut BTreeSet::new(), &mut vars);
 
         let inputs = vars
             .iter()
@@ -253,6 +240,45 @@ impl Thunk {
     }
 }
 
+impl TryFrom<&Expr> for HyperGraphOp {
+    type Error = ConvertError;
+
+    fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
+        let mut vars = BTreeSet::new();
+
+        expr.free_variables(&mut BTreeSet::new(), &mut vars);
+
+        expr.to_hypergraph_from_inputs(vars.into_iter().collect())
+    }
+}
+
+impl Expr {
+    pub(crate) fn to_hypergraph_from_inputs(
+        &self,
+        inputs: Vec<Variable>,
+    ) -> Result<HyperGraphOp, ConvertError> {
+        let mut mapping: HashMap<Variable, Port> = HashMap::new();
+
+        let mut graph = HyperGraphOp::new();
+
+        let input_node = graph.add_node(GraphNode::Input, vec![], inputs.len())?;
+
+        for (i, var) in inputs.into_iter().enumerate() {
+            mapping.insert(
+                var,
+                Port {
+                    node: input_node,
+                    index: PortIndex(i),
+                },
+            );
+        }
+
+        self.process(&mut graph, &mut mapping)?;
+
+        Ok(graph)
+    }
+}
+
 impl From<&str> for Variable {
     fn from(value: &str) -> Self {
         Variable(value.to_string())
@@ -269,7 +295,11 @@ mod tests {
     use pest::Parser;
     use rstest::{fixture, rstest};
 
-    use crate::language::{Expr, Rule, SDParser, Variable};
+    use super::Syntax;
+    use crate::{
+        graph::HyperGraphOp,
+        language::{Expr, Rule, SDParser, Variable},
+    };
 
     #[fixture]
     fn basic_program() -> Result<Expr> {
@@ -324,7 +354,7 @@ mod tests {
 
     #[rstest]
     fn hypergraph_test_basic(basic_program: Result<Expr>) -> Result<()> {
-        let graph = basic_program?.to_hypergraph()?;
+        let graph: HyperGraphOp = (&basic_program?).try_into()?;
 
         assert_debug_snapshot!(graph);
 
@@ -333,7 +363,7 @@ mod tests {
 
     #[rstest]
     fn hypergraph_test_free_var(free_vars: Result<Expr>) -> Result<()> {
-        let graph = free_vars?.to_hypergraph()?;
+        let graph: HyperGraphOp = (&free_vars?).try_into()?;
 
         assert_debug_snapshot!(graph);
 
@@ -342,7 +372,7 @@ mod tests {
 
     #[rstest]
     fn hypergraph_test_thunk(thunks: Result<Expr>) -> Result<()> {
-        let graph = thunks?.to_hypergraph()?;
+        let graph: HyperGraphOp = (&thunks?).try_into()?;
 
         assert_debug_snapshot!(graph);
 
