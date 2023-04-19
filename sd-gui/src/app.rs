@@ -17,6 +17,7 @@ use crate::{
     parser::{ParseError, Parser},
 };
 
+#[derive(Default)]
 pub struct App {
     code: String,
     parsed: bool,
@@ -84,14 +85,7 @@ impl App {
 
         cc.egui_ctx.set_fonts(font_definitions);
 
-        App {
-            code: Default::default(),
-            parsed: Default::default(),
-            hypergraph: Default::default(),
-            monoidal_term: Default::default(),
-            monoidal_graph: Default::default(),
-            panzoom: Default::default(),
-        }
+        App::default()
     }
 
     fn code_ui(&mut self, ui: &mut egui::Ui) {
