@@ -6,8 +6,6 @@
   inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
   inputs.parts.url = "github:hercules-ci/flake-parts";
   inputs.parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-  inputs.pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
-  inputs.pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
   inputs.nci.url = "github:yusdacra/nix-cargo-integration";
   inputs.nci.inputs.nixpkgs.follows = "nixpkgs";
   inputs.nci.inputs.parts.follows = "parts";
@@ -16,7 +14,6 @@
     inputs @ { parts
     , nixpkgs
     , nci
-    , pre-commit-hooks
     , ...
     }:
     let
@@ -78,16 +75,6 @@
             perSystem = { self', config, lib, pkgs, system, ... }:
               {
                 nci = nciFromPkgs pkgs "linux" { } { };
-                checks = {
-                  pre-commit-check = pre-commit-hooks.lib.${system}.run {
-                    src = ./.;
-                    hooks = {
-                      cargo-check.enable = true;
-                      clippy.enable = true;
-                      rustfmt.enable = true;
-                    };
-                  };
-                };
                 devShells.default = config.nci.outputs.sd.devShell;
                 packages.default = config.nci.outputs.sd-gui.packages.release;
               };
