@@ -7,7 +7,7 @@ use crate::hypergraph::{GraphNode, HyperGraph, HyperGraphError, NodeIndex, Port,
 use itertools::Itertools;
 use num::rational::Ratio;
 use thiserror::Error;
-use tracing::{debug, debug_span};
+use tracing::debug;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct WiredSlice<O> {
@@ -235,9 +235,6 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
         graph: &HyperGraph<O>,
         prefix: &[NodeIndex],
     ) -> Result<Self, FromHyperError> {
-        // List of open ports we have left to process
-
-        debug_span!("From hypergraph");
         debug!("To Process: {:?}", graph);
 
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
@@ -266,49 +263,53 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
         debug!("Input wires: {:?}", input_wires);
         debug!("Output wires: {:?}", output_wires);
 
+        // Maintain a list of wires we have left to link up
         let mut open_wires: Vec<Port> = output_wires;
 
+        // Build up slices and wirings
         let mut slices: Vec<WiredSlice<O>> = Vec::new();
         let mut wirings: Vec<Wiring> = Vec::new();
 
+        // For each operation in the next layer, we store the following data.
         #[derive(Debug)]
         struct OpData<O> {
+            // The corresponding operation in the monoidal wired term, or none if we encounter an input/output node
             op: Option<MonoidalWiredOp<O>>,
+            // The output ports of this operation
             outputs: Vec<Port>,
+            // The hypergraph address of the operation
             addr: Vec<NodeIndex>,
+            // The average of the indices of the outputs in 'open_wires'
             weight: Ratio<usize>,
         }
 
         for r in ranks {
+            // We build a list of OpData's for this layer
             let mut ops: Vec<OpData<O>> = Vec::new();
+
+            // Also keep track of the subset of open wires which have a destination operation
             let mut gathered_ports: BTreeSet<Port> = BTreeSet::new();
 
-            for node in r.iter() {
+            // Create an OpData for each node
+            for &node in r.iter() {
                 debug!("Processing node {:?}", node);
-                let node = *node;
-                let addr = {
-                    let mut temp = prefix.to_vec();
-                    temp.push(node);
-                    temp
-                };
+
+                // Compute new address by adding the NodeIndex to the end
+                let addr = [prefix, &[node]].concat();
+
+                // Compute the weight
                 let (sum, count) = open_wires
                     .iter()
                     .enumerate()
-                    .filter_map(
-                        |(i, Port { node: n, index: _ })| {
-                            if &node == n {
-                                Some((i, 1))
-                            } else {
-                                None
-                            }
-                        },
-                    )
+                    .filter_map(|(i, Port { node: n, .. })| (node == *n).then_some((i, 1)))
                     .fold((0, 0), |(x, y), (a, b)| (x + a, y + b));
                 let weight = if count == 0 {
+                    // All outputs of this operation get deleted, so we arbitrarily put it on the right
                     usize::MAX.into()
                 } else {
                     Ratio::new_raw(sum, count)
                 };
+
                 let outputs = (0..graph.number_of_outputs(node)?)
                     .map(|index| Port {
                         node,
@@ -317,13 +318,13 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                     .collect();
 
                 gathered_ports.extend(&outputs);
-                let op = match graph.get(node)? {
+
+                let op = match &graph[node] {
                     GraphNode::Weight(op) => Some(MonoidalWiredOp::Operation {
                         inputs: graph.get_inputs(node)?.collect(),
                         op_name: *op,
                     }),
-                    GraphNode::Input => None,
-                    GraphNode::Output => None,
+                    GraphNode::Input | GraphNode::Output => None,
                     GraphNode::Thunk { args, body } => Some(MonoidalWiredOp::Thunk {
                         inputs: graph.get_inputs(node)?.collect(),
                         args: *args,
@@ -338,6 +339,8 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                 })
             }
 
+            // Wires not in gathered_ports will be used in a later layer
+            // Therefore we must introduce an identity to route them through
             for (i, port) in open_wires.iter().copied().enumerate() {
                 if !gathered_ports.contains(&port) {
                     gathered_ports.insert(port);
@@ -350,10 +353,12 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                 }
             }
 
+            // Sort the ops by weight
             ops.sort_by_key(|data| data.weight);
 
             debug!("Operation layer generated: {:?}", ops);
 
+            // Compute the wiring from the open_wires to the operations
             let out_nodes: BTreeMap<Port, usize> = ops
                 .iter()
                 .flat_map(|data| data.outputs.iter().copied())
@@ -373,18 +378,22 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
 
             debug!("Wiring generated");
 
+            // We generate the new set of 'open_wires'.
+            // This is just the inputs of the layer we just generated
             open_wires = ops
                 .iter()
-                .map(|data| {
+                .flat_map(|data| {
                     data.op
                         .as_ref()
                         .map(|x| x.input_ports())
                         .unwrap_or_default()
                 })
-                .concat();
+                .collect();
 
             debug!("Open wires: {:?}", open_wires);
 
+            // If any of the operations were None then this was the input slice
+            // Otherwise we should add this slice to the diagram
             if let Some(ops) = ops
                 .into_iter()
                 .map(|data| Some((data.op?, data.addr)))
@@ -396,6 +405,7 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
             wirings.push(wiring);
         }
 
+        // We worked bottom up, so we reverse the slices and wirings
         slices.reverse();
         wirings.reverse();
 
