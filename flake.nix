@@ -119,6 +119,7 @@
                     cd sd-gui
                     HOME=$TMPDIR \
                       trunk -v build \
+                      --public-url /sd-visualiser \
                       --dist $out \
                       --release \
                       ''${cargoBuildFlags:-}
