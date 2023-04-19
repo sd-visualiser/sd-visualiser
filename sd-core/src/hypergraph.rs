@@ -2,6 +2,7 @@ use slab::Slab;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt::Debug,
+    ops::Index,
 };
 use thiserror::Error;
 
@@ -38,6 +39,13 @@ pub enum HyperGraphError {
 #[derive(Clone)]
 pub struct HyperGraph<E> {
     nodes: Slab<NodeInfo<E>>,
+}
+
+impl<E> Index<NodeIndex> for HyperGraph<E> {
+    type Output = GraphNode<E>;
+    fn index(&self, index: NodeIndex) -> &Self::Output {
+        &self.nodes[index.0].data
+    }
 }
 
 impl<E> Default for HyperGraph<E> {
