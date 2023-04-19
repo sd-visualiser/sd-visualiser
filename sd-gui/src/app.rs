@@ -234,6 +234,13 @@ impl eframe::App for App {
                 if ui.button("Zoom Out").clicked() {
                     self.panzoom.zoom /= 1.25;
                 }
+
+                ui.separator();
+
+                if ui.button("Gather").clicked() {
+                    let _selected = self.monoidal_graph.selected();
+                    // TODO(@calintat): Do the gathering
+                }
             });
         });
 

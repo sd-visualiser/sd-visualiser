@@ -168,6 +168,20 @@ pub struct MonoidalGraph<O> {
     pub slices: Vec<Slice<O>>,
 }
 
+impl<O> MonoidalGraph<O> {
+    pub fn selected(&self) -> Vec<Vec<NodeIndex>> {
+        self.slices
+            .iter()
+            .flat_map(|slice| {
+                slice.ops.iter().filter_map(|(op, ns)| match op {
+                    MonoidalOp::Operation { selected, .. } if *selected => Some(ns.clone()),
+                    _ => None,
+                })
+            })
+            .collect()
+    }
+}
+
 impl<O> Default for MonoidalGraph<O> {
     fn default() -> Self {
         MonoidalGraph {
@@ -185,6 +199,7 @@ pub enum MonoidalOp<O> {
     Operation {
         inputs: usize,
         op_name: O,
+        selected: bool,
     },
     Thunk {
         args: usize,
@@ -424,6 +439,7 @@ impl<O: Copy> MonoidalWiredOp<O> {
             MonoidalWiredOp::Operation { inputs, op_name } => Ok(MonoidalOp::Operation {
                 inputs: inputs.len(),
                 op_name: *op_name,
+                selected: false,
             }),
             MonoidalWiredOp::Thunk { args, body, .. } => Ok(MonoidalOp::Thunk {
                 args: *args,

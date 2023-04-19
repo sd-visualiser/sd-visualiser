@@ -15,6 +15,7 @@ pub fn int() -> MonoidalGraph<Op> {
                 Operation {
                     inputs: 0,
                     op_name: PassiveOp::Int(1).into(),
+                    selected: false,
                 },
                 vec![],
             )],
@@ -48,6 +49,7 @@ pub fn thunk() -> MonoidalGraph<Op> {
                 Operation {
                     inputs: 2,
                     op_name: ActiveOp::Plus.into(),
+                    selected: false,
                 },
                 vec![],
             )],
@@ -70,6 +72,7 @@ pub fn thunk() -> MonoidalGraph<Op> {
                     Operation {
                         inputs: 2,
                         op_name: ActiveOp::Plus.into(),
+                        selected: false,
                     },
                     vec![],
                 ),

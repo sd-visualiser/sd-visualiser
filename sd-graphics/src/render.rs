@@ -186,15 +186,26 @@ fn generate_shapes<O: Display>(
                                 default_color,
                             ))
                         }
-                        MonoidalOp::Operation { op_name, .. } => {
+                        MonoidalOp::Operation {
+                            op_name, selected, ..
+                        } => {
                             let op_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let op_response = ui.interact(op_rect, id, Sense::click());
+                            if op_response.clicked() {
+                                *selected = !*selected;
+                            }
                             shapes.push(Shape::Circle(CircleShape {
                                 center,
                                 radius: RADIUS_OPERATION * transform.scale,
-                                fill: ui.style().interact(&op_response).bg_fill,
-                                stroke: ui.style().interact(&op_response).fg_stroke,
+                                fill: ui
+                                    .style()
+                                    .interact_selectable(&op_response, *selected)
+                                    .bg_fill,
+                                stroke: ui
+                                    .style()
+                                    .interact_selectable(&op_response, *selected)
+                                    .fg_stroke,
                             }));
                             ui.fonts(|fonts| {
                                 shapes.push(Shape::text(
