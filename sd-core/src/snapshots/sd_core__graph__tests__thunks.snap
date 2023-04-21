@@ -1,0 +1,736 @@
+---
+source: sd-core/src/graph.rs
+expression: graph
+---
+Hypergraph {
+    nodes: [
+        (
+            NodeIndex(
+                0,
+            ),
+            Input,
+        ),
+        (
+            NodeIndex(
+                1,
+            ),
+            Thunk {
+                args: 2,
+                body: Hypergraph {
+                    nodes: [
+                        (
+                            NodeIndex(
+                                0,
+                            ),
+                            Input,
+                        ),
+                        (
+                            NodeIndex(
+                                1,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                2,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                3,
+                            ),
+                            Output,
+                        ),
+                    ],
+                    edges: [
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        1,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    1,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        1,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    2,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        2,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    1,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        2,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    2,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        3,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                    ],
+                },
+            },
+        ),
+        (
+            NodeIndex(
+                2,
+            ),
+            Thunk {
+                args: 3,
+                body: Hypergraph {
+                    nodes: [
+                        (
+                            NodeIndex(
+                                0,
+                            ),
+                            Input,
+                        ),
+                        (
+                            NodeIndex(
+                                1,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                2,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                3,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                4,
+                            ),
+                            Output,
+                        ),
+                    ],
+                    edges: [
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        1,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    1,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        1,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    2,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        2,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    3,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        3,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    1,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        2,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    2,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        3,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    3,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        4,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                    ],
+                },
+            },
+        ),
+        (
+            NodeIndex(
+                3,
+            ),
+            Thunk {
+                args: 4,
+                body: Hypergraph {
+                    nodes: [
+                        (
+                            NodeIndex(
+                                0,
+                            ),
+                            Input,
+                        ),
+                        (
+                            NodeIndex(
+                                1,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                2,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                3,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                4,
+                            ),
+                            Weight(
+                                Active(
+                                    Plus,
+                                ),
+                            ),
+                        ),
+                        (
+                            NodeIndex(
+                                5,
+                            ),
+                            Output,
+                        ),
+                    ],
+                    edges: [
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        1,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    1,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        1,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    2,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        2,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    3,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        3,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    0,
+                                ),
+                                index: PortIndex(
+                                    4,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        4,
+                                    ),
+                                    index: PortIndex(
+                                        1,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    1,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        2,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    2,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        3,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    3,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        4,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                        (
+                            Port {
+                                node: NodeIndex(
+                                    4,
+                                ),
+                                index: PortIndex(
+                                    0,
+                                ),
+                            },
+                            {
+                                Port {
+                                    node: NodeIndex(
+                                        5,
+                                    ),
+                                    index: PortIndex(
+                                        0,
+                                    ),
+                                },
+                            },
+                        ),
+                    ],
+                },
+            },
+        ),
+        (
+            NodeIndex(
+                4,
+            ),
+            Weight(
+                Active(
+                    Plus,
+                ),
+            ),
+        ),
+        (
+            NodeIndex(
+                5,
+            ),
+            Output,
+        ),
+    ],
+    edges: [
+        (
+            Port {
+                node: NodeIndex(
+                    0,
+                ),
+                index: PortIndex(
+                    0,
+                ),
+            },
+            {
+                Port {
+                    node: NodeIndex(
+                        1,
+                    ),
+                    index: PortIndex(
+                        0,
+                    ),
+                },
+                Port {
+                    node: NodeIndex(
+                        2,
+                    ),
+                    index: PortIndex(
+                        0,
+                    ),
+                },
+                Port {
+                    node: NodeIndex(
+                        3,
+                    ),
+                    index: PortIndex(
+                        0,
+                    ),
+                },
+            },
+        ),
+        (
+            Port {
+                node: NodeIndex(
+                    1,
+                ),
+                index: PortIndex(
+                    0,
+                ),
+            },
+            {
+                Port {
+                    node: NodeIndex(
+                        4,
+                    ),
+                    index: PortIndex(
+                        0,
+                    ),
+                },
+            },
+        ),
+        (
+            Port {
+                node: NodeIndex(
+                    2,
+                ),
+                index: PortIndex(
+                    0,
+                ),
+            },
+            {
+                Port {
+                    node: NodeIndex(
+                        4,
+                    ),
+                    index: PortIndex(
+                        1,
+                    ),
+                },
+            },
+        ),
+        (
+            Port {
+                node: NodeIndex(
+                    3,
+                ),
+                index: PortIndex(
+                    0,
+                ),
+            },
+            {
+                Port {
+                    node: NodeIndex(
+                        4,
+                    ),
+                    index: PortIndex(
+                        2,
+                    ),
+                },
+            },
+        ),
+        (
+            Port {
+                node: NodeIndex(
+                    4,
+                ),
+                index: PortIndex(
+                    0,
+                ),
+            },
+            {
+                Port {
+                    node: NodeIndex(
+                        5,
+                    ),
+                    index: PortIndex(
+                        0,
+                    ),
+                },
+            },
+        ),
+    ],
+}

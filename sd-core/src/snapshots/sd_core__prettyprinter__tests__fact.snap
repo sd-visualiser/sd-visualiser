@@ -1,0 +1,19 @@
+---
+source: sd-core/src/prettyprinter.rs
+expression: expr.to_pretty()
+---
+bind fact_rec = f .
+    bind fact_lambda = x .
+        bind c = eq(x, 1) in
+        bind d = minus(x, 1) in
+        bind e = app(f, d) in
+        bind f = times(x, e) in
+        bind g = if(c, 1, f) in
+        g
+    in
+    bind b = lambda(fact_lambda) in
+    b
+in
+bind fact = rec(fact_rec) in
+bind a = app(fact, 5) in
+a

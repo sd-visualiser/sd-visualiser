@@ -150,3 +150,52 @@ impl Display for Variable {
         f.write_str(&self.0)
     }
 }
+
+#[cfg(test)]
+pub(crate) mod tests {
+    use anyhow::{Context, Result};
+    use from_pest::FromPest;
+    use pest::Parser;
+    use rstest::{fixture, rstest};
+
+    use super::{Expr, Rule, SDParser};
+
+    #[fixture]
+    pub(crate) fn basic_program() -> Result<Expr> {
+        let mut pairs = SDParser::parse(Rule::program, "bind x = 1() in x")
+            .context("Could not parse basic program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
+    #[fixture]
+    pub(crate) fn free_vars() -> Result<Expr> {
+        let mut pairs = SDParser::parse(Rule::program, "bind x = y in z")
+            .context("Could not parse free variable program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
+    // Make this something meaningful
+    #[fixture]
+    pub(crate) fn thunks() -> Result<Expr> {
+        let mut pairs = SDParser::parse(Rule::program, include_str!("../../examples/thunks.sd"))
+            .context("Could not parse fact program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
+    #[fixture]
+    pub(crate) fn fact() -> Result<Expr> {
+        let mut pairs = SDParser::parse(Rule::program, include_str!("../../examples/fact.sd"))
+            .context("Could not parse fact program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
+    #[rstest]
+    #[case(basic_program())]
+    #[case(free_vars())]
+    #[case(thunks())]
+    #[case(fact())]
+    fn check_parse(#[case] expr: Result<Expr>) -> Result<()> {
+        expr?;
+        Ok(())
+    }
+}

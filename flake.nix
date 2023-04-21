@@ -23,7 +23,15 @@
           profiles.release.runTests = target == "linux";
         };
         crates = {
-          sd-core = { };
+          sd-core = {
+            overrides = {
+              add-inputs.overrideAttrs = oldAttrs: rec {
+                nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
+                  cargo-insta
+                ]);
+              };
+            };
+          };
           sd-graphics = {
             overrides = {
               add-inputs.overrideAttrs = oldAttrs: rec {

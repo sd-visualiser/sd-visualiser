@@ -289,59 +289,21 @@ impl From<&str> for Variable {
 mod tests {
     use std::collections::BTreeSet;
 
-    use anyhow::{Context, Result};
-    use from_pest::FromPest;
+    use anyhow::Result;
     use insta::assert_debug_snapshot;
-    use pest::Parser;
-    use rstest::{fixture, rstest};
+    use rstest::rstest;
 
     use super::Syntax;
     use crate::{
         graph::HyperGraphOp,
-        language::{Expr, Rule, SDParser, Variable},
+        language::{tests::*, Expr, Variable},
     };
-
-    #[fixture]
-    fn basic_program() -> Result<Expr> {
-        let mut pairs = SDParser::parse(Rule::program, "bind x = 1() in x")
-            .context("Could not parse basic program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    fn free_vars() -> Result<Expr> {
-        let mut pairs = SDParser::parse(Rule::program, "bind x = y in z")
-            .context("Could not parse free variable program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    // Make this something meaningful
-    #[fixture]
-    fn thunks() -> Result<Expr> {
-        let mut pairs = SDParser::parse(
-            Rule::program,
-            "bind a = x0.1() in bind b = x0.bind z = plus(x0,y) in z in bind x = plus(a,b) in x",
-        )
-        .context("Could not parse thunk program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[rstest]
-    fn check_parse(
-        basic_program: Result<Expr>,
-        free_vars: Result<Expr>,
-        thunks: Result<Expr>,
-    ) -> Result<()> {
-        basic_program?;
-        free_vars?;
-        thunks?;
-        Ok(())
-    }
 
     #[rstest]
     #[case(basic_program(), vec![])]
     #[case(free_vars(), vec!["y".into(), "z".into()])]
-    #[case(thunks(), vec!["y".into()])]
+    #[case(thunks(), vec!["x".into()])]
+    #[case(fact(), vec![])]
     fn free_var_test(#[case] expr: Result<Expr>, #[case] vars: Vec<Variable>) -> Result<()> {
         let expr = expr?;
         let mut free_vars = BTreeSet::new();
@@ -353,28 +315,14 @@ mod tests {
     }
 
     #[rstest]
-    fn hypergraph_test_basic(basic_program: Result<Expr>) -> Result<()> {
-        let graph: HyperGraphOp = (&basic_program?).try_into()?;
+    #[case("basic_program", basic_program())]
+    #[case("free_vars", free_vars())]
+    #[case("thunks", thunks())]
+    #[case("fact", fact())]
+    fn hypergraph_snapshots(#[case] name: &str, #[case] expr: Result<Expr>) -> Result<()> {
+        let graph: HyperGraphOp = (&expr?).try_into()?;
 
-        assert_debug_snapshot!(graph);
-
-        Ok(())
-    }
-
-    #[rstest]
-    fn hypergraph_test_free_var(free_vars: Result<Expr>) -> Result<()> {
-        let graph: HyperGraphOp = (&free_vars?).try_into()?;
-
-        assert_debug_snapshot!(graph);
-
-        Ok(())
-    }
-
-    #[rstest]
-    fn hypergraph_test_thunk(thunks: Result<Expr>) -> Result<()> {
-        let graph: HyperGraphOp = (&thunks?).try_into()?;
-
-        assert_debug_snapshot!(graph);
+        assert_debug_snapshot!(name, graph);
 
         Ok(())
     }
