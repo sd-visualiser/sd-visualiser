@@ -1,0 +1,6 @@
+---
+source: sd-core/src/prettyprinter.rs
+expression: expr.to_pretty()
+---
+bind x = 1 in
+x

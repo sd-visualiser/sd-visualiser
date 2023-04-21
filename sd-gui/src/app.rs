@@ -8,6 +8,7 @@ use pest::error::LineColLocation;
 use sd_core::{
     graph::{HyperGraphOp, Op},
     monoidal::{MonoidalGraph, MonoidalWiredGraph},
+    prettyprinter::PrettyPrint,
 };
 use tracing::{debug, event, Level};
 
@@ -21,6 +22,7 @@ use crate::{
 pub struct App {
     code: String,
     parsed: bool,
+    focus_code: String,
     hypergraph: HyperGraphOp,
     monoidal_term: MonoidalWiredGraph<Op>,
     monoidal_graph: MonoidalGraph<Op>,
@@ -88,7 +90,25 @@ impl App {
         App::default()
     }
 
-    fn code_ui(&mut self, ui: &mut egui::Ui) {
+    fn code_view_ui(&mut self, ui: &mut egui::Ui) {
+        let theme = CodeTheme::from_style(ui.style());
+
+        let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
+            let mut layout_job = highlight(ui.ctx(), &theme, source, "sd");
+            layout_job.wrap.max_width = wrap_width;
+            ui.fonts(|f| f.layout_job(layout_job))
+        };
+
+        egui::TextEdit::multiline(&mut self.focus_code)
+            .code_editor()
+            .layouter(&mut layouter)
+            .min_size(ui.available_size())
+            .desired_width(f32::INFINITY) // don't wrap text
+            .interactive(false)
+            .show(ui);
+    }
+
+    fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
         let theme = CodeTheme::from_style(ui.style());
 
         let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
@@ -163,6 +183,7 @@ impl App {
                 let parse = Parser::parse(ui.ctx(), &app.code);
                 let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
                 app.parsed = true;
+                app.focus_code = expr.to_pretty();
                 event!(Level::DEBUG, "Converting to hypergraph");
                 app.hypergraph = HyperGraphOp::try_from(expr)?;
                 event!(Level::DEBUG, "Converting to monoidal term");
@@ -242,11 +263,16 @@ impl eframe::App for App {
             ui.columns(2, |columns| {
                 egui::ScrollArea::vertical()
                     .id_source("code")
-                    .show(&mut columns[0], |ui| self.code_ui(ui));
+                    .show(&mut columns[0], |ui| self.code_edit_ui(ui));
                 egui::ScrollArea::both()
                     .id_source("graph")
                     .show(&mut columns[1], |ui| self.graph_ui(ui));
-            })
+            });
+            egui::Window::new("Focus").show(ctx, |ui| {
+                egui::ScrollArea::vertical()
+                    .id_source("focus")
+                    .show(ui, |ui| self.code_view_ui(ui))
+            });
         });
     }
 }
