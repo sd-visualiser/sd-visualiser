@@ -227,7 +227,7 @@ impl Syntax for Thunk {
         let node = graph.add_node(
             Node::Thunk {
                 args: self.args.len(),
-                body: Box::new(graph_inner),
+                body: graph_inner,
             },
             inputs,
             1,

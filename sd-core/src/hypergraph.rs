@@ -62,10 +62,7 @@ pub enum Node<E> {
     Weight(E),
     Input,
     Output,
-    Thunk {
-        args: usize,
-        body: Box<HyperGraph<E>>,
-    },
+    Thunk { args: usize, body: HyperGraph<E> },
 }
 
 impl<E> Node<E> {
