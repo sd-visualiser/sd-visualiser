@@ -42,7 +42,11 @@ impl PrettyPrint for Variable {
 impl PrettyPrint for Term {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Term::Thunk(thunk) => thunk.to_doc().append(RcDoc::line()),
+            Term::Thunk(thunk) => thunk.to_doc().append(if thunk.body.binds.is_empty() {
+                RcDoc::space()
+            } else {
+                RcDoc::line()
+            }),
             Term::ActiveOp(op, vs) => op
                 .to_doc()
                 .append(RcDoc::text("("))
@@ -110,7 +114,11 @@ impl PrettyPrint for Thunk {
         RcDoc::intersperse(self.args.iter().map(|arg| arg.to_doc()), RcDoc::space())
             .append(RcDoc::space())
             .append(RcDoc::text("."))
-            .append(RcDoc::line().append(self.body.to_doc()).nest(4))
+            .append(if self.body.binds.is_empty() {
+                RcDoc::space().append(self.body.to_doc())
+            } else {
+                RcDoc::line().append(self.body.to_doc()).nest(4)
+            })
     }
 }
 
