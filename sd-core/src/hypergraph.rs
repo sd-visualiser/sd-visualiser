@@ -177,6 +177,16 @@ impl<E> HyperGraph<E> {
         })
     }
 
+    pub fn recurse(&self, path: &[NodeIndex]) -> Option<&Self> {
+        match path.split_first() {
+            None => Some(self),
+            Some((n, rest)) => match self.get(*n) {
+                Ok(Node::Thunk { body, .. }) => body.recurse(rest),
+                _ => None,
+            },
+        }
+    }
+
     pub fn ranks_from_end(
         &self,
     ) -> (
