@@ -253,8 +253,12 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Gather").clicked() {
-                    let _selected = self.monoidal_graph.selected();
-                    // TODO(@calintat): Do the gathering
+                    if let Some((prefix, _selection)) = self.monoidal_graph.selected() {
+                        let _graph = self.hypergraph.recurse(&prefix).unwrap();
+                        // TODO(@calintat): Find the subgraph of graph containing the selected nodes.
+                    } else {
+                        // TODO(@calintat): Display an error message or something.
+                    }
                 }
             });
         });

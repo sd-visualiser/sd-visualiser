@@ -171,16 +171,41 @@ pub struct MonoidalGraph<O> {
 }
 
 impl<O> MonoidalGraph<O> {
-    pub fn selected(&self) -> Vec<NodeIndex> {
-        self.slices
-            .iter()
-            .flat_map(|slice| {
-                slice.ops.iter().filter_map(|op| match op {
-                    MonoidalOp::Operation { addr, selected, .. } if *selected => Some(*addr),
-                    _ => None,
-                })
-            })
-            .collect()
+    pub fn selected(&self) -> Option<(Vec<NodeIndex>, BTreeSet<NodeIndex>)> {
+        // Addresses of selected nodes.
+        let mut selections = BTreeSet::default();
+
+        // Internal selection state (prefix and addresses) of the first selected thunk.
+        let mut thunk = None;
+
+        for slice in &self.slices {
+            for op in &slice.ops {
+                match op {
+                    MonoidalOp::Operation { addr, selected, .. } => {
+                        if *selected {
+                            selections.insert(*addr);
+                        }
+                    }
+                    MonoidalOp::Thunk { addr, body, .. } => {
+                        if let Some((mut prefix, subselections)) = body.selected() {
+                            selections.insert(*addr);
+
+                            if thunk.is_none() {
+                                prefix.insert(0, *addr);
+                                thunk = Some((prefix, subselections));
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        match (selections.len(), thunk) {
+            (0, _) => None,
+            (1, Some((prefix, subselections))) => Some((prefix, subselections)),
+            _ => Some((vec![], selections)),
+        }
     }
 }
 
