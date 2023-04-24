@@ -114,7 +114,6 @@ pub struct MonoidalWiredGraph<O> {
     pub inputs: usize,
     pub slices: Vec<WiredSlice<O>>,
     pub wirings: Vec<Wiring>,
-    pub prefix: Vec<NodeIndex>,
 }
 
 impl<O> Default for MonoidalWiredGraph<O> {
@@ -123,7 +122,6 @@ impl<O> Default for MonoidalWiredGraph<O> {
             inputs: 0,
             slices: vec![],
             wirings: vec![Wiring::new(0)],
-            prefix: vec![],
         }
     }
 }
@@ -170,7 +168,6 @@ impl<O> MonoidalWiredOp<O> {
 pub struct MonoidalGraph<O> {
     pub inputs: usize,
     pub slices: Vec<Slice<O>>,
-    pub prefix: Vec<NodeIndex>,
 }
 
 impl<O> MonoidalGraph<O> {
@@ -192,7 +189,6 @@ impl<O> Default for MonoidalGraph<O> {
         MonoidalGraph {
             inputs: 0,
             slices: vec![],
-            prefix: vec![],
         }
     }
 }
@@ -254,10 +250,7 @@ pub enum FromHyperError {
 
 // This can be made a lot nicer
 impl<O: Debug + Copy> MonoidalWiredGraph<O> {
-    pub fn from_hypergraph(
-        graph: &HyperGraph<O>,
-        prefix: &[NodeIndex],
-    ) -> Result<Self, FromHyperError> {
+    pub fn from_hypergraph(graph: &HyperGraph<O>) -> Result<Self, FromHyperError> {
         debug!("To Process: {:?}", graph);
 
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
@@ -348,10 +341,7 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                         addr: node,
                         inputs: graph.get_inputs(node)?.collect(),
                         args: *args,
-                        body: MonoidalWiredGraph::from_hypergraph(
-                            body,
-                            &[prefix, &[node]].concat(),
-                        )?,
+                        body: MonoidalWiredGraph::from_hypergraph(body)?,
                     }),
                 };
                 ops.push(OpData {
@@ -434,7 +424,6 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
             inputs: input_wires,
             slices,
             wirings,
-            prefix: prefix.to_vec(),
         })
     }
 }
@@ -492,7 +481,6 @@ impl<O: Copy> MonoidalWiredGraph<O> {
         Ok(MonoidalGraph {
             inputs: self.inputs,
             slices,
-            prefix: self.prefix.clone(),
         })
     }
 }

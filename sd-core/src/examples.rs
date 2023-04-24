@@ -19,7 +19,6 @@ pub fn int() -> MonoidalGraph<Op> {
                 selected: false,
             }],
         }],
-        prefix: vec![],
     }
 }
 
@@ -36,7 +35,6 @@ pub fn copy() -> MonoidalGraph<Op> {
                 ops: vec![Copy { copies: 2 }, MonoidalOp::ID],
             },
         ],
-        prefix: vec![],
     }
 }
 
@@ -53,7 +51,6 @@ pub fn thunk() -> MonoidalGraph<Op> {
                 selected: false,
             }],
         }],
-        prefix: vec![NodeIndex(0)],
     };
 
     MonoidalGraph {
@@ -74,6 +71,5 @@ pub fn thunk() -> MonoidalGraph<Op> {
                 },
             ],
         }],
-        prefix: vec![],
     }
 }

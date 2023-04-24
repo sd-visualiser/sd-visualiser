@@ -187,7 +187,7 @@ impl App {
                 event!(Level::DEBUG, "Converting to hypergraph");
                 app.hypergraph = SyntaxHyperGraph::try_from(expr)?;
                 event!(Level::DEBUG, "Converting to monoidal term");
-                app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph, &[])?;
+                app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph)?;
                 event!(Level::DEBUG, "Got term {:?}", app.monoidal_term);
                 event!(Level::DEBUG, "Inserting swaps and copies");
                 app.monoidal_graph = app.monoidal_term.to_graph()?;
