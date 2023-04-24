@@ -6,7 +6,7 @@ use eframe::{
 };
 use pest::error::LineColLocation;
 use sd_core::{
-    graph::{HyperGraphOp, Op},
+    graph::{Op, SyntaxHyperGraph},
     monoidal::{MonoidalGraph, MonoidalWiredGraph},
     prettyprinter::PrettyPrint,
 };
@@ -23,7 +23,7 @@ pub struct App {
     code: String,
     parsed: bool,
     focus_code: String,
-    hypergraph: HyperGraphOp,
+    hypergraph: SyntaxHyperGraph,
     monoidal_term: MonoidalWiredGraph<Op>,
     monoidal_graph: MonoidalGraph<Op>,
     panzoom: Panzoom,
@@ -185,7 +185,7 @@ impl App {
                 app.parsed = true;
                 app.focus_code = expr.to_pretty();
                 event!(Level::DEBUG, "Converting to hypergraph");
-                app.hypergraph = HyperGraphOp::try_from(expr)?;
+                app.hypergraph = SyntaxHyperGraph::try_from(expr)?;
                 event!(Level::DEBUG, "Converting to monoidal term");
                 app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph, &[])?;
                 event!(Level::DEBUG, "Got term {:?}", app.monoidal_term);

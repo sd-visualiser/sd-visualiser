@@ -35,14 +35,14 @@ pub enum HyperGraphError {
     UnknownPort(Port),
 }
 
-/// HyperGraph with hyperedges/nodes with weights E and vertices/wires
+/// Hypergraph with hyperedges/nodes with weights E and hypervertices/wires
 #[derive(Clone)]
 pub struct HyperGraph<E> {
     nodes: Slab<NodeInfo<E>>,
 }
 
 impl<E> Index<NodeIndex> for HyperGraph<E> {
-    type Output = GraphNode<E>;
+    type Output = Node<E>;
     fn index(&self, index: NodeIndex) -> &Self::Output {
         &self.nodes[index.0].data
     }
@@ -51,14 +51,14 @@ impl<E> Index<NodeIndex> for HyperGraph<E> {
 impl<E> Default for HyperGraph<E> {
     fn default() -> Self {
         let mut g = Self::new();
-        g.add_node(GraphNode::Input, vec![], 0).unwrap();
-        g.add_node(GraphNode::Output, vec![], 0).unwrap();
+        g.add_node(Node::Input, vec![], 0).unwrap();
+        g.add_node(Node::Output, vec![], 0).unwrap();
         g
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum GraphNode<E> {
+pub enum Node<E> {
     Weight(E),
     Input,
     Output,
@@ -68,23 +68,23 @@ pub enum GraphNode<E> {
     },
 }
 
-impl<E> GraphNode<E> {
+impl<E> Node<E> {
     pub fn w<F: Into<E>>(weight: F) -> Self {
-        GraphNode::Weight(weight.into())
+        Node::Weight(weight.into())
     }
 
     pub fn is_input(&self) -> bool {
-        matches!(self, GraphNode::Input)
+        matches!(self, Node::Input)
     }
 
     pub fn is_output(&self) -> bool {
-        matches!(self, GraphNode::Output)
+        matches!(self, Node::Output)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct NodeInfo<E> {
-    data: GraphNode<E>,
+    data: Node<E>,
     inputs: Vec<Port>,
     outputs: Vec<BTreeSet<Port>>,
 }
@@ -98,7 +98,7 @@ impl<E> HyperGraph<E> {
     /// Adds a new node to a graph with specified node data, a list of ports to obtain inputs from
     pub fn add_node(
         &mut self,
-        data: GraphNode<E>,
+        data: Node<E>,
         inputs: Vec<Port>,
         output_ports: usize,
     ) -> Result<NodeIndex, HyperGraphError> {
@@ -136,7 +136,7 @@ impl<E> HyperGraph<E> {
             .ok_or(HyperGraphError::UnknownNode(key))
     }
 
-    pub fn get(&self, key: NodeIndex) -> Result<&GraphNode<E>, HyperGraphError> {
+    pub fn get(&self, key: NodeIndex) -> Result<&Node<E>, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(&info.data)
     }
@@ -167,7 +167,7 @@ impl<E> HyperGraph<E> {
         Ok(info.inputs.len())
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &GraphNode<E>)> {
+    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &Node<E>)> {
         self.nodes.iter().map(|(x, d)| (NodeIndex(x), &d.data))
     }
 
