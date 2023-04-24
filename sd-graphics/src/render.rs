@@ -81,7 +81,7 @@ fn generate_shapes<O: Display>(
 
         let mut offset_i = 0;
         let mut offset_o = 0;
-        for (i, (op, _)) in slice.ops.iter_mut().enumerate() {
+        for (i, op) in slice.ops.iter_mut().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
@@ -115,6 +115,7 @@ fn generate_shapes<O: Display>(
                     args,
                     body,
                     expanded,
+                    ..
                 } if *expanded => {
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
