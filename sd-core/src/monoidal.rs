@@ -11,12 +11,12 @@ use tracing::debug;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct WiredSlice<O> {
-    pub ops: Vec<(MonoidalWiredOp<O>, Vec<NodeIndex>)>,
+    pub ops: Vec<(MonoidalWiredOp<O>, Option<NodeIndex>)>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Slice<O> {
-    pub ops: Vec<(MonoidalOp<O>, Vec<NodeIndex>)>,
+    pub ops: Vec<(MonoidalOp<O>, Option<NodeIndex>)>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -38,8 +38,8 @@ impl Wiring {
         self.backward.push(input);
     }
 
-    pub fn to_slices<O>(&self, prefix: &[NodeIndex]) -> Vec<Slice<O>> {
-        let mut slices = Slice::permutation_to_swaps(self.backward.clone(), prefix);
+    pub fn to_slices<O>(&self) -> Vec<Slice<O>> {
+        let mut slices = Slice::permutation_to_swaps(self.backward.clone());
         let mut copy_slice = Vec::new();
         let mut is_empty = true;
         for x in &self.forward {
@@ -47,7 +47,7 @@ impl Wiring {
             if copies != 1 {
                 is_empty = false;
             }
-            copy_slice.push((MonoidalOp::Copy { copies }, prefix.to_vec()))
+            copy_slice.push((MonoidalOp::Copy { copies }, None))
         }
         if !is_empty {
             slices.push(Slice { ops: copy_slice });
@@ -76,7 +76,7 @@ impl<O> Slice<O> {
         self.ops.iter().map(|(op, _)| op.number_of_outputs()).sum()
     }
 
-    pub fn permutation_to_swaps(mut permutation: Vec<usize>, prefix: &[NodeIndex]) -> Vec<Self> {
+    pub fn permutation_to_swaps(mut permutation: Vec<usize>) -> Vec<Self> {
         let mut slices = Vec::new();
 
         let mut finished = false;
@@ -88,16 +88,16 @@ impl<O> Slice<O> {
             while i + 1 < permutation.len() {
                 if permutation[i] <= permutation[i + 1] {
                     i += 1;
-                    slice_ops.push((MonoidalOp::ID, prefix.to_vec()));
+                    slice_ops.push((MonoidalOp::ID, None));
                 } else {
                     finished = false;
-                    slice_ops.push((MonoidalOp::Swap, prefix.to_vec()));
+                    slice_ops.push((MonoidalOp::Swap, None));
                     permutation.swap(i, i + 1);
                     i += 2;
                 }
             }
             if i + 1 == permutation.len() {
-                slice_ops.push((MonoidalOp::ID, prefix.to_vec()));
+                slice_ops.push((MonoidalOp::ID, None));
             }
             if !finished {
                 // Slice is non trivial
@@ -114,6 +114,7 @@ pub struct MonoidalWiredGraph<O> {
     pub inputs: usize,
     pub slices: Vec<WiredSlice<O>>,
     pub wirings: Vec<Wiring>,
+    pub prefix: Vec<NodeIndex>,
 }
 
 impl<O> Default for MonoidalWiredGraph<O> {
@@ -122,6 +123,7 @@ impl<O> Default for MonoidalWiredGraph<O> {
             inputs: 0,
             slices: vec![],
             wirings: vec![Wiring::new(0)],
+            prefix: vec![],
         }
     }
 }
@@ -166,15 +168,16 @@ impl<O> MonoidalWiredOp<O> {
 pub struct MonoidalGraph<O> {
     pub inputs: usize,
     pub slices: Vec<Slice<O>>,
+    pub prefix: Vec<NodeIndex>,
 }
 
 impl<O> MonoidalGraph<O> {
-    pub fn selected(&self) -> Vec<Vec<NodeIndex>> {
+    pub fn selected(&self) -> Vec<Option<NodeIndex>> {
         self.slices
             .iter()
             .flat_map(|slice| {
                 slice.ops.iter().filter_map(|(op, ns)| match op {
-                    MonoidalOp::Operation { selected, .. } if *selected => Some(ns.clone()),
+                    MonoidalOp::Operation { selected, .. } if *selected => Some(*ns),
                     _ => None,
                 })
             })
@@ -187,6 +190,7 @@ impl<O> Default for MonoidalGraph<O> {
         MonoidalGraph {
             inputs: 0,
             slices: vec![],
+            prefix: vec![],
         }
     }
 }
@@ -293,7 +297,7 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
             // The output ports of this operation
             outputs: Vec<Port>,
             // The hypergraph address of the operation
-            addr: Vec<NodeIndex>,
+            addr: Option<NodeIndex>,
             // The average of the indices of the outputs in 'open_wires'
             weight: Ratio<usize>,
         }
@@ -308,9 +312,6 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
             // Create an OpData for each node
             for &node in r.iter() {
                 debug!("Processing node {:?}", node);
-
-                // Compute new address by adding the NodeIndex to the end
-                let addr = [prefix, &[node]].concat();
 
                 // Compute the weight
                 let (sum, count) = open_wires
@@ -343,13 +344,16 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                     Node::Thunk { args, body } => Some(MonoidalWiredOp::Thunk {
                         inputs: graph.get_inputs(node)?.collect(),
                         args: *args,
-                        body: MonoidalWiredGraph::from_hypergraph(body, &addr)?,
+                        body: MonoidalWiredGraph::from_hypergraph(
+                            body,
+                            &[prefix, &[node]].concat(),
+                        )?,
                     }),
                 };
                 ops.push(OpData {
                     op,
                     outputs,
-                    addr,
+                    addr: Some(node),
                     weight,
                 })
             }
@@ -362,7 +366,7 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                     ops.push(OpData {
                         op: Some(MonoidalWiredOp::Id { port }),
                         outputs: vec![port],
-                        addr: prefix.to_vec(),
+                        addr: None,
                         weight: i.into(),
                     });
                 }
@@ -428,12 +432,13 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
             inputs: input_wires,
             slices,
             wirings,
+            prefix: prefix.to_vec(),
         })
     }
 }
 
 impl<O: Copy> MonoidalWiredOp<O> {
-    pub fn to_monoidal_op(&self, node: &[NodeIndex]) -> Result<MonoidalOp<O>, FromHyperError> {
+    pub fn to_monoidal_op(&self) -> Result<MonoidalOp<O>, FromHyperError> {
         match self {
             MonoidalWiredOp::Id { .. } => Ok(MonoidalOp::ID),
             MonoidalWiredOp::Operation { inputs, op_name } => Ok(MonoidalOp::Operation {
@@ -443,7 +448,7 @@ impl<O: Copy> MonoidalWiredOp<O> {
             }),
             MonoidalWiredOp::Thunk { args, body, .. } => Ok(MonoidalOp::Thunk {
                 args: *args,
-                body: body.to_graph(node)?,
+                body: body.to_graph()?,
                 expanded: true,
             }),
         }
@@ -456,15 +461,15 @@ impl<O: Copy> WiredSlice<O> {
             ops: self
                 .ops
                 .iter()
-                .map(|(x, node)| Ok((x.to_monoidal_op(node)?, node.clone())))
+                .map(|(x, node)| Ok((x.to_monoidal_op()?, *node)))
                 .collect::<Result<Vec<_>, FromHyperError>>()?,
         })
     }
 }
 
 impl<O: Copy> MonoidalWiredGraph<O> {
-    pub fn to_graph(&self, prefix: &[NodeIndex]) -> Result<MonoidalGraph<O>, FromHyperError> {
-        let wiring_slices = self.wirings.iter().map(|w| w.to_slices(prefix));
+    pub fn to_graph(&self) -> Result<MonoidalGraph<O>, FromHyperError> {
+        let wiring_slices = self.wirings.iter().map(|w| w.to_slices());
         let slices: Vec<Slice<O>> = wiring_slices
             .into_iter()
             .interleave(
@@ -477,6 +482,7 @@ impl<O: Copy> MonoidalWiredGraph<O> {
         Ok(MonoidalGraph {
             inputs: self.inputs,
             slices,
+            prefix: self.prefix.clone(),
         })
     }
 }
@@ -492,13 +498,13 @@ mod tests {
 
     #[rstest]
     #[case(vec![0,1], vec![])]
-    #[case(vec![1,0], vec![Slice { ops: vec![(MonoidalOp::Swap, vec![])]}])]
-    #[case(vec![1,2,0], vec![Slice { ops: vec![(MonoidalOp::ID, vec![]),(MonoidalOp::Swap, vec![])]}, Slice { ops: vec![(MonoidalOp::Swap, vec![]), (MonoidalOp::ID, vec![])]}])]
+    #[case(vec![1,0], vec![Slice { ops: vec![(MonoidalOp::Swap, None)]}])]
+    #[case(vec![1,2,0], vec![Slice { ops: vec![(MonoidalOp::ID, None),(MonoidalOp::Swap, None)]}, Slice { ops: vec![(MonoidalOp::Swap, None), (MonoidalOp::ID, None)]}])]
     fn test_permutation(
         #[case] permutation: Vec<usize>,
         #[case] result: Vec<Slice<Op>>,
     ) -> Result<()> {
-        assert_eq!(Slice::permutation_to_swaps(permutation, &[]), result);
+        assert_eq!(Slice::permutation_to_swaps(permutation), result);
         Ok(())
     }
 }

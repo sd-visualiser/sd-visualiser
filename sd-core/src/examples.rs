@@ -17,9 +17,10 @@ pub fn int() -> MonoidalGraph<Op> {
                     op_name: PassiveOp::Int(1).into(),
                     selected: false,
                 },
-                vec![],
+                None,
             )],
         }],
+        prefix: vec![],
     }
 }
 
@@ -30,12 +31,13 @@ pub fn copy() -> MonoidalGraph<Op> {
         inputs: 1,
         slices: vec![
             Slice {
-                ops: vec![(Copy { copies: 2 }, vec![])],
+                ops: vec![(Copy { copies: 2 }, None)],
             },
             Slice {
-                ops: vec![(Copy { copies: 2 }, vec![]), (MonoidalOp::ID, vec![])],
+                ops: vec![(Copy { copies: 2 }, None), (MonoidalOp::ID, None)],
             },
         ],
+        prefix: vec![],
     }
 }
 
@@ -51,9 +53,10 @@ pub fn thunk() -> MonoidalGraph<Op> {
                     op_name: ActiveOp::Plus.into(),
                     selected: false,
                 },
-                vec![],
+                None,
             )],
         }],
+        prefix: vec![],
     };
 
     MonoidalGraph {
@@ -66,7 +69,7 @@ pub fn thunk() -> MonoidalGraph<Op> {
                         body: plus,
                         expanded: true,
                     },
-                    vec![],
+                    None,
                 ),
                 (
                     Operation {
@@ -74,9 +77,10 @@ pub fn thunk() -> MonoidalGraph<Op> {
                         op_name: ActiveOp::Plus.into(),
                         selected: false,
                     },
-                    vec![],
+                    None,
                 ),
             ],
         }],
+        prefix: vec![],
     }
 }

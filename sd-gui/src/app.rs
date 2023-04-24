@@ -190,7 +190,7 @@ impl App {
                 app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph, &[])?;
                 event!(Level::DEBUG, "Got term {:?}", app.monoidal_term);
                 event!(Level::DEBUG, "Inserting swaps and copies");
-                app.monoidal_graph = app.monoidal_term.to_graph(&[])?;
+                app.monoidal_graph = app.monoidal_term.to_graph()?;
                 event!(Level::DEBUG, "Got graph {:?}", app.monoidal_graph);
                 Ok(())
             };
