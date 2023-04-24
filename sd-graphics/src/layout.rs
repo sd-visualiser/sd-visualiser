@@ -171,7 +171,7 @@ fn layout_internal<O>(
         let ns = slice
             .ops
             .iter()
-            .map(|(op, _)| match op {
+            .map(|op| match op {
                 MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
                     Node::Thunk(layout_internal(body, problem))
                 }
@@ -189,7 +189,7 @@ fn layout_internal<O>(
         let mut prev_out = None;
         let mut offset_i = 0;
         let mut offset_o = 0;
-        for (i, (op, _)) in slice.ops.iter().enumerate() {
+        for (i, op) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
