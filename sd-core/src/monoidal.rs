@@ -3,7 +3,7 @@ use std::{
     fmt::Debug,
 };
 
-use crate::hypergraph::{GraphNode, HyperGraph, HyperGraphError, NodeIndex, Port, PortIndex};
+use crate::hypergraph::{HyperGraph, HyperGraphError, Node, NodeIndex, Port, PortIndex};
 use itertools::Itertools;
 use num::rational::Ratio;
 use thiserror::Error;
@@ -335,12 +335,12 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                 gathered_ports.extend(&outputs);
 
                 let op = match &graph[node] {
-                    GraphNode::Weight(op) => Some(MonoidalWiredOp::Operation {
+                    Node::Weight(op) => Some(MonoidalWiredOp::Operation {
                         inputs: graph.get_inputs(node)?.collect(),
                         op_name: *op,
                     }),
-                    GraphNode::Input | GraphNode::Output => None,
-                    GraphNode::Thunk { args, body } => Some(MonoidalWiredOp::Thunk {
+                    Node::Input | Node::Output => None,
+                    Node::Thunk { args, body } => Some(MonoidalWiredOp::Thunk {
                         inputs: graph.get_inputs(node)?.collect(),
                         args: *args,
                         body: MonoidalWiredGraph::from_hypergraph(body, &addr)?,

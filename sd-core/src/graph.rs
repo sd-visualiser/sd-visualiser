@@ -4,13 +4,13 @@ use std::{
 };
 use thiserror::Error;
 
-use crate::hypergraph::{GraphNode, HyperGraph, HyperGraphError, Port, PortIndex};
+use crate::hypergraph::{HyperGraph, HyperGraphError, Node, Port, PortIndex};
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 pub enum Op {
-    Passive(PassiveOp),
     Active(ActiveOp),
+    Passive(PassiveOp),
 }
 
 impl Display for Op {
@@ -22,19 +22,19 @@ impl Display for Op {
     }
 }
 
-impl From<PassiveOp> for Op {
-    fn from(p: PassiveOp) -> Self {
-        Op::Passive(p)
-    }
-}
-
 impl From<ActiveOp> for Op {
     fn from(a: ActiveOp) -> Self {
         Op::Active(a)
     }
 }
 
-pub type HyperGraphOp = HyperGraph<Op>;
+impl From<PassiveOp> for Op {
+    fn from(p: PassiveOp) -> Self {
+        Op::Passive(p)
+    }
+}
+
+pub type SyntaxHyperGraph = HyperGraph<Op>;
 
 #[derive(Debug, Error)]
 pub enum ConvertError {
@@ -57,7 +57,7 @@ pub(crate) trait Syntax {
     /// This function will return an error if variables are malformed.
     fn process(
         &self,
-        graph: &mut HyperGraphOp,
+        graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError>;
 }
@@ -74,14 +74,14 @@ impl Syntax for Expr {
 
     fn process(
         &self,
-        graph: &mut HyperGraphOp,
+        graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         for bc in &self.binds {
             bc.process(graph, mapping)?;
         }
         let port = self.value.process(graph, mapping)?;
-        graph.add_node(GraphNode::Output, vec![port], 0)?;
+        graph.add_node(Node::Output, vec![port], 0)?;
         Ok(())
     }
 }
@@ -96,7 +96,7 @@ impl Syntax for BindClause {
 
     fn process(
         &self,
-        graph: &mut HyperGraphOp,
+        graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         let port = self.term.process(graph, mapping)?;
@@ -122,7 +122,7 @@ impl Syntax for Term {
 
     fn process(
         &self,
-        graph: &mut HyperGraphOp,
+        graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         match self {
@@ -132,7 +132,7 @@ impl Syntax for Term {
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
                 }
-                let node = graph.add_node(GraphNode::w(*op), inputs, 1)?;
+                let node = graph.add_node(Node::w(*op), inputs, 1)?;
                 Ok(Port {
                     node,
                     index: PortIndex(0),
@@ -163,7 +163,7 @@ impl Syntax for Value {
 
     fn process(
         &self,
-        graph: &mut HyperGraphOp,
+        graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         match self {
@@ -176,7 +176,7 @@ impl Syntax for Value {
                 for v in vals {
                     inputs.push(v.process(graph, mapping)?);
                 }
-                let node = graph.add_node(GraphNode::w(*op), inputs, 1)?;
+                let node = graph.add_node(Node::w(*op), inputs, 1)?;
                 Ok(Port {
                     node,
                     index: PortIndex(0),
@@ -201,7 +201,7 @@ impl Syntax for Thunk {
 
     fn process(
         &self,
-        graph: &mut HyperGraphOp,
+        graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         let mut vars = BTreeSet::new();
@@ -225,7 +225,7 @@ impl Syntax for Thunk {
         let graph_inner = self.body.to_hypergraph_from_inputs(vars_vec)?;
 
         let node = graph.add_node(
-            GraphNode::Thunk {
+            Node::Thunk {
                 args: self.args.len(),
                 body: Box::new(graph_inner),
             },
@@ -240,7 +240,7 @@ impl Syntax for Thunk {
     }
 }
 
-impl TryFrom<&Expr> for HyperGraphOp {
+impl TryFrom<&Expr> for SyntaxHyperGraph {
     type Error = ConvertError;
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
@@ -256,12 +256,12 @@ impl Expr {
     pub(crate) fn to_hypergraph_from_inputs(
         &self,
         inputs: Vec<Variable>,
-    ) -> Result<HyperGraphOp, ConvertError> {
+    ) -> Result<SyntaxHyperGraph, ConvertError> {
         let mut mapping: HashMap<Variable, Port> = HashMap::new();
 
-        let mut graph = HyperGraphOp::new();
+        let mut graph = SyntaxHyperGraph::new();
 
-        let input_node = graph.add_node(GraphNode::Input, vec![], inputs.len())?;
+        let input_node = graph.add_node(Node::Input, vec![], inputs.len())?;
 
         for (i, var) in inputs.into_iter().enumerate() {
             mapping.insert(
@@ -295,7 +295,7 @@ mod tests {
 
     use super::Syntax;
     use crate::{
-        graph::HyperGraphOp,
+        graph::SyntaxHyperGraph,
         language::{tests::*, Expr, Variable},
     };
 
@@ -320,7 +320,7 @@ mod tests {
     #[case("thunks", thunks())]
     #[case("fact", fact())]
     fn hypergraph_snapshots(#[case] name: &str, #[case] expr: Result<Expr>) -> Result<()> {
-        let graph: HyperGraphOp = (&expr?).try_into()?;
+        let graph: SyntaxHyperGraph = (&expr?).try_into()?;
 
         assert_debug_snapshot!(name, graph);
 
