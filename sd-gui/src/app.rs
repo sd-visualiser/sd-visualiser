@@ -4,6 +4,7 @@ use eframe::{
     emath,
     epaint::{Color32, FontId, Pos2, QuadraticBezierShape, Rect, Rounding, Shape, Stroke, Vec2},
 };
+use egui_notify::Toasts;
 use pest::error::LineColLocation;
 use sd_core::{
     graph::{Op, SyntaxHyperGraph},
@@ -25,6 +26,7 @@ pub struct App {
     monoidal_term: MonoidalWiredGraph<Op>,
     monoidal_graph: MonoidalGraph<Op>,
     panzoom: Panzoom,
+    toasts: Toasts,
 }
 
 struct Panzoom {
@@ -241,7 +243,7 @@ impl eframe::App for App {
                         let _graph = self.hypergraph.recurse(&prefix).unwrap();
                         // TODO(@calintat): Find the subgraph of graph containing the selected nodes.
                     } else {
-                        // TODO(@calintat): Display an error message or something.
+                        self.toasts.warning("No nodes selected");
                     }
                 }
             });
@@ -257,5 +259,7 @@ impl eframe::App for App {
                     .show(&mut columns[1], |ui| self.graph_ui(ui));
             });
         });
+
+        self.toasts.show(ctx);
     }
 }
