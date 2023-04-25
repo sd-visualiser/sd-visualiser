@@ -1,3 +1,4 @@
+pub mod common;
 pub mod examples;
 pub mod graph;
 pub mod hypergraph;

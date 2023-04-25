@@ -3,20 +3,18 @@ use std::{
     fmt::Debug,
 };
 
-use crate::hypergraph::{HyperGraph, HyperGraphError, Node, NodeIndex, Port, PortIndex};
+use crate::{
+    common::InOut,
+    hypergraph::{HyperGraph, HyperGraphError, Node, NodeIndex, Port, PortIndex},
+};
 use itertools::Itertools;
 use num::rational::Ratio;
 use thiserror::Error;
 use tracing::debug;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct WiredSlice<O> {
-    pub ops: Vec<MonoidalWiredOp<O>>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct Slice<O> {
-    pub ops: Vec<MonoidalOp<O>>,
+pub struct Slice<O: InOut> {
+    pub ops: Vec<O>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -38,7 +36,7 @@ impl Wiring {
         self.backward.push(input);
     }
 
-    pub fn to_slices<O>(&self) -> Vec<Slice<O>> {
+    pub fn to_slices<O>(&self) -> Vec<Slice<MonoidalOp<O>>> {
         let mut slices = Slice::permutation_to_swaps(self.backward.clone());
         let mut copy_slice = Vec::new();
         let mut is_empty = true;
@@ -57,25 +55,17 @@ impl Wiring {
     }
 }
 
-impl<O> WiredSlice<O> {
-    pub fn number_of_inputs(&self) -> usize {
+impl<O: InOut> InOut for Slice<O> {
+    fn number_of_inputs(&self) -> usize {
         self.ops.iter().map(|op| op.number_of_inputs()).sum()
     }
 
-    pub fn number_of_outputs(&self) -> usize {
+    fn number_of_outputs(&self) -> usize {
         self.ops.iter().map(|op| op.number_of_outputs()).sum()
     }
 }
 
-impl<O> Slice<O> {
-    pub fn number_of_inputs(&self) -> usize {
-        self.ops.iter().map(|op| op.number_of_inputs()).sum()
-    }
-
-    pub fn number_of_outputs(&self) -> usize {
-        self.ops.iter().map(|op| op.number_of_outputs()).sum()
-    }
-
+impl<O> Slice<MonoidalOp<O>> {
     pub fn permutation_to_swaps(mut permutation: Vec<usize>) -> Vec<Self> {
         let mut slices = Vec::new();
 
@@ -112,7 +102,7 @@ impl<O> Slice<O> {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct MonoidalWiredGraph<O> {
     pub inputs: usize,
-    pub slices: Vec<WiredSlice<O>>,
+    pub slices: Vec<Slice<MonoidalWiredOp<O>>>,
     pub wirings: Vec<Wiring>,
 }
 
@@ -144,17 +134,17 @@ pub enum MonoidalWiredOp<O> {
     },
 }
 
-impl<O> MonoidalWiredOp<O> {
-    /// Returns number of inputs of an operation
-    pub fn number_of_inputs(&self) -> usize {
+impl<O> InOut for MonoidalWiredOp<O> {
+    fn number_of_inputs(&self) -> usize {
         self.input_ports().len()
     }
 
-    /// Returns number of outputs of an operation
-    pub fn number_of_outputs(&self) -> usize {
+    fn number_of_outputs(&self) -> usize {
         1
     }
+}
 
+impl<O> MonoidalWiredOp<O> {
     pub fn input_ports(&self) -> Vec<Port> {
         match self {
             MonoidalWiredOp::Id { port } => vec![*port],
@@ -167,7 +157,7 @@ impl<O> MonoidalWiredOp<O> {
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct MonoidalGraph<O> {
     pub inputs: usize,
-    pub slices: Vec<Slice<O>>,
+    pub slices: Vec<Slice<MonoidalOp<O>>>,
 }
 
 impl<O> MonoidalGraph<O> {
@@ -238,9 +228,8 @@ pub enum MonoidalOp<O> {
     Swap,
 }
 
-impl<O> MonoidalOp<O> {
-    /// Returns number of cinputs of an operation
-    pub fn number_of_inputs(&self) -> usize {
+impl<O> InOut for MonoidalOp<O> {
+    fn number_of_inputs(&self) -> usize {
         match self {
             Self::Copy { .. } => 1,
             Self::Operation { inputs, .. } => *inputs,
@@ -249,8 +238,7 @@ impl<O> MonoidalOp<O> {
         }
     }
 
-    /// Returns number of outputs of an operation
-    pub fn number_of_outputs(&self) -> usize {
+    fn number_of_outputs(&self) -> usize {
         match self {
             Self::Copy { copies } => *copies,
             Self::Operation { .. } => 1,
@@ -258,9 +246,10 @@ impl<O> MonoidalOp<O> {
             Self::Swap => 2,
         }
     }
+}
 
+impl<O> MonoidalOp<O> {
     pub const ID: Self = MonoidalOp::Copy { copies: 1 };
-
     pub const DELETE: Self = MonoidalOp::Copy { copies: 0 };
 }
 
@@ -309,7 +298,7 @@ impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
         let mut open_wires: Vec<Port> = output_wires;
 
         // Build up slices and wirings
-        let mut slices: Vec<WiredSlice<O>> = Vec::new();
+        let mut slices: Vec<Slice<MonoidalWiredOp<O>>> = Vec::new();
         let mut wirings: Vec<Wiring> = Vec::new();
 
         // For each operation in the next layer, we store the following data.
@@ -436,7 +425,7 @@ impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
                 .map(|data: OpData<O>| data.op)
                 .collect::<Option<Vec<_>>>()
             {
-                slices.push(WiredSlice { ops });
+                slices.push(Slice { ops });
             }
 
             wirings.push(wiring);
@@ -480,10 +469,10 @@ impl<O: Copy> From<&MonoidalWiredOp<O>> for MonoidalOp<O> {
     }
 }
 
-impl<O: Copy> From<&WiredSlice<O>> for Slice<O> {
-    fn from(slice: &WiredSlice<O>) -> Self {
+impl<'a, A: InOut, B: InOut + From<&'a A>> From<&'a Slice<A>> for Slice<B> {
+    fn from(value: &'a Slice<A>) -> Self {
         Self {
-            ops: slice.ops.iter().map(MonoidalOp::from).collect(),
+            ops: value.ops.iter().map(B::from).collect(),
         }
     }
 }
@@ -491,7 +480,7 @@ impl<O: Copy> From<&WiredSlice<O>> for Slice<O> {
 impl<O: Copy> From<&MonoidalWiredGraph<O>> for MonoidalGraph<O> {
     fn from(graph: &MonoidalWiredGraph<O>) -> Self {
         let wiring_slices = graph.wirings.iter().map(|w| w.to_slices());
-        let slices: Vec<Slice<O>> = wiring_slices
+        let slices: Vec<Slice<MonoidalOp<O>>> = wiring_slices
             .into_iter()
             .interleave(graph.slices.iter().map(|x| vec![x.into()]))
             .concat();
@@ -517,7 +506,7 @@ mod tests {
     #[case(vec![1,2,0], vec![Slice { ops: vec![MonoidalOp::ID, MonoidalOp::Swap]}, Slice { ops: vec![MonoidalOp::Swap, MonoidalOp::ID]}])]
     fn test_permutation(
         #[case] permutation: Vec<usize>,
-        #[case] result: Vec<Slice<Op>>,
+        #[case] result: Vec<Slice<MonoidalOp<Op>>>,
     ) -> Result<()> {
         assert_eq!(Slice::permutation_to_swaps(permutation), result);
         Ok(())
