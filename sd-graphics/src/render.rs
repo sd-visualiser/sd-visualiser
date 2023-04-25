@@ -139,7 +139,7 @@ fn generate_shapes<O: Display>(
                         transform.apply(x_op.max, y_max),
                     );
                     let thunk_response = ui.interact(thunk_rect, id, Sense::click());
-                    if thunk_response.clicked() {
+                    if thunk_response.secondary_clicked() {
                         *expanded = false;
                     }
                     shapes.push(Shape::rect_stroke(
@@ -226,7 +226,7 @@ fn generate_shapes<O: Display>(
                             let thunk_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let thunk_response = ui.interact(thunk_rect, id, Sense::click());
-                            if thunk_response.clicked() {
+                            if thunk_response.secondary_clicked() {
                                 *expanded = true;
                             }
                             shapes.push(Shape::Rect(RectShape {
