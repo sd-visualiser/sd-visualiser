@@ -262,10 +262,10 @@ pub enum FromHyperError {
     HyperGraphError(#[from] HyperGraphError),
 }
 
-impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
+impl<O: Copy + Debug, V: Debug + Clone> TryFrom<&HyperGraph<O, V>> for MonoidalWiredGraph<O> {
     type Error = FromHyperError;
 
-    fn try_from(graph: &HyperGraph<O>) -> Result<Self, Self::Error> {
+    fn try_from(graph: &HyperGraph<O, V>) -> Result<Self, Self::Error> {
         debug!("To Process: {:?}", graph);
 
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
@@ -283,7 +283,7 @@ impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
 
             let output_wires = outputs
                 .iter()
-                .map(|x| graph.get_inputs(*x).unwrap().collect_vec())
+                .map(|x| graph.get_inputs(*x).unwrap().map(|x| x.0).collect_vec())
                 .concat();
 
             r.push(inputs);
@@ -348,13 +348,13 @@ impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
                 let op = match &graph[node] {
                     Node::Weight(op) => Some(MonoidalWiredOp::Operation {
                         addr: node,
-                        inputs: graph.get_inputs(node)?.collect(),
+                        inputs: graph.get_inputs(node)?.map(|x| x.0).collect(),
                         op_name: *op,
                     }),
                     Node::Input | Node::Output => None,
                     Node::Thunk { args, body } => Some(MonoidalWiredOp::Thunk {
                         addr: node,
-                        inputs: graph.get_inputs(node)?.collect(),
+                        inputs: graph.get_inputs(node)?.map(|x| x.0).collect(),
                         args: *args,
                         body: MonoidalWiredGraph::try_from(body)?,
                     }),

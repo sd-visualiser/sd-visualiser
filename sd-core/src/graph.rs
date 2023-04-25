@@ -19,6 +19,13 @@ pub enum Op {
     Passive(PassiveOp),
 }
 
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Serialize))]
+pub enum EdgeStrength {
+    Strong,
+    Weak,
+}
+
 impl Display for Op {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -40,7 +47,7 @@ impl From<PassiveOp> for Op {
     }
 }
 
-pub type SyntaxHyperGraph = HyperGraph<Op>;
+pub type SyntaxHyperGraph = HyperGraph<Op, EdgeStrength>;
 
 #[derive(Debug, Error)]
 pub enum ConvertError {
@@ -64,7 +71,7 @@ pub(crate) trait Syntax {
     fn process(
         &self,
         graph: &mut SyntaxHyperGraph,
-        mapping: &mut HashMap<Variable, Port>,
+        mapping: &mut HashMap<Variable, (Port, EdgeStrength)>,
     ) -> Result<Self::ProcessOutput, ConvertError>;
 }
 
@@ -81,7 +88,7 @@ impl Syntax for Expr {
     fn process(
         &self,
         graph: &mut SyntaxHyperGraph,
-        mapping: &mut HashMap<Variable, Port>,
+        mapping: &mut HashMap<Variable, (Port, EdgeStrength)>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         for bc in &self.binds {
             bc.process(graph, mapping)?;
@@ -103,7 +110,7 @@ impl Syntax for BindClause {
     fn process(
         &self,
         graph: &mut SyntaxHyperGraph,
-        mapping: &mut HashMap<Variable, Port>,
+        mapping: &mut HashMap<Variable, (Port, EdgeStrength)>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         let port = self.term.process(graph, mapping)?;
         mapping.insert(self.var.clone(), port);
@@ -124,12 +131,12 @@ impl Syntax for Term {
         }
     }
 
-    type ProcessOutput = Port;
+    type ProcessOutput = (Port, EdgeStrength);
 
     fn process(
         &self,
         graph: &mut SyntaxHyperGraph,
-        mapping: &mut HashMap<Variable, Port>,
+        mapping: &mut HashMap<Variable, (Port, EdgeStrength)>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         match self {
             Term::Value(v) => v.process(graph, mapping),
@@ -139,12 +146,15 @@ impl Syntax for Term {
                     inputs.push(v.process(graph, mapping)?);
                 }
                 let node = graph.add_node(Node::w(*op), inputs, 1)?;
-                Ok(Port {
-                    node,
-                    index: PortIndex(0),
-                })
+                Ok((
+                    Port {
+                        node,
+                        index: PortIndex(0),
+                    },
+                    EdgeStrength::Strong,
+                ))
             }
-            Term::Thunk(thunk) => thunk.process(graph, mapping),
+            Term::Thunk(thunk) => Ok((thunk.process(graph, mapping)?, EdgeStrength::Strong)),
         }
     }
 }
@@ -165,12 +175,12 @@ impl Syntax for Value {
         }
     }
 
-    type ProcessOutput = Port;
+    type ProcessOutput = (Port, EdgeStrength);
 
     fn process(
         &self,
         graph: &mut SyntaxHyperGraph,
-        mapping: &mut HashMap<Variable, Port>,
+        mapping: &mut HashMap<Variable, (Port, EdgeStrength)>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         match self {
             Value::Var(v) => mapping
@@ -183,10 +193,13 @@ impl Syntax for Value {
                     inputs.push(v.process(graph, mapping)?);
                 }
                 let node = graph.add_node(Node::w(*op), inputs, 1)?;
-                Ok(Port {
-                    node,
-                    index: PortIndex(0),
-                })
+                Ok((
+                    Port {
+                        node,
+                        index: PortIndex(0),
+                    },
+                    EdgeStrength::Strong,
+                ))
             }
         }
     }
@@ -208,7 +221,7 @@ impl Syntax for Thunk {
     fn process(
         &self,
         graph: &mut SyntaxHyperGraph,
-        mapping: &mut HashMap<Variable, Port>,
+        mapping: &mut HashMap<Variable, (Port, EdgeStrength)>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
         let mut vars = HashSet::new();
 
@@ -263,7 +276,7 @@ impl Expr {
         &self,
         inputs: Vec<Variable>,
     ) -> Result<SyntaxHyperGraph, ConvertError> {
-        let mut mapping: HashMap<Variable, Port> = HashMap::new();
+        let mut mapping: HashMap<Variable, (Port, EdgeStrength)> = HashMap::new();
 
         let mut graph = SyntaxHyperGraph::new();
 
@@ -272,10 +285,13 @@ impl Expr {
         for (i, var) in inputs.into_iter().enumerate() {
             mapping.insert(
                 var,
-                Port {
-                    node: input_node,
-                    index: PortIndex(i),
-                },
+                (
+                    Port {
+                        node: input_node,
+                        index: PortIndex(i),
+                    },
+                    EdgeStrength::Strong,
+                ),
             );
         }
 

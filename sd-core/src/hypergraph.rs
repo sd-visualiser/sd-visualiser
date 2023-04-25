@@ -45,18 +45,19 @@ pub enum HyperGraphError {
 /// Hypergraph with hyperedges/nodes with weights E and hypervertices/wires
 #[derive(Clone)]
 #[cfg_attr(test, derive(Serialize))]
-pub struct HyperGraph<E> {
-    nodes: Slab<NodeInfo<E>>,
+pub struct HyperGraph<E, V> {
+    nodes: Slab<NodeInfo<E, V>>,
 }
 
-impl<E> Index<NodeIndex> for HyperGraph<E> {
-    type Output = Node<E>;
+impl<E, V> Index<NodeIndex> for HyperGraph<E, V> {
+    type Output = Node<E, V>;
+
     fn index(&self, index: NodeIndex) -> &Self::Output {
         &self.nodes[index.0].data
     }
 }
 
-impl<E> Default for HyperGraph<E> {
+impl<E, V: Copy> Default for HyperGraph<E, V> {
     fn default() -> Self {
         let mut g = Self::new();
         g.add_node(Node::Input, vec![], 0).unwrap();
@@ -67,14 +68,14 @@ impl<E> Default for HyperGraph<E> {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(Serialize))]
-pub enum Node<E> {
+pub enum Node<E, V> {
     Weight(E),
     Input,
     Output,
-    Thunk { args: usize, body: HyperGraph<E> },
+    Thunk { args: usize, body: HyperGraph<E, V> },
 }
 
-impl<E> Node<E> {
+impl<E, V> Node<E, V> {
     pub fn w<F: Into<E>>(weight: F) -> Self {
         Node::Weight(weight.into())
     }
@@ -90,60 +91,25 @@ impl<E> Node<E> {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(Serialize))]
-pub struct NodeInfo<E> {
-    data: Node<E>,
-    inputs: Vec<Port>,
-    outputs: Vec<HashSet<Port>>,
+pub struct NodeInfo<E, V> {
+    data: Node<E, V>,
+    inputs: Vec<(Port, V)>,
+    outputs: Vec<HashMap<Port, V>>,
 }
 
-impl<E> HyperGraph<E> {
+impl<E, V> HyperGraph<E, V> {
     /// Generate a new graph
     pub fn new() -> Self {
         HyperGraph { nodes: Slab::new() }
     }
 
-    /// Adds a new node to a graph with specified node data, a list of ports to obtain inputs from
-    pub fn add_node(
-        &mut self,
-        data: Node<E>,
-        inputs: Vec<Port>,
-        output_ports: usize,
-    ) -> Result<NodeIndex, HyperGraphError> {
-        let next_node = self.nodes.vacant_key();
-
-        for (i, port @ Port { node, index }) in inputs.iter().enumerate() {
-            let input = self
-                .nodes
-                .get_mut(node.0)
-                .ok_or(HyperGraphError::UnknownNode(*node))?;
-
-            let port_set = input
-                .outputs
-                .get_mut(index.0)
-                .ok_or(HyperGraphError::UnknownPort(*port))?;
-            port_set.insert((next_node, i).into());
-        }
-
-        let outputs = vec![HashSet::new(); output_ports];
-
-        let info = NodeInfo {
-            data,
-            inputs,
-            outputs,
-        };
-
-        let idx = self.nodes.insert(info);
-
-        Ok(NodeIndex(idx))
-    }
-
-    fn get_info(&self, key: NodeIndex) -> Result<&NodeInfo<E>, HyperGraphError> {
+    fn get_info(&self, key: NodeIndex) -> Result<&NodeInfo<E, V>, HyperGraphError> {
         self.nodes
             .get(key.0)
             .ok_or(HyperGraphError::UnknownNode(key))
     }
 
-    pub fn get(&self, key: NodeIndex) -> Result<&Node<E>, HyperGraphError> {
+    pub fn get(&self, key: NodeIndex) -> Result<&Node<E, V>, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(&info.data)
     }
@@ -151,7 +117,7 @@ impl<E> HyperGraph<E> {
     pub fn get_outputs(
         &self,
         key: NodeIndex,
-    ) -> Result<impl Iterator<Item = &HashSet<Port>>, HyperGraphError> {
+    ) -> Result<impl Iterator<Item = &HashMap<Port, V>>, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.outputs.iter())
     }
@@ -164,9 +130,12 @@ impl<E> HyperGraph<E> {
     pub fn get_inputs(
         &self,
         key: NodeIndex,
-    ) -> Result<impl Iterator<Item = Port> + '_, HyperGraphError> {
+    ) -> Result<impl Iterator<Item = (Port, V)> + '_, HyperGraphError>
+    where
+        V: Clone,
+    {
         let info = self.get_info(key)?;
-        Ok(info.inputs.iter().copied())
+        Ok(info.inputs.iter().cloned())
     }
 
     pub fn number_of_inputs(&self, key: NodeIndex) -> Result<usize, HyperGraphError> {
@@ -174,11 +143,11 @@ impl<E> HyperGraph<E> {
         Ok(info.inputs.len())
     }
 
-    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &Node<E>)> {
+    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &Node<E, V>)> {
         self.nodes.iter().map(|(x, d)| (NodeIndex(x), &d.data))
     }
 
-    pub fn edges(&self) -> impl Iterator<Item = (Port, &HashSet<Port>)> {
+    pub fn edges(&self) -> impl Iterator<Item = (Port, &HashMap<Port, V>)> {
         self.nodes.iter().flat_map(|(node, d)| {
             d.outputs
                 .iter()
@@ -204,7 +173,7 @@ impl<E> HyperGraph<E> {
         Vec<HashSet<NodeIndex>>,
         HashSet<NodeIndex>,
     ) {
-        let mut nodes: HashMap<NodeIndex, &NodeInfo<E>> =
+        let mut nodes: HashMap<NodeIndex, &NodeInfo<E, V>> =
             self.nodes.iter().map(|(x, d)| (NodeIndex(x), d)).collect();
 
         let inputs: HashSet<NodeIndex> = nodes
@@ -226,7 +195,7 @@ impl<E> HyperGraph<E> {
             for (n, o) in nodes.iter() {
                 if o.outputs
                     .iter()
-                    .flat_map(|x| x.iter().map(|y| y.node))
+                    .flat_map(|x| x.iter().map(|(y, _)| y.node))
                     .all(|z| collected.contains(&z))
                 {
                     collected.insert(*n);
@@ -242,7 +211,44 @@ impl<E> HyperGraph<E> {
     }
 }
 
-impl<E: Debug> Debug for HyperGraph<E> {
+impl<E, V: Copy> HyperGraph<E, V> {
+    /// Adds a new node to a graph with specified node data, a list of ports to obtain inputs from
+    pub fn add_node(
+        &mut self,
+        data: Node<E, V>,
+        inputs: Vec<(Port, V)>,
+        output_ports: usize,
+    ) -> Result<NodeIndex, HyperGraphError> {
+        let next_node = self.nodes.vacant_key();
+
+        for (i, &(port @ Port { node, index }, v)) in inputs.iter().enumerate() {
+            let input = self
+                .nodes
+                .get_mut(node.0)
+                .ok_or(HyperGraphError::UnknownNode(node))?;
+
+            let port_set = input
+                .outputs
+                .get_mut(index.0)
+                .ok_or(HyperGraphError::UnknownPort(port))?;
+            port_set.insert((next_node, i).into(), v);
+        }
+
+        let outputs = vec![HashMap::new(); output_ports];
+
+        let info = NodeInfo {
+            data,
+            inputs,
+            outputs,
+        };
+
+        let idx = self.nodes.insert(info);
+
+        Ok(NodeIndex(idx))
+    }
+}
+
+impl<E: Debug, V: Debug> Debug for HyperGraph<E, V> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Hypergraph")
             .field("nodes", &self.nodes().collect::<Vec<_>>())

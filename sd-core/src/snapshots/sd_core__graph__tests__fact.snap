@@ -18,12 +18,12 @@ HyperGraph(
               data: Input,
               inputs: [],
               outputs: [
-                [
+                {
                   Port(
                     node: NodeIndex(1),
                     index: PortIndex(0),
-                  ),
-                ],
+                  ): Strong,
+                },
               ],
             ),
             1: NodeInfo(
@@ -35,180 +35,180 @@ HyperGraph(
                       data: Input,
                       inputs: [],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(5),
                             index: PortIndex(0),
-                          ),
-                        ],
-                        [
+                          ): Strong,
+                        },
+                        {
                           Port(
                             node: NodeIndex(2),
                             index: PortIndex(0),
-                          ),
+                          ): Strong,
                           Port(
                             node: NodeIndex(4),
                             index: PortIndex(0),
-                          ),
+                          ): Strong,
                           Port(
                             node: NodeIndex(6),
                             index: PortIndex(0),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     1: NodeInfo(
                       data: Weight(Passive(Int(1))),
                       inputs: [],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(2),
                             index: PortIndex(1),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     2: NodeInfo(
                       data: Weight(Active(Eq)),
                       inputs: [
-                        Port(
+                        (Port(
                           node: NodeIndex(0),
                           index: PortIndex(1),
-                        ),
-                        Port(
+                        ), Strong),
+                        (Port(
                           node: NodeIndex(1),
                           index: PortIndex(0),
-                        ),
+                        ), Strong),
                       ],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(8),
                             index: PortIndex(0),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     3: NodeInfo(
                       data: Weight(Passive(Int(1))),
                       inputs: [],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(4),
                             index: PortIndex(1),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     4: NodeInfo(
                       data: Weight(Active(Minus)),
                       inputs: [
-                        Port(
+                        (Port(
                           node: NodeIndex(0),
                           index: PortIndex(1),
-                        ),
-                        Port(
+                        ), Strong),
+                        (Port(
                           node: NodeIndex(3),
                           index: PortIndex(0),
-                        ),
+                        ), Strong),
                       ],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(5),
                             index: PortIndex(1),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     5: NodeInfo(
                       data: Weight(Active(App)),
                       inputs: [
-                        Port(
+                        (Port(
                           node: NodeIndex(0),
                           index: PortIndex(0),
-                        ),
-                        Port(
+                        ), Strong),
+                        (Port(
                           node: NodeIndex(4),
                           index: PortIndex(0),
-                        ),
+                        ), Strong),
                       ],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(6),
                             index: PortIndex(1),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     6: NodeInfo(
                       data: Weight(Active(Times)),
                       inputs: [
-                        Port(
+                        (Port(
                           node: NodeIndex(0),
                           index: PortIndex(1),
-                        ),
-                        Port(
+                        ), Strong),
+                        (Port(
                           node: NodeIndex(5),
                           index: PortIndex(0),
-                        ),
+                        ), Strong),
                       ],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(8),
                             index: PortIndex(2),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     7: NodeInfo(
                       data: Weight(Passive(Int(1))),
                       inputs: [],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(8),
                             index: PortIndex(1),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     8: NodeInfo(
                       data: Weight(Active(If)),
                       inputs: [
-                        Port(
+                        (Port(
                           node: NodeIndex(2),
                           index: PortIndex(0),
-                        ),
-                        Port(
+                        ), Strong),
+                        (Port(
                           node: NodeIndex(7),
                           index: PortIndex(0),
-                        ),
-                        Port(
+                        ), Strong),
+                        (Port(
                           node: NodeIndex(6),
                           index: PortIndex(0),
-                        ),
+                        ), Strong),
                       ],
                       outputs: [
-                        [
+                        {
                           Port(
                             node: NodeIndex(9),
                             index: PortIndex(0),
-                          ),
-                        ],
+                          ): Strong,
+                        },
                       ],
                     ),
                     9: NodeInfo(
                       data: Output,
                       inputs: [
-                        Port(
+                        (Port(
                           node: NodeIndex(8),
                           index: PortIndex(0),
-                        ),
+                        ), Strong),
                       ],
                       outputs: [],
                     ),
@@ -216,44 +216,44 @@ HyperGraph(
                 ),
               ),
               inputs: [
-                Port(
+                (Port(
                   node: NodeIndex(0),
                   index: PortIndex(0),
-                ),
+                ), Strong),
               ],
               outputs: [
-                [
+                {
                   Port(
                     node: NodeIndex(2),
                     index: PortIndex(0),
-                  ),
-                ],
+                  ): Strong,
+                },
               ],
             ),
             2: NodeInfo(
               data: Weight(Passive(Lambda)),
               inputs: [
-                Port(
+                (Port(
                   node: NodeIndex(1),
                   index: PortIndex(0),
-                ),
+                ), Strong),
               ],
               outputs: [
-                [
+                {
                   Port(
                     node: NodeIndex(3),
                     index: PortIndex(0),
-                  ),
-                ],
+                  ): Strong,
+                },
               ],
             ),
             3: NodeInfo(
               data: Output,
               inputs: [
-                Port(
+                (Port(
                   node: NodeIndex(2),
                   index: PortIndex(0),
-                ),
+                ), Strong),
               ],
               outputs: [],
             ),
@@ -262,71 +262,71 @@ HyperGraph(
       ),
       inputs: [],
       outputs: [
-        [
+        {
           Port(
             node: NodeIndex(2),
             index: PortIndex(0),
-          ),
-        ],
+          ): Strong,
+        },
       ],
     ),
     2: NodeInfo(
       data: Weight(Active(Rec)),
       inputs: [
-        Port(
+        (Port(
           node: NodeIndex(1),
           index: PortIndex(0),
-        ),
+        ), Strong),
       ],
       outputs: [
-        [
+        {
           Port(
             node: NodeIndex(4),
             index: PortIndex(0),
-          ),
-        ],
+          ): Strong,
+        },
       ],
     ),
     3: NodeInfo(
       data: Weight(Passive(Int(5))),
       inputs: [],
       outputs: [
-        [
+        {
           Port(
             node: NodeIndex(4),
             index: PortIndex(1),
-          ),
-        ],
+          ): Strong,
+        },
       ],
     ),
     4: NodeInfo(
       data: Weight(Active(App)),
       inputs: [
-        Port(
+        (Port(
           node: NodeIndex(2),
           index: PortIndex(0),
-        ),
-        Port(
+        ), Strong),
+        (Port(
           node: NodeIndex(3),
           index: PortIndex(0),
-        ),
+        ), Strong),
       ],
       outputs: [
-        [
+        {
           Port(
             node: NodeIndex(5),
             index: PortIndex(0),
-          ),
-        ],
+          ): Strong,
+        },
       ],
     ),
     5: NodeInfo(
       data: Output,
       inputs: [
-        Port(
+        (Port(
           node: NodeIndex(4),
           index: PortIndex(0),
-        ),
+        ), Strong),
       ],
       outputs: [],
     ),

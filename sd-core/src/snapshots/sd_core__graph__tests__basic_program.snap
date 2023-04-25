@@ -13,21 +13,21 @@ HyperGraph(
       data: Weight(Passive(Int(1))),
       inputs: [],
       outputs: [
-        [
+        {
           Port(
             node: NodeIndex(2),
             index: PortIndex(0),
-          ),
-        ],
+          ): Strong,
+        },
       ],
     ),
     2: NodeInfo(
       data: Output,
       inputs: [
-        Port(
+        (Port(
           node: NodeIndex(1),
           index: PortIndex(0),
-        ),
+        ), Strong),
       ],
       outputs: [],
     ),
