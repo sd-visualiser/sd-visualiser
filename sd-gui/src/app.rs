@@ -196,11 +196,11 @@ impl App {
         self.hypergraph = SyntaxHyperGraph::try_from(expr)?;
 
         event!(Level::DEBUG, "Converting to monoidal term");
-        self.monoidal_term = MonoidalWiredGraph::from_hypergraph(&self.hypergraph)?;
+        self.monoidal_term = MonoidalWiredGraph::try_from(&self.hypergraph)?;
         event!(Level::DEBUG, "Got term {:?}", self.monoidal_term);
 
         event!(Level::DEBUG, "Inserting swaps and copies");
-        self.monoidal_graph = self.monoidal_term.to_graph()?;
+        self.monoidal_graph = MonoidalGraph::from(&self.monoidal_term);
         event!(Level::DEBUG, "Got graph {:?}", self.monoidal_graph);
 
         Ok(())
