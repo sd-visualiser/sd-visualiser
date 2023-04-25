@@ -21,8 +21,6 @@ use crate::{
 #[derive(Default)]
 pub struct App {
     code: String,
-    parsed: bool,
-    focus_code: String,
     hypergraph: SyntaxHyperGraph,
     monoidal_term: MonoidalWiredGraph<Op>,
     monoidal_graph: MonoidalGraph<Op>,
@@ -88,24 +86,6 @@ impl App {
         cc.egui_ctx.set_fonts(font_definitions);
 
         App::default()
-    }
-
-    fn code_view_ui(&mut self, ui: &mut egui::Ui) {
-        let theme = CodeTheme::from_style(ui.style());
-
-        let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
-            let mut layout_job = highlight(ui.ctx(), &theme, source, "sd");
-            layout_job.wrap.max_width = wrap_width;
-            ui.fonts(|f| f.layout_job(layout_job))
-        };
-
-        egui::TextEdit::multiline(&mut self.focus_code)
-            .code_editor()
-            .layouter(&mut layouter)
-            .min_size(ui.available_size())
-            .desired_width(f32::INFINITY) // don't wrap text
-            .interactive(false)
-            .show(ui);
     }
 
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
@@ -176,30 +156,6 @@ impl App {
                 }
             }
         }
-
-        if text_edit_out.response.changed() {
-            event!(Level::DEBUG, "Reparsing");
-            let block = |app: &mut App| -> anyhow::Result<()> {
-                let parse = Parser::parse(ui.ctx(), &app.code);
-                let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
-                app.parsed = true;
-                app.focus_code = expr.to_pretty();
-                event!(Level::DEBUG, "Converting to hypergraph");
-                app.hypergraph = SyntaxHyperGraph::try_from(expr)?;
-                event!(Level::DEBUG, "Converting to monoidal term");
-                app.monoidal_term = MonoidalWiredGraph::from_hypergraph(&app.hypergraph)?;
-                event!(Level::DEBUG, "Got term {:?}", app.monoidal_term);
-                event!(Level::DEBUG, "Inserting swaps and copies");
-                app.monoidal_graph = app.monoidal_term.to_graph()?;
-                event!(Level::DEBUG, "Got graph {:?}", app.monoidal_graph);
-                Ok(())
-            };
-            if let Err(e) = block(self) {
-                debug!("{:?}", e);
-                // Display error to user?
-                self.parsed = false;
-            }
-        }
     }
 
     fn graph_ui(&mut self, ui: &mut egui::Ui) {
@@ -228,6 +184,27 @@ impl App {
             to_screen,
         ));
     }
+
+    fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
+        let parse = Parser::parse(ctx, &self.code);
+        let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
+
+        // Prettify the code.
+        self.code = expr.to_pretty();
+
+        event!(Level::DEBUG, "Converting to hypergraph");
+        self.hypergraph = SyntaxHyperGraph::try_from(expr)?;
+
+        event!(Level::DEBUG, "Converting to monoidal term");
+        self.monoidal_term = MonoidalWiredGraph::from_hypergraph(&self.hypergraph)?;
+        event!(Level::DEBUG, "Got term {:?}", self.monoidal_term);
+
+        event!(Level::DEBUG, "Inserting swaps and copies");
+        self.monoidal_graph = self.monoidal_term.to_graph()?;
+        event!(Level::DEBUG, "Got graph {:?}", self.monoidal_graph);
+
+        Ok(())
+    }
 }
 
 impl eframe::App for App {
@@ -252,6 +229,13 @@ impl eframe::App for App {
 
                 ui.separator();
 
+                if ui.button("Compile").clicked() {
+                    if let Err(err) = self.compile(ui.ctx()) {
+                        // Display error to user?
+                        debug!("{:?}", err);
+                    }
+                }
+
                 if ui.button("Gather").clicked() {
                     if let Some((prefix, _selection)) = self.monoidal_graph.selected() {
                         let _graph = self.hypergraph.recurse(&prefix).unwrap();
@@ -271,11 +255,6 @@ impl eframe::App for App {
                 egui::ScrollArea::both()
                     .id_source("graph")
                     .show(&mut columns[1], |ui| self.graph_ui(ui));
-            });
-            egui::Window::new("Focus").show(ctx, |ui| {
-                egui::ScrollArea::vertical()
-                    .id_source("focus")
-                    .show(ui, |ui| self.code_view_ui(ui))
             });
         });
     }
