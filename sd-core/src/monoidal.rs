@@ -161,6 +161,18 @@ pub struct MonoidalGraph<O> {
 }
 
 impl<O> MonoidalGraph<O> {
+    pub fn select_all(&mut self, value: bool) {
+        for slice in self.slices.iter_mut() {
+            for op in slice.ops.iter_mut() {
+                match op {
+                    MonoidalOp::Thunk { body, .. } => body.select_all(value),
+                    MonoidalOp::Operation { selected, .. } => *selected = value,
+                    _ => (),
+                }
+            }
+        }
+    }
+
     pub fn selected(&self) -> Option<(Vec<NodeIndex>, BTreeSet<NodeIndex>)> {
         // Addresses of selected nodes.
         let mut selections = BTreeSet::default();

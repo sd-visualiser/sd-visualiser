@@ -120,6 +120,7 @@ fn generate_shapes<O: Display>(
                     expanded,
                     ..
                 } if *expanded => {
+                    let selected = body.selected().is_some();
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_in + diff;
@@ -139,13 +140,18 @@ fn generate_shapes<O: Display>(
                         transform.apply(x_op.max, y_max),
                     );
                     let thunk_response = ui.interact(thunk_rect, id, Sense::click());
+                    if thunk_response.clicked() {
+                        body.select_all(!selected);
+                    }
                     if thunk_response.secondary_clicked() {
                         *expanded = false;
                     }
                     shapes.push(Shape::rect_stroke(
                         thunk_rect,
                         Rounding::none(),
-                        ui.style().interact(&thunk_response).fg_stroke,
+                        ui.style()
+                            .interact_selectable(&thunk_response, selected)
+                            .fg_stroke,
                     ));
                     for &x in x_op.inputs().iter().rev().take(*args) {
                         let dot = transform.apply(x, y_min);
@@ -222,18 +228,28 @@ fn generate_shapes<O: Display>(
                                 ));
                             });
                         }
-                        MonoidalOp::Thunk { expanded, .. } => {
+                        MonoidalOp::Thunk { body, expanded, .. } => {
+                            let selected = body.selected().is_some();
                             let thunk_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let thunk_response = ui.interact(thunk_rect, id, Sense::click());
+                            if thunk_response.clicked() {
+                                body.select_all(!selected);
+                            }
                             if thunk_response.secondary_clicked() {
                                 *expanded = true;
                             }
                             shapes.push(Shape::Rect(RectShape {
                                 rect: thunk_rect,
                                 rounding: Rounding::none(),
-                                fill: ui.style().interact(&thunk_response).bg_fill,
-                                stroke: ui.style().interact(&thunk_response).fg_stroke,
+                                fill: ui
+                                    .style()
+                                    .interact_selectable(&thunk_response, selected)
+                                    .bg_fill,
+                                stroke: ui
+                                    .style()
+                                    .interact_selectable(&thunk_response, selected)
+                                    .fg_stroke,
                             }));
                         }
                         _ => (),
