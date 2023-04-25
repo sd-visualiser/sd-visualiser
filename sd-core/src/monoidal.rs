@@ -273,9 +273,10 @@ pub enum FromHyperError {
     HyperGraphError(#[from] HyperGraphError),
 }
 
-// This can be made a lot nicer
-impl<O: Debug + Copy> MonoidalWiredGraph<O> {
-    pub fn from_hypergraph(graph: &HyperGraph<O>) -> Result<Self, FromHyperError> {
+impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
+    type Error = FromHyperError;
+
+    fn try_from(graph: &HyperGraph<O>) -> Result<Self, Self::Error> {
         debug!("To Process: {:?}", graph);
 
         // Separate the nodes into input nodes, output nodes, and other nodes by rank
@@ -366,7 +367,7 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
                         addr: node,
                         inputs: graph.get_inputs(node)?.collect(),
                         args: *args,
-                        body: MonoidalWiredGraph::from_hypergraph(body)?,
+                        body: MonoidalWiredGraph::try_from(body)?,
                     }),
                 };
                 ops.push(OpData {
@@ -453,60 +454,51 @@ impl<O: Debug + Copy> MonoidalWiredGraph<O> {
     }
 }
 
-impl<O: Copy> MonoidalWiredOp<O> {
-    pub fn to_monoidal_op(&self) -> Result<MonoidalOp<O>, FromHyperError> {
-        match self {
-            MonoidalWiredOp::Id { .. } => Ok(MonoidalOp::ID),
+impl<O: Copy> From<&MonoidalWiredOp<O>> for MonoidalOp<O> {
+    fn from(op: &MonoidalWiredOp<O>) -> Self {
+        match op {
+            MonoidalWiredOp::Id { .. } => Self::ID,
             MonoidalWiredOp::Operation {
                 addr,
                 inputs,
                 op_name,
-            } => Ok(MonoidalOp::Operation {
+            } => Self::Operation {
                 addr: *addr,
                 inputs: inputs.len(),
                 op_name: *op_name,
                 selected: false,
-            }),
+            },
             MonoidalWiredOp::Thunk {
                 addr, args, body, ..
-            } => Ok(MonoidalOp::Thunk {
+            } => Self::Thunk {
                 addr: *addr,
                 args: *args,
-                body: body.to_graph()?,
+                body: body.into(),
                 expanded: true,
-            }),
+            },
         }
     }
 }
 
-impl<O: Copy> WiredSlice<O> {
-    pub fn to_slice(&self) -> Result<Slice<O>, FromHyperError> {
-        Ok(Slice {
-            ops: self
-                .ops
-                .iter()
-                .map(|x| x.to_monoidal_op())
-                .collect::<Result<Vec<_>, FromHyperError>>()?,
-        })
+impl<O: Copy> From<&WiredSlice<O>> for Slice<O> {
+    fn from(slice: &WiredSlice<O>) -> Self {
+        Self {
+            ops: slice.ops.iter().map(MonoidalOp::from).collect(),
+        }
     }
 }
 
-impl<O: Copy> MonoidalWiredGraph<O> {
-    pub fn to_graph(&self) -> Result<MonoidalGraph<O>, FromHyperError> {
-        let wiring_slices = self.wirings.iter().map(|w| w.to_slices());
+impl<O: Copy> From<&MonoidalWiredGraph<O>> for MonoidalGraph<O> {
+    fn from(graph: &MonoidalWiredGraph<O>) -> Self {
+        let wiring_slices = graph.wirings.iter().map(|w| w.to_slices());
         let slices: Vec<Slice<O>> = wiring_slices
             .into_iter()
-            .interleave(
-                self.slices
-                    .iter()
-                    .map(|x| Ok(vec![x.to_slice()?]))
-                    .collect::<Result<Vec<_>, FromHyperError>>()?,
-            )
+            .interleave(graph.slices.iter().map(|x| vec![x.into()]))
             .concat();
-        Ok(MonoidalGraph {
-            inputs: self.inputs,
+        Self {
+            inputs: graph.inputs,
             slices,
-        })
+        }
     }
 }
 
