@@ -357,7 +357,7 @@ Hypergraph {
                                 2,
                             ),
                             Weight(
-                                Active(
+                                Passive(
                                     Lambda,
                                 ),
                             ),

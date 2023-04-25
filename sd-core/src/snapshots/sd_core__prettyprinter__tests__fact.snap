@@ -11,8 +11,7 @@ bind fact_rec = f .
         bind g = if(c, 1, f) in
         g
     in
-    bind b = lambda(fact_lambda) in
-    b
+    lambda(fact_lambda)
 in
 bind fact = rec(fact_rec) in
 bind a = app(fact, 5) in

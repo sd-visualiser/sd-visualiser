@@ -3,8 +3,8 @@ bind_clause = { "bind" ~ variable ~ "=" ~ term ~ "in" }
 expr = { bind_clause* ~ value }
 term = { thunk | (active_op ~ "(" ~ args ~ ")") | value }
 value = { (passive_op ~ ("(" ~ args ~ ")")?) | variable }
-active_op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "lambda" | "rec" }
-passive_op = { number | "true" | "false" }
+active_op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "rec" }
+passive_op = { number | "true" | "false" | "lambda" }
 number = @{ ASCII_DIGIT+ }
 args = _{ value ~ ("," ~ value)* | "" }
 program = _{ SOI ~ expr ~ EOI }

@@ -64,17 +64,16 @@ impl PrettyPrint for Term {
 impl PrettyPrint for ActiveOp {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(match *self {
-            ActiveOp::Plus => "plus",
-            ActiveOp::Minus => "minus",
-            ActiveOp::Times => "times",
-            ActiveOp::Eq => "eq",
-            ActiveOp::And => "and",
-            ActiveOp::Or => "or",
-            ActiveOp::Not => "not",
-            ActiveOp::If => "if",
-            ActiveOp::App => "app",
-            ActiveOp::Lambda => "lambda",
-            ActiveOp::Rec => "rec",
+            Self::Plus => "plus",
+            Self::Minus => "minus",
+            Self::Times => "times",
+            Self::Eq => "eq",
+            Self::And => "and",
+            Self::Or => "or",
+            Self::Not => "not",
+            Self::If => "if",
+            Self::App => "app",
+            Self::Rec => "rec",
         })
     }
 }
@@ -82,8 +81,9 @@ impl PrettyPrint for ActiveOp {
 impl PrettyPrint for PassiveOp {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(match *self {
-            PassiveOp::Int(n) => n.to_string(),
-            PassiveOp::Bool(b) => b.to_string(),
+            Self::Int(n) => n.to_string(),
+            Self::Bool(b) => b.to_string(),
+            Self::Lambda => "lambda".to_string(),
         })
     }
 }
