@@ -2,7 +2,10 @@ use std::fmt::Debug;
 
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
-use sd_core::monoidal::{FromHyperError, MonoidalGraph, MonoidalOp};
+use sd_core::{
+    common::InOut,
+    monoidal::{FromHyperError, MonoidalGraph, MonoidalOp},
+};
 use thiserror::Error;
 
 use crate::lp::LpProblem;

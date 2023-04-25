@@ -5,7 +5,10 @@ use egui::{
     epaint::{CircleShape, CubicBezierShape, RectShape},
     vec2, Align2, Color32, Pos2, Rect, Response, Rounding, Sense, Shape, Vec2,
 };
-use sd_core::monoidal::{MonoidalGraph, MonoidalOp};
+use sd_core::{
+    common::InOut,
+    monoidal::{MonoidalGraph, MonoidalOp},
+};
 
 use crate::layout::Layout;
 
