@@ -52,7 +52,6 @@ pub enum ActiveOp {
     Not,
     If,
     App,
-    Lambda,
     Rec,
 }
 
@@ -73,7 +72,6 @@ impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
             Some("not") => Ok(Self::Not),
             Some("if") => Ok(Self::If),
             Some("app") => Ok(Self::App),
-            Some("lambda") => Ok(Self::Lambda),
             Some("rec") => Ok(Self::Rec),
             _ => Err(from_pest::ConversionError::NoMatch),
         }
@@ -84,6 +82,7 @@ impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
 pub enum PassiveOp {
     Int(usize),
     Bool(bool),
+    Lambda,
 }
 
 impl<'pest> from_pest::FromPest<'pest> for PassiveOp {
@@ -96,6 +95,7 @@ impl<'pest> from_pest::FromPest<'pest> for PassiveOp {
         match pest.next().map(|pair| pair.as_str()) {
             Some("true") => Ok(Self::Bool(true)),
             Some("false") => Ok(Self::Bool(false)),
+            Some("lambda") => Ok(Self::Lambda),
             Some(str) => str::parse(str)
                 .map(Self::Int)
                 .map_err(|_err| from_pest::ConversionError::NoMatch),
@@ -130,7 +130,6 @@ impl Display for ActiveOp {
             Self::Not => f.write_str("not"),
             Self::If => f.write_str("if"),
             Self::App => f.write_char('@'),
-            Self::Lambda => f.write_char('λ'),
             Self::Rec => f.write_char('μ'),
         }
     }
@@ -139,8 +138,9 @@ impl Display for ActiveOp {
 impl Display for PassiveOp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PassiveOp::Int(d) => f.write_str(&d.to_string()),
-            PassiveOp::Bool(b) => f.write_str(&b.to_string()),
+            Self::Int(d) => f.write_str(&d.to_string()),
+            Self::Bool(b) => f.write_str(&b.to_string()),
+            Self::Lambda => f.write_char('λ'),
         }
     }
 }
