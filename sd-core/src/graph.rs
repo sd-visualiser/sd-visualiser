@@ -1,13 +1,19 @@
-use std::{
-    collections::{BTreeSet, HashMap},
-    fmt::Display,
-};
+use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
 use crate::hypergraph::{HyperGraph, HyperGraphError, Node, Port, PortIndex};
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
+#[cfg(not(test))]
+use std::collections::HashSet;
+
+#[cfg(test)]
+use serde::Serialize;
+#[cfg(test)]
+use std::collections::BTreeSet as HashSet;
+
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Op {
     Active(ActiveOp),
     Passive(PassiveOp),
@@ -46,7 +52,7 @@ pub enum ConvertError {
 
 pub(crate) trait Syntax {
     /// This piece of syntax generates both bound and free variables.
-    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>);
+    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>);
 
     type ProcessOutput;
 
@@ -63,7 +69,7 @@ pub(crate) trait Syntax {
 }
 
 impl Syntax for Expr {
-    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
         for bc in &self.binds {
             bc.free_variables(bound, vars);
         }
@@ -87,7 +93,7 @@ impl Syntax for Expr {
 }
 
 impl Syntax for BindClause {
-    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
         self.term.free_variables(bound, vars);
         bound.insert(self.var.clone());
     }
@@ -106,7 +112,7 @@ impl Syntax for BindClause {
 }
 
 impl Syntax for Term {
-    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
         match self {
             Term::Value(v) => v.free_variables(bound, vars),
             Term::ActiveOp(_, vs) => {
@@ -144,7 +150,7 @@ impl Syntax for Term {
 }
 
 impl Syntax for Value {
-    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
         match self {
             Value::Var(v) => {
                 if !bound.contains(v) {
@@ -187,7 +193,7 @@ impl Syntax for Value {
 }
 
 impl Syntax for Thunk {
-    fn free_variables(&self, bound: &mut BTreeSet<Variable>, vars: &mut BTreeSet<Variable>) {
+    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
         let mut bound = bound.clone(); // create new scope for bound variables in thunk
 
         for arg in &self.args {
@@ -204,9 +210,9 @@ impl Syntax for Thunk {
         graph: &mut SyntaxHyperGraph,
         mapping: &mut HashMap<Variable, Port>,
     ) -> Result<Self::ProcessOutput, ConvertError> {
-        let mut vars = BTreeSet::new();
+        let mut vars = HashSet::new();
 
-        self.free_variables(&mut BTreeSet::new(), &mut vars);
+        self.free_variables(&mut HashSet::new(), &mut vars);
 
         let inputs = vars
             .iter()
@@ -244,9 +250,9 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
     type Error = ConvertError;
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
-        let mut vars = BTreeSet::new();
+        let mut vars = HashSet::new();
 
-        expr.free_variables(&mut BTreeSet::new(), &mut vars);
+        expr.free_variables(&mut HashSet::new(), &mut vars);
 
         expr.to_hypergraph_from_inputs(vars.into_iter().collect())
     }
@@ -287,10 +293,9 @@ impl From<&str> for Variable {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet;
+    use std::collections::BTreeSet as HashSet;
 
     use anyhow::Result;
-    use insta::assert_debug_snapshot;
     use rstest::rstest;
 
     use super::Syntax;
@@ -306,8 +311,8 @@ mod tests {
     #[case(fact(), vec![])]
     fn free_var_test(#[case] expr: Result<Expr>, #[case] vars: Vec<Variable>) -> Result<()> {
         let expr = expr?;
-        let mut free_vars = BTreeSet::new();
-        expr.free_variables(&mut BTreeSet::new(), &mut free_vars);
+        let mut free_vars = HashSet::new();
+        expr.free_variables(&mut HashSet::new(), &mut free_vars);
 
         assert_eq!(free_vars, vars.into_iter().collect());
 
@@ -322,7 +327,9 @@ mod tests {
     fn hypergraph_snapshots(#[case] name: &str, #[case] expr: Result<Expr>) -> Result<()> {
         let graph: SyntaxHyperGraph = (&expr?).try_into()?;
 
-        assert_debug_snapshot!(name, graph);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_ron_snapshot!(name, graph);
+        });
 
         Ok(())
     }

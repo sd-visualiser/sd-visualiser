@@ -7,6 +7,9 @@ use pest::Span;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
+#[cfg(test)]
+use serde::Serialize;
+
 #[derive(Parser)]
 #[grammar = "language.pest"]
 pub struct SDParser;
@@ -42,6 +45,7 @@ pub enum Term {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum ActiveOp {
     Plus,
     Minus,
@@ -79,6 +83,7 @@ impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum PassiveOp {
     Int(usize),
     Bool(bool),

@@ -10,6 +10,9 @@ use thiserror::Error;
 
 use crate::lp::LpProblem;
 
+#[cfg(test)]
+use serde::Serialize;
+
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
     #[error("An error occurred when solving the problem: {0}")]
@@ -19,6 +22,7 @@ pub enum LayoutError {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Node<T> {
     Atom(T),
     Thunk(LayoutInternal<T>),
@@ -55,6 +59,7 @@ impl<T> Node<T> {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct LayoutInternal<T> {
     pub min: T,
     pub max: T,
@@ -266,18 +271,21 @@ pub fn layout<O>(graph: &MonoidalGraph<O>) -> Result<Layout, LayoutError> {
 
 #[cfg(test)]
 mod tests {
-    use insta::assert_debug_snapshot;
     use sd_core::examples;
 
     use super::layout;
 
     #[test]
     fn int() {
-        assert_debug_snapshot!(layout(&examples::int()).expect("Layout failed"));
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_ron_snapshot!(layout(&examples::int()).expect("Layout failed"));
+        });
     }
 
     #[test]
     fn copy() {
-        assert_debug_snapshot!(layout(&examples::copy()).expect("Layout failed"));
+        insta::with_settings!({sort_maps => true}, {
+                insta::assert_ron_snapshot!(layout(&examples::copy()).expect("Layout failed"));
+        });
     }
 }

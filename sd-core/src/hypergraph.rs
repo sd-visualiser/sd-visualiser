@@ -1,18 +1,25 @@
 use slab::Slab;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt::Debug,
-    ops::Index,
-};
+use std::{collections::HashMap, fmt::Debug, ops::Index};
 use thiserror::Error;
 
+#[cfg(not(test))]
+use std::collections::HashSet;
+
+#[cfg(test)]
+use serde::Serialize;
+#[cfg(test)]
+use std::collections::BTreeSet as HashSet;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct NodeIndex(pub usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct PortIndex(pub usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Port {
     pub node: NodeIndex,
     pub index: PortIndex,
@@ -37,6 +44,7 @@ pub enum HyperGraphError {
 
 /// Hypergraph with hyperedges/nodes with weights E and hypervertices/wires
 #[derive(Clone)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct HyperGraph<E> {
     nodes: Slab<NodeInfo<E>>,
 }
@@ -58,6 +66,7 @@ impl<E> Default for HyperGraph<E> {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Node<E> {
     Weight(E),
     Input,
@@ -80,10 +89,11 @@ impl<E> Node<E> {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct NodeInfo<E> {
     data: Node<E>,
     inputs: Vec<Port>,
-    outputs: Vec<BTreeSet<Port>>,
+    outputs: Vec<HashSet<Port>>,
 }
 
 impl<E> HyperGraph<E> {
@@ -114,7 +124,7 @@ impl<E> HyperGraph<E> {
             port_set.insert((next_node, i).into());
         }
 
-        let outputs = vec![BTreeSet::new(); output_ports];
+        let outputs = vec![HashSet::new(); output_ports];
 
         let info = NodeInfo {
             data,
@@ -141,7 +151,7 @@ impl<E> HyperGraph<E> {
     pub fn get_outputs(
         &self,
         key: NodeIndex,
-    ) -> Result<impl Iterator<Item = &BTreeSet<Port>>, HyperGraphError> {
+    ) -> Result<impl Iterator<Item = &HashSet<Port>>, HyperGraphError> {
         let info = self.get_info(key)?;
         Ok(info.outputs.iter())
     }
@@ -168,7 +178,7 @@ impl<E> HyperGraph<E> {
         self.nodes.iter().map(|(x, d)| (NodeIndex(x), &d.data))
     }
 
-    pub fn edges(&self) -> impl Iterator<Item = (Port, &BTreeSet<Port>)> {
+    pub fn edges(&self) -> impl Iterator<Item = (Port, &HashSet<Port>)> {
         self.nodes.iter().flat_map(|(node, d)| {
             d.outputs
                 .iter()
@@ -190,29 +200,29 @@ impl<E> HyperGraph<E> {
     pub fn ranks_from_end(
         &self,
     ) -> (
-        BTreeSet<NodeIndex>,
-        Vec<BTreeSet<NodeIndex>>,
-        BTreeSet<NodeIndex>,
+        HashSet<NodeIndex>,
+        Vec<HashSet<NodeIndex>>,
+        HashSet<NodeIndex>,
     ) {
-        let mut nodes: BTreeMap<NodeIndex, &NodeInfo<E>> =
+        let mut nodes: HashMap<NodeIndex, &NodeInfo<E>> =
             self.nodes.iter().map(|(x, d)| (NodeIndex(x), d)).collect();
 
-        let inputs: BTreeSet<NodeIndex> = nodes
+        let inputs: HashSet<NodeIndex> = nodes
             .iter()
             .filter_map(|(x, d)| if d.data.is_input() { Some(*x) } else { None })
             .collect();
-        let outputs: BTreeSet<NodeIndex> = nodes
+        let outputs: HashSet<NodeIndex> = nodes
             .iter()
             .filter_map(|(x, d)| if d.data.is_output() { Some(*x) } else { None })
             .collect();
 
         nodes.retain(|x, _| !inputs.contains(x) && !outputs.contains(x));
 
-        let mut ranks: Vec<BTreeSet<NodeIndex>> = vec![];
-        let mut collected: BTreeSet<NodeIndex> = outputs.clone();
+        let mut ranks: Vec<HashSet<NodeIndex>> = vec![];
+        let mut collected: HashSet<NodeIndex> = outputs.clone();
 
         while !nodes.is_empty() {
-            let mut next_rank = BTreeSet::new();
+            let mut next_rank = HashSet::new();
             for (n, o) in nodes.iter() {
                 if o.outputs
                     .iter()

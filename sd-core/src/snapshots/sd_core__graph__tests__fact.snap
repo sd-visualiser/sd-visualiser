@@ -2,557 +2,333 @@
 source: sd-core/src/graph.rs
 expression: graph
 ---
-Hypergraph {
-    nodes: [
-        (
-            NodeIndex(
-                0,
+HyperGraph(
+  nodes: {
+    0: NodeInfo(
+      data: Input,
+      inputs: [],
+      outputs: [],
+    ),
+    1: NodeInfo(
+      data: Thunk(
+        args: 1,
+        body: HyperGraph(
+          nodes: {
+            0: NodeInfo(
+              data: Input,
+              inputs: [],
+              outputs: [
+                [
+                  Port(
+                    node: NodeIndex(1),
+                    index: PortIndex(0),
+                  ),
+                ],
+              ],
             ),
-            Input,
-        ),
-        (
-            NodeIndex(
-                1,
-            ),
-            Thunk {
+            1: NodeInfo(
+              data: Thunk(
                 args: 1,
-                body: Hypergraph {
-                    nodes: [
-                        (
-                            NodeIndex(
-                                0,
-                            ),
-                            Input,
+                body: HyperGraph(
+                  nodes: {
+                    0: NodeInfo(
+                      data: Input,
+                      inputs: [],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(5),
+                            index: PortIndex(0),
+                          ),
+                        ],
+                        [
+                          Port(
+                            node: NodeIndex(2),
+                            index: PortIndex(0),
+                          ),
+                          Port(
+                            node: NodeIndex(4),
+                            index: PortIndex(0),
+                          ),
+                          Port(
+                            node: NodeIndex(6),
+                            index: PortIndex(0),
+                          ),
+                        ],
+                      ],
+                    ),
+                    1: NodeInfo(
+                      data: Weight(Passive(Int(1))),
+                      inputs: [],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(2),
+                            index: PortIndex(1),
+                          ),
+                        ],
+                      ],
+                    ),
+                    2: NodeInfo(
+                      data: Weight(Active(Eq)),
+                      inputs: [
+                        Port(
+                          node: NodeIndex(0),
+                          index: PortIndex(1),
                         ),
-                        (
-                            NodeIndex(
-                                1,
-                            ),
-                            Thunk {
-                                args: 1,
-                                body: Hypergraph {
-                                    nodes: [
-                                        (
-                                            NodeIndex(
-                                                0,
-                                            ),
-                                            Input,
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                1,
-                                            ),
-                                            Weight(
-                                                Passive(
-                                                    Int(
-                                                        1,
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                2,
-                                            ),
-                                            Weight(
-                                                Active(
-                                                    Eq,
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                3,
-                                            ),
-                                            Weight(
-                                                Passive(
-                                                    Int(
-                                                        1,
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                4,
-                                            ),
-                                            Weight(
-                                                Active(
-                                                    Minus,
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                5,
-                                            ),
-                                            Weight(
-                                                Active(
-                                                    App,
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                6,
-                                            ),
-                                            Weight(
-                                                Active(
-                                                    Times,
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                7,
-                                            ),
-                                            Weight(
-                                                Passive(
-                                                    Int(
-                                                        1,
-                                                    ),
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                8,
-                                            ),
-                                            Weight(
-                                                Active(
-                                                    If,
-                                                ),
-                                            ),
-                                        ),
-                                        (
-                                            NodeIndex(
-                                                9,
-                                            ),
-                                            Output,
-                                        ),
-                                    ],
-                                    edges: [
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    0,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        5,
-                                                    ),
-                                                    index: PortIndex(
-                                                        0,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    0,
-                                                ),
-                                                index: PortIndex(
-                                                    1,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        2,
-                                                    ),
-                                                    index: PortIndex(
-                                                        0,
-                                                    ),
-                                                },
-                                                Port {
-                                                    node: NodeIndex(
-                                                        4,
-                                                    ),
-                                                    index: PortIndex(
-                                                        0,
-                                                    ),
-                                                },
-                                                Port {
-                                                    node: NodeIndex(
-                                                        6,
-                                                    ),
-                                                    index: PortIndex(
-                                                        0,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    1,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        2,
-                                                    ),
-                                                    index: PortIndex(
-                                                        1,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    2,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        8,
-                                                    ),
-                                                    index: PortIndex(
-                                                        0,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    3,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        4,
-                                                    ),
-                                                    index: PortIndex(
-                                                        1,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    4,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        5,
-                                                    ),
-                                                    index: PortIndex(
-                                                        1,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    5,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        6,
-                                                    ),
-                                                    index: PortIndex(
-                                                        1,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    6,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        8,
-                                                    ),
-                                                    index: PortIndex(
-                                                        2,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    7,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        8,
-                                                    ),
-                                                    index: PortIndex(
-                                                        1,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                        (
-                                            Port {
-                                                node: NodeIndex(
-                                                    8,
-                                                ),
-                                                index: PortIndex(
-                                                    0,
-                                                ),
-                                            },
-                                            {
-                                                Port {
-                                                    node: NodeIndex(
-                                                        9,
-                                                    ),
-                                                    index: PortIndex(
-                                                        0,
-                                                    ),
-                                                },
-                                            },
-                                        ),
-                                    ],
-                                },
-                            },
+                        Port(
+                          node: NodeIndex(1),
+                          index: PortIndex(0),
                         ),
-                        (
-                            NodeIndex(
-                                2,
-                            ),
-                            Weight(
-                                Passive(
-                                    Lambda,
-                                ),
-                            ),
+                      ],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(8),
+                            index: PortIndex(0),
+                          ),
+                        ],
+                      ],
+                    ),
+                    3: NodeInfo(
+                      data: Weight(Passive(Int(1))),
+                      inputs: [],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(4),
+                            index: PortIndex(1),
+                          ),
+                        ],
+                      ],
+                    ),
+                    4: NodeInfo(
+                      data: Weight(Active(Minus)),
+                      inputs: [
+                        Port(
+                          node: NodeIndex(0),
+                          index: PortIndex(1),
                         ),
-                        (
-                            NodeIndex(
-                                3,
-                            ),
-                            Output,
+                        Port(
+                          node: NodeIndex(3),
+                          index: PortIndex(0),
                         ),
-                    ],
-                    edges: [
-                        (
-                            Port {
-                                node: NodeIndex(
-                                    0,
-                                ),
-                                index: PortIndex(
-                                    0,
-                                ),
-                            },
-                            {
-                                Port {
-                                    node: NodeIndex(
-                                        1,
-                                    ),
-                                    index: PortIndex(
-                                        0,
-                                    ),
-                                },
-                            },
+                      ],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(5),
+                            index: PortIndex(1),
+                          ),
+                        ],
+                      ],
+                    ),
+                    5: NodeInfo(
+                      data: Weight(Active(App)),
+                      inputs: [
+                        Port(
+                          node: NodeIndex(0),
+                          index: PortIndex(0),
                         ),
-                        (
-                            Port {
-                                node: NodeIndex(
-                                    1,
-                                ),
-                                index: PortIndex(
-                                    0,
-                                ),
-                            },
-                            {
-                                Port {
-                                    node: NodeIndex(
-                                        2,
-                                    ),
-                                    index: PortIndex(
-                                        0,
-                                    ),
-                                },
-                            },
+                        Port(
+                          node: NodeIndex(4),
+                          index: PortIndex(0),
                         ),
-                        (
-                            Port {
-                                node: NodeIndex(
-                                    2,
-                                ),
-                                index: PortIndex(
-                                    0,
-                                ),
-                            },
-                            {
-                                Port {
-                                    node: NodeIndex(
-                                        3,
-                                    ),
-                                    index: PortIndex(
-                                        0,
-                                    ),
-                                },
-                            },
+                      ],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(6),
+                            index: PortIndex(1),
+                          ),
+                        ],
+                      ],
+                    ),
+                    6: NodeInfo(
+                      data: Weight(Active(Times)),
+                      inputs: [
+                        Port(
+                          node: NodeIndex(0),
+                          index: PortIndex(1),
                         ),
-                    ],
-                },
-            },
-        ),
-        (
-            NodeIndex(
-                2,
+                        Port(
+                          node: NodeIndex(5),
+                          index: PortIndex(0),
+                        ),
+                      ],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(8),
+                            index: PortIndex(2),
+                          ),
+                        ],
+                      ],
+                    ),
+                    7: NodeInfo(
+                      data: Weight(Passive(Int(1))),
+                      inputs: [],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(8),
+                            index: PortIndex(1),
+                          ),
+                        ],
+                      ],
+                    ),
+                    8: NodeInfo(
+                      data: Weight(Active(If)),
+                      inputs: [
+                        Port(
+                          node: NodeIndex(2),
+                          index: PortIndex(0),
+                        ),
+                        Port(
+                          node: NodeIndex(7),
+                          index: PortIndex(0),
+                        ),
+                        Port(
+                          node: NodeIndex(6),
+                          index: PortIndex(0),
+                        ),
+                      ],
+                      outputs: [
+                        [
+                          Port(
+                            node: NodeIndex(9),
+                            index: PortIndex(0),
+                          ),
+                        ],
+                      ],
+                    ),
+                    9: NodeInfo(
+                      data: Output,
+                      inputs: [
+                        Port(
+                          node: NodeIndex(8),
+                          index: PortIndex(0),
+                        ),
+                      ],
+                      outputs: [],
+                    ),
+                  },
+                ),
+              ),
+              inputs: [
+                Port(
+                  node: NodeIndex(0),
+                  index: PortIndex(0),
+                ),
+              ],
+              outputs: [
+                [
+                  Port(
+                    node: NodeIndex(2),
+                    index: PortIndex(0),
+                  ),
+                ],
+              ],
             ),
-            Weight(
-                Active(
-                    Rec,
+            2: NodeInfo(
+              data: Weight(Passive(Lambda)),
+              inputs: [
+                Port(
+                  node: NodeIndex(1),
+                  index: PortIndex(0),
                 ),
+              ],
+              outputs: [
+                [
+                  Port(
+                    node: NodeIndex(3),
+                    index: PortIndex(0),
+                  ),
+                ],
+              ],
             ),
-        ),
-        (
-            NodeIndex(
-                3,
+            3: NodeInfo(
+              data: Output,
+              inputs: [
+                Port(
+                  node: NodeIndex(2),
+                  index: PortIndex(0),
+                ),
+              ],
+              outputs: [],
             ),
-            Weight(
-                Passive(
-                    Int(
-                        5,
-                    ),
-                ),
-            ),
+          },
         ),
-        (
-            NodeIndex(
-                4,
-            ),
-            Weight(
-                Active(
-                    App,
-                ),
-            ),
+      ),
+      inputs: [],
+      outputs: [
+        [
+          Port(
+            node: NodeIndex(2),
+            index: PortIndex(0),
+          ),
+        ],
+      ],
+    ),
+    2: NodeInfo(
+      data: Weight(Active(Rec)),
+      inputs: [
+        Port(
+          node: NodeIndex(1),
+          index: PortIndex(0),
         ),
-        (
-            NodeIndex(
-                5,
-            ),
-            Output,
+      ],
+      outputs: [
+        [
+          Port(
+            node: NodeIndex(4),
+            index: PortIndex(0),
+          ),
+        ],
+      ],
+    ),
+    3: NodeInfo(
+      data: Weight(Passive(Int(5))),
+      inputs: [],
+      outputs: [
+        [
+          Port(
+            node: NodeIndex(4),
+            index: PortIndex(1),
+          ),
+        ],
+      ],
+    ),
+    4: NodeInfo(
+      data: Weight(Active(App)),
+      inputs: [
+        Port(
+          node: NodeIndex(2),
+          index: PortIndex(0),
         ),
-    ],
-    edges: [
-        (
-            Port {
-                node: NodeIndex(
-                    1,
-                ),
-                index: PortIndex(
-                    0,
-                ),
-            },
-            {
-                Port {
-                    node: NodeIndex(
-                        2,
-                    ),
-                    index: PortIndex(
-                        0,
-                    ),
-                },
-            },
+        Port(
+          node: NodeIndex(3),
+          index: PortIndex(0),
         ),
-        (
-            Port {
-                node: NodeIndex(
-                    2,
-                ),
-                index: PortIndex(
-                    0,
-                ),
-            },
-            {
-                Port {
-                    node: NodeIndex(
-                        4,
-                    ),
-                    index: PortIndex(
-                        0,
-                    ),
-                },
-            },
+      ],
+      outputs: [
+        [
+          Port(
+            node: NodeIndex(5),
+            index: PortIndex(0),
+          ),
+        ],
+      ],
+    ),
+    5: NodeInfo(
+      data: Output,
+      inputs: [
+        Port(
+          node: NodeIndex(4),
+          index: PortIndex(0),
         ),
-        (
-            Port {
-                node: NodeIndex(
-                    3,
-                ),
-                index: PortIndex(
-                    0,
-                ),
-            },
-            {
-                Port {
-                    node: NodeIndex(
-                        4,
-                    ),
-                    index: PortIndex(
-                        1,
-                    ),
-                },
-            },
-        ),
-        (
-            Port {
-                node: NodeIndex(
-                    4,
-                ),
-                index: PortIndex(
-                    0,
-                ),
-            },
-            {
-                Port {
-                    node: NodeIndex(
-                        5,
-                    ),
-                    index: PortIndex(
-                        0,
-                    ),
-                },
-            },
-        ),
-    ],
-}
+      ],
+      outputs: [],
+    ),
+  },
+)

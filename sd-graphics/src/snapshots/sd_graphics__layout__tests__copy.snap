@@ -2,36 +2,30 @@
 source: sd-graphics/src/layout.rs
 expression: "layout(&examples::copy()).expect(\"Layout failed\")"
 ---
-LayoutInternal {
-    min: 0.0,
-    max: 3.0,
-    nodes: [
-        [
-            Atom(
-                1.75,
-            ),
-        ],
-        [
-            Atom(
-                1.0,
-            ),
-            Atom(
-                2.5,
-            ),
-        ],
+LayoutInternal(
+  min: 0.0,
+  max: 3.0,
+  nodes: [
+    [
+      Atom(1.75),
     ],
-    wires: [
-        [
-            1.75,
-        ],
-        [
-            1.0,
-            2.5,
-        ],
-        [
-            0.5,
-            1.5,
-            2.5,
-        ],
+    [
+      Atom(1.0),
+      Atom(2.5),
     ],
-}
+  ],
+  wires: [
+    [
+      1.75,
+    ],
+    [
+      1.0,
+      2.5,
+    ],
+    [
+      0.5,
+      1.5,
+      2.5,
+    ],
+  ],
+)

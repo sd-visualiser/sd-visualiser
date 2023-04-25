@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{HashMap, HashSet},
     fmt::Debug,
 };
 
@@ -17,16 +17,16 @@ pub struct Slice<O: InOut> {
     pub ops: Vec<O>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Wiring {
-    forward: Vec<BTreeSet<usize>>,
+    forward: Vec<HashSet<usize>>,
     backward: Vec<usize>,
 }
 
 impl Wiring {
     pub fn new(inputs: usize) -> Self {
         Wiring {
-            forward: vec![BTreeSet::new(); inputs],
+            forward: vec![HashSet::new(); inputs],
             backward: vec![],
         }
     }
@@ -99,7 +99,7 @@ impl<O> Slice<MonoidalOp<O>> {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct MonoidalWiredGraph<O> {
     pub inputs: usize,
     pub slices: Vec<Slice<MonoidalWiredOp<O>>>,
@@ -116,7 +116,7 @@ impl<O> Default for MonoidalWiredGraph<O> {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MonoidalWiredOp<O> {
     Id {
         port: Port,
@@ -161,9 +161,9 @@ pub struct MonoidalGraph<O> {
 }
 
 impl<O> MonoidalGraph<O> {
-    pub fn selected(&self) -> Option<(Vec<NodeIndex>, BTreeSet<NodeIndex>)> {
+    pub fn selected(&self) -> Option<(Vec<NodeIndex>, HashSet<NodeIndex>)> {
         // Addresses of selected nodes.
-        let mut selections = BTreeSet::default();
+        let mut selections = HashSet::default();
 
         // Internal selection state (prefix and addresses) of the first selected thunk.
         let mut thunk = None;
@@ -317,7 +317,7 @@ impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
             let mut ops: Vec<OpData<O>> = Vec::new();
 
             // Also keep track of the subset of open wires which have a destination operation
-            let mut gathered_ports: BTreeSet<Port> = BTreeSet::new();
+            let mut gathered_ports: HashSet<Port> = HashSet::new();
 
             // Create an OpData for each node
             for &node in r.iter() {
@@ -385,7 +385,7 @@ impl<O: Copy + Debug> TryFrom<&HyperGraph<O>> for MonoidalWiredGraph<O> {
             debug!("Operation layer generated: {:?}", ops);
 
             // Compute the wiring from the open_wires to the operations
-            let out_nodes: BTreeMap<Port, usize> = ops
+            let out_nodes: HashMap<Port, usize> = ops
                 .iter()
                 .flat_map(|data| data.outputs.iter().copied())
                 .enumerate()
