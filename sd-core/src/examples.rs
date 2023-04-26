@@ -1,8 +1,9 @@
 use crate::{
+    common::Slice,
     graph::Op,
     hypergraph::NodeIndex,
     language::{ActiveOp, PassiveOp},
-    monoidal::{MonoidalGraph, MonoidalOp, Slice},
+    monoidal::{MonoidalGraph, MonoidalOp},
 };
 
 /// Corrresponds to the program `bind x = 1() in x`.

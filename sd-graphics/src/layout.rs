@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
-    common::InOut,
-    monoidal::{FromHyperError, MonoidalGraph, MonoidalOp},
+    common::{FromHyperError, InOut},
+    monoidal::{MonoidalGraph, MonoidalOp},
 };
 use thiserror::Error;
 

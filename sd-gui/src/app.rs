@@ -8,7 +8,8 @@ use egui_notify::Toasts;
 use pest::error::LineColLocation;
 use sd_core::{
     graph::{Op, SyntaxHyperGraph},
-    monoidal::{MonoidalGraph, MonoidalWiredGraph},
+    monoidal::MonoidalGraph,
+    monoidal_wired::MonoidalWiredGraph,
     prettyprinter::PrettyPrint,
 };
 use tracing::{debug, event, Level};
