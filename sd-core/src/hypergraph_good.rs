@@ -326,6 +326,18 @@ pub trait Fragment<V, E>: owner::HasOwner {
             .insert(WeakByAddress(Rc::downgrade(&input)), strength);
         Ok(())
     }
+
+    fn in_thunk<T>(
+        &mut self,
+        thunk: Rc<ThunkBuilder<V, E>>,
+        f: impl FnOnce(&mut OwnedMut<ThunkBuilder<V, E>>) -> T,
+    ) -> T {
+        let mut owned = OwnedMut {
+            inner: thunk,
+            owner: self.owner(),
+        };
+        f(&mut owned)
+    }
 }
 
 impl<V, E> Fragment<V, E> for HyperGraphBuilder<V, E>
