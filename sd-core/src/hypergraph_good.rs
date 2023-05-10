@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
-    rc::{Rc, Weak},
+    sync::{Arc, Weak},
 };
 
 use bimap::BiMap;
@@ -18,24 +18,6 @@ use thiserror::Error;
 
 use self::owner::HasOwner;
 
-// macro_rules! impl_partialeq_eq_hash_by_ptr {
-//     (& $t:ident < $($l:lifetime),+ , $($g:ident),+ >) => {
-//         impl<$($l),+ , $($g),+> PartialEq for &$t < $($l),+ , $($g),+ > {
-//             fn eq(&self, other: &Self) -> bool {
-//                 std::ptr::eq(*self, *other)
-//             }
-//         }
-//
-//         impl < $($l),+ , $($g),+ > Eq for &$t < $($l),+ , $($g),+ > {}
-//
-//         impl < $($l),+ , $($g),+ > std::hash::Hash for &$t < $($l),+ , $($g),+ > {
-//             fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-//                 std::ptr::hash(*self, state)
-//             }
-//         }
-//     };
-// }
-
 #[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum EdgeStrength {
@@ -45,12 +27,12 @@ pub enum EdgeStrength {
 
 #[derive(Clone)]
 pub struct Owned<'a, T: ?Sized> {
-    inner: Rc<T>,
+    inner: Arc<T>,
     owner: &'a QCellOwner,
 }
 
 pub struct OwnedMut<'a, T: ?Sized> {
-    inner: Rc<T>,
+    inner: Arc<T>,
     owner: &'a mut QCellOwner,
 }
 
@@ -64,17 +46,17 @@ where
     E: Debug,
 {
     #[error("No input port at index `{0:#?}`")]
-    UnknownInput(Rc<InPortBuilder<V, E>>),
+    UnknownInput(Arc<InPortBuilder<V, E>>),
     #[error("No output port at index `{0:#?}`")]
-    UnknownOutput(Rc<OutPortBuilder<V, E>>),
+    UnknownOutput(Arc<OutPortBuilder<V, E>>),
     #[error("Input port not linked: {0:#?}")]
-    UnlinkedInput(Rc<InPortBuilder<V, E>>),
+    UnlinkedInput(Arc<InPortBuilder<V, E>>),
     #[error("Unlinked port")]
     UnlinkedPort,
     #[error("Input port already linked: {0:#?}")]
-    InputLinkError(Rc<InPortBuilder<V, E>>),
+    InputLinkError(Arc<InPortBuilder<V, E>>),
     #[error("Output port already linked to specified input: {0:#?}")]
-    OutputLinkError(Rc<OutPortBuilder<V, E>>),
+    OutputLinkError(Arc<OutPortBuilder<V, E>>),
 }
 
 type Result<T, V, E> = core::result::Result<T, HyperGraphError<V, E>>;
@@ -211,9 +193,9 @@ where
     V: 'static,
     E: 'static,
 {
-    nodes: HashSet<ByThinAddress<Rc<dyn NodeBuilder<V, E>>>>,
-    graph_inputs: HashSet<ByThinAddress<Rc<OutPortBuilder<V, E>>>>,
-    graph_outputs: HashSet<ByThinAddress<Rc<InPortBuilder<V, E>>>>,
+    nodes: HashSet<ByThinAddress<Arc<dyn NodeBuilder<V, E>>>>,
+    graph_inputs: HashSet<ByThinAddress<Arc<OutPortBuilder<V, E>>>>,
+    graph_outputs: HashSet<ByThinAddress<Arc<InPortBuilder<V, E>>>>,
     token: QCellOwner,
 }
 
@@ -227,12 +209,34 @@ where
     V: Debug,
     E: Debug,
 {
+    pub fn new(input_weights: Vec<E>, number_of_outputs: usize) -> Self {
+        let nodes = HashSet::new();
+
+        let token = QCellOwner::new();
+
+        let graph_inputs = input_weights
+            .into_iter()
+            .map(|weight| ByThinAddress(Arc::new(OutPortBuilder::new_boundary(&token, weight))))
+            .collect();
+
+        let graph_outputs = (0..number_of_outputs)
+            .into_iter()
+            .map(|_| ByThinAddress(Arc::new(InPortBuilder::new_boundary(&token))))
+            .collect();
+
+        HyperGraphBuilder {
+            nodes,
+            graph_inputs,
+            graph_outputs,
+            token,
+        }
+    }
+
     pub fn build(self) -> Result<HyperGraph<V, E>, V, E> {
         // check validity of hypergraph:
         // no unlinked ports
-        todo!();
         // no strong cycles
-        todo!();
+        // todo!();
 
         Ok(HyperGraph(self))
     }
@@ -289,68 +293,79 @@ mod owner {
     }
 }
 
-pub trait Fragment<V, E>: owner::HasOwner {
+pub trait Fragment<V: 'static, E: 'static>: owner::HasOwner {
     fn add_operation(
         &mut self,
         input_len: usize,
         output_weights: Vec<E>,
         weight: V,
-    ) -> Rc<Operation<V, E>>;
+    ) -> Arc<Operation<V, E>>;
 
     fn add_thunk(
         &mut self,
         free_variables: Vec<E>,
         bound_variables: Vec<E>,
         output_weights: Vec<E>,
-    ) -> Rc<ThunkBuilder<V, E>>;
+    ) -> Arc<ThunkBuilder<V, E>>;
 
     fn link(
         &mut self,
-        input: Rc<InPortBuilder<V, E>>,
-        output: Rc<OutPortBuilder<V, E>>,
+        out_port: Arc<OutPortBuilder<V, E>>,
+        in_port: Arc<InPortBuilder<V, E>>,
         strength: EdgeStrength,
     ) -> Result<(), V, E>
     where
         V: Debug,
         E: Debug,
     {
-        let out = input.output.rw(self.owner());
+        let out = in_port.output.rw(self.owner());
         if let Some(existing) = out.upgrade() {
             return Err(HyperGraphError::OutputLinkError(existing));
         } else {
-            *out = Rc::downgrade(&output);
+            *out = Arc::downgrade(&out_port);
         }
-        output
+        out_port
             .inputs
             .rw(self.owner())
-            .insert(WeakByAddress(Rc::downgrade(&input)), strength);
+            .insert(WeakByAddress(Arc::downgrade(&in_port)), strength);
         Ok(())
+    }
+
+    fn borrow(
+	&mut self,
+	thunk: Arc<ThunkBuilder<V, E>>,
+    ) -> OwnedMut<ThunkBuilder<V, E>> {
+	OwnedMut { inner: thunk, owner: self.owner() }
     }
 
     fn in_thunk<T>(
         &mut self,
-        thunk: Rc<ThunkBuilder<V, E>>,
-        f: impl FnOnce(&mut OwnedMut<ThunkBuilder<V, E>>) -> T,
-    ) -> T {
-        let mut owned = OwnedMut {
+        thunk: Arc<ThunkBuilder<V, E>>,
+        f: impl FnOnce(OwnedMut<ThunkBuilder<V,E>>) -> T,
+    ) -> T where V: Debug,
+    E: Debug,{
+        let owned = OwnedMut {
             inner: thunk,
             owner: self.owner(),
         };
-        f(&mut owned)
+        f(owned)
     }
+
+    fn graph_inputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_>;
+    fn graph_outputs(&self) -> Box<dyn Iterator<Item = Arc<InPortBuilder<V, E>>> + '_>;
 }
 
 impl<V, E> Fragment<V, E> for HyperGraphBuilder<V, E>
 where
-    V: Debug,
-    E: Debug,
+    V: Debug + Send + Sync,
+    E: Debug + Send + Sync,
 {
     fn add_operation(
         &mut self,
         input_len: usize,
         output_weights: Vec<E>,
         weight: V,
-    ) -> Rc<Operation<V, E>> {
+    ) -> Arc<Operation<V, E>> {
         let op = Operation::new(self.owner(), input_len, output_weights, weight);
         self.nodes.insert(ByThinAddress(op.clone()));
         op
@@ -361,7 +376,7 @@ where
         free_variables: Vec<E>,
         bound_variables: Vec<E>,
         output_weights: Vec<E>,
-    ) -> Rc<ThunkBuilder<V, E>> {
+    ) -> Arc<ThunkBuilder<V, E>> {
         let thunk = ThunkBuilder::new(
             self.owner(),
             free_variables,
@@ -371,19 +386,35 @@ where
         self.nodes.insert(ByThinAddress(thunk.clone()));
         thunk
     }
+
+    fn graph_inputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_> {
+        Box::new(
+            self.graph_inputs
+                .iter()
+                .map(|ByThinAddress(out_port)| out_port.clone()),
+        )
+    }
+
+    fn graph_outputs(&self) -> Box<dyn Iterator<Item = Arc<InPortBuilder<V, E>>> + '_> {
+        Box::new(
+            self.graph_outputs
+                .iter()
+                .map(|ByThinAddress(in_port)| in_port.clone()),
+        )
+    }
 }
 
 impl<V, E> Fragment<V, E> for OwnedMut<'_, ThunkBuilder<V, E>>
 where
-    V: Debug + 'static,
-    E: Debug + 'static,
+    V: Debug + Send + Sync + 'static,
+    E: Debug + Send + Sync + 'static,
 {
     fn add_operation(
         &mut self,
         input_len: usize,
         output_weights: Vec<E>,
         weight: V,
-    ) -> Rc<Operation<V, E>> {
+    ) -> Arc<Operation<V, E>> {
         let op = Operation::new(self.owner(), input_len, output_weights, weight);
         let nodes = self.inner.nodes.rw(self.owner);
         nodes.insert(ByThinAddress(op.clone()));
@@ -395,7 +426,7 @@ where
         free_variables: Vec<E>,
         bound_variables: Vec<E>,
         output_weights: Vec<E>,
-    ) -> Rc<ThunkBuilder<V, E>> {
+    ) -> Arc<ThunkBuilder<V, E>> {
         let thunk = ThunkBuilder::new(
             self.owner(),
             free_variables,
@@ -406,11 +437,24 @@ where
         nodes.insert(ByThinAddress(thunk.clone()));
         thunk
     }
+
+    fn graph_inputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_> {
+        Box::new(self.inner.free_inputs().chain(self.inner.bound_inputs()))
+    }
+
+    fn graph_outputs(&self) -> Box<dyn Iterator<Item = Arc<InPortBuilder<V, E>>> + '_> {
+        Box::new(
+            self.inner
+                .outputs
+                .left_values()
+                .map(|ByThinAddress(inport)| inport.clone()),
+        )
+    }
 }
 
-pub trait NodeBuilder<V, E>: Debug {
-    fn inputs(&self) -> Box<dyn Iterator<Item = Rc<InPortBuilder<V, E>>> + '_>;
-    fn outputs(&self) -> Box<dyn Iterator<Item = Rc<OutPortBuilder<V, E>>> + '_>;
+pub trait NodeBuilder<V, E>: Debug + Send + Sync {
+    fn inputs(&self) -> Box<dyn Iterator<Item = Arc<InPortBuilder<V, E>>> + '_>;
+    fn outputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_>;
 }
 
 pub type Node<'hyper, V, E> = Owned<'hyper, dyn NodeBuilder<V, E>>;
@@ -435,24 +479,21 @@ impl<V, E> Node<'_, V, E> {
 #[derivative(Debug)]
 pub struct Operation<V, E> {
     weight: V,
-    inputs: Vec<Rc<InPortBuilder<V, E>>>,
-    outputs: Vec<Rc<OutPortBuilder<V, E>>>,
+    inputs: Vec<Arc<InPortBuilder<V, E>>>,
+    outputs: Vec<Arc<OutPortBuilder<V, E>>>,
 }
 
 impl<V, E> Operation<V, E>
 where
-    V: 'static,
-    E: 'static,
+    V: Debug + Send + Sync + 'static,
+    E: Debug + Send + Sync + 'static,
 {
-    fn new(owner: &QCellOwner, input_len: usize, output_weights: Vec<E>, weight: V) -> Rc<Self>
-    where
-        V: Debug,
-        E: Debug,
+    fn new(owner: &QCellOwner, input_len: usize, output_weights: Vec<E>, weight: V) -> Arc<Self>
     {
-        Rc::new_cyclic(|weak: &Weak<Self>| {
+        Arc::new_cyclic(|weak: &Weak<Self>| {
             let inputs = (0..input_len)
                 .map(|_| {
-                    Rc::new(InPortBuilder {
+                    Arc::new(InPortBuilder {
                         node: Some(weak.clone()),
                         output: QCell::new(owner, Weak::new()),
                     })
@@ -461,7 +502,7 @@ where
             let outputs = output_weights
                 .into_iter()
                 .map(|weight| {
-                    Rc::new(OutPortBuilder {
+                    Arc::new(OutPortBuilder {
                         node: Some(weak.clone()),
                         inputs: QCell::new(owner, Default::default()),
                         weight,
@@ -479,49 +520,49 @@ where
 
 impl<V, E> NodeBuilder<V, E> for Operation<V, E>
 where
-    V: Debug,
-    E: Debug,
+    V: Debug + Send + Sync,
+    E: Debug + Send + Sync,
 {
-    fn inputs(&self) -> Box<dyn Iterator<Item = Rc<InPortBuilder<V, E>>> + '_> {
+    fn inputs(&self) -> Box<dyn Iterator<Item = Arc<InPortBuilder<V, E>>> + '_> {
         Box::new(self.inputs.iter().cloned())
     }
 
-    fn outputs(&self) -> Box<dyn Iterator<Item = Rc<OutPortBuilder<V, E>>> + '_> {
+    fn outputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_> {
         Box::new(self.outputs.iter().cloned())
     }
 }
 
 type InOutMap<V, E> =
-    BiMap<ByThinAddress<Rc<InPortBuilder<V, E>>>, ByThinAddress<Rc<OutPortBuilder<V, E>>>>;
+    BiMap<ByThinAddress<Arc<InPortBuilder<V, E>>>, ByThinAddress<Arc<OutPortBuilder<V, E>>>>;
 
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct ThunkBuilder<V, E> {
     #[allow(clippy::type_complexity)]
     #[derivative(Debug = "ignore")]
-    nodes: QCell<HashSet<ByThinAddress<Rc<dyn NodeBuilder<V, E>>>>>,
+    nodes: QCell<HashSet<ByThinAddress<Arc<dyn NodeBuilder<V, E>>>>>,
     free_variable_inputs: InOutMap<V, E>,
-    bound_variables: Vec<Rc<OutPortBuilder<V, E>>>,
+    bound_variables: Vec<Arc<OutPortBuilder<V, E>>>,
     outputs: InOutMap<V, E>,
 }
 
 impl<V, E> ThunkBuilder<V, E>
 where
-    V: Debug + 'static,
-    E: Debug + 'static,
+    V: Debug + Send + Sync + 'static,
+    E: Debug + Send + Sync + 'static,
 {
     fn new(
         owner: &QCellOwner,
         free_variables: Vec<E>,
         bound_variables: Vec<E>,
         output_weights: Vec<E>,
-    ) -> Rc<Self> {
-        Rc::new_cyclic(|weak: &Weak<Self>| {
+    ) -> Arc<Self> {
+        Arc::new_cyclic(|weak: &Weak<Self>| {
             let free_variable_inputs = free_variables
                 .into_iter()
                 .map(|fv| {
-                    let inner_output = Rc::new(OutPortBuilder::new_boundary(owner, fv));
-                    let outer_input = Rc::new(InPortBuilder {
+                    let inner_output = Arc::new(OutPortBuilder::new_boundary(owner, fv));
+                    let outer_input = Arc::new(InPortBuilder {
                         node: Some(weak.clone()),
                         output: QCell::new(owner, Weak::new()),
                     });
@@ -530,13 +571,13 @@ where
                 .collect();
             let bound_variables = bound_variables
                 .into_iter()
-                .map(|bv| Rc::new(OutPortBuilder::new_boundary(owner, bv)))
+                .map(|bv| Arc::new(OutPortBuilder::new_boundary(owner, bv)))
                 .collect();
             let outputs = output_weights
                 .into_iter()
                 .map(|weight| {
-                    let inner_input = Rc::new(InPortBuilder::new_boundary(owner));
-                    let outer_output = Rc::new(OutPortBuilder {
+                    let inner_input = Arc::new(InPortBuilder::new_boundary(owner));
+                    let outer_output = Arc::new(OutPortBuilder {
                         node: Some(weak.clone()),
                         inputs: QCell::new(owner, Default::default()),
                         weight,
@@ -555,31 +596,24 @@ where
 }
 
 impl<V, E> ThunkBuilder<V, E> {
-    pub fn bound_inputs(&self) -> impl Iterator<Item = Rc<OutPortBuilder<V, E>>> + '_ {
+    pub fn bound_inputs(&self) -> impl Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_ {
         self.bound_variables.iter().cloned()
     }
 
-    pub fn free_inputs(&self) -> impl Iterator<Item = Rc<OutPortBuilder<V, E>>> + '_ {
+    pub fn free_inputs(&self) -> impl Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_ {
         self.free_variable_inputs
             .right_values()
             .map(|ByThinAddress(outport)| outport)
-            .cloned()
-    }
-
-    pub fn graph_outputs(&self) -> impl Iterator<Item = Rc<InPortBuilder<V, E>>> + '_ {
-        self.outputs
-            .left_values()
-            .map(|ByThinAddress(inport)| inport)
             .cloned()
     }
 }
 
 impl<V, E> NodeBuilder<V, E> for ThunkBuilder<V, E>
 where
-    V: Debug,
-    E: Debug,
+    V: Debug + Send + Sync,
+    E: Debug + Send + Sync,
 {
-    fn inputs(&self) -> Box<dyn Iterator<Item = Rc<InPortBuilder<V, E>>> + '_> {
+    fn inputs(&self) -> Box<dyn Iterator<Item = Arc<InPortBuilder<V, E>>> + '_> {
         Box::new(
             self.free_variable_inputs
                 .left_values()
@@ -588,7 +622,7 @@ where
         )
     }
 
-    fn outputs(&self) -> Box<dyn Iterator<Item = Rc<OutPortBuilder<V, E>>> + '_> {
+    fn outputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortBuilder<V, E>>> + '_> {
         Box::new(self.outputs.right_values().cloned().map(|x| x.0))
     }
 }

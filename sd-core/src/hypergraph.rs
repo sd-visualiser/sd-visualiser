@@ -1,258 +1,443 @@
-use slab::Slab;
-use std::{collections::HashMap, fmt::Debug, ops::Index};
-use thiserror::Error;
+use std::collections::{HashMap, HashSet};
 
-#[cfg(not(test))]
-use std::collections::HashSet;
-
+use bimap::BiMap;
+use elsa::FrozenVec;
+use qcell::{QCell, QCellOwner};
 #[cfg(test)]
 use serde::Serialize;
-#[cfg(test)]
-use std::collections::BTreeSet as HashSet;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct NodeIndex(pub usize);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct PortIndex(pub usize);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct Port {
-    pub node: NodeIndex,
-    pub index: PortIndex,
-}
-
-impl From<(usize, usize)> for Port {
-    fn from(value: (usize, usize)) -> Self {
-        Port {
-            node: NodeIndex(value.0),
-            index: PortIndex(value.1),
-        }
-    }
-}
+use thiserror::Error;
 
 #[derive(Debug, Error, Clone)]
 pub enum HyperGraphError {
-    #[error("No node at index `{0:?}`")]
-    UnknownNode(NodeIndex),
-    #[error("Node `{:?}` has no port `{:?}`", .0.node, .0.index)]
-    UnknownPort(Port),
+    #[error("Output port already linked")]
+    OutputLinkError,
 }
 
-/// Hypergraph with hyperedges/nodes with weights E and hypervertices/wires
-#[derive(Clone)]
+type Result<T> = std::result::Result<T, HyperGraphError>;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct InputIndex(usize);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct OutputIndex(usize);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+struct NodeIndex(usize);
+
+#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Serialize))]
-pub struct HyperGraph<E, V> {
-    nodes: Slab<NodeInfo<E, V>>,
+pub enum EdgeStrength {
+    Strong,
+    Weak,
 }
 
-impl<E, V> Index<NodeIndex> for HyperGraph<E, V> {
-    type Output = Node<E, V>;
-
-    fn index(&self, index: NodeIndex) -> &Self::Output {
-        &self.nodes[index.0].data
-    }
+pub struct InputPortB {
+    node: Option<NodeIndex>,
+    output: QCell<Option<OutputIndex>>,
+    index: InputIndex,
 }
 
-impl<E, V: Copy> Default for HyperGraph<E, V> {
+pub struct OutputPortB<E> {
+    node: Option<NodeIndex>,
+    inputs: QCell<HashMap<InputIndex, EdgeStrength>>,
+    weight: E,
+    index: OutputIndex,
+}
+
+pub struct HyperGraphB<V, E> {
+    node_store: FrozenVec<Box<NodeB<V>>>,
+    input_ports: FrozenVec<Box<InputPortB>>,
+    output_ports: FrozenVec<Box<OutputPortB<E>>>,
+    inputs: HashSet<OutputIndex>,
+    outputs: HashSet<InputIndex>,
+    nodes: HashSet<NodeIndex>,
+    token: QCellOwner,
+}
+
+pub type Position<'a> = Option<&'a ThunkB>;
+pub type PositionAndWeight<'a, E> = Option<(&'a ThunkB, E)>;
+
+impl<V, E> Default for HyperGraphB<V, E> {
     fn default() -> Self {
-        let mut g = Self::new();
-        g.add_node(Node::Input, vec![], 0).unwrap();
-        g.add_node(Node::Output, vec![], 0).unwrap();
-        g
+        Self::new()
     }
 }
 
-#[derive(Debug, Clone)]
-#[cfg_attr(test, derive(Serialize))]
-pub enum Node<E, V> {
-    Weight(E),
-    Input,
-    Output,
-    Thunk { args: usize, body: HyperGraph<E, V> },
-}
-
-impl<E, V> Node<E, V> {
-    pub fn w<F: Into<E>>(weight: F) -> Self {
-        Node::Weight(weight.into())
-    }
-
-    pub fn is_input(&self) -> bool {
-        matches!(self, Node::Input)
-    }
-
-    pub fn is_output(&self) -> bool {
-        matches!(self, Node::Output)
-    }
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct NodeInfo<E, V> {
-    data: Node<E, V>,
-    inputs: Vec<(Port, V)>,
-    outputs: Vec<HashMap<Port, V>>,
-}
-
-impl<E, V> HyperGraph<E, V> {
-    /// Generate a new graph
+impl<V, E> HyperGraphB<V, E> {
     pub fn new() -> Self {
-        HyperGraph { nodes: Slab::new() }
-    }
-
-    fn get_info(&self, key: NodeIndex) -> Result<&NodeInfo<E, V>, HyperGraphError> {
-        self.nodes
-            .get(key.0)
-            .ok_or(HyperGraphError::UnknownNode(key))
-    }
-
-    pub fn get(&self, key: NodeIndex) -> Result<&Node<E, V>, HyperGraphError> {
-        let info = self.get_info(key)?;
-        Ok(&info.data)
-    }
-
-    pub fn get_outputs(
-        &self,
-        key: NodeIndex,
-    ) -> Result<impl Iterator<Item = &HashMap<Port, V>>, HyperGraphError> {
-        let info = self.get_info(key)?;
-        Ok(info.outputs.iter())
-    }
-
-    pub fn number_of_outputs(&self, key: NodeIndex) -> Result<usize, HyperGraphError> {
-        let info = self.get_info(key)?;
-        Ok(info.outputs.len())
-    }
-
-    pub fn get_inputs(
-        &self,
-        key: NodeIndex,
-    ) -> Result<impl Iterator<Item = (Port, V)> + '_, HyperGraphError>
-    where
-        V: Clone,
-    {
-        let info = self.get_info(key)?;
-        Ok(info.inputs.iter().cloned())
-    }
-
-    pub fn number_of_inputs(&self, key: NodeIndex) -> Result<usize, HyperGraphError> {
-        let info = self.get_info(key)?;
-        Ok(info.inputs.len())
-    }
-
-    pub fn nodes(&self) -> impl Iterator<Item = (NodeIndex, &Node<E, V>)> {
-        self.nodes.iter().map(|(x, d)| (NodeIndex(x), &d.data))
-    }
-
-    pub fn edges(&self) -> impl Iterator<Item = (Port, &HashMap<Port, V>)> {
-        self.nodes.iter().flat_map(|(node, d)| {
-            d.outputs
-                .iter()
-                .enumerate()
-                .map(move |(index, targets)| ((node, index).into(), targets))
-        })
-    }
-
-    pub fn recurse(&self, path: &[NodeIndex]) -> Option<&Self> {
-        match path.split_first() {
-            None => Some(self),
-            Some((n, rest)) => match self.get(*n) {
-                Ok(Node::Thunk { body, .. }) => body.recurse(rest),
-                _ => None,
-            },
+        HyperGraphB::<V, E> {
+            node_store: Default::default(),
+            input_ports: Default::default(),
+            output_ports: Default::default(),
+            inputs: Default::default(),
+            outputs: Default::default(),
+            nodes: Default::default(),
+            token: Default::default(),
         }
     }
 
-    pub fn ranks_from_end(
-        &self,
-    ) -> (
-        HashSet<NodeIndex>,
-        Vec<HashSet<NodeIndex>>,
-        HashSet<NodeIndex>,
-    ) {
-        let mut nodes: HashMap<NodeIndex, &NodeInfo<E, V>> =
-            self.nodes.iter().map(|(x, d)| (NodeIndex(x), d)).collect();
-
-        let inputs: HashSet<NodeIndex> = nodes
-            .iter()
-            .filter_map(|(x, d)| if d.data.is_input() { Some(*x) } else { None })
-            .collect();
-        let outputs: HashSet<NodeIndex> = nodes
-            .iter()
-            .filter_map(|(x, d)| if d.data.is_output() { Some(*x) } else { None })
-            .collect();
-
-        nodes.retain(|x, _| !inputs.contains(x) && !outputs.contains(x));
-
-        let mut ranks: Vec<HashSet<NodeIndex>> = vec![];
-        let mut collected: HashSet<NodeIndex> = outputs.clone();
-
-        while !nodes.is_empty() {
-            let mut next_rank = HashSet::new();
-            for (n, o) in nodes.iter() {
-                if o.outputs
-                    .iter()
-                    .flat_map(|x| x.iter().map(|(y, _)| y.node))
-                    .all(|z| collected.contains(&z))
-                {
-                    collected.insert(*n);
-                    next_rank.insert(*n);
-                }
-            }
-            nodes.retain(|x, _| !next_rank.contains(x));
-
-            ranks.push(next_rank);
-        }
-
-        (inputs, ranks, outputs)
+    fn node(&self, idx: NodeIndex) -> &NodeB<V> {
+        self.node_store.get(idx.0).unwrap()
     }
-}
 
-impl<E, V: Copy> HyperGraph<E, V> {
-    /// Adds a new node to a graph with specified node data, a list of ports to obtain inputs from
-    pub fn add_node(
+    fn input(&self, idx: InputIndex) -> &InputPortB {
+        self.input_ports.get(idx.0).unwrap()
+    }
+
+    fn output(&self, idx: OutputIndex) -> &OutputPortB<E> {
+        self.output_ports.get(idx.0).unwrap()
+    }
+
+    fn next_node(&self) -> NodeIndex {
+        NodeIndex(self.node_store.len())
+    }
+
+    fn next_input(&self) -> InputIndex {
+        InputIndex(self.input_ports.len())
+    }
+
+    fn next_output(&self) -> OutputIndex {
+        OutputIndex(self.output_ports.len())
+    }
+
+    pub fn add_operation(
         &mut self,
-        data: Node<E, V>,
-        inputs: Vec<(Port, V)>,
-        output_ports: usize,
-    ) -> Result<NodeIndex, HyperGraphError> {
-        let next_node = self.nodes.vacant_key();
+        pos: Position,
+        input_len: usize,
+        output_weights: Vec<E>,
+        weight: V,
+    ) -> &OperationB<V> {
+        let next_index = self.next_node();
 
-        for (i, &(port @ Port { node, index }, v)) in inputs.iter().enumerate() {
-            let input = self
-                .nodes
-                .get_mut(node.0)
-                .ok_or(HyperGraphError::UnknownNode(node))?;
+        let inputs = (0..input_len)
+            .map(|_| {
+                let index = self.next_input();
+                let port = InputPortB {
+                    node: Some(next_index),
+                    output: self.token.cell(None),
+                    index,
+                };
+                self.input_ports.push(Box::new(port));
+                index
+            })
+            .collect();
 
-            let port_set = input
-                .outputs
-                .get_mut(index.0)
-                .ok_or(HyperGraphError::UnknownPort(port))?;
-            port_set.insert((next_node, i).into(), v);
-        }
-
-        let outputs = vec![HashMap::new(); output_ports];
-
-        let info = NodeInfo {
-            data,
+        let outputs = output_weights
+            .into_iter()
+            .map(|weight| {
+                let index = self.next_output();
+                let port = OutputPortB {
+                    node: Some(next_index),
+                    inputs: self.token.cell(Default::default()),
+                    index,
+                    weight,
+                };
+                self.output_ports.push(Box::new(port));
+                index
+            })
+            .collect();
+        let op = OperationB {
+            weight,
             inputs,
             outputs,
+            index: next_index,
+        };
+        match pos {
+            Some(thunk) => self.token.rw(&thunk.nodes).insert(next_index),
+            None => self.nodes.insert(next_index),
+        };
+        if let NodeB::Operation(op) = self.node_store.push_get(Box::new(NodeB::Operation(op))) {
+            op
+        } else {
+            unreachable!()
+        }
+    }
+
+    pub fn add_thunk(
+        &mut self,
+        pos: Position,
+        bound_weights: Vec<E>,
+    ) -> (&ThunkB, Vec<&OutputPortB<E>>) {
+        let next_index = self.next_node();
+
+        let bound_variables: Vec<OutputIndex> = bound_weights
+            .into_iter()
+            .map(|weight| {
+                let index = self.next_output();
+                let port = OutputPortB {
+                    node: None,
+                    inputs: self.token.cell(Default::default()),
+                    index,
+                    weight,
+                };
+                self.output_ports.push(Box::new(port));
+                index
+            })
+            .collect();
+
+        let thunk = ThunkB {
+            nodes: self.token.cell(Default::default()),
+            free_variable_inputs: self.token.cell(Default::default()),
+            bound_variables: bound_variables.clone(),
+            outputs: self.token.cell(Default::default()),
+            index: next_index,
         };
 
-        let idx = self.nodes.insert(info);
+        match pos {
+            Some(thunk) => self.token.rw(&thunk.nodes).insert(next_index),
+            None => self.nodes.insert(next_index),
+        };
+        if let NodeB::Thunk(thunk) = self
+            .node_store
+            .push_get(Box::new(NodeB::Thunk(Box::new(thunk))))
+        {
+            let bound_var_data = bound_variables
+                .iter()
+                .map(|&idx| self.output(idx))
+                .collect();
+            (thunk, bound_var_data)
+        } else {
+            unreachable!()
+        }
+    }
 
-        Ok(NodeIndex(idx))
+    pub fn add_input(&mut self, pos: Position, weight: E) -> &OutputPortB<E> {
+        let out_port_idx = self.next_output();
+
+        let port = OutputPortB {
+            node: None,
+            inputs: self.token.cell(Default::default()),
+            index: out_port_idx,
+            weight,
+        };
+
+        let out_port = self.output_ports.push_get(Box::new(port));
+
+        match pos {
+            Some(thunk) => {
+                let in_port_idx = self.next_input();
+
+                let port = InputPortB {
+                    node: Some(thunk.index),
+                    output: self.token.cell(Default::default()),
+                    index: in_port_idx,
+                };
+
+                self.input_ports.push(Box::new(port));
+
+                self.token
+                    .rw(&thunk.free_variable_inputs)
+                    .insert(in_port_idx, out_port_idx);
+            }
+            None => {
+                self.inputs.insert(out_port_idx);
+            }
+        };
+
+        out_port
+    }
+
+    pub fn add_output(&mut self, pos: PositionAndWeight<E>) -> &InputPortB {
+        let in_port_idx = self.next_input();
+
+        let port = InputPortB {
+            node: None,
+            output: self.token.cell(Default::default()),
+            index: in_port_idx,
+        };
+
+        let in_port = self.input_ports.push_get(Box::new(port));
+
+        match pos {
+            Some((thunk, weight)) => {
+                let out_port_idx = self.next_output();
+
+                let port = OutputPortB {
+                    node: Some(thunk.index),
+                    inputs: self.token.cell(Default::default()),
+                    index: out_port_idx,
+                    weight,
+                };
+
+                self.output_ports.push(Box::new(port));
+
+                self.token
+                    .rw(&thunk.outputs)
+                    .insert(in_port_idx, out_port_idx);
+            }
+            None => {
+                self.outputs.insert(in_port_idx);
+            }
+        };
+
+        in_port
+    }
+
+    pub fn link(
+        &mut self,
+        output: &OutputPortB<E>,
+        input: &InputPortB,
+        strength: EdgeStrength,
+    ) -> Result<()> {
+        let output_field = self.token.rw(&input.output);
+
+        if output_field.is_some() {
+            return Err(HyperGraphError::OutputLinkError);
+        }
+
+        *output_field = Some(output.index);
+
+        let inputs_field = self.token.rw(&output.inputs);
+
+        inputs_field.insert(input.index, strength);
+
+        Ok(())
+    }
+
+    pub fn build(self) -> Result<HyperGraph<V, E>> {
+        //TODO perform check here
+        Ok(HyperGraph(self))
     }
 }
 
-impl<E: Debug, V: Debug> Debug for HyperGraph<E, V> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Hypergraph")
-            .field("nodes", &self.nodes().collect::<Vec<_>>())
-            .field("edges", &self.edges().collect::<Vec<_>>())
-            .finish()
+pub enum NodeB<V> {
+    Operation(OperationB<V>),
+    Thunk(Box<ThunkB>),
+}
+
+pub struct OperationB<V> {
+    weight: V,
+    inputs: Vec<InputIndex>,
+    outputs: Vec<OutputIndex>,
+    #[allow(dead_code)] // TODO: Remove this if not necessary I guess
+    index: NodeIndex,
+}
+
+pub struct ThunkB {
+    nodes: QCell<HashSet<NodeIndex>>,
+    free_variable_inputs: QCell<BiMap<InputIndex, OutputIndex>>,
+    bound_variables: Vec<OutputIndex>,
+    outputs: QCell<BiMap<InputIndex, OutputIndex>>,
+    index: NodeIndex,
+}
+
+pub struct HyperGraph<V, E>(HyperGraphB<V, E>);
+
+pub struct WithGraph<'a, T, V, E> {
+    inner: &'a T,
+    graph: &'a HyperGraph<V, E>,
+}
+
+pub type Thunk<'a, V, E> = WithGraph<'a, ThunkB, V, E>;
+pub type Operation<'a, V, E> = WithGraph<'a, OperationB<V>, V, E>;
+pub type InputPort<'a, V, E> = WithGraph<'a, InputPortB, V, E>;
+pub type OutputPort<'a, V, E> = WithGraph<'a, OutputPortB<E>, V, E>;
+
+pub enum Node<'a, V, E> {
+    Operation(Operation<'a, V, E>),
+    Thunk(Thunk<'a, V, E>),
+}
+
+impl<'a, V, E> Node<'a, V, E> {
+    fn build(node: &'a NodeB<V>, graph: &'a HyperGraph<V, E>) -> Self {
+        match node {
+            NodeB::Operation(op) => Node::Operation(WithGraph { inner: op, graph }),
+            NodeB::Thunk(thunk) => Node::Thunk(WithGraph {
+                inner: thunk,
+                graph,
+            }),
+        }
+    }
+}
+
+impl<V, E> HyperGraph<V, E> {
+    fn node(&self, idx: NodeIndex) -> Node<V, E> {
+        Node::build(self.0.node(idx), self)
+    }
+
+    fn input(&self, idx: InputIndex) -> InputPort<V, E> {
+        InputPort {
+            inner: self.0.input(idx),
+            graph: self,
+        }
+    }
+
+    fn output(&self, idx: OutputIndex) -> OutputPort<V, E> {
+        OutputPort {
+            inner: self.0.output(idx),
+            graph: self,
+        }
+    }
+
+    pub fn nodes(&self) -> impl Iterator<Item = Node<V, E>> {
+        self.0.nodes.iter().map(|&idx| self.node(idx))
+    }
+
+    pub fn inputs(&self) -> impl Iterator<Item = OutputPort<V, E>> {
+        self.0.inputs.iter().map(|&idx| self.output(idx))
+    }
+
+    pub fn outputs(&self) -> impl Iterator<Item = InputPort<V, E>> {
+        self.0.outputs.iter().map(|&idx| self.input(idx))
+    }
+}
+
+impl<'a, V, E> Thunk<'a, V, E> {
+    pub fn nodes(&self) -> impl Iterator<Item = Node<V, E>> {
+        self.graph
+            .0
+            .token
+            .ro(&self.inner.nodes)
+            .iter()
+            .map(|&idx| self.graph.node(idx))
+    }
+
+    pub fn bound_variables(&self) -> impl Iterator<Item = OutputPort<V, E>> {
+        self.inner
+            .bound_variables
+            .iter()
+            .map(|&idx| self.graph.output(idx))
+    }
+}
+
+impl<'a, V, E> Operation<'a, V, E> {
+    pub fn weight(&self) -> &V {
+        &self.inner.weight
+    }
+
+    pub fn inputs(&self) -> impl Iterator<Item = InputPort<V, E>> {
+        self.inner.inputs.iter().map(|&idx| self.graph.input(idx))
+    }
+
+    pub fn outputs(&self) -> impl Iterator<Item = OutputPort<V, E>> {
+        self.inner.outputs.iter().map(|&idx| self.graph.output(idx))
+    }
+}
+
+impl<'a, V, E> InputPort<'a, V, E> {
+    pub fn node(&self) -> Option<Node<V, E>> {
+        self.inner.node.map(|idx| self.graph.node(idx))
+    }
+
+    pub fn output(&self) -> OutputPort<V, E> {
+        self.graph
+            .output(self.graph.0.token.ro(&self.inner.output).unwrap())
+    }
+}
+
+impl<'a, V, E> OutputPort<'a, V, E> {
+    pub fn node(&self) -> Option<Node<V, E>> {
+        self.inner.node.map(|idx| self.graph.node(idx))
+    }
+
+    pub fn inputs(&self) -> impl Iterator<Item = (InputPort<V, E>, EdgeStrength)> {
+        self.graph
+            .0
+            .token
+            .ro(&self.inner.inputs)
+            .iter()
+            .map(|(&idx, &s)| (self.graph.input(idx), s))
+    }
+
+    pub fn weight(&self) -> &E {
+        &self.inner.weight
     }
 }

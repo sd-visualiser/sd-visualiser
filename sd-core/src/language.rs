@@ -156,6 +156,12 @@ impl Display for Variable {
     }
 }
 
+impl From<&str> for Variable {
+    fn from(value: &str) -> Self {
+        Variable(value.to_string())
+    }
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use anyhow::{Context, Result};
