@@ -3,8 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
 use crate::hypergraph_good::{
-    EdgeStrength, Fragment, HyperGraph, HyperGraphBuilder, HyperGraphError, NodeBuilder,
-    OutPortBuilder,
+    EdgeStrength, Fragment, HyperGraph, HyperGraphBuilder, HyperGraphError, OutPortBuilder,
 };
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 

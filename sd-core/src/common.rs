@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::{hypergraph_good::HyperGraphError, graph::Op};
+use crate::{graph::Op, hypergraph_good::HyperGraphError};
 
 /// Specifies an operation which has inputs and outputs.
 pub trait InOut {
@@ -29,5 +29,5 @@ pub enum FromHyperError {
     EmptyGraph,
 
     #[error("Hypergraph error")]
-    HyperGraphError(#[from] HyperGraphError<Op,()>),
+    HyperGraphError(#[from] HyperGraphError<Op, ()>),
 }
