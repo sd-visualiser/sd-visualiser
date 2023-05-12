@@ -38,15 +38,40 @@ where
 
 type Result<T, V, E> = core::result::Result<T, HyperGraphError<V, E>>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = ""),
+    Hash(bound = "")
+)]
 pub struct InPort<V, E, const BUILT: bool = true>(ByThinAddress<Arc<InPortInternal<V, E>>>);
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = ""),
+    Hash(bound = "")
+)]
 pub struct OutPort<V, E, const BUILT: bool = true>(ByThinAddress<Arc<OutPortInternal<V, E>>>);
-#[derive(Debug, Clone)]
+#[derive(Debug, Derivative)]
+#[derivative(Clone(bound = ""))]
 pub struct HyperGraph<V, E, const BUILT: bool = true>(HyperGraphInternal<V, E>);
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = ""),
+    Hash(bound = "")
+)]
 pub struct Operation<V, E, const BUILT: bool = true>(ByThinAddress<Arc<OperationInternal<V, E>>>);
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = ""),
+    Hash(bound = "")
+)]
 pub struct Thunk<V, E, const BUILT: bool = true>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 
 #[derive(Debug, Clone)]
@@ -152,12 +177,21 @@ impl<V, E> OutPort<V, E> {
             .into_iter()
     }
 
+    pub fn number_of_inputs(&self) -> usize {
+        self.0
+            .inputs
+            .try_read()
+            .expect("Lock unexpectedly taken")
+            .len()
+    }
+
     pub fn weight(&self) -> &E {
         &self.0.weight
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Derivative)]
+#[derivative(Clone(bound = ""))]
 struct HyperGraphInternal<V, E> {
     operations: HashSet<ByThinAddress<Arc<OperationInternal<V, E>>>>,
     thunks: HashSet<ByThinAddress<Arc<ThunkInternal<V, E>>>>,
@@ -394,7 +428,7 @@ impl<V, E> GraphView<V, E> for Thunk<V, E> {
         Box::new(
             self.0
                 .operations
-                .read()
+                .try_read()
                 .expect("Lock unexpectedly taken")
                 .iter()
                 .cloned()
@@ -408,7 +442,7 @@ impl<V, E> GraphView<V, E> for Thunk<V, E> {
         Box::new(
             self.0
                 .thunks
-                .read()
+                .try_read()
                 .expect("Lock unexpectedly taken")
                 .iter()
                 .cloned()
