@@ -1,10 +1,7 @@
-use std::sync::Arc;
 use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
-use crate::hypergraph_good::{
-    EdgeStrength, Fragment, HyperGraph, HyperGraphBuilder, HyperGraphError, OutPortBuilder,
-};
+use crate::hypergraph_good::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
 #[cfg(not(test))]
@@ -43,7 +40,7 @@ impl From<PassiveOp> for Op {
     }
 }
 
-pub type SyntaxHyperGraphBuilder = HyperGraphBuilder<Op, ()>;
+pub type SyntaxHyperGraphBuilder = HyperGraph<Op, ()>;
 pub type SyntaxHyperGraph = HyperGraph<Op, ()>;
 
 #[derive(Debug, Error)]
@@ -67,11 +64,13 @@ pub(crate) trait Syntax {
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
-    fn process<F: Fragment<Op, ()>>(
+    fn process<F>(
         &self,
         fragment: &mut F,
-        mapping: &mut HashMap<Variable, (Arc<OutPortBuilder<Op, ()>>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError>;
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>;
 }
 
 impl Syntax for Expr {
@@ -84,11 +83,14 @@ impl Syntax for Expr {
 
     type ProcessOutput = ();
 
-    fn process<F: Fragment<Op, ()>>(
+    fn process<F>(
         &self,
         fragment: &mut F,
-        mapping: &mut HashMap<Variable, (Arc<OutPortBuilder<Op, ()>>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError> {
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>,
+    {
         for bc in &self.binds {
             bc.process(fragment, mapping)?;
         }
@@ -110,11 +112,14 @@ impl Syntax for BindClause {
 
     type ProcessOutput = ();
 
-    fn process<F: Fragment<Op, ()>>(
+    fn process<F>(
         &self,
         fragment: &mut F,
-        mapping: &mut HashMap<Variable, (Arc<OutPortBuilder<Op, ()>>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError> {
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>,
+    {
         let port = self.term.process(fragment, mapping)?;
         mapping.insert(self.var.clone(), port);
         Ok(())
@@ -134,13 +139,16 @@ impl Syntax for Term {
         }
     }
 
-    type ProcessOutput = (Arc<OutPortBuilder<Op, ()>>, EdgeStrength);
+    type ProcessOutput = (OutPort<Op, (), false>, EdgeStrength);
 
-    fn process<F: Fragment<Op, ()>>(
+    fn process<F>(
         &self,
         fragment: &mut F,
-        mapping: &mut HashMap<Variable, (Arc<OutPortBuilder<Op, ()>>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError> {
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>,
+    {
         match self {
             Term::Value(v) => v.process(fragment, mapping),
             Term::ActiveOp(op, vals) => {
@@ -178,13 +186,16 @@ impl Syntax for Value {
         }
     }
 
-    type ProcessOutput = (Arc<OutPortBuilder<Op, ()>>, EdgeStrength);
+    type ProcessOutput = (OutPort<Op, (), false>, EdgeStrength);
 
-    fn process<F: Fragment<Op, ()>>(
+    fn process<F>(
         &self,
         fragment: &mut F,
-        mapping: &mut HashMap<Variable, (Arc<OutPortBuilder<Op, ()>>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError> {
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>,
+    {
         match self {
             Value::Var(v) => mapping
                 .get(v)
@@ -220,13 +231,16 @@ impl Syntax for Thunk {
         self.body.free_variables(&mut bound, vars);
     }
 
-    type ProcessOutput = Arc<OutPortBuilder<Op, ()>>;
+    type ProcessOutput = OutPort<Op, (), false>;
 
-    fn process<F: Fragment<Op, ()>>(
+    fn process<F>(
         &self,
         fragment: &mut F,
-        mapping: &mut HashMap<Variable, (Arc<OutPortBuilder<Op, ()>>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError> {
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>,
+    {
         let mut vars = HashSet::new();
 
         self.free_variables(&mut HashSet::new(), &mut vars);
@@ -269,7 +283,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
         expr.free_variables(&mut HashSet::new(), &mut vars);
 
-        let mut graph = HyperGraphBuilder::new(vec![(); vars.len()], 1);
+        let mut graph = HyperGraph::new(vec![(); vars.len()], 1);
 
         let mut mapping: HashMap<_, _> = vars
             .into_iter()
