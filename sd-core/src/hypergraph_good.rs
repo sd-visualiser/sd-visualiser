@@ -476,6 +476,14 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
         self.0.outputs.iter().cloned().map(OutPort)
     }
 
+    pub fn number_of_inputs(&self) -> usize {
+	self.0.inputs.len()
+    }
+
+    pub fn number_of_outputs(&self) -> usize {
+	self.0.outputs.len()
+    }
+
     pub fn weight(&self) -> &V {
         &self.0.weight
     }
@@ -557,6 +565,14 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
             .right_values()
             .cloned()
             .map(|ByThinAddress(o)| OutPort(o))
+    }
+
+    pub fn number_of_inputs(&self) -> usize {
+	self.0.free_variable_inputs.len()
+    }
+
+    pub fn number_of_outputs(&self) -> usize {
+	self.0.outputs.len()
     }
 }
 
