@@ -423,42 +423,11 @@ where
     }
 }
 
-// impl<V, E> Node<V, E> {
-//     pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E>> + '_ {
-// 	match self {
-// 	    Node::Operation(op) => op,
-// 	    Node::Thunk(thunk) => todo!(),
-// }
-//         // self.inner.inputs().map(|inner| Owned {
-//         //     inner,
-//         //     owner: self.owner,
-//         // })
-//     }
-
-//     // pub fn outputs(&self) -> impl Iterator<Item = OutPort<V, E>> + '_ {
-//     //     self.inner.outputs().map(|inner| Owned {
-//     //         inner,
-//     //         owner: self.owner,
-//     //     })
-//     // }
-// }
-
 #[derive(Debug, Clone)]
 enum NodeInternal<V, E> {
     Operation(Arc<OperationInternal<V, E>>),
     Thunk(Arc<ThunkInternal<V, E>>),
 }
-
-// impl<V, E> Node<V, E> {
-//     delegate! {
-//         to match self {
-//             Node::Operation(operation) => operation,
-//             Node::Thunk(thunk) => thunk,
-//         } {
-//             pub fn inputs(&self) -> impl Iterator<Item = Arc<
-//         }
-//     }
-// }
 
 #[derive(Debug)]
 struct OperationInternal<V, E> {
@@ -477,11 +446,11 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
     }
 
     pub fn number_of_inputs(&self) -> usize {
-	self.0.inputs.len()
+        self.0.inputs.len()
     }
 
     pub fn number_of_outputs(&self) -> usize {
-	self.0.outputs.len()
+        self.0.outputs.len()
     }
 
     pub fn weight(&self) -> &V {
@@ -568,11 +537,11 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
     }
 
     pub fn number_of_inputs(&self) -> usize {
-	self.0.free_variable_inputs.len()
+        self.0.free_variable_inputs.len()
     }
 
     pub fn number_of_outputs(&self) -> usize {
-	self.0.outputs.len()
+        self.0.outputs.len()
     }
 }
 
