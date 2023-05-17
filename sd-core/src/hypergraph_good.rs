@@ -1,7 +1,7 @@
+use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::sync::RwLock;
 use std::{
-    collections::{HashMap, HashSet},
     fmt::Debug,
     sync::{Arc, Weak},
 };
@@ -70,7 +70,7 @@ pub struct InPort<V, E, const BUILT: bool = true>(ByThinAddress<Arc<InPortIntern
 )]
 pub struct OutPort<V, E, const BUILT: bool = true>(ByThinAddress<Arc<OutPortInternal<V, E>>>);
 #[derive(Debug, Derivative)]
-#[derivative(Clone(bound = ""))]
+#[derivative(Clone(bound = ""), Default(bound = ""))]
 pub struct HyperGraph<V, E, const BUILT: bool = true>(HyperGraphInternal<V, E>);
 #[derive(Debug, Derivative)]
 #[derivative(
@@ -89,7 +89,7 @@ pub struct Operation<V, E, const BUILT: bool = true>(ByThinAddress<Arc<Operation
 )]
 pub struct Thunk<V, E, const BUILT: bool = true>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 
-#[derive(Derivative, Debug)]
+#[derive(Debug, Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -215,7 +215,7 @@ impl<V, E> OutPort<V, E> {
 }
 
 #[derive(Debug, Derivative)]
-#[derivative(Clone(bound = ""))]
+#[derivative(Clone(bound = ""), Default(bound = ""))]
 struct HyperGraphInternal<V, E> {
     nodes: Vec<NodeInternal<V, E>>,
     graph_inputs: HashSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
@@ -562,7 +562,7 @@ pub trait Graph<V, E, const BUILT: bool> {
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_>;
 }
 
-pub trait GraphView<V, E, const BUILT: bool>: Graph<V, E, BUILT> {
+pub trait GraphView<V, E, const BUILT: bool = true>: Graph<V, E, BUILT> {
     fn nodes(&self) -> Box<dyn Iterator<Item = Node<V, E, BUILT>> + '_>;
     fn operations<'a>(&'a self) -> Box<dyn Iterator<Item = Operation<V, E, BUILT>> + 'a>
     where
@@ -783,6 +783,20 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
     pub fn number_of_outputs(&self) -> usize {
         self.0.outputs.len()
     }
+
+    pub fn externalise_input(&self, port: &OutPort<V, E>) -> Option<InPort<V, E>> {
+        self.0
+            .free_variable_inputs
+            .get_by_right(&port.0)
+            .map(|in_port| InPort(in_port.clone()))
+    }
+
+    pub fn externalise_output(&self, port: &InPort<V, E>) -> Option<OutPort<V, E>> {
+        self.0
+            .outputs
+            .get_by_left(&port.0)
+            .map(|out_port| OutPort(out_port.clone()))
+    }
 }
 
 impl<V, E> ThunkInternal<V, E>
@@ -841,6 +855,20 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         match self {
             Node::Operation(op) => Box::new(op.outputs()),
             Node::Thunk(thunk) => Box::new(thunk.outputs()),
+        }
+    }
+
+    pub fn number_of_inputs(&self) -> usize {
+        match self {
+            Node::Operation(op) => op.number_of_inputs(),
+            Node::Thunk(thunk) => thunk.number_of_inputs(),
+        }
+    }
+
+    pub fn number_of_outputs(&self) -> usize {
+        match self {
+            Node::Operation(op) => op.number_of_outputs(),
+            Node::Thunk(thunk) => thunk.number_of_outputs(),
         }
     }
 

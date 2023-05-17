@@ -35,12 +35,12 @@ impl Transform {
     }
 }
 
-pub fn render<O: Display>(
+pub fn render<V: Display, E>(
     ui: &egui::Ui,
     response: &Response,
     layout: &Layout,
     scale: f32,
-    graph: &mut MonoidalGraph<O>,
+    graph: &mut MonoidalGraph<V, E>,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape> {
@@ -56,13 +56,13 @@ pub fn render<O: Display>(
     shapes
 }
 
-fn generate_shapes<O: Display>(
+fn generate_shapes<V: Display, E>(
     ui: &egui::Ui,
     response: &Response,
     shapes: &mut Vec<Shape>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &mut MonoidalGraph<O>,
+    graph: &mut MonoidalGraph<V, E>,
     transform: &Transform,
 ) {
     let default_stroke = ui.visuals().noninteractive().fg_stroke;
@@ -95,7 +95,7 @@ fn generate_shapes<O: Display>(
             let id = response.id.with((j, i));
 
             match op {
-                MonoidalOp::Swap => {
+                MonoidalOp::Swap { .. } => {
                     let in1 = transform.apply(x_ins[0], y_in);
                     let in2 = transform.apply(x_ins[1], y_in);
                     let out1 = transform.apply(x_outs[0], y_out);
@@ -115,7 +115,7 @@ fn generate_shapes<O: Display>(
                     )));
                 }
                 MonoidalOp::Thunk {
-                    args,
+                    addr,
                     body,
                     expanded,
                     ..
@@ -147,7 +147,7 @@ fn generate_shapes<O: Display>(
                         Rounding::none(),
                         ui.style().interact(&thunk_response).fg_stroke,
                     ));
-                    for &x in x_op.inputs().iter().rev().take(*args) {
+                    for &x in x_op.inputs().iter().rev().take(addr.bound_inputs().count()) {
                         let dot = transform.apply(x, y_min);
                         shapes.push(Shape::circle_filled(
                             dot,
@@ -183,16 +183,14 @@ fn generate_shapes<O: Display>(
                     }
 
                     match op {
-                        MonoidalOp::Copy { copies } if *copies != 1 => {
+                        MonoidalOp::Copy { copies, .. } if *copies != 1 => {
                             shapes.push(Shape::circle_filled(
                                 center,
                                 RADIUS_COPY * transform.scale,
                                 default_color,
                             ))
                         }
-                        MonoidalOp::Operation {
-                            op_name, selected, ..
-                        } => {
+                        MonoidalOp::Operation { addr, selected, .. } => {
                             let op_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let op_response = ui.interact(op_rect, id, Sense::click());
@@ -216,7 +214,7 @@ fn generate_shapes<O: Display>(
                                     fonts,
                                     center,
                                     Align2::CENTER_CENTER,
-                                    op_name,
+                                    addr.weight(),
                                     Default::default(),
                                     ui.visuals().strong_text_color(),
                                 ));

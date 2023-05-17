@@ -24,8 +24,8 @@ use crate::{
 pub struct App {
     code: String,
     hypergraph: SyntaxHyperGraph,
-    monoidal_term: MonoidalWiredGraph<Op>,
-    monoidal_graph: MonoidalGraph<Op>,
+    monoidal_term: MonoidalWiredGraph<Op, ()>,
+    monoidal_graph: MonoidalGraph<Op, ()>,
     panzoom: Panzoom,
     toasts: Toasts,
 }
@@ -240,12 +240,12 @@ impl eframe::App for App {
                 }
 
                 if ui.button("Gather").clicked() {
-                    if let Some((prefix, _selection)) = self.monoidal_graph.selected() {
-                        let _graph = self.hypergraph.recurse(&prefix).unwrap();
-                        // TODO(@calintat): Find the subgraph of graph containing the selected nodes.
-                    } else {
-                        self.toasts.warning("No nodes selected");
-                    }
+                    // if let Some((prefix, _selection)) = self.monoidal_graph.selected() {
+                    //     let _graph = self.hypergraph.recurse(&prefix).unwrap();
+                    //     // TODO(@calintat): Find the subgraph of graph containing the selected nodes.
+                    // } else {
+                    //     self.toasts.warning("No nodes selected");
+                    // }
                 }
             });
         });

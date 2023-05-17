@@ -130,8 +130,8 @@ impl Layout {
     }
 }
 
-fn layout_internal<O>(
-    graph: &MonoidalGraph<O>,
+fn layout_internal<V, E>(
+    graph: &MonoidalGraph<V, E>,
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable> {
     // STEP 1. Generate variables for each layer.
@@ -168,7 +168,7 @@ fn layout_internal<O>(
         };
     }
 
-    let inputs = problem.add_variables(variable().min(0.0), graph.inputs);
+    let inputs = problem.add_variables(variable().min(0.0), graph.inputs.len());
     add_constraints_wires!(&inputs);
     wires.push(inputs);
     for slice in &graph.slices {
@@ -260,7 +260,7 @@ fn layout_internal<O>(
     }
 }
 
-pub fn layout<O>(graph: &MonoidalGraph<O>) -> Result<Layout, LayoutError> {
+pub fn layout<V, E>(graph: &MonoidalGraph<V, E>) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
     let layout = layout_internal(graph, &mut problem);
