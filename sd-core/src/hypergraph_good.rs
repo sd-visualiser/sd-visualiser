@@ -108,19 +108,6 @@ enum WeakNodeInternal<V, E> {
     Thunk(Weak<ThunkInternal<V, E>>),
 }
 
-impl<V, E> WeakNodeInternal<V, E> {
-    fn upgrade(&self) -> Option<NodeInternal<V, E>> {
-        match self {
-            WeakNodeInternal::Operation(weak_operation) => weak_operation
-                .upgrade()
-                .map(|operation| NodeInternal::Operation(operation)),
-            WeakNodeInternal::Thunk(weak_thunk) => {
-                weak_thunk.upgrade().map(|thunk| NodeInternal::Thunk(thunk))
-            }
-        }
-    }
-}
-
 #[derive(Debug)]
 struct InPortInternal<V, E> {
     node: Option<WeakNodeInternal<V, E>>,
@@ -677,22 +664,6 @@ enum NodeInternal<V, E> {
     Thunk(Arc<ThunkInternal<V, E>>),
 }
 
-impl<V, E> NodeInternal<V, E>
-where
-    V: Debug + Send + Sync,
-    E: Debug + Send + Sync,
-{
-    delegate! {
-        to match self {
-            NodeInternal::Operation(operation) => operation,
-            NodeInternal::Thunk(thunk) => thunk,
-        } {
-            fn inputs(&self) -> Box<dyn Iterator<Item = Arc<InPortInternal<V, E>>> + '_>;
-            fn outputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortInternal<V, E>>> + '_>;
-        }
-    }
-}
-
 #[derive(Debug)]
 struct OperationInternal<V, E> {
     weight: V,
@@ -735,14 +706,6 @@ where
     V: Debug + Send + Sync,
     E: Debug + Send + Sync,
 {
-    fn inputs(&self) -> Box<dyn Iterator<Item = Arc<InPortInternal<V, E>>> + '_> {
-        Box::new(self.inputs.iter().cloned())
-    }
-
-    fn outputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortInternal<V, E>>> + '_> {
-        Box::new(self.outputs.iter().cloned())
-    }
-
     fn new(input_len: usize, output_weights: Vec<E>, weight: V) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let inputs = (0..input_len)
@@ -827,24 +790,6 @@ where
     V: Debug + Send + Sync,
     E: Debug + Send + Sync,
 {
-    fn inputs(&self) -> Box<dyn Iterator<Item = Arc<InPortInternal<V, E>>> + '_> {
-        Box::new(
-            self.free_variable_inputs
-                .left_values()
-                .map(|ByThinAddress(x)| x)
-                .cloned(),
-        )
-    }
-
-    fn outputs(&self) -> Box<dyn Iterator<Item = Arc<OutPortInternal<V, E>>> + '_> {
-        Box::new(
-            self.outputs
-                .right_values()
-                .map(|ByThinAddress(x)| x)
-                .cloned(),
-        )
-    }
-
     fn new(free_variables: Vec<E>, bound_variables: Vec<E>, output_weights: Vec<E>) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let free_variable_inputs = free_variables
