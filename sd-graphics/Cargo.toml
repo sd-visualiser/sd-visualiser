@@ -17,3 +17,6 @@ thiserror = "1.0.40"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 insta = { version = "1.29.0", features = ["ron"] }
 serde = "1.0.160"
+
+[features]
+cbc = ["good_lp/coin_cbc"]
