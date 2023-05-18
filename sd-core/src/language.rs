@@ -7,6 +7,8 @@ use pest::Span;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
+pub(super) mod visitor;
+
 #[cfg(test)]
 use serde::Serialize;
 
