@@ -1,51 +1,20 @@
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt::Debug,
-};
+use std::fmt::Debug;
 
 use crate::{
-    common::{InOut, Slice},
+    common::{generate_permutation, InOut, Slice},
     hypergraph_good::{InPort, Operation, OutPort, Thunk},
     monoidal_wired::{MonoidalWiredGraph, MonoidalWiredOp},
 };
 use derivative::Derivative;
-use tracing::debug;
 
 impl<V, E> Slice<MonoidalOp<V, E>> {
     pub fn permutation_to_swaps(
         start_ports: impl Iterator<Item = OutPort<V, E>>,
         end_ports: impl Iterator<Item = OutPort<V, E>>,
     ) -> Vec<Self> {
-        let start_ports = {
-            let x = start_ports.collect::<Vec<_>>();
-            debug!("Start: {:?}", x);
-            x.into_iter()
-        };
+        let mut perm_iter = generate_permutation(start_ports, end_ports).peekable();
 
-        let end_ports = {
-            let x = end_ports.collect::<Vec<_>>();
-            debug!("End: {:?}", x);
-            x.into_iter()
-        };
-
-        let mut end_map: HashMap<OutPort<V, E>, VecDeque<usize>> = Default::default();
-
-        let mut length = 0;
-        for (idx, port) in end_ports.enumerate() {
-            end_map.entry(port).or_default().push_back(idx);
-            length += 1;
-        }
-
-        let mut perm_iter = start_ports
-            .map(|out_port| {
-                let index = end_map
-                    .get_mut(&out_port)
-                    .and_then(|deque| deque.pop_front());
-                (out_port, index)
-            })
-            .peekable();
-
-        let mut permutation: Vec<(OutPort<V, E>, usize)> = Vec::with_capacity(length);
+        let mut permutation: Vec<(OutPort<V, E>, usize)> = Vec::new();
 
         let mut finished = true;
         let mut slice_ops = Vec::new();

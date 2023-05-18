@@ -1,11 +1,13 @@
 use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
 use crate::{
-    common::{InOut, Slice},
+    common::{generate_permutation, InOut, Slice},
     hypergraph_good::{GraphView, InPort, Node, Operation, OutPort, Thunk},
 };
 use bimap::BiMap;
 use derivative::Derivative;
+use num::rational::Ratio;
+use tracing::debug;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Wiring {
@@ -240,315 +242,65 @@ where
 
         builder.slices.reverse();
 
-        MonoidalWiredGraph {
+        let mut graph = MonoidalWiredGraph {
             inputs: graph.graph_inputs().collect(),
             slices: builder.slices,
             outputs,
-        }
+        };
+
+        graph.minimise_swaps();
+
+        graph
     }
 }
 
-// #[derive(Default, PartialEq, Eq)]
-// struct PortData {
-//     ports_open: usize, // Number of open wires going to this port
-//     multiplicity: usize, // Number of input ports seen that link to this port
-// }
+impl<V, E> MonoidalWiredGraph<V, E> {
+    pub fn minimise_swaps(&mut self) {
+        fn fold_slice<'a, V, E>(
+            ports_below: Box<dyn Iterator<Item = OutPort<V, E>> + 'a>,
+            slice: &'a mut Slice<MonoidalWiredOp<V, E>>,
+        ) -> Box<dyn Iterator<Item = OutPort<V, E>> + 'a> {
+            slice.minimise_swaps(ports_below);
+            slice.inputs()
+        }
 
-// impl PortData {
-//     const ONE: Self = PortData {
-//         ports_open: 1,
-//         multiplicity: 1,
-//     };
-// }
+        let ports_below = self.slices.iter_mut().rev().fold(
+            Box::new(self.outputs.iter().map(|in_port| in_port.output()))
+                as Box<dyn Iterator<Item = OutPort<V, E>>>,
+            fold_slice::<V, E>,
+        );
 
-// impl AddAssign for PortData {
-//     fn add_assign(&mut self, rhs: Self) {
-//         self.ports_open += rhs.ports_open;
-//         self.multiplicity += rhs.multiplicity;
-//     }
-// }
+        let perm_map: HashMap<OutPort<V, E>, Option<usize>> =
+            generate_permutation(self.inputs.iter().cloned(), ports_below).collect();
 
-// struct LayerIterator<V, E> {
-//     nodes: PriorityQueue<Node<V,E>, Reverse<usize>>,
-//     ready_ports: HashSet<OutPort<V, E>>,
-//     incomplete_ports: HashMap<OutPort<V, E>, PortData>,
-// }
+        self.inputs.sort_by_key(|out_port| {
+            perm_map
+                .get(out_port)
+                .copied()
+                .flatten()
+                .unwrap_or(usize::MAX)
+        });
+    }
+}
 
-// impl<V, E> LayerIterator<V, E> {
-//     fn new(graph: &impl GraphView<V, E>) -> Self {
-// 	let nodes = graph.nodes().map(|node| {
-// 	    let outputs = node.outputs();
-// 	    let non_deleted_outputs = outputs.filter(|out_port| out_port.number_of_inputs() != 0 );
-// 	    let non_deleted_outputs_len = non_deleted_outputs.count();
-// 	    (node, Reverse(non_deleted_outputs_len))
-// 	}).collect();
+impl<V, E> Slice<MonoidalWiredOp<V, E>> {
+    pub fn minimise_swaps(&mut self, ports_below: impl Iterator<Item = OutPort<V, E>>) {
+        let outputs = self.outputs();
 
-//         let mut layer_iter = Self { nodes, incomplete_ports: Default::default(), ready_ports: Default::default() };
+        let perm_map: HashMap<OutPort<V, E>, Option<usize>> =
+            generate_permutation(outputs, ports_below).collect();
 
-// 	// Add global graph outputs
-//         for in_port in graph.graph_outputs() {
-// 	    layer_iter.add_incomplete_port(in_port.output());
-//         }
+        debug!("Map: {:#?}", perm_map);
 
-// 	layer_iter.complete_ports();
-// 	layer_iter
-//     }
-
-//     fn add_incomplete_port(&mut self, port: OutPort<V, E>) {
-// 	*self.incomplete_ports
-//                 .entry(port)
-//                 .or_insert(Default::default()) += PortData::ONE;
-//     }
-
-//     fn complete_ports(&mut self) {
-// 	let ports: Vec<_> = self.incomplete_ports.keys().cloned().collect();
-// 	for port in ports {
-// 	    if self.incomplete_ports[&port] == (PortData {
-// 		ports_open: 1,
-// 		multiplicity: port.number_of_inputs(),
-// 	    }) {
-// 		self.incomplete_ports.remove(&port);
-// 		if let Some(node) = port.node() {
-// 		    self.nodes.change_priority_by(&node, |Reverse(x)| { *x -= 1; });
-// 		}
-// 		self.ready_ports.insert(port);
-// 	    }
-// 	}
-//     }
-
-//     fn next_ready(&mut self) -> Option<Node<V, E>> {
-// 	if self.nodes.peek()?.1.0 == 0 {
-// 	    Some(self.nodes.pop()?.0)
-// 	} else {
-// 	    None
-// 	}
-//     }
-// }
-
-// impl<V, E> Iterator for LayerIterator<V, E> {
-//     type Item = Vec<MonoidalWiredOp<V, E>>;
-
-//     fn next(&mut self) -> Option<Self::Item> {
-// 	let mut modified = false; // Check for modification
-//         let mut ops: <Self as Iterator>::Item = Default::default();
-// 	let mut new_outports: Vec<OutPort<V,E>> = Default::default();
-
-// 	// Process any nodes that are ready
-// 	while let Some(node) = self.next_ready() {
-// 	    modified = true;
-// 	    for out_port in node.outputs() {
-// 		self.ready_ports.remove(&out_port);
-// 	    }
-// 	    new_outports.extend(node.inputs().map(|in_port| in_port.output()));
-// 	    ops.push(node.into());
-// 	}
-
-// 	// Any remaining ready ports should be passed through
-// 	ops.extend(self.ready_ports.iter().map(|port| MonoidalWiredOp::Copy { addr: port.clone(), copies: 1 }));
-
-// 	// Process incomplete ports
-// 	for (port, data) in self.incomplete_ports.iter_mut() {
-// 	    ops.push(MonoidalWiredOp::Copy { addr: port.clone(), copies: data.ports_open });
-// 	    if data.ports_open != 1 {
-// 		modified = true;
-// 	    }
-// 	    data.ports_open = 1;
-// 	}
-
-// 	// Add new ports to incomplete ports
-// 	for port in new_outports {
-// 	    self.add_incomplete_port(port);
-// 	}
-
-// 	// Check for completed ports
-// 	self.complete_ports();
-
-// 	if modified {
-// 	    Some(ops)
-// 	} else {
-// 	    None
-// 	}
-
-//     }
-// }
-
-// impl<O: Copy + Debug, V: Debug + Clone> TryFrom<&HyperGraph<O, V>> for MonoidalWiredGraph<O> {
-//     type Error = FromHyperError;
-
-//     fn try_from(graph: &HyperGraph<O, V>) -> Result<Self, Self::Error> {
-//         debug!("To Process: {:?}", graph);
-
-//         // Separate the nodes into input nodes, output nodes, and other nodes by rank
-//         let (ranks, input_wires, output_wires) = {
-//             let (inputs, mut r, outputs) = graph.ranks_from_end();
-
-//             debug!("Inputs: {:?}", inputs);
-//             debug!("Ranks: {:?}", r);
-//             debug!("Outputs: {:?}", outputs);
-
-//             let input_wires = inputs
-//                 .iter()
-//                 .map(|x| graph.number_of_outputs(*x).unwrap())
-//                 .sum();
-
-//             let output_wires = outputs
-//                 .iter()
-//                 .map(|x| graph.get_inputs(*x).unwrap().map(|x| x.0).collect_vec())
-//                 .concat();
-
-//             r.push(inputs);
-
-//             (r, input_wires, output_wires)
-//         };
-
-//         debug!("Input wires: {:?}", input_wires);
-//         debug!("Output wires: {:?}", output_wires);
-
-//         // Maintain a list of wires we have left to link up
-//         let mut open_wires: Vec<Port> = output_wires;
-
-//         // Build up slices and wirings
-//         let mut slices: Vec<Slice<MonoidalWiredOp<O>>> = Vec::new();
-//         let mut wirings: Vec<Wiring> = Vec::new();
-
-//         // For each operation in the next layer, we store the following data.
-//         #[derive(Debug)]
-//         struct OpData<O> {
-//             // The corresponding operation in the monoidal wired term, or none if we encounter an input/output node
-//             op: Option<MonoidalWiredOp<O>>,
-//             // The output ports of this operation
-//             outputs: Vec<Port>,
-//             // The average of the indices of the outputs in 'open_wires'
-//             weight: Ratio<usize>,
-//         }
-
-//         for r in ranks {
-//             // We build a list of OpData's for this layer
-//             let mut ops: Vec<OpData<O>> = Vec::new();
-
-//             // Also keep track of the subset of open wires which have a destination operation
-//             let mut gathered_ports: HashSet<Port> = HashSet::new();
-
-//             // Create an OpData for each node
-//             for &node in r.iter() {
-//                 debug!("Processing node {:?}", node);
-
-//                 // Compute the weight
-//                 let (sum, count) = open_wires
-//                     .iter()
-//                     .enumerate()
-//                     .filter_map(|(i, Port { node: n, .. })| (node == *n).then_some((i, 1)))
-//                     .fold((0, 0), |(x, y), (a, b)| (x + a, y + b));
-//                 let weight = if count == 0 {
-//                     // All outputs of this operation get deleted, so we arbitrarily put it on the right
-//                     usize::MAX.into()
-//                 } else {
-//                     Ratio::new_raw(sum, count)
-//                 };
-
-//                 let outputs = (0..graph.number_of_outputs(node)?)
-//                     .map(|index| Port {
-//                         node,
-//                         index: PortIndex(index),
-//                     })
-//                     .collect();
-
-//                 gathered_ports.extend(&outputs);
-
-//                 let op = match &graph[node] {
-//                     Node::Weight(op) => Some(MonoidalWiredOp::Operation {
-//                         addr: node,
-//                         inputs: graph.get_inputs(node)?.map(|x| x.0).collect(),
-//                         op_name: *op,
-//                     }),
-//                     Node::Input | Node::Output => None,
-//                     Node::Thunk { args, body } => Some(MonoidalWiredOp::Thunk {
-//                         addr: node,
-//                         inputs: graph.get_inputs(node)?.map(|x| x.0).collect(),
-//                         args: *args,
-//                         body: MonoidalWiredGraph::try_from(body)?,
-//                     }),
-//                 };
-//                 ops.push(OpData {
-//                     op,
-//                     outputs,
-//                     weight,
-//                 })
-//             }
-
-//             // Wires not in gathered_ports will be used in a later layer
-//             // Therefore we must introduce an identity to route them through
-//             for (i, port) in open_wires.iter().copied().enumerate() {
-//                 if !gathered_ports.contains(&port) {
-//                     gathered_ports.insert(port);
-//                     ops.push(OpData {
-//                         op: Some(MonoidalWiredOp::Id { port }),
-//                         outputs: vec![port],
-//                         weight: i.into(),
-//                     });
-//                 }
-//             }
-
-//             // Sort the ops by weight
-//             ops.sort_by_key(|data| data.weight);
-
-//             debug!("Operation layer generated: {:?}", ops);
-
-//             // Compute the wiring from the open_wires to the operations
-//             let out_nodes: HashMap<Port, usize> = ops
-//                 .iter()
-//                 .flat_map(|data| data.outputs.iter().copied())
-//                 .enumerate()
-//                 .map(|(x, y)| (y, x))
-//                 .collect();
-
-//             let number_of_out_ports = gathered_ports.len();
-
-//             debug!("Out nodes: {:?}", out_nodes);
-
-//             let mut wiring = Wiring::new(number_of_out_ports);
-
-//             for p in open_wires {
-//                 wiring.add_wire(*out_nodes.get(&p).ok_or(HyperGraphError::UnknownPort(p))?);
-//             }
-
-//             debug!("Wiring generated");
-
-//             // We generate the new set of 'open_wires'.
-//             // This is just the inputs of the layer we just generated
-//             open_wires = ops
-//                 .iter()
-//                 .flat_map(|data| {
-//                     data.op
-//                         .as_ref()
-//                         .map(|x| x.input_ports())
-//                         .unwrap_or_default()
-//                 })
-//                 .collect();
-
-//             debug!("Open wires: {:?}", open_wires);
-
-//             // If any of the operations were None then this was the input slice
-//             // Otherwise we should add this slice to the diagram
-//             if let Some(ops) = ops
-//                 .into_iter()
-//                 .map(|data: OpData<O>| data.op)
-//                 .collect::<Option<Vec<_>>>()
-//             {
-//                 slices.push(Slice { ops });
-//             }
-
-//             wirings.push(wiring);
-//         }
-
-//         // We worked bottom up, so we reverse the slices and wirings
-//         slices.reverse();
-//         wirings.reverse();
-
-//         Ok(MonoidalWiredGraph {
-//             inputs: input_wires,
-//             slices,
-//             wirings,
-//         })
-//     }
-// }
+        self.ops.sort_by_cached_key(|op| -> Ratio<usize> {
+            match op
+                .outputs()
+                .filter_map(|out_port| perm_map.get(&out_port).copied().flatten())
+                .fold((0, 0), |(a, b), c| (a + c, b + 1))
+            {
+                (_, 0) => usize::MAX.into(),
+                (x, y) => Ratio::new_raw(x, y),
+            }
+        })
+    }
+}

@@ -397,7 +397,7 @@ where
                             *mark = Some(Mark::Permanent); // backtracking from stack
                             xs.push(cur);
                         }
-                        Some(Mark::Permanent) => unreachable!(),
+                        Some(Mark::Permanent) => {}
                         None => {
                             *mark = Some(Mark::Temporary);
                             stack.push(cur.clone());

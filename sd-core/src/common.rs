@@ -1,4 +1,8 @@
 use derivative::Derivative;
+use std::{
+    collections::{HashMap, VecDeque},
+    hash::Hash,
+};
 use thiserror::Error;
 
 use crate::{
@@ -61,6 +65,24 @@ where
             ops: value.ops.iter().map(B::from).collect(),
         }
     }
+}
+
+pub(crate) fn generate_permutation<'a, T: 'a>(
+    start: impl Iterator<Item = T> + 'a,
+    end: impl Iterator<Item = T> + 'a,
+) -> impl Iterator<Item = (T, Option<usize>)> + 'a
+where
+    T: PartialEq + Eq + Hash,
+{
+    let mut end_map: HashMap<T, VecDeque<usize>> = Default::default();
+    for (idx, x) in end.enumerate() {
+        end_map.entry(x).or_default().push_back(idx);
+    }
+
+    start.map(move |x| {
+        let index = end_map.get_mut(&x).and_then(|deque| deque.pop_front());
+        (x, index)
+    })
 }
 
 #[derive(Debug, Error, Clone)]
