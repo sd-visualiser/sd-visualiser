@@ -624,7 +624,15 @@ where
 }
 
 pub trait Graph<V, E, const BUILT: bool> {
-    fn graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_>;
+    fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_>;
+    fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_>;
+    fn graph_inputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + 'a>
+    where
+        E: 'a,
+        V: 'a,
+    {
+        Box::new(self.unbound_graph_inputs().chain(self.bound_graph_inputs()))
+    }
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_>;
 }
 
@@ -653,8 +661,12 @@ pub trait GraphView<V, E, const BUILT: bool = true>: Graph<V, E, BUILT> {
 }
 
 impl<V, E, const BUILT: bool> Graph<V, E, BUILT> for HyperGraph<V, E, BUILT> {
-    fn graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+    fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
         Box::new(self.0.graph_inputs.iter().cloned().map(OutPort))
+    }
+
+    fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+        Box::new(std::iter::empty())
     }
 
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
@@ -680,8 +692,12 @@ impl<V, E, const BUILT: bool> GraphView<V, E, BUILT> for HyperGraph<V, E, BUILT>
 }
 
 impl<V, E, const BUILT: bool> Graph<V, E, BUILT> for Thunk<V, E, BUILT> {
-    fn graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
-        Box::new(self.free_inputs().chain(self.bound_inputs()))
+    fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+        Box::new(self.free_inputs())
+    }
+
+    fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+        Box::new(self.bound_inputs())
     }
 
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
@@ -717,7 +733,9 @@ where
 {
     delegate! {
         to self.0 {
-            fn graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
+            fn graph_inputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + 'a> where V: 'a, E: 'a;
+        fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
+        fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
             fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, false>> + '_>;
         }
     }

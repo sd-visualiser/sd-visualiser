@@ -237,8 +237,13 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredOp<V, E>> for MonoidalOp<V, E> {
 
 impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<V, E> {
     fn from(graph: &MonoidalWiredGraph<V, E>) -> Self {
+        let graph_inputs = {
+            let mut x = graph.unbound_inputs.clone();
+            x.append(&mut graph.bound_inputs.clone());
+            x
+        };
         let (open_ports, mut slices): (_, Vec<Slice<MonoidalOp<V, E>>>) = graph.slices.iter().fold(
-            (graph.inputs.clone(), vec![]),
+            (graph_inputs.clone(), vec![]),
             |(open_ports, mut slices), next_slice| {
                 slices.extend(Slice::permutation_to_swaps(
                     open_ports.into_iter(),
@@ -259,7 +264,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<V, E>
         ));
 
         MonoidalGraph {
-            inputs: graph.inputs.clone(),
+            inputs: graph_inputs,
             slices,
             outputs: graph.outputs.clone(),
         }

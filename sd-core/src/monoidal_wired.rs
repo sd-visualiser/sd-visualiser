@@ -17,7 +17,8 @@ pub struct Wiring {
 
 #[derive(Clone, Debug)]
 pub struct MonoidalWiredGraph<V, E> {
-    pub inputs: Vec<OutPort<V, E>>,
+    pub unbound_inputs: Vec<OutPort<V, E>>,
+    pub bound_inputs: Vec<OutPort<V, E>>, // We need to make sure these don't get reordered
     pub slices: Vec<Slice<MonoidalWiredOp<V, E>>>,
     pub outputs: Vec<InPort<V, E>>,
 }
@@ -25,7 +26,8 @@ pub struct MonoidalWiredGraph<V, E> {
 impl<V, E> Default for MonoidalWiredGraph<V, E> {
     fn default() -> Self {
         MonoidalWiredGraph {
-            inputs: vec![],
+            unbound_inputs: vec![],
+            bound_inputs: vec![],
             slices: vec![],
             outputs: vec![],
         }
@@ -75,7 +77,7 @@ impl<V, E> InOut<V, E> for MonoidalWiredOp<V, E> {
                 Box::new(addr.inputs().map(|in_port| in_port.output()))
             }
             MonoidalWiredOp::Thunk { addr, body } => Box::new(
-                body.inputs
+                body.unbound_inputs
                     .iter()
                     .filter_map(|port| addr.externalise_input(port).map(|x| x.output())),
             ),
@@ -243,7 +245,8 @@ where
         builder.slices.reverse();
 
         let mut graph = MonoidalWiredGraph {
-            inputs: graph.graph_inputs().collect(),
+            unbound_inputs: graph.unbound_graph_inputs().collect(),
+            bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,
             outputs,
         };
@@ -271,9 +274,9 @@ impl<V, E> MonoidalWiredGraph<V, E> {
         );
 
         let perm_map: HashMap<OutPort<V, E>, Option<usize>> =
-            generate_permutation(self.inputs.iter().cloned(), ports_below).collect();
+            generate_permutation(self.unbound_inputs.iter().cloned(), ports_below).collect();
 
-        self.inputs.sort_by_key(|out_port| {
+        self.unbound_inputs.sort_by_key(|out_port| {
             perm_map
                 .get(out_port)
                 .copied()
