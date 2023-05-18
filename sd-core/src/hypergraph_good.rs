@@ -53,7 +53,7 @@ where
 
 type Result<T, V, E> = core::result::Result<T, HyperGraphError<V, E>>;
 
-#[derive(Debug, Derivative)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -61,7 +61,7 @@ type Result<T, V, E> = core::result::Result<T, HyperGraphError<V, E>>;
     Hash(bound = "")
 )]
 pub struct InPort<V, E, const BUILT: bool = true>(ByThinAddress<Arc<InPortInternal<V, E>>>);
-#[derive(Debug, Derivative)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -72,7 +72,7 @@ pub struct OutPort<V, E, const BUILT: bool = true>(ByThinAddress<Arc<OutPortInte
 #[derive(Debug, Derivative)]
 #[derivative(Clone(bound = ""), Default(bound = ""))]
 pub struct HyperGraph<V, E, const BUILT: bool = true>(HyperGraphInternal<V, E>);
-#[derive(Debug, Derivative)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -89,7 +89,7 @@ pub struct Operation<V, E, const BUILT: bool = true>(ByThinAddress<Arc<Operation
 )]
 pub struct Thunk<V, E, const BUILT: bool = true>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 
-#[derive(Debug, Derivative)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -106,6 +106,48 @@ pub enum Node<V, E, const BUILT: bool = true> {
 enum WeakNodeInternal<V, E> {
     Operation(Weak<OperationInternal<V, E>>),
     Thunk(Weak<ThunkInternal<V, E>>),
+}
+
+impl<V, E> Debug for InPort<V, E, true> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InPort")
+            .field("output", &self.output())
+            .finish()
+    }
+}
+
+impl<V, E> Debug for InPort<V, E, false> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InPort").finish()
+    }
+}
+
+impl<V: Debug, E> Debug for Operation<V, E, true> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Operation")
+            .field("weight", self.weight())
+            .field("inputs", &self.inputs().collect::<Vec<_>>())
+            .field("outputs", &self.outputs().collect::<Vec<_>>())
+            .finish()
+    }
+}
+
+impl<V: Debug, E> Debug for Operation<V, E, false> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Operation")
+            .field("weight", self.weight())
+            .field("inputs", &self.inputs().collect::<Vec<_>>())
+            .field("outputs", &self.outputs().collect::<Vec<_>>())
+            .finish()
+    }
+}
+
+impl<V, E, const BUILT: bool> Debug for OutPort<V, E, BUILT> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("OutPort")
+            .field(&Arc::as_ptr(&self.0))
+            .finish()
+    }
 }
 
 #[derive(Debug)]

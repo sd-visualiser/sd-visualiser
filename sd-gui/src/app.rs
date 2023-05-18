@@ -200,11 +200,11 @@ impl App {
 
         event!(Level::DEBUG, "Converting to monoidal term");
         self.monoidal_term = MonoidalWiredGraph::try_from(&self.hypergraph)?;
-        event!(Level::DEBUG, "Got term {:?}", self.monoidal_term);
+        event!(Level::DEBUG, "Got term {:#?}", self.monoidal_term);
 
         event!(Level::DEBUG, "Inserting swaps and copies");
         self.monoidal_graph = MonoidalGraph::from(&self.monoidal_term);
-        event!(Level::DEBUG, "Got graph {:?}", self.monoidal_graph);
+        event!(Level::DEBUG, "Got graph {:#?}", self.monoidal_graph);
 
         Ok(())
     }

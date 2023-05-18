@@ -68,16 +68,14 @@ impl<V, E> InOut<V, E> for MonoidalWiredOp<V, E> {
         E: 'a,
     {
         match self {
-            MonoidalWiredOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat(addr.clone()).take(*copies))
-            }
+            MonoidalWiredOp::Copy { addr, .. } => Box::new(std::iter::once(addr.clone())),
             MonoidalWiredOp::Operation { addr } => {
                 Box::new(addr.inputs().map(|in_port| in_port.output()))
             }
             MonoidalWiredOp::Thunk { addr, body } => Box::new(
                 body.inputs
                     .iter()
-                    .map(|port| addr.externalise_input(port).unwrap().output()),
+                    .filter_map(|port| addr.externalise_input(port).map(|x| x.output())),
             ),
         }
     }
@@ -88,7 +86,9 @@ impl<V, E> InOut<V, E> for MonoidalWiredOp<V, E> {
         E: 'a,
     {
         match self {
-            MonoidalWiredOp::Copy { addr, .. } => Box::new(std::iter::once(addr.clone())),
+            MonoidalWiredOp::Copy { addr, copies } => {
+                Box::new(std::iter::repeat(addr.clone()).take(*copies))
+            }
             MonoidalWiredOp::Operation { addr } => Box::new(addr.outputs()),
             MonoidalWiredOp::Thunk { addr, body } => Box::new(
                 body.outputs
@@ -224,9 +224,9 @@ where
             .map(|out_port| (out_port.clone(), builder.insert_copies_for_port(out_port)))
             .collect();
 
-        let inputs = remaining_port_layers
+        remaining_port_layers
             .into_iter()
-            .map(|(out_port, layer)| {
+            .for_each(|(out_port, layer)| {
                 (layer..builder.slices.len()).for_each(|x| {
                     builder.add_op(
                         MonoidalWiredOp::Copy {
@@ -236,14 +236,12 @@ where
                         x,
                     )
                 });
-                out_port
-            })
-            .collect();
+            });
 
         builder.slices.reverse();
 
         MonoidalWiredGraph {
-            inputs,
+            inputs: graph.graph_inputs().collect(),
             slices: builder.slices,
             outputs,
         }
