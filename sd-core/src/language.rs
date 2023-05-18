@@ -41,9 +41,8 @@ pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
 #[pest_ast(rule(Rule::term))]
 pub enum Term {
-    Thunk(Thunk),
-    ActiveOp(ActiveOp, Vec<Value>),
     Value(Value),
+    ActiveOp(ActiveOp, Vec<Arg>),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -114,8 +113,8 @@ impl<'pest> from_pest::FromPest<'pest> for PassiveOp {
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
 #[pest_ast(rule(Rule::value))]
 pub enum Value {
-    PassiveOp(PassiveOp, Vec<Value>),
     Var(Variable),
+    PassiveOp(PassiveOp, Vec<Arg>),
 }
 
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
@@ -123,6 +122,13 @@ pub enum Value {
 pub struct Thunk {
     pub args: Vec<Variable>,
     pub body: Expr,
+}
+
+#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[pest_ast(rule(Rule::arg))]
+pub enum Arg {
+    Value(Value),
+    Thunk(Thunk),
 }
 
 impl Display for ActiveOp {
@@ -175,7 +181,7 @@ pub(crate) mod tests {
 
     #[fixture]
     pub(crate) fn basic_program() -> Result<Expr> {
-        let mut pairs = SDParser::parse(Rule::program, "bind x = 1() in x")
+        let mut pairs = SDParser::parse(Rule::program, "bind x = 1 in x")
             .context("Could not parse basic program")?;
         Ok(Expr::from_pest(&mut pairs).unwrap())
     }

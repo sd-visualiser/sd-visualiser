@@ -3,7 +3,7 @@ use thiserror::Error;
 
 use crate::hypergraph::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
 use crate::language::visitor::Visitable;
-use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
+use crate::language::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
 #[cfg(not(test))]
 use std::collections::HashSet;
@@ -164,10 +164,10 @@ impl Syntax for Term {
     {
         match self {
             Term::Value(v) => v.process(fragment, mapping),
-            Term::ActiveOp(op, vals) => {
-                let operation = fragment.add_operation(vals.len(), vec![()], (*op).into());
-                for (v, in_port) in vals.iter().zip(operation.inputs()) {
-                    let (out_port, strength) = v.process(fragment, mapping)?;
+            Term::ActiveOp(op, args) => {
+                let operation = fragment.add_operation(args.len(), vec![()], (*op).into());
+                for (arg, in_port) in args.iter().zip(operation.inputs()) {
+                    let (out_port, strength) = arg.process(fragment, mapping)?;
                     fragment.link(out_port, in_port, strength)?;
                 }
 
@@ -178,7 +178,6 @@ impl Syntax for Term {
 
                 Ok((output, EdgeStrength::Strong))
             }
-            Term::Thunk(thunk) => Ok((thunk.process(fragment, mapping)?, EdgeStrength::Strong)),
         }
     }
 }
@@ -199,11 +198,10 @@ impl Syntax for Value {
                 .get(v)
                 .cloned()
                 .ok_or(ConvertError::VariableError(v.clone())),
-            Value::PassiveOp(op, vals) => {
-                let operation = fragment.add_operation(vals.len(), vec![()], (*op).into());
-
-                for (v, in_port) in vals.iter().zip(operation.inputs()) {
-                    let (out_port, strength) = v.process(fragment, mapping)?;
+            Value::PassiveOp(op, args) => {
+                let operation = fragment.add_operation(args.len(), vec![()], (*op).into());
+                for (arg, in_port) in args.iter().zip(operation.inputs()) {
+                    let (out_port, strength) = arg.process(fragment, mapping)?;
                     fragment.link(out_port, in_port, strength)?;
                 }
 
@@ -265,6 +263,26 @@ impl Syntax for Thunk {
         let out_port = thunk.outputs().next().ok_or(ConvertError::NoOutputError)?;
 
         Ok(out_port)
+    }
+}
+
+impl Syntax for Arg {
+    type ProcessOutput = (OutPort<Op, (), false>, EdgeStrength);
+
+    fn process<F>(
+        &self,
+        fragment: &mut F,
+        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
+    ) -> Result<Self::ProcessOutput, ConvertError>
+    where
+        F: Fragment<Op, ()> + Graph<Op, (), false>,
+    {
+        match self {
+            Arg::Value(v) => v.process(fragment, mapping),
+            Arg::Thunk(d) => d
+                .process(fragment, mapping)
+                .map(|out_port| (out_port, EdgeStrength::Strong)),
+        }
     }
 }
 

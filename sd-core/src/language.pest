@@ -1,12 +1,13 @@
 variable = @{ !("bind" | "in" | active_op | passive_op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 bind_clause = { "bind" ~ variable ~ "=" ~ term ~ "in" }
 expr = { bind_clause* ~ value }
-term = { thunk | (active_op ~ "(" ~ args ~ ")") | value }
-value = { (passive_op ~ ("(" ~ args ~ ")")?) | variable }
+term = { active_op ~ "(" ~ args ~ ")" | value }
+value = { passive_op ~ ("(" ~ args ~ ")")? | variable }
 active_op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "rec" }
 passive_op = { number | "true" | "false" | "lambda" }
 number = @{ ASCII_DIGIT+ }
-args = _{ value ~ ("," ~ value)* | "" }
+args = _{ arg ~ ("," ~ arg)* | "" }
+arg = { thunk | value } // ordering is important to avoid ambiguity
 program = _{ SOI ~ expr ~ EOI }
 WHITESPACE = _{ " " | "\t" | "\n" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }

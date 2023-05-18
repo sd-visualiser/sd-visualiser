@@ -1,4 +1,4 @@
-use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
+use crate::language::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 use pretty::RcDoc;
 
 pub trait PrettyPrint: std::fmt::Debug {
@@ -27,7 +27,7 @@ impl PrettyPrint for BindClause {
             .append(RcDoc::text("="))
             .append(RcDoc::space())
             .append(self.term.to_doc())
-            // term will have either a space or \n (for thunks) at the end
+            .append(RcDoc::space())
             .append(RcDoc::text("in"))
             .append(RcDoc::line())
     }
@@ -42,21 +42,15 @@ impl PrettyPrint for Variable {
 impl PrettyPrint for Term {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Term::Thunk(thunk) => thunk.to_doc().append(if thunk.body.binds.is_empty() {
-                RcDoc::space()
-            } else {
-                RcDoc::line()
-            }),
-            Term::ActiveOp(op, vs) => op
+            Term::Value(v) => v.to_doc(),
+            Term::ActiveOp(op, args) => op
                 .to_doc()
                 .append(RcDoc::text("("))
                 .append(RcDoc::intersperse(
-                    vs.iter().map(|v| v.to_doc()),
+                    args.iter().map(PrettyPrint::to_doc),
                     RcDoc::text(",").append(RcDoc::space()),
                 ))
-                .append(RcDoc::text(")"))
-                .append(RcDoc::space()),
-            Term::Value(v) => v.to_doc().append(RcDoc::space()),
+                .append(RcDoc::text(")")),
         }
     }
 }
@@ -91,20 +85,20 @@ impl PrettyPrint for PassiveOp {
 impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Value::PassiveOp(op, vs) => {
-                if vs.is_empty() {
+            Value::Var(v) => v.to_doc(),
+            Value::PassiveOp(op, args) => {
+                if args.is_empty() {
                     op.to_doc()
                 } else {
                     op.to_doc()
                         .append(RcDoc::text("("))
                         .append(RcDoc::intersperse(
-                            vs.iter().map(|v| v.to_doc()),
+                            args.iter().map(PrettyPrint::to_doc),
                             RcDoc::text(",").append(RcDoc::space()),
                         ))
                         .append(RcDoc::text(")"))
                 }
             }
-            Value::Var(v) => v.to_doc(),
         }
     }
 }
@@ -117,8 +111,20 @@ impl PrettyPrint for Thunk {
             .append(if self.body.binds.is_empty() {
                 RcDoc::space().append(self.body.to_doc())
             } else {
-                RcDoc::line().append(self.body.to_doc()).nest(4)
+                RcDoc::line()
+                    .append(self.body.to_doc())
+                    .nest(4)
+                    .append(RcDoc::line())
             })
+    }
+}
+
+impl PrettyPrint for Arg {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        match self {
+            Arg::Value(v) => v.to_doc(),
+            Arg::Thunk(t) => t.to_doc(),
+        }
     }
 }
 
