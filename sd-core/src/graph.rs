@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
 use crate::hypergraph_good::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
+use crate::language::visitor::Visitable;
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
 #[cfg(not(test))]
@@ -53,10 +54,47 @@ pub enum ConvertError {
     NoOutputError,
 }
 
-pub(crate) trait Syntax {
-    /// This piece of syntax generates both bound and free variables.
-    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>);
+struct Variables {
+    free: HashSet<Variable>,
+    bound: Vec<HashSet<Variable>>,
+}
 
+impl Default for Variables {
+    fn default() -> Self {
+        Self {
+            free: Default::default(),
+            bound: vec![Default::default()],
+        }
+    }
+}
+
+impl crate::language::visitor::Visitor for Variables {
+    fn after_bind_clause(&mut self, bind_clause: &BindClause) {
+        let scope = self.bound.last_mut().unwrap();
+        scope.insert(bind_clause.var.clone());
+    }
+
+    fn visit_value(&mut self, value: &Value) {
+        if let Value::Var(v) = value {
+            let scope = self.bound.last_mut().unwrap();
+            if !scope.contains(v) {
+                self.free.insert(v.clone());
+            }
+        }
+    }
+
+    fn visit_thunk(&mut self, thunk: &Thunk) {
+        // make new scope for thunk
+        self.bound.push(thunk.args.iter().cloned().collect());
+    }
+
+    fn after_thunk(&mut self, _thunk: &Thunk) {
+        // discard scope
+        assert!(self.bound.pop().is_some());
+    }
+}
+
+pub(crate) trait Syntax {
     type ProcessOutput;
 
     /// Insert this piece of syntax into a hypergraph and update the mapping of variables to ports.
@@ -74,13 +112,6 @@ pub(crate) trait Syntax {
 }
 
 impl Syntax for Expr {
-    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
-        for bc in &self.binds {
-            bc.free_variables(bound, vars);
-        }
-        self.value.free_variables(bound, vars);
-    }
-
     type ProcessOutput = ();
 
     fn process<F>(
@@ -105,11 +136,6 @@ impl Syntax for Expr {
 }
 
 impl Syntax for BindClause {
-    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
-        self.term.free_variables(bound, vars);
-        bound.insert(self.var.clone());
-    }
-
     type ProcessOutput = ();
 
     fn process<F>(
@@ -127,18 +153,6 @@ impl Syntax for BindClause {
 }
 
 impl Syntax for Term {
-    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
-        match self {
-            Term::Value(v) => v.free_variables(bound, vars),
-            Term::ActiveOp(_, vs) => {
-                for v in vs {
-                    v.free_variables(bound, vars);
-                }
-            }
-            Term::Thunk(thunk) => thunk.free_variables(bound, vars),
-        }
-    }
-
     type ProcessOutput = (OutPort<Op, (), false>, EdgeStrength);
 
     fn process<F>(
@@ -171,21 +185,6 @@ impl Syntax for Term {
 }
 
 impl Syntax for Value {
-    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
-        match self {
-            Value::Var(v) => {
-                if !bound.contains(v) {
-                    vars.insert(v.clone());
-                }
-            }
-            Value::PassiveOp(_, vs) => {
-                for v in vs {
-                    v.free_variables(bound, vars)
-                }
-            }
-        }
-    }
-
     type ProcessOutput = (OutPort<Op, (), false>, EdgeStrength);
 
     fn process<F>(
@@ -221,16 +220,6 @@ impl Syntax for Value {
 }
 
 impl Syntax for Thunk {
-    fn free_variables(&self, bound: &mut HashSet<Variable>, vars: &mut HashSet<Variable>) {
-        let mut bound = bound.clone(); // create new scope for bound variables in thunk
-
-        for arg in &self.args {
-            bound.insert(arg.clone());
-        }
-
-        self.body.free_variables(&mut bound, vars);
-    }
-
     type ProcessOutput = OutPort<Op, (), false>;
 
     fn process<F>(
@@ -241,13 +230,17 @@ impl Syntax for Thunk {
     where
         F: Fragment<Op, ()> + Graph<Op, (), false>,
     {
-        let mut vars = HashSet::new();
+        let mut vars: Variables = Default::default();
 
-        self.free_variables(&mut HashSet::new(), &mut vars);
+        self.walk(&mut vars);
 
-        let thunk = fragment.add_thunk(vec![(); vars.len()], vec![(); self.args.len()], vec![()]);
+        let thunk = fragment.add_thunk(
+            vec![(); vars.free.len()],
+            vec![(); self.args.len()],
+            vec![()],
+        );
 
-        for (v, in_port) in vars.iter().zip(thunk.inputs()) {
+        for (v, in_port) in vars.free.iter().zip(thunk.inputs()) {
             let (out_port, strength) = mapping
                 .get(v)
                 .cloned()
@@ -257,6 +250,7 @@ impl Syntax for Thunk {
 
         fragment.in_thunk(thunk.clone(), |mut inner_fragment| {
             let mut inner_mapping: HashMap<_, _> = vars
+                .free
                 .iter()
                 .chain(self.args.iter())
                 .cloned()
@@ -279,13 +273,14 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
     type Error = ConvertError;
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
-        let mut vars = HashSet::new();
+        let mut vars: Variables = Default::default();
 
-        expr.free_variables(&mut HashSet::new(), &mut vars);
+        expr.walk(&mut vars);
 
-        let mut graph = HyperGraph::new(vec![(); vars.len()], 1);
+        let mut graph = HyperGraph::new(vec![(); vars.free.len()], 1);
 
         let mut mapping: HashMap<_, _> = vars
+            .free
             .into_iter()
             .zip(
                 graph
@@ -302,15 +297,12 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeSet as HashSet;
-
     use anyhow::Result;
     use rstest::rstest;
 
-    use super::Syntax;
     use crate::{
-        graph::SyntaxHyperGraph,
-        language::{tests::*, Expr, Variable},
+        graph::{SyntaxHyperGraph, Variables},
+        language::{tests::*, visitor::Visitable, Expr, Variable},
     };
 
     #[rstest]
@@ -318,12 +310,12 @@ mod tests {
     #[case(free_vars(), vec!["y".into(), "z".into()])]
     #[case(thunks(), vec!["x".into()])]
     #[case(fact(), vec![])]
-    fn free_var_test(#[case] expr: Result<Expr>, #[case] vars: Vec<Variable>) -> Result<()> {
+    fn free_var_test(#[case] expr: Result<Expr>, #[case] free_vars: Vec<Variable>) -> Result<()> {
         let expr = expr?;
-        let mut free_vars = HashSet::new();
-        expr.free_variables(&mut HashSet::new(), &mut free_vars);
+        let mut vars: Variables = Default::default();
+        expr.walk(&mut vars);
 
-        assert_eq!(free_vars, vars.into_iter().collect());
+        assert_eq!(vars.free, free_vars.into_iter().collect());
 
         Ok(())
     }
