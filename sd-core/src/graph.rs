@@ -76,8 +76,7 @@ impl crate::language::visitor::Visitor for Variables {
 
     fn visit_value(&mut self, value: &Value) {
         if let Value::Var(v) = value {
-            let scope = self.bound.last_mut().unwrap();
-            if !scope.contains(v) {
+            if !self.bound.iter().any(|scope| scope.contains(v)) {
                 self.free.insert(v.clone());
             }
         }
