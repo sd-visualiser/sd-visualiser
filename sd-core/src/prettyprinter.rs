@@ -1,4 +1,6 @@
-use crate::language::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
+use crate::language::spartan::{
+    ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable,
+};
 use pretty::RcDoc;
 
 pub trait PrettyPrint: std::fmt::Debug {
@@ -130,12 +132,12 @@ impl PrettyPrint for Arg {
 
 #[cfg(test)]
 mod tests {
-    use crate::language::tests::*;
+    use crate::language::spartan::tests::*;
     use anyhow::Result;
     use insta::assert_snapshot;
     use rstest::rstest;
 
-    use crate::{language::Expr, prettyprinter::PrettyPrint};
+    use crate::{language::spartan::Expr, prettyprinter::PrettyPrint};
 
     #[rstest]
     #[case("basic_program", basic_program())]

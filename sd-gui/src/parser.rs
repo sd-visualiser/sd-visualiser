@@ -7,7 +7,7 @@ use eframe::egui::{
 use from_pest::{ConversionError, FromPest, Void};
 use pest::error;
 use pest::Parser as _;
-use sd_core::language::{Expr, Rule, SDParser};
+use sd_core::language::spartan::{Expr, Rule, SpartanParser};
 use thiserror::Error;
 use tracing::debug;
 
@@ -32,7 +32,7 @@ impl ComputerMut<&str, Arc<Result<Expr, ParseError>>> for Parser {
     fn compute(&mut self, source: &str) -> Arc<Result<Expr, ParseError>> {
         debug!("Parsing");
         Arc::new((|| {
-            let mut pairs = SDParser::parse(Rule::program, source)?;
+            let mut pairs = SpartanParser::parse(Rule::program, source)?;
             let expr = Expr::from_pest(&mut pairs)?;
             Ok(expr)
         })())

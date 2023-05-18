@@ -2,7 +2,7 @@ use crate::{
     common::Slice,
     graph::Op,
     hypergraph::NodeIndex,
-    language::{ActiveOp, PassiveOp},
+    language::spartan::{ActiveOp, PassiveOp},
     monoidal::{MonoidalGraph, MonoidalOp},
 };
 

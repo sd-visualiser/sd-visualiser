@@ -2,8 +2,10 @@ use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
 use crate::hypergraph::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
+use crate::language::spartan::{
+    ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable,
+};
 use crate::language::visitor::Visitable;
-use crate::language::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
 #[cfg(not(test))]
 use std::collections::HashSet;
@@ -319,7 +321,8 @@ mod tests {
 
     use crate::{
         graph::{SyntaxHyperGraph, Variables},
-        language::{tests::*, visitor::Visitable, Expr, Variable},
+        language::spartan::{tests::*, Expr, Variable},
+        language::visitor::Visitable,
     };
 
     #[rstest]

@@ -1,4 +1,4 @@
-use super::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
+use super::spartan::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 
 #[allow(unused_variables)]
 pub trait Visitor {
