@@ -2,7 +2,7 @@ use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
 use crate::{
     common::{generate_permutation, InOut, Slice},
-    hypergraph_good::{GraphView, InPort, Node, Operation, OutPort, Thunk},
+    hypergraph::{GraphView, InPort, Node, Operation, OutPort, Thunk},
 };
 use bimap::BiMap;
 use derivative::Derivative;

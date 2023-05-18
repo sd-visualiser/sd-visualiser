@@ -7,7 +7,7 @@ use thiserror::Error;
 
 use crate::{
     graph::Op,
-    hypergraph_good::{HyperGraphError, OutPort},
+    hypergraph::{HyperGraphError, OutPort},
 };
 
 /// Specifies an operation which has inputs and outputs.

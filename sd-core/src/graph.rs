@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display};
 use thiserror::Error;
 
-use crate::hypergraph_good::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
+use crate::hypergraph::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
 use crate::language::visitor::Visitable;
 use crate::language::{ActiveOp, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
 

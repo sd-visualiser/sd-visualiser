@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::{
     common::{generate_permutation, InOut, Slice},
-    hypergraph_good::{InPort, Operation, OutPort, Thunk},
+    hypergraph::{InPort, Operation, OutPort, Thunk},
     monoidal_wired::{MonoidalWiredGraph, MonoidalWiredOp},
 };
 use derivative::Derivative;
