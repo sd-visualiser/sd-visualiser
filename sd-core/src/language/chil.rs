@@ -73,7 +73,21 @@ pub struct PassiveOp(#[pest_ast(outer(with(span_into_str), with(str::to_string))
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::ty))]
-pub struct Type(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+pub enum Type {
+    Atomic(AtomicType),
+    Function(FunctionType),
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::atomic_ty))]
+pub struct AtomicType(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::function_ty))]
+pub struct FunctionType {
+    pub ins: Vec<Type>,
+    pub out: AtomicType,
+}
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable))]

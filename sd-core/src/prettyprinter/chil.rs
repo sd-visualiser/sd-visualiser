@@ -1,7 +1,7 @@
 use super::PrettyPrint;
 use crate::language::chil::{
-    ActiveOp, Arg, BindClause, Expr, Identifier, Name, PassiveOp, Term, Thunk, Type, TypedVariable,
-    Value, Variable,
+    ActiveOp, Arg, AtomicType, BindClause, Expr, FunctionType, Identifier, Name, PassiveOp, Term,
+    Thunk, Type, TypedVariable, Value, Variable,
 };
 use pretty::RcDoc;
 
@@ -45,7 +45,31 @@ impl PrettyPrint for Variable {
 
 impl PrettyPrint for Type {
     fn to_doc(&self) -> RcDoc<'_, ()> {
+        match self {
+            Self::Atomic(aty) => aty.to_doc(),
+            Self::Function(fty) => fty.to_doc(),
+        }
+    }
+}
+
+impl PrettyPrint for AtomicType {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(&self.0)
+    }
+}
+
+impl PrettyPrint for FunctionType {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        RcDoc::text("(")
+            .append(RcDoc::intersperse(
+                self.ins.iter().map(PrettyPrint::to_doc),
+                RcDoc::text(",").append(RcDoc::space()),
+            ))
+            .append(RcDoc::text(")"))
+            .append(RcDoc::space())
+            .append(RcDoc::text("->"))
+            .append(RcDoc::space())
+            .append(self.out.to_doc())
     }
 }
 

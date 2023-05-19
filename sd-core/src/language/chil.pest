@@ -16,7 +16,10 @@ active_op = { "plus" }
 passive_op = { "func" }
 number = @{ ASCII_DIGIT+ }
 
-ty = { "Type" }
+ty = { atomic_ty | function_ty }
+atomic_ty = { "Type" }
+function_ty = { "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
+tys = _{ ty ~ ("," ~ ty)* | "" }
 variable = { identifier | name ~ "(" ~ "id" ~ ":" ~ identifier ~ ")" }
 typed_variable = { variable ~ ":" ~ ty }
 
