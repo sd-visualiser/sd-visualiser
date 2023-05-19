@@ -206,7 +206,7 @@ impl App {
         let expr = match parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))? {
             ParseOutput::ChilExpr(expr) => {
                 // Prettify the code.
-                // self.code = expr.to_pretty();
+                self.code = expr.to_pretty();
                 expr.clone().into()
             }
             ParseOutput::SpartanExpr(expr) => {
