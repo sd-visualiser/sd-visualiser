@@ -1,10 +1,10 @@
 program = _{ SOI ~ expr ~ EOI }
 
 expr = { bind_clause* ~ "output" ~ value }
-bind_clause = { "def" ~ typed_variable ~ "=" ~ term }
+bind_clause = { "def" ~ variable_def ~ "=" ~ term }
 
 thunk = { "thunk" ~ identifier ~ "=" ~ "{" ~ thunk_args ~ "=>" ~ expr ~ "}" }
-thunk_args = _{ typed_variable ~ ("," ~ typed_variable)* | "" }
+thunk_args = _{ variable_def ~ ("," ~ variable_def)* | "" }
 
 term = { value | active_op ~ "(" ~ args ~ ")" }
 value = { variable | passive_op ~ ("(" ~ args ~ ")")? }
@@ -21,7 +21,7 @@ atomic_ty = { 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
 function_ty = { "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
 tys = _{ ty ~ ("," ~ ty)* | "" }
 variable = { identifier | name ~ "(" ~ "id" ~ ":" ~ identifier ~ ")" }
-typed_variable = { variable ~ ":" ~ ty }
+variable_def = { variable ~ ":" ~ ty | variable }
 
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }

@@ -30,7 +30,7 @@ pub struct Expr {
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::bind_clause))]
 pub struct BindClause {
-    pub var: TypedVariable,
+    pub var: VariableDef,
     pub term: Term,
 }
 
@@ -38,7 +38,7 @@ pub struct BindClause {
 #[pest_ast(rule(Rule::thunk))]
 pub struct Thunk {
     pub id: Identifier,
-    pub args: Vec<TypedVariable>,
+    pub args: Vec<VariableDef>,
     pub body: Expr,
 }
 
@@ -97,10 +97,10 @@ pub enum Variable {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::typed_variable))]
-pub struct TypedVariable {
-    pub var: Variable,
-    pub ty: Type,
+#[pest_ast(rule(Rule::variable_def))]
+pub enum VariableDef {
+    Inferred(Variable),
+    Manifest { var: Variable, ty: Type },
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
@@ -133,7 +133,7 @@ impl From<Expr> for spartan::Expr {
 impl From<BindClause> for spartan::BindClause {
     fn from(bind: BindClause) -> Self {
         Self {
-            var: bind.var.var.into(),
+            var: bind.var.into(),
             term: bind.term.into(),
         }
     }
@@ -142,7 +142,11 @@ impl From<BindClause> for spartan::BindClause {
 impl From<Thunk> for spartan::Thunk {
     fn from(thunk: Thunk) -> Self {
         Self {
-            args: thunk.args.into_iter().map(|arg| arg.var.into()).collect(),
+            args: thunk
+                .args
+                .into_iter()
+                .map(|var_def| var_def.into())
+                .collect(),
             body: thunk.body.into(),
         }
     }
@@ -188,6 +192,15 @@ impl From<Variable> for spartan::Variable {
             Variable::Id(id) => format!("var_{}", id.0),
             Variable::Name(name, _id) => name.0,
         })
+    }
+}
+
+impl From<VariableDef> for spartan::Variable {
+    fn from(var: VariableDef) -> Self {
+        match var {
+            VariableDef::Inferred(var) => var.into(),
+            VariableDef::Manifest { var, .. } => var.into(),
+        }
     }
 }
 
