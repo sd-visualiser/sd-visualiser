@@ -1,0 +1,37 @@
+%YAML 1.2
+---
+name: Chil
+file_extensions: [chil]
+scope: source.chil
+
+variables:
+  identifier: ''
+
+contexts:
+  main:
+    - match: '#.*$'
+      scope: comment
+    - match: '\b(def|output)\b'
+      scope: keyword
+    - match: '(=>)'
+      scope: keyword.operator
+    - match: '(=)'
+      scope: keyword.operator
+    - match: '[0-9]+'
+      scope: constant
+    - match: '\b(true|false)\b'
+      scope: constant
+    - match: '\b(plus|func)\b'
+      scope: entity.name.function
+    - match: '[a-zA-Z][a-zA-Z0-9_]*'
+      scope: variable
+    - match: '\('
+      scope: punctuation
+    - match: '\)'
+      scope: punctuation
+    - match: '{'
+      scope: punctuation
+    - match: '}'
+      scope: punctuation
+    - match: ','
+      scope: punctuation

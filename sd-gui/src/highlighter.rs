@@ -72,7 +72,8 @@ impl CodeTheme {
 
 // ----------------------------------------------------------------------------
 
-pub const SYNTAX: &str = include_str!("sd.sublime-syntax");
+pub const CHIL_SYNTAX: &str = include_str!("highlighter/chil.sublime-syntax");
+pub const SPARTAN_SYNTAX: &str = include_str!("highlighter/spartan.sublime-syntax");
 
 struct Highlighter {
     themes: ThemeSet,
@@ -83,7 +84,8 @@ impl Default for Highlighter {
     fn default() -> Self {
         let syntaxes = {
             let mut builder = SyntaxSetBuilder::new();
-            builder.add(SyntaxDefinition::load_from_str(SYNTAX, true, None).unwrap());
+            builder.add(SyntaxDefinition::load_from_str(CHIL_SYNTAX, true, None).unwrap());
+            builder.add(SyntaxDefinition::load_from_str(SPARTAN_SYNTAX, true, None).unwrap());
             builder.build()
         };
 

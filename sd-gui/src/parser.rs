@@ -21,6 +21,15 @@ pub enum Language {
     Spartan,
 }
 
+impl Language {
+    pub(crate) fn name(&self) -> &str {
+        match self {
+            Self::Chil => "chil",
+            Self::Spartan => "spartan",
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub enum ParseOutput {
     ChilExpr(chil::Expr),

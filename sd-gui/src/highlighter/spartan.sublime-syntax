@@ -1,8 +1,8 @@
 %YAML 1.2
 ---
-name: SD
-file_extensions: [sd]
-scope: source.sd
+name: Spartan
+file_extensions: [spartan]
+scope: source.spartan
 
 variables:
   identifier: ''
