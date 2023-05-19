@@ -107,6 +107,7 @@ impl App {
             .code_editor()
             .layouter(&mut layouter)
             .min_size(ui.available_size())
+            .desired_width(f32::INFINITY)
             .show(ui);
 
         let parse = Parser::parse(ui.ctx(), &self.code, self.language);
