@@ -97,17 +97,16 @@ impl App {
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
         let theme = CodeTheme::from_style(ui.style());
 
-        let mut layouter = |ui: &egui::Ui, source: &str, wrap_width: f32| {
-            let mut layout_job = highlight(ui.ctx(), &theme, source, self.language.name());
-            layout_job.wrap.max_width = wrap_width;
+        let mut layouter = |ui: &egui::Ui, source: &str, _wrap_width: f32| {
+            let layout_job = highlight(ui.ctx(), &theme, source, self.language.name());
             ui.fonts(|f| f.layout_job(layout_job))
         };
 
         let text_edit_out = egui::TextEdit::multiline(&mut self.code)
             .code_editor()
+            .desired_width(f32::INFINITY)
             .layouter(&mut layouter)
             .min_size(ui.available_size())
-            .desired_width(f32::INFINITY)
             .show(ui);
 
         let parse = Parser::parse(ui.ctx(), &self.code, self.language);
@@ -126,7 +125,7 @@ impl App {
         err: String,
         line_col: &LineColLocation,
     ) {
-        let painter = ui.ctx().layer_painter(text_edit_out.response.layer_id);
+        let painter = ui.painter();
         for l in lines_contained(line_col) {
             if let Some(row) = text_edit_out.galley.rows.get(l) {
                 // Draw squiggly line under error line
@@ -281,7 +280,7 @@ impl eframe::App for App {
 
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.columns(2, |columns| {
-                egui::ScrollArea::vertical()
+                egui::ScrollArea::both()
                     .id_source("code")
                     .show(&mut columns[0], |ui| self.code_edit_ui(ui));
                 egui::ScrollArea::both()
