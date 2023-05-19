@@ -10,7 +10,7 @@ term = { value | active_op ~ "(" ~ args ~ ")" }
 value = { variable | passive_op ~ ("(" ~ args ~ ")")? }
 
 arg = { thunk | value }
-args = _{ arg ~ ("," ~ arg)* | "" }
+args = _{ arg ~ (("," | ";") ~ arg)* | "" }
 
 active_op = { "plus" }
 passive_op = { "func" }
