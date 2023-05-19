@@ -17,7 +17,7 @@ passive_op = { "func" }
 number = @{ ASCII_DIGIT+ }
 
 ty = { atomic_ty | function_ty }
-atomic_ty = { "Type" }
+atomic_ty = { 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
 function_ty = { "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
 tys = _{ ty ~ ("," ~ ty)* | "" }
 variable = { identifier | name ~ "(" ~ "id" ~ ":" ~ identifier ~ ")" }
@@ -27,4 +27,4 @@ COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }
 
 identifier = @{ ("@" | "%") ~ number }
-name = { !("def" | "thunk" | active_op | passive_op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+name = { !("def" | "thunk" | "output" | active_op | passive_op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
