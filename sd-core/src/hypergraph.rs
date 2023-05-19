@@ -707,7 +707,7 @@ impl<V, E, const BUILT: bool> Graph<V, E, BUILT> for Thunk<V, E, BUILT> {
     }
 
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
-        Box::new(self.0.outputs.left_values().cloned().map(InPort))
+        Box::new(self.0.output_order.iter().cloned().map(InPort))
     }
 }
 
@@ -869,8 +869,10 @@ struct ThunkInternal<V, E> {
     #[allow(clippy::type_complexity)]
     nodes: RwLock<Vec<NodeInternal<V, E>>>,
     free_variable_inputs: InOutMap<V, E>,
+    input_order: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
     bound_variables: Vec<Arc<OutPortInternal<V, E>>>,
     outputs: InOutMap<V, E>,
+    output_order: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
     depth: usize,
     back_pointer: BackPointerInternal<V, E>,
 }
@@ -885,23 +887,26 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
     }
 
     pub fn free_inputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
-        self.0
-            .free_variable_inputs
-            .right_values()
-            .cloned()
-            .map(OutPort)
+        self.0.input_order.iter().cloned().map(OutPort)
     }
 
     pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> + '_ {
-        self.0
-            .free_variable_inputs
-            .left_values()
-            .cloned()
-            .map(InPort)
+        self.0.input_order.iter().map(|out_port| {
+            InPort(
+                self.0
+                    .free_variable_inputs
+                    .get_by_right(out_port)
+                    .unwrap()
+                    .clone(),
+            )
+        })
     }
 
     pub fn outputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
-        self.0.outputs.right_values().cloned().map(OutPort)
+        self.0
+            .output_order
+            .iter()
+            .map(|in_port| OutPort(self.0.outputs.get_by_left(in_port).unwrap().clone()))
     }
 
     pub fn number_of_inputs(&self) -> usize {
@@ -953,38 +958,48 @@ where
         back_pointer: BackPointerInternal<V, E>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
-            let free_variable_inputs = free_variables
+            let input_order: Vec<_> = free_variables
                 .into_iter()
-                .map(|fv| {
-                    let inner_output = Arc::new(OutPortInternal::new_boundary(fv));
+                .map(|fv| ByThinAddress(Arc::new(OutPortInternal::new_boundary(fv))))
+                .collect();
+            let free_variable_inputs = input_order
+                .iter()
+                .cloned()
+                .map(|inner_output| {
                     let outer_input = Arc::new(InPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
                         output: RwLock::new(Weak::new()),
                     });
-                    (ByThinAddress(outer_input), ByThinAddress(inner_output))
+                    (ByThinAddress(outer_input), inner_output)
                 })
                 .collect();
             let bound_variables = bound_variables
                 .into_iter()
                 .map(|bv| Arc::new(OutPortInternal::new_boundary(bv)))
                 .collect();
+
+            let output_order: Vec<_> = (0..output_weights.len())
+                .map(|_| ByThinAddress(Arc::new(InPortInternal::new_boundary())))
+                .collect();
             let outputs = output_weights
                 .into_iter()
-                .map(|weight| {
-                    let inner_input = Arc::new(InPortInternal::new_boundary());
+                .zip(output_order.iter().cloned())
+                .map(|(weight, inner_input)| {
                     let outer_output = Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
                         inputs: RwLock::new(Default::default()),
                         weight,
                     });
-                    (ByThinAddress(inner_input), ByThinAddress(outer_output))
+                    (inner_input, ByThinAddress(outer_output))
                 })
                 .collect();
             ThunkInternal {
                 nodes: RwLock::new(Default::default()),
                 free_variable_inputs,
+                input_order,
                 bound_variables,
                 outputs,
+                output_order,
                 depth,
                 back_pointer,
             }
