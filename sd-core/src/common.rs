@@ -67,6 +67,12 @@ where
     }
 }
 
+pub(crate) fn advance_by<I: Iterator>(iter: &mut I, n: usize) {
+    if n != 0 {
+        iter.nth(n - 1);
+    }
+}
+
 pub(crate) fn generate_permutation<'a, T: 'a>(
     start: impl Iterator<Item = T> + 'a,
     end: impl Iterator<Item = T> + 'a,

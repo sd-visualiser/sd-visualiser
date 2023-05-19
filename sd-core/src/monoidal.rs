@@ -1,11 +1,13 @@
+use itertools::Itertools;
 use std::fmt::Debug;
 
 use crate::{
-    common::{generate_permutation, InOut, Slice},
+    common::{advance_by, generate_permutation, InOut, Slice},
     hypergraph::{InPort, Operation, OutPort, Thunk},
     monoidal_wired::{MonoidalWiredGraph, MonoidalWiredOp},
 };
 use derivative::Derivative;
+use tracing::debug;
 
 impl<V, E> Slice<MonoidalOp<V, E>> {
     pub fn permutation_to_swaps(
@@ -215,6 +217,15 @@ impl<V, E> InOut<V, E> for MonoidalOp<V, E> {
     }
 }
 
+impl<V, E> MonoidalOp<V, E> {
+    pub fn is_id(&self) -> bool {
+        match self {
+            MonoidalOp::Copy { copies, .. } => *copies == 1,
+            _ => false,
+        }
+    }
+}
+
 impl<V: Debug, E: Debug> From<&MonoidalWiredOp<V, E>> for MonoidalOp<V, E> {
     fn from(op: &MonoidalWiredOp<V, E>) -> Self {
         match op {
@@ -263,11 +274,110 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<V, E>
             graph.outputs.iter().map(|in_port| in_port.output()),
         ));
 
-        MonoidalGraph {
+        let mut graph = MonoidalGraph {
             inputs: graph_inputs,
             slices,
             outputs: graph.outputs.clone(),
+        };
+
+        debug!("Presquash: {:#?}", graph);
+        graph.squash_layers();
+        debug!("Postsquash: {:#?}", graph);
+
+        graph
+    }
+}
+
+impl<V, E> MonoidalGraph<V, E> {
+    fn squash_layers(&mut self) {
+        self.slices = std::mem::take(&mut self.slices)
+            .into_iter()
+            .rev()
+            .coalesce(|x, y| {
+                if y.check_mergeablity(&x) {
+                    Ok(y.merge_slice(x))
+                } else {
+                    Err((x, y))
+                }
+            })
+            .collect();
+
+        self.slices.reverse();
+    }
+}
+
+impl<V, E> Slice<MonoidalOp<V, E>> {
+    fn check_mergeablity(&self, other: &Self) -> bool {
+        let mut first_iter = self.ops.iter();
+        let mut second_iter = other.ops.iter();
+
+        let mut canonical = true;
+
+        while let Some(first) = first_iter.next() {
+            if first.number_of_outputs() == 0 {
+                canonical = false;
+                continue;
+            }
+            let second = if canonical {
+                second_iter.find(|op| op.number_of_inputs() != 0).unwrap()
+            } else {
+                canonical = true;
+                second_iter.next().unwrap()
+            };
+            if !first.is_id() {
+                if !second.is_id() {
+                    return false;
+                }
+                for _ in 1..first.number_of_outputs() {
+                    if second_iter.next().map(|x| x.is_id()) != Some(true) {
+                        return false;
+                    }
+                }
+            } else {
+                for _ in 1..second.number_of_inputs() {
+                    if first_iter.next().map(|x| x.is_id()) != Some(true) {
+                        return false;
+                    }
+                }
+            }
         }
+
+        canonical || second_iter.next().is_none()
+    }
+
+    fn merge_slice(self, other: Self) -> Self {
+        // Assume that slices are mergeable
+        let mut first_iter = self.ops.into_iter();
+        let mut second_iter = other.ops.into_iter();
+
+        let mut ops = Vec::new();
+
+        while let Some(op) = first_iter.next() {
+            if op.number_of_outputs() == 0 {
+                ops.push(op);
+            } else {
+                let mut second = second_iter.next().unwrap();
+
+                while second.number_of_inputs() == 0 {
+                    ops.push(second);
+                    second = second_iter.next().unwrap();
+                }
+
+                if !op.is_id() {
+                    advance_by(&mut second_iter, op.number_of_outputs() - 1);
+                    ops.push(op);
+                }
+
+                if !second.is_id() {
+                    advance_by(&mut first_iter, second.number_of_inputs() - 1);
+                    ops.push(second);
+                }
+            }
+        }
+
+        ops.extend(second_iter);
+
+        Slice { ops }
     }
 }
 
