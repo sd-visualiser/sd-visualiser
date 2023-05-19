@@ -7,42 +7,74 @@ use eframe::egui::{
 use from_pest::{ConversionError, FromPest, Void};
 use pest::error;
 use pest::Parser as _;
-use sd_core::language::spartan::{Expr, Rule, SpartanParser};
+use sd_core::language::{
+    chil::{self, ChilParser},
+    spartan::{self, SpartanParser},
+};
 use thiserror::Error;
 use tracing::debug;
 
-#[derive(Error, Debug, Clone)]
-pub enum ParseError {
-    #[error("Parsing error:\n{0}")]
-    PError(#[from] error::Error<Rule>),
-    #[error("Convertion error:\n{0:?}")]
-    CError(ConversionError<Void>),
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
+pub enum Language {
+    Chil,
+    #[default]
+    Spartan,
 }
 
-impl From<ConversionError<Void>> for ParseError {
-    fn from(e: ConversionError<Void>) -> Self {
-        ParseError::CError(e)
-    }
+#[derive(Clone, Debug)]
+pub enum ParseOutput {
+    ChilExpr(chil::Expr),
+    SpartanExpr(spartan::Expr),
+}
+
+#[derive(Clone, Debug, Error)]
+pub enum ParseError {
+    #[error("Chil parsing error:\n{0}")]
+    Chil(#[from] error::Error<chil::Rule>),
+
+    #[error("Spartan parsing error:\n{0}")]
+    Spartan(#[from] error::Error<spartan::Rule>),
+
+    #[error("Conversion error:\n{0:?}")]
+    Conversion(#[from] ConversionError<Void>),
 }
 
 #[derive(Default)]
-pub struct Parser {}
+pub struct Parser;
 
-impl ComputerMut<&str, Arc<Result<Expr, ParseError>>> for Parser {
-    fn compute(&mut self, source: &str) -> Arc<Result<Expr, ParseError>> {
+impl ComputerMut<(&str, Language), Arc<Result<ParseOutput, ParseError>>> for Parser {
+    fn compute(
+        &mut self,
+        (source, language): (&str, Language),
+    ) -> Arc<Result<ParseOutput, ParseError>> {
         debug!("Parsing");
-        Arc::new((|| {
-            let mut pairs = SpartanParser::parse(Rule::program, source)?;
-            let expr = Expr::from_pest(&mut pairs)?;
-            Ok(expr)
+        Arc::new((|| match language {
+            Language::Chil => {
+                let mut pairs = ChilParser::parse(chil::Rule::program, source)?;
+                let expr = chil::Expr::from_pest(&mut pairs)?;
+                Ok(ParseOutput::ChilExpr(expr))
+            }
+            Language::Spartan => {
+                let mut pairs = SpartanParser::parse(spartan::Rule::program, source)?;
+                let expr = spartan::Expr::from_pest(&mut pairs)?;
+                Ok(ParseOutput::SpartanExpr(expr))
+            }
         })())
     }
 }
 
-type ParserCache<'a> = FrameCache<Arc<Result<Expr, ParseError>>, Parser>;
+type ParserCache<'a> = FrameCache<Arc<Result<ParseOutput, ParseError>>, Parser>;
 
 impl Parser {
-    pub fn parse(ctx: &Context, source: &str) -> Arc<Result<Expr, ParseError>> {
-        ctx.memory_mut(|mem| mem.caches.cache::<ParserCache<'_>>().get(source))
+    pub fn parse(
+        ctx: &Context,
+        source: &str,
+        language: Language,
+    ) -> Arc<Result<ParseOutput, ParseError>> {
+        ctx.memory_mut(|mem| {
+            mem.caches
+                .cache::<ParserCache<'_>>()
+                .get((source, language))
+        })
     }
 }

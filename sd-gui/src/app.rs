@@ -1,6 +1,8 @@
 use anyhow::anyhow;
 use eframe::{
-    egui::{self, show_tooltip_at_pointer, FontDefinitions, Id, RichText},
+    egui::{
+        self, show_tooltip_at_pointer, text_edit::TextEditOutput, FontDefinitions, Id, RichText,
+    },
     emath,
     epaint::{Color32, FontId, Pos2, QuadraticBezierShape, Rect, Rounding, Shape, Stroke, Vec2},
 };
@@ -17,12 +19,13 @@ use tracing::{debug, event, Level};
 use crate::{
     highlighter::{highlight, CodeTheme},
     layout::Layouter,
-    parser::{ParseError, Parser},
+    parser::{Language, ParseError, ParseOutput, Parser},
 };
 
 #[derive(Default)]
 pub struct App {
     code: String,
+    language: Language,
     hypergraph: SyntaxHyperGraph,
     monoidal_term: MonoidalWiredGraph<Op, ()>,
     monoidal_graph: MonoidalGraph<Op, ()>,
@@ -106,56 +109,66 @@ impl App {
             .min_size(ui.available_size())
             .show(ui);
 
-        let parse = Parser::parse(ui.ctx(), &self.code);
+        let parse = Parser::parse(ui.ctx(), &self.code, self.language);
+        if let Err(ParseError::Chil(err)) = parse.as_ref() {
+            self.code_edit_error_ui(ui, &text_edit_out, err.to_string(), &err.line_col)
+        }
+        if let Err(ParseError::Spartan(err)) = parse.as_ref() {
+            self.code_edit_error_ui(ui, &text_edit_out, err.to_string(), &err.line_col)
+        }
+    }
 
-        if let Err(ParseError::PError(err)) = parse.as_ref() {
-            let painter = ui.ctx().layer_painter(text_edit_out.response.layer_id);
-            for l in lines_contained(&err.line_col) {
-                if let Some(row) = text_edit_out.galley.rows.get(l) {
-                    // Draw squiggly line under error line
-                    const SQUIGGLE_HEIGHT: f32 = 5.0;
-                    const SQUIGGLES_PER_CHAR: usize = 3;
-                    let left = row.rect.min.x;
-                    let right = row.rect.max.x;
-                    let base = row.rect.max.y;
-                    let count = row.glyphs.len() * SQUIGGLES_PER_CHAR;
-                    // Takes weighted average of 'left' and 'right' where
-                    // 0 <= i <= count
-                    let w_avg = |i: f32| {
-                        let count_f = count as f32;
-                        (left * (count_f - i) + right * i) / count_f
-                    };
-                    for i in 0..count {
-                        let start: Pos2 = Pos2::from((w_avg(i as f32), base))
-                            + text_edit_out.text_draw_pos.to_vec2();
-                        let control: Pos2 = Pos2::from((
-                            w_avg(i as f32 + 0.5),
-                            base + SQUIGGLE_HEIGHT * (((i + 1) % 2) as f32 - 0.5),
-                        )) + text_edit_out.text_draw_pos.to_vec2();
-                        let end: Pos2 = Pos2::from((w_avg((i + 1) as f32), base))
-                            + text_edit_out.text_draw_pos.to_vec2();
-                        painter.add(QuadraticBezierShape {
-                            points: [start, control, end],
-                            closed: false,
-                            fill: Color32::TRANSPARENT,
-                            stroke: Stroke::new(1.0, ui.style().visuals.error_fg_color),
-                        });
-                    }
+    fn code_edit_error_ui(
+        &self,
+        ui: &mut egui::Ui,
+        text_edit_out: &TextEditOutput,
+        err: String,
+        line_col: &LineColLocation,
+    ) {
+        let painter = ui.ctx().layer_painter(text_edit_out.response.layer_id);
+        for l in lines_contained(line_col) {
+            if let Some(row) = text_edit_out.galley.rows.get(l) {
+                // Draw squiggly line under error line
+                const SQUIGGLE_HEIGHT: f32 = 5.0;
+                const SQUIGGLES_PER_CHAR: usize = 3;
+                let left = row.rect.min.x;
+                let right = row.rect.max.x;
+                let base = row.rect.max.y;
+                let count = row.glyphs.len() * SQUIGGLES_PER_CHAR;
+                // Takes weighted average of 'left' and 'right' where
+                // 0 <= i <= count
+                let w_avg = |i: f32| {
+                    let count_f = count as f32;
+                    (left * (count_f - i) + right * i) / count_f
+                };
+                for i in 0..count {
+                    let start: Pos2 =
+                        Pos2::from((w_avg(i as f32), base)) + text_edit_out.text_draw_pos.to_vec2();
+                    let control: Pos2 = Pos2::from((
+                        w_avg(i as f32 + 0.5),
+                        base + SQUIGGLE_HEIGHT * (((i + 1) % 2) as f32 - 0.5),
+                    )) + text_edit_out.text_draw_pos.to_vec2();
+                    let end: Pos2 = Pos2::from((w_avg((i + 1) as f32), base))
+                        + text_edit_out.text_draw_pos.to_vec2();
+                    painter.add(QuadraticBezierShape {
+                        points: [start, control, end],
+                        closed: false,
+                        fill: Color32::TRANSPARENT,
+                        stroke: Stroke::new(1.0, ui.style().visuals.error_fg_color),
+                    });
                 }
             }
+        }
 
-            if let Some(x) = text_edit_out.response.hover_pos() {
-                let pos = x - text_edit_out.text_draw_pos;
+        if let Some(x) = text_edit_out.response.hover_pos() {
+            let pos = x - text_edit_out.text_draw_pos;
 
-                if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
-                    let cursor = text_edit_out.galley.cursor_from_pos(pos);
-                    if is_in_line(cursor.rcursor.row, &err.line_col) {
-                        show_tooltip_at_pointer(ui.ctx(), Id::new("hover_tooltip"), |ui| {
-                            ui.label(
-                                RichText::new(format!("{}", err)).font(FontId::monospace(13.5)),
-                            )
-                        });
-                    }
+            if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
+                let cursor = text_edit_out.galley.cursor_from_pos(pos);
+                if is_in_line(cursor.rcursor.row, line_col) {
+                    show_tooltip_at_pointer(ui.ctx(), Id::new("hover_tooltip"), |ui| {
+                        ui.label(RichText::new(err).font(FontId::monospace(13.5)))
+                    });
                 }
             }
         }
@@ -189,14 +202,22 @@ impl App {
     }
 
     fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
-        let parse = Parser::parse(ctx, &self.code);
-        let expr = parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))?;
-
-        // Prettify the code.
-        self.code = expr.to_pretty();
+        let parse = Parser::parse(ctx, &self.code, self.language);
+        let expr = match parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))? {
+            ParseOutput::ChilExpr(expr) => {
+                // Prettify the code.
+                // self.code = expr.to_pretty();
+                expr.clone().into()
+            }
+            ParseOutput::SpartanExpr(expr) => {
+                // Prettify the code.
+                self.code = expr.to_pretty();
+                expr.clone()
+            }
+        };
 
         event!(Level::DEBUG, "Converting to hypergraph");
-        self.hypergraph = SyntaxHyperGraph::try_from(expr)?;
+        self.hypergraph = SyntaxHyperGraph::try_from(&expr)?;
 
         event!(Level::DEBUG, "Converting to monoidal term");
         self.monoidal_term = MonoidalWiredGraph::try_from(&self.hypergraph)?;
@@ -217,6 +238,13 @@ impl eframe::App for App {
             ui.horizontal_wrapped(|ui| {
                 ui.visuals_mut().button_frame = false;
                 egui::widgets::global_dark_light_mode_buttons(ui);
+
+                ui.separator();
+
+                ui.menu_button("Language", |ui| {
+                    ui.radio_value(&mut self.language, Language::Chil, "Chil");
+                    ui.radio_value(&mut self.language, Language::Spartan, "Spartan");
+                });
 
                 ui.separator();
 
