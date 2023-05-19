@@ -260,7 +260,7 @@ impl<V, E> OutPort<V, E> {
 #[derivative(Clone(bound = ""), Default(bound = ""))]
 struct HyperGraphInternal<V, E> {
     nodes: Vec<NodeInternal<V, E>>,
-    graph_inputs: HashSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
+    graph_inputs: Vec<Arc<OutPortInternal<V, E>>>,
     graph_outputs: Vec<Arc<InPortInternal<V, E>>>,
 }
 
@@ -272,7 +272,7 @@ where
     pub fn new(input_weights: Vec<E>, number_of_outputs: usize) -> Self {
         let graph_inputs = input_weights
             .into_iter()
-            .map(|weight| ByThinAddress(Arc::new(OutPortInternal::new_boundary(weight))))
+            .map(|weight| Arc::new(OutPortInternal::new_boundary(weight)))
             .collect();
 
         let graph_outputs = (0..number_of_outputs)
@@ -662,7 +662,13 @@ pub trait GraphView<V, E, const BUILT: bool = true>: Graph<V, E, BUILT> {
 
 impl<V, E, const BUILT: bool> Graph<V, E, BUILT> for HyperGraph<V, E, BUILT> {
     fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
-        Box::new(self.0.graph_inputs.iter().cloned().map(OutPort))
+        Box::new(
+            self.0
+                .graph_inputs
+                .iter()
+                .cloned()
+                .map(|o| OutPort(ByThinAddress(o))),
+        )
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
