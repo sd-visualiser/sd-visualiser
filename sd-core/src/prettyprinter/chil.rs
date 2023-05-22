@@ -1,7 +1,7 @@
 use super::PrettyPrint;
 use crate::language::chil::{
-    ActiveOp, Arg, AtomicType, BindClause, Expr, FunctionType, Identifier, Name, PassiveOp, Term,
-    Thunk, Type, Value, Variable, VariableDef,
+    Arg, AtomicType, BindClause, Expr, FunctionType, Identifier, Name, Op, Thunk, Type, Value,
+    Variable, VariableDef,
 };
 use pretty::RcDoc;
 
@@ -22,7 +22,7 @@ impl PrettyPrint for BindClause {
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())
-            .append(self.term.to_doc())
+            .append(self.value.to_doc())
             .append(RcDoc::line())
     }
 }
@@ -87,27 +87,11 @@ impl PrettyPrint for FunctionType {
     }
 }
 
-impl PrettyPrint for Term {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        match self {
-            Self::Value(v) => v.to_doc(),
-            Self::ActiveOp(op, args) => op
-                .to_doc()
-                .append(RcDoc::text("("))
-                .append(RcDoc::intersperse(
-                    args.iter().map(PrettyPrint::to_doc),
-                    RcDoc::text(",").append(RcDoc::space()),
-                ))
-                .append(RcDoc::text(")")),
-        }
-    }
-}
-
 impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Var(x) => x.to_doc(),
-            Self::PassiveOp(op, args) => {
+            Self::Op(op, args) => {
                 if args.is_empty() {
                     op.to_doc()
                 } else {
@@ -157,13 +141,7 @@ impl PrettyPrint for Arg {
     }
 }
 
-impl PrettyPrint for ActiveOp {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(&self.0)
-    }
-}
-
-impl PrettyPrint for PassiveOp {
+impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(&self.0)
     }

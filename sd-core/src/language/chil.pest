@@ -1,19 +1,17 @@
 program = _{ SOI ~ expr ~ EOI }
 
 expr = { bind_clause* ~ "output" ~ value }
-bind_clause = { "def" ~ variable_def ~ "=" ~ term }
+bind_clause = { "def" ~ variable_def ~ "=" ~ value }
 
 thunk = { "thunk" ~ identifier ~ "=" ~ "{" ~ thunk_args ~ "=>" ~ expr ~ "}" }
 thunk_args = _{ variable_def ~ ("," ~ variable_def)* | "" }
 
-term = { value | active_op ~ "(" ~ args ~ ")" }
-value = { variable | passive_op ~ ("(" ~ args ~ ")")? }
+value = { variable | op ~ ("(" ~ args ~ ")")? }
 
 arg = { thunk | value }
 args = _{ arg ~ (("," | ";") ~ arg)* | "" }
 
-active_op = { "plus" }
-passive_op = { "func" }
+op = { "plus" | "func" }
 number = @{ ASCII_DIGIT+ }
 
 ty = { atomic_ty | function_ty }
@@ -27,4 +25,4 @@ COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }
 
 identifier = @{ ("@" | "%") ~ number }
-name = { !("def" | "thunk" | "output" | active_op | passive_op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+name = { !("def" | "thunk" | "output" | op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

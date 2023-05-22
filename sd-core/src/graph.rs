@@ -1,47 +1,15 @@
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
 use thiserror::Error;
 
 use crate::hypergraph::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
-use crate::language::spartan::{
-    ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable,
-};
+use crate::language::spartan::{Arg, BindClause, Expr, Op, Thunk, Value, Variable};
 use crate::language::visitor::Visitable;
 
 #[cfg(not(test))]
 use std::collections::HashSet;
 
 #[cfg(test)]
-use serde::Serialize;
-#[cfg(test)]
 use std::collections::BTreeSet as HashSet;
-
-#[derive(Clone, Debug, Copy, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(Serialize))]
-pub enum Op {
-    Active(ActiveOp),
-    Passive(PassiveOp),
-}
-
-impl Display for Op {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Active(op) => op.fmt(f),
-            Self::Passive(op) => op.fmt(f),
-        }
-    }
-}
-
-impl From<ActiveOp> for Op {
-    fn from(a: ActiveOp) -> Self {
-        Op::Active(a)
-    }
-}
-
-impl From<PassiveOp> for Op {
-    fn from(p: PassiveOp) -> Self {
-        Op::Passive(p)
-    }
-}
 
 pub type SyntaxHyperGraphBuilder = HyperGraph<Op, ()>;
 pub type SyntaxHyperGraph = HyperGraph<Op, ()>;
@@ -147,40 +115,9 @@ impl Syntax for BindClause {
     where
         F: Fragment<Op, ()> + Graph<Op, (), false>,
     {
-        let port = self.term.process(fragment, mapping)?;
+        let port = self.value.process(fragment, mapping)?;
         mapping.insert(self.var.clone(), port);
         Ok(())
-    }
-}
-
-impl Syntax for Term {
-    type ProcessOutput = (OutPort<Op, (), false>, EdgeStrength);
-
-    fn process<F>(
-        &self,
-        fragment: &mut F,
-        mapping: &mut HashMap<Variable, (OutPort<Op, (), false>, EdgeStrength)>,
-    ) -> Result<Self::ProcessOutput, ConvertError>
-    where
-        F: Fragment<Op, ()> + Graph<Op, (), false>,
-    {
-        match self {
-            Term::Value(v) => v.process(fragment, mapping),
-            Term::ActiveOp(op, args) => {
-                let operation = fragment.add_operation(args.len(), vec![()], (*op).into());
-                for (arg, in_port) in args.iter().zip(operation.inputs()) {
-                    let (out_port, strength) = arg.process(fragment, mapping)?;
-                    fragment.link(out_port, in_port, strength)?;
-                }
-
-                let output = operation
-                    .outputs()
-                    .next()
-                    .ok_or(ConvertError::NoOutputError)?;
-
-                Ok((output, EdgeStrength::Strong))
-            }
-        }
     }
 }
 
@@ -200,8 +137,8 @@ impl Syntax for Value {
                 .get(v)
                 .cloned()
                 .ok_or(ConvertError::VariableError(v.clone())),
-            Value::PassiveOp(op, args) => {
-                let operation = fragment.add_operation(args.len(), vec![()], (*op).into());
+            Value::Op(op, args) => {
+                let operation = fragment.add_operation(args.len(), vec![()], *op);
                 for (arg, in_port) in args.iter().zip(operation.inputs()) {
                     let (out_port, strength) = arg.process(fragment, mapping)?;
                     fragment.link(out_port, in_port, strength)?;

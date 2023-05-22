@@ -1,22 +1,18 @@
-use super::spartan::{ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable};
+use super::spartan::{Arg, BindClause, Expr, Op, Thunk, Value, Variable};
 
 #[allow(unused_variables)]
 pub trait Visitor {
     fn visit_variable(&mut self, variable: &Variable) {}
     fn visit_bind_clause(&mut self, bind_clause: &BindClause) {}
     fn visit_expr(&mut self, expr: &Expr) {}
-    fn visit_term(&mut self, term: &Term) {}
     fn visit_value(&mut self, value: &Value) {}
-    fn visit_active_op(&mut self, active_op: &ActiveOp) {}
-    fn visit_passive_op(&mut self, passive_op: &PassiveOp) {}
+    fn visit_op(&mut self, op: &Op) {}
     fn visit_thunk(&mut self, thunk: &Thunk) {}
     fn after_variable(&mut self, variable: &Variable) {}
     fn after_bind_clause(&mut self, bind_clause: &BindClause) {}
     fn after_expr(&mut self, expr: &Expr) {}
-    fn after_term(&mut self, term: &Term) {}
     fn after_value(&mut self, value: &Value) {}
-    fn after_active_op(&mut self, active_op: &ActiveOp) {}
-    fn after_passive_op(&mut self, passive_op: &PassiveOp) {}
+    fn after_op(&mut self, op: &Op) {}
     fn after_thunk(&mut self, thunk: &Thunk) {}
 }
 
@@ -35,7 +31,7 @@ impl Visitable for BindClause {
     fn walk(&self, visitor: &mut impl Visitor) {
         visitor.visit_bind_clause(self);
         self.var.walk(visitor);
-        self.term.walk(visitor);
+        self.value.walk(visitor);
         visitor.after_bind_clause(self);
     }
 }
@@ -49,22 +45,6 @@ impl Visitable for Expr {
     }
 }
 
-impl Visitable for Term {
-    fn walk(&self, visitor: &mut impl Visitor) {
-        visitor.visit_term(self);
-        match self {
-            Term::Value(v) => {
-                v.walk(visitor);
-            }
-            Term::ActiveOp(op, args) => {
-                op.walk(visitor);
-                args.iter().for_each(|arg| arg.walk(visitor));
-            }
-        }
-        visitor.after_term(self);
-    }
-}
-
 impl Visitable for Value {
     fn walk(&self, visitor: &mut impl Visitor) {
         visitor.visit_value(self);
@@ -72,7 +52,7 @@ impl Visitable for Value {
             Value::Var(var) => {
                 var.walk(visitor);
             }
-            Value::PassiveOp(op, args) => {
+            Value::Op(op, args) => {
                 op.walk(visitor);
                 args.iter().for_each(|arg| arg.walk(visitor));
             }
@@ -81,17 +61,10 @@ impl Visitable for Value {
     }
 }
 
-impl Visitable for ActiveOp {
+impl Visitable for Op {
     fn walk(&self, visitor: &mut impl Visitor) {
-        visitor.visit_active_op(self);
-        visitor.after_active_op(self);
-    }
-}
-
-impl Visitable for PassiveOp {
-    fn walk(&self, visitor: &mut impl Visitor) {
-        visitor.visit_passive_op(self);
-        visitor.after_passive_op(self);
+        visitor.visit_op(self);
+        visitor.after_op(self);
     }
 }
 

@@ -31,7 +31,7 @@ pub struct Expr {
 #[pest_ast(rule(Rule::bind_clause))]
 pub struct BindClause {
     pub var: VariableDef,
-    pub term: Term,
+    pub value: Value,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
@@ -43,17 +43,10 @@ pub struct Thunk {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::term))]
-pub enum Term {
-    Value(Value),
-    ActiveOp(ActiveOp, Vec<Arg>),
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::value))]
 pub enum Value {
     Var(Variable),
-    PassiveOp(PassiveOp, Vec<Arg>),
+    Op(Op, Vec<Arg>),
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
@@ -64,12 +57,8 @@ pub enum Arg {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::active_op))]
-pub struct ActiveOp(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::passive_op))]
-pub struct PassiveOp(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+#[pest_ast(rule(Rule::op))]
+pub struct Op(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::ty))]
@@ -134,7 +123,7 @@ impl From<BindClause> for spartan::BindClause {
     fn from(bind: BindClause) -> Self {
         Self {
             var: bind.var.into(),
-            term: bind.term.into(),
+            value: bind.value.into(),
         }
     }
 }
@@ -152,37 +141,20 @@ impl From<Thunk> for spartan::Thunk {
     }
 }
 
-impl From<Term> for spartan::Term {
-    fn from(term: Term) -> Self {
-        match term {
-            Term::Value(value) => Self::Value(value.into()),
-            Term::ActiveOp(op, args) => {
-                Self::ActiveOp(op.into(), args.into_iter().map(|arg| arg.into()).collect())
-            }
-        }
-    }
-}
-
 impl From<Value> for spartan::Value {
     fn from(value: Value) -> Self {
         match value {
             Value::Var(var) => Self::Var(var.into()),
-            Value::PassiveOp(op, args) => {
-                Self::PassiveOp(op.into(), args.into_iter().map(|arg| arg.into()).collect())
+            Value::Op(op, args) => {
+                Self::Op(op.into(), args.into_iter().map(|arg| arg.into()).collect())
             }
         }
     }
 }
 
-impl From<ActiveOp> for spartan::ActiveOp {
-    fn from(_op: ActiveOp) -> Self {
+impl From<Op> for spartan::Op {
+    fn from(_op: Op) -> Self {
         Self::Plus
-    }
-}
-
-impl From<PassiveOp> for spartan::PassiveOp {
-    fn from(_op: PassiveOp) -> Self {
-        Self::Lambda
     }
 }
 

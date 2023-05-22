@@ -29,23 +29,16 @@ pub struct Expr {
 #[pest_ast(rule(Rule::bind_clause))]
 pub struct BindClause {
     pub var: Variable,
-    pub term: Term,
+    pub value: Value,
 }
 
 #[derive(Clone, Debug, FromPest, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
-#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
-#[pest_ast(rule(Rule::term))]
-pub enum Term {
-    Value(Value),
-    ActiveOp(ActiveOp, Vec<Arg>),
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Serialize))]
-pub enum ActiveOp {
+pub enum Op {
     Plus,
     Minus,
     Times,
@@ -56,9 +49,12 @@ pub enum ActiveOp {
     If,
     App,
     Rec,
+    Int(usize),
+    Bool(bool),
+    Lambda,
 }
 
-impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
+impl<'pest> from_pest::FromPest<'pest> for Op {
     type Rule = Rule;
     type FatalError = Void;
 
@@ -76,27 +72,6 @@ impl<'pest> from_pest::FromPest<'pest> for ActiveOp {
             Some("if") => Ok(Self::If),
             Some("app") => Ok(Self::App),
             Some("rec") => Ok(Self::Rec),
-            _ => Err(from_pest::ConversionError::NoMatch),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(test, derive(Serialize))]
-pub enum PassiveOp {
-    Int(usize),
-    Bool(bool),
-    Lambda,
-}
-
-impl<'pest> from_pest::FromPest<'pest> for PassiveOp {
-    type Rule = Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
-        match pest.next().map(|pair| pair.as_str()) {
             Some("true") => Ok(Self::Bool(true)),
             Some("false") => Ok(Self::Bool(false)),
             Some("lambda") => Ok(Self::Lambda),
@@ -112,7 +87,7 @@ impl<'pest> from_pest::FromPest<'pest> for PassiveOp {
 #[pest_ast(rule(Rule::value))]
 pub enum Value {
     Var(Variable),
-    PassiveOp(PassiveOp, Vec<Arg>),
+    Op(Op, Vec<Arg>),
 }
 
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
@@ -129,7 +104,7 @@ pub enum Arg {
     Thunk(Thunk),
 }
 
-impl Display for ActiveOp {
+impl Display for Op {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Plus => f.write_char('+'),
@@ -142,13 +117,6 @@ impl Display for ActiveOp {
             Self::If => f.write_str("if"),
             Self::App => f.write_char('@'),
             Self::Rec => f.write_char('μ'),
-        }
-    }
-}
-
-impl Display for PassiveOp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
             Self::Int(d) => f.write_str(&d.to_string()),
             Self::Bool(b) => f.write_str(&b.to_string()),
             Self::Lambda => f.write_char('λ'),

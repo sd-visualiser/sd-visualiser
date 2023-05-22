@@ -386,7 +386,7 @@ mod tests {
     use anyhow::Result;
     use rstest::rstest;
 
-    use crate::graph::Op;
+    use crate::language::spartan::Op;
 
     use super::*;
 

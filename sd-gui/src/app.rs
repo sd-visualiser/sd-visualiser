@@ -9,10 +9,8 @@ use eframe::{
 use egui_notify::Toasts;
 use pest::error::LineColLocation;
 use sd_core::{
-    graph::{Op, SyntaxHyperGraph},
-    monoidal::MonoidalGraph,
-    monoidal_wired::MonoidalWiredGraph,
-    prettyprinter::PrettyPrint,
+    graph::SyntaxHyperGraph, language::spartan::Op, monoidal::MonoidalGraph,
+    monoidal_wired::MonoidalWiredGraph, prettyprinter::PrettyPrint,
 };
 use tracing::{debug, event, Level};
 

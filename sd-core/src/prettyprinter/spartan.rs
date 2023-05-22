@@ -1,7 +1,5 @@
 use super::PrettyPrint;
-use crate::language::spartan::{
-    ActiveOp, Arg, BindClause, Expr, PassiveOp, Term, Thunk, Value, Variable,
-};
+use crate::language::spartan::{Arg, BindClause, Expr, Op, Thunk, Value, Variable};
 use pretty::RcDoc;
 
 impl PrettyPrint for Expr {
@@ -18,7 +16,7 @@ impl PrettyPrint for BindClause {
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())
-            .append(self.term.to_doc())
+            .append(self.value.to_doc())
             .append(RcDoc::space())
             .append(RcDoc::text("in"))
             .append(RcDoc::line())
@@ -31,54 +29,11 @@ impl PrettyPrint for Variable {
     }
 }
 
-impl PrettyPrint for Term {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        match self {
-            Term::Value(v) => v.to_doc(),
-            Term::ActiveOp(op, args) => op
-                .to_doc()
-                .append(RcDoc::text("("))
-                .append(RcDoc::intersperse(
-                    args.iter().map(PrettyPrint::to_doc),
-                    RcDoc::text(",").append(RcDoc::space()),
-                ))
-                .append(RcDoc::text(")")),
-        }
-    }
-}
-
-impl PrettyPrint for ActiveOp {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(match *self {
-            Self::Plus => "plus",
-            Self::Minus => "minus",
-            Self::Times => "times",
-            Self::Eq => "eq",
-            Self::And => "and",
-            Self::Or => "or",
-            Self::Not => "not",
-            Self::If => "if",
-            Self::App => "app",
-            Self::Rec => "rec",
-        })
-    }
-}
-
-impl PrettyPrint for PassiveOp {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(match *self {
-            Self::Int(n) => n.to_string(),
-            Self::Bool(b) => b.to_string(),
-            Self::Lambda => "lambda".to_string(),
-        })
-    }
-}
-
 impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Value::Var(v) => v.to_doc(),
-            Value::PassiveOp(op, args) => {
+            Value::Op(op, args) => {
                 if args.is_empty() {
                     op.to_doc()
                 } else {
@@ -91,6 +46,26 @@ impl PrettyPrint for Value {
                         .append(RcDoc::text(")"))
                 }
             }
+        }
+    }
+}
+
+impl PrettyPrint for Op {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        match *self {
+            Self::Plus => RcDoc::text("plus"),
+            Self::Minus => RcDoc::text("minus"),
+            Self::Times => RcDoc::text("times"),
+            Self::Eq => RcDoc::text("eq"),
+            Self::And => RcDoc::text("and"),
+            Self::Or => RcDoc::text("or"),
+            Self::Not => RcDoc::text("not"),
+            Self::If => RcDoc::text("if"),
+            Self::App => RcDoc::text("app"),
+            Self::Rec => RcDoc::text("rec"),
+            Self::Int(n) => RcDoc::as_string(n),
+            Self::Bool(b) => RcDoc::as_string(b),
+            Self::Lambda => RcDoc::text("lambda"),
         }
     }
 }
