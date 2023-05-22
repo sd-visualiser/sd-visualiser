@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
-    common::{FromHyperError, InOut},
+    common::InOut,
     monoidal::{MonoidalGraph, MonoidalOp},
 };
 use thiserror::Error;
@@ -17,8 +17,6 @@ use serde::Serialize;
 pub enum LayoutError {
     #[error("An error occurred when solving the problem: {0}")]
     ResolutionError(#[from] ResolutionError),
-    #[error("An error occurred when converting from hypergraph: {0}")]
-    FromHyperError(#[from] FromHyperError),
 }
 
 #[derive(Clone, Debug)]

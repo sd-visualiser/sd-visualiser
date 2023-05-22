@@ -1,13 +1,8 @@
+use crate::hypergraph::OutPort;
 use derivative::Derivative;
 use std::{
     collections::{HashMap, VecDeque},
     hash::Hash,
-};
-use thiserror::Error;
-
-use crate::{
-    graph::Op,
-    hypergraph::{HyperGraphError, OutPort},
 };
 
 /// Specifies an operation which has inputs and outputs.
@@ -89,13 +84,4 @@ where
         let index = end_map.get_mut(&x).and_then(|deque| deque.pop_front());
         (x, index)
     })
-}
-
-#[derive(Debug, Error, Clone)]
-pub enum FromHyperError {
-    #[error("Hypergraph contains no nodes")]
-    EmptyGraph,
-
-    #[error("Hypergraph error")]
-    HyperGraphError(#[from] HyperGraphError<Op, ()>),
 }
