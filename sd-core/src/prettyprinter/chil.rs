@@ -143,7 +143,7 @@ impl PrettyPrint for Arg {
 
 impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(&self.0)
+        RcDoc::intersperse(self.0.iter().map(RcDoc::text), RcDoc::text("/"))
     }
 }
 

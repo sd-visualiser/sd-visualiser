@@ -1,5 +1,7 @@
 program = _{ SOI ~ expr ~ EOI }
 
+keyword = { "def" | "output" | "thunk" }
+
 expr = { bind_clause* ~ "output" ~ value }
 bind_clause = { "def" ~ variable_def ~ "=" ~ value }
 
@@ -11,8 +13,9 @@ value = { variable | op ~ ("(" ~ args ~ ")")? }
 arg = { thunk | value }
 args = _{ arg ~ (("," | ";") ~ arg)* | "" }
 
-op = { "plus" | "func" }
-number = @{ ASCII_DIGIT+ }
+op = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "+" | "-" | "*" | "=")* ~ ("/" ~ (number | string | ty ~ "/" ~ ty))? }
+number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+string = !{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
 ty = { atomic_ty | function_ty }
 atomic_ty = { 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
@@ -25,4 +28,4 @@ COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }
 
 identifier = @{ ("@" | "%") ~ number }
-name = { !("def" | "thunk" | "output" | op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+name = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

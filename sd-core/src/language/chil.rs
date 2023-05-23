@@ -56,9 +56,22 @@ pub enum Arg {
     Thunk(Thunk),
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::op))]
-pub struct Op(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Op(pub Vec<String>);
+
+impl<'pest> from_pest::FromPest<'pest> for Op {
+    type Rule = Rule;
+    type FatalError = from_pest::Void;
+
+    fn from_pest(
+        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        match pest.next().map(|pair| pair.as_str()) {
+            Some(str) => Ok(Self(str.split('/').map(str::to_string).collect())),
+            _ => Err(from_pest::ConversionError::NoMatch),
+        }
+    }
+}
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::ty))]
