@@ -5,21 +5,20 @@ keyword = { "def" | "output" | "thunk" }
 expr = { bind_clause* ~ "output" ~ value }
 bind_clause = { "def" ~ variable_def ~ "=" ~ value }
 
-thunk = { "thunk" ~ addr ~ "=" ~ "{" ~ thunk_args ~ "=>" ~ expr ~ "}" }
-thunk_args = _{ variable_def ~ ("," ~ variable_def)* | "" }
+thunk = { "thunk" ~ addr ~ "=" ~ "{" ~ (variable_def ~ ("," ~ variable_def)*)? ~ "=>" ~ expr ~ "}" }
 
-value = { variable | op ~ ("(" ~ (ds | vs ~ (";" ~ ds)?) ~ ")")? }
-vs = _{ value ~ ("," ~ value)* }
-ds = _{ thunk ~ ("," ~ thunk)* }
+value = { variable | op ~ ("(" ~ (thunks | values ~ (";" ~ thunks)?) ~ ")")? }
+thunks = _{ thunk ~ ("," ~ thunk)* }
+values = _{ value ~ ("," ~ value)* }
 
-op = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "+" | "-" | "*" | "=")* ~ ("/" ~ (number | string | ty ~ "/" ~ ty))? }
+op = ${ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "+" | "-" | "*" | "=")* ~ ("/" ~ (number | string | ty ~ "/" ~ ty))? }
 number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
-string = !{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+string = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
 ty = { atomic_ty | function_ty }
 atomic_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
-function_ty = !{ "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
-tys = _{ ty ~ ("," ~ ty)* | "" }
+function_ty = !{ "(" ~ (ty ~ ("," ~ ty)*)? ~ ")" ~ "->" ~ atomic_ty }
+
 variable = { addr | identifier ~ "(" ~ "id" ~ ":" ~ addr ~ ")" }
 variable_def = { variable ~ ":" ~ ty | variable }
 

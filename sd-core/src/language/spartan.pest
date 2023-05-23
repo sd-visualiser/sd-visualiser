@@ -1,14 +1,20 @@
-variable = @{ !("bind" | "in" | op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
-bind_clause = { "bind" ~ variable ~ "=" ~ value ~ "in" }
-expr = { bind_clause* ~ value }
+program = _{ SOI ~ expr ~ EOI }
 
-value = { variable | op ~ ("(" ~ (ds | vs ~ (";" ~ ds)?) ~ ")")? }
-vs = _{ value ~ ("," ~ value)* }
-ds = _{ thunk ~ ("," ~ thunk)* }
+keyword = { "bind" | "in" }
+
+expr = { bind_clause* ~ value }
+bind_clause = { "bind" ~ variable ~ "=" ~ value ~ "in" }
+
+thunk = { variable* ~ "." ~ expr }
+
+value = { variable | op ~ ("(" ~ (thunks | values ~ (";" ~ thunks)?) ~ ")")? }
+thunks = _{ thunk ~ ("," ~ thunk)* }
+values = _{ value ~ ("," ~ value)* }
 
 op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "rec" | number | "true" | "false" | "lambda" }
 number = @{ ASCII_DIGIT+ }
-program = _{ SOI ~ expr ~ EOI }
-WHITESPACE = _{ " " | "\t" | "\n" }
+
+variable = @{ !(keyword | op) ~ "_"* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
-thunk = { variable* ~ "." ~ expr }
+WHITESPACE = _{ " " | "\t" | "\n" }
