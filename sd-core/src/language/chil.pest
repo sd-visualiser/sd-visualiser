@@ -18,8 +18,8 @@ number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 string = !{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
 ty = { atomic_ty | function_ty }
-atomic_ty = { 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
-function_ty = { "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
+atomic_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
+function_ty = !{ "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
 tys = _{ ty ~ ("," ~ ty)* | "" }
 variable = { identifier | name ~ "(" ~ "id" ~ ":" ~ identifier ~ ")" }
 variable_def = { variable ~ ":" ~ ty | variable }
