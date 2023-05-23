@@ -7,8 +7,7 @@ bind_clause = { "def" ~ variable_def ~ "=" ~ value }
 
 thunk = { "thunk" ~ addr ~ "=" ~ "{" ~ (variable_def ~ ("," ~ variable_def)*)? ~ "=>" ~ expr ~ "}" }
 
-value = { variable | op ~ ("(" ~ (thunks | values ~ (";" ~ thunks)?) ~ ")")? }
-thunks = _{ thunk ~ ("," ~ thunk)* }
+value = { variable | op ~ ("(" ~ (thunk+ | values ~ (";" ~ thunk+)?) ~ ")")? }
 values = _{ value ~ ("," ~ value)* }
 
 op = ${ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "+" | "-" | "*" | "=")* ~ ("/" ~ (number | string | ty ~ "/" ~ ty))? }

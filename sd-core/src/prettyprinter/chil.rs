@@ -103,12 +103,12 @@ impl PrettyPrint for Value {
                     }
                     if !ds.is_empty() {
                         if !vs.is_empty() {
-                            doc = doc.append(RcDoc::text(";")).append(RcDoc::space());
+                            doc = doc.append(RcDoc::text(";"));
                         }
-                        doc = doc.append(RcDoc::intersperse(
-                            ds.iter().map(PrettyPrint::to_doc),
-                            RcDoc::text(",").append(RcDoc::space()),
-                        ));
+                        doc = doc
+                            .append(RcDoc::line())
+                            .append(RcDoc::concat(ds.iter().map(PrettyPrint::to_doc)))
+                            .nest(4);
                     }
                     doc = doc.append(RcDoc::text(")"));
                 }
@@ -139,6 +139,7 @@ impl PrettyPrint for Thunk {
             .nest(4)
             .append(RcDoc::line())
             .append(RcDoc::text("}"))
+            .append(RcDoc::line())
     }
 }
 
