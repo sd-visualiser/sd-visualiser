@@ -5,13 +5,12 @@ keyword = { "def" | "output" | "thunk" }
 expr = { bind_clause* ~ "output" ~ value }
 bind_clause = { "def" ~ variable_def ~ "=" ~ value }
 
-thunk = { "thunk" ~ identifier ~ "=" ~ "{" ~ thunk_args ~ "=>" ~ expr ~ "}" }
+thunk = { "thunk" ~ addr ~ "=" ~ "{" ~ thunk_args ~ "=>" ~ expr ~ "}" }
 thunk_args = _{ variable_def ~ ("," ~ variable_def)* | "" }
 
-value = { variable | op ~ ("(" ~ args ~ ")")? }
-
-arg = { thunk | value }
-args = _{ arg ~ (("," | ";") ~ arg)* | "" }
+value = { variable | op ~ ("(" ~ (ds | vs ~ (";" ~ ds)?) ~ ")")? }
+vs = _{ value ~ ("," ~ value)* }
+ds = _{ thunk ~ ("," ~ thunk)* }
 
 op = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "+" | "-" | "*" | "=")* ~ ("/" ~ (number | string | ty ~ "/" ~ ty))? }
 number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
@@ -21,11 +20,11 @@ ty = { atomic_ty | function_ty }
 atomic_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
 function_ty = !{ "(" ~ tys ~ ")" ~ "->" ~ atomic_ty }
 tys = _{ ty ~ ("," ~ ty)* | "" }
-variable = { identifier | name ~ "(" ~ "id" ~ ":" ~ identifier ~ ")" }
+variable = { addr | identifier ~ "(" ~ "id" ~ ":" ~ addr ~ ")" }
 variable_def = { variable ~ ":" ~ ty | variable }
 
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }
 
-identifier = @{ ("@" | "%") ~ number }
-name = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+addr = @{ ("@" | "%") ~ ASCII_DIGIT+ }
+identifier = @{ !keyword ~ "_"* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

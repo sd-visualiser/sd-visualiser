@@ -1,11 +1,13 @@
 variable = @{ !("bind" | "in" | op) ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 bind_clause = { "bind" ~ variable ~ "=" ~ value ~ "in" }
 expr = { bind_clause* ~ value }
-value = { op ~ ("(" ~ args ~ ")")? | variable }
+
+value = { variable | op ~ ("(" ~ (ds | vs ~ (";" ~ ds)?) ~ ")")? }
+vs = _{ value ~ ("," ~ value)* }
+ds = _{ thunk ~ ("," ~ thunk)* }
+
 op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "rec" | number | "true" | "false" | "lambda" }
 number = @{ ASCII_DIGIT+ }
-args = _{ arg ~ ("," ~ arg)* | "" }
-arg = { thunk | value } // ordering is important to avoid ambiguity
 program = _{ SOI ~ expr ~ EOI }
 WHITESPACE = _{ " " | "\t" | "\n" }
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }

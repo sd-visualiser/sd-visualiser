@@ -1,11 +1,11 @@
 #![allow(clippy::clone_on_copy)]
 
-use std::fmt::{Display, Write};
+use super::span_into_str;
 
 use from_pest::Void;
-use pest::Span;
 use pest_ast::FromPest;
 use pest_derive::Parser;
+use std::fmt::{Display, Write};
 
 #[cfg(test)]
 use serde::Serialize;
@@ -13,10 +13,6 @@ use serde::Serialize;
 #[derive(Parser)]
 #[grammar = "language/spartan.pest"]
 pub struct SpartanParser;
-
-fn span_into_str(span: Span) -> &str {
-    span.as_str()
-}
 
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
 #[pest_ast(rule(Rule::expr))]
@@ -86,8 +82,12 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
 #[pest_ast(rule(Rule::value))]
 pub enum Value {
-    Var(Variable),
-    Op(Op, Vec<Arg>),
+    Variable(Variable),
+    Op {
+        op: Op,
+        vs: Vec<Value>,
+        ds: Vec<Thunk>,
+    },
 }
 
 #[derive(Clone, Debug, FromPest, PartialEq, Eq)]
@@ -95,13 +95,6 @@ pub enum Value {
 pub struct Thunk {
     pub args: Vec<Variable>,
     pub body: Expr,
-}
-
-#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
-#[pest_ast(rule(Rule::arg))]
-pub enum Arg {
-    Value(Value),
-    Thunk(Thunk),
 }
 
 impl Display for Op {

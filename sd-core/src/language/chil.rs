@@ -1,23 +1,17 @@
 #![allow(clippy::clone_on_copy)]
 
-use pest::Span;
+use super::span_into_str;
+use super::spartan;
+
 use pest_ast::FromPest;
 use pest_derive::Parser;
-
-use super::spartan;
 
 #[derive(Parser)]
 #[grammar = "language/chil.pest"]
 pub struct ChilParser;
 
-fn span_into_str(span: Span) -> &str {
-    span.as_str()
-}
-
-fn remove_first(value: &str) -> &str {
-    let mut chars = value.chars();
-    chars.next();
-    chars.as_str()
+fn parse_addr(input: &str) -> usize {
+    input[1..].parse().unwrap()
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
@@ -37,7 +31,7 @@ pub struct BindClause {
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::thunk))]
 pub struct Thunk {
-    pub id: Identifier,
+    pub addr: Addr,
     pub args: Vec<VariableDef>,
     pub body: Expr,
 }
@@ -45,15 +39,12 @@ pub struct Thunk {
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::value))]
 pub enum Value {
-    Var(Variable),
-    Op(Op, Vec<Arg>),
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::arg))]
-pub enum Arg {
-    Value(Value),
-    Thunk(Thunk),
+    Variable(Variable),
+    Op {
+        op: Op,
+        vs: Vec<Value>,
+        ds: Vec<Thunk>,
+    },
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -94,8 +85,8 @@ pub struct FunctionType {
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable))]
 pub enum Variable {
-    Id(Identifier),
-    Name(Name, Identifier),
+    Addr(Addr),
+    Identifier(Identifier, Addr),
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
@@ -106,20 +97,12 @@ pub enum VariableDef {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::name))]
-pub struct Name(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+#[pest_ast(rule(Rule::addr))]
+pub struct Addr(#[pest_ast(outer(with(span_into_str), with(parse_addr),))] pub usize);
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::identifier))]
-pub struct Identifier(
-    #[pest_ast(outer(
-        with(span_into_str),
-        with(remove_first),
-        with(str::parse),
-        with(Result::unwrap)
-    ))]
-    pub usize,
-);
+pub struct Identifier(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
 // Conversion to spartan
 
@@ -144,11 +127,7 @@ impl From<BindClause> for spartan::BindClause {
 impl From<Thunk> for spartan::Thunk {
     fn from(thunk: Thunk) -> Self {
         Self {
-            args: thunk
-                .args
-                .into_iter()
-                .map(|var_def| var_def.into())
-                .collect(),
+            args: thunk.args.into_iter().map(Into::into).collect(),
             body: thunk.body.into(),
         }
     }
@@ -157,10 +136,12 @@ impl From<Thunk> for spartan::Thunk {
 impl From<Value> for spartan::Value {
     fn from(value: Value) -> Self {
         match value {
-            Value::Var(var) => Self::Var(var.into()),
-            Value::Op(op, args) => {
-                Self::Op(op.into(), args.into_iter().map(|arg| arg.into()).collect())
-            }
+            Value::Variable(var) => Self::Variable(var.into()),
+            Value::Op { op, vs, ds } => Self::Op {
+                op: op.into(),
+                vs: vs.into_iter().map(Into::into).collect(),
+                ds: ds.into_iter().map(Into::into).collect(),
+            },
         }
     }
 }
@@ -174,8 +155,8 @@ impl From<Op> for spartan::Op {
 impl From<Variable> for spartan::Variable {
     fn from(var: Variable) -> Self {
         Self(match var {
-            Variable::Id(id) => format!("var_{}", id.0),
-            Variable::Name(name, _id) => name.0,
+            Variable::Addr(addr) => format!("var_{}", addr.0),
+            Variable::Identifier(name, _addr) => name.0,
         })
     }
 }
@@ -185,15 +166,6 @@ impl From<VariableDef> for spartan::Variable {
         match var {
             VariableDef::Inferred(var) => var.into(),
             VariableDef::Manifest { var, .. } => var.into(),
-        }
-    }
-}
-
-impl From<Arg> for spartan::Arg {
-    fn from(arg: Arg) -> Self {
-        match arg {
-            Arg::Value(value) => Self::Value(value.into()),
-            Arg::Thunk(thunk) => Self::Thunk(thunk.into()),
         }
     }
 }

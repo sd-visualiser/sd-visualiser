@@ -1,4 +1,4 @@
-use super::spartan::{Arg, BindClause, Expr, Op, Thunk, Value, Variable};
+use super::spartan::{BindClause, Expr, Op, Thunk, Value, Variable};
 
 #[allow(unused_variables)]
 pub trait Visitor {
@@ -49,12 +49,13 @@ impl Visitable for Value {
     fn walk(&self, visitor: &mut impl Visitor) {
         visitor.visit_value(self);
         match self {
-            Value::Var(var) => {
+            Value::Variable(var) => {
                 var.walk(visitor);
             }
-            Value::Op(op, args) => {
+            Value::Op { op, vs, ds } => {
                 op.walk(visitor);
-                args.iter().for_each(|arg| arg.walk(visitor));
+                vs.iter().for_each(|v| v.walk(visitor));
+                ds.iter().for_each(|d| d.walk(visitor));
             }
         }
         visitor.after_value(self);
@@ -74,14 +75,5 @@ impl Visitable for Thunk {
         self.args.iter().for_each(|var| var.walk(visitor));
         self.body.walk(visitor);
         visitor.after_thunk(self);
-    }
-}
-
-impl Visitable for Arg {
-    fn walk(&self, visitor: &mut impl Visitor) {
-        match self {
-            Arg::Value(v) => v.walk(visitor),
-            Arg::Thunk(d) => d.walk(visitor),
-        }
     }
 }

@@ -1,7 +1,7 @@
 use super::PrettyPrint;
 use crate::language::chil::{
-    Arg, AtomicType, BindClause, Expr, FunctionType, Identifier, Name, Op, Thunk, Type, Value,
-    Variable, VariableDef,
+    Addr, AtomicType, BindClause, Expr, FunctionType, Identifier, Op, Thunk, Type, Value, Variable,
+    VariableDef,
 };
 use pretty::RcDoc;
 
@@ -30,14 +30,14 @@ impl PrettyPrint for BindClause {
 impl PrettyPrint for Variable {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Self::Id(id) => id.to_doc(),
-            Self::Name(name, id) => name
+            Self::Addr(addr) => addr.to_doc(),
+            Self::Identifier(name, addr) => name
                 .to_doc()
                 .append(RcDoc::text("("))
                 .append(RcDoc::text("id"))
                 .append(RcDoc::text(":"))
                 .append(RcDoc::space())
-                .append(id.to_doc())
+                .append(addr.to_doc())
                 .append(RcDoc::text(")")),
         }
     }
@@ -90,19 +90,29 @@ impl PrettyPrint for FunctionType {
 impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Self::Var(x) => x.to_doc(),
-            Self::Op(op, args) => {
-                if args.is_empty() {
-                    op.to_doc()
-                } else {
-                    op.to_doc()
-                        .append(RcDoc::text("("))
-                        .append(RcDoc::intersperse(
-                            args.iter().map(PrettyPrint::to_doc),
+            Self::Variable(var) => var.to_doc(),
+            Self::Op { op, vs, ds } => {
+                let mut doc = op.to_doc();
+                if !vs.is_empty() || !ds.is_empty() {
+                    doc = doc.append(RcDoc::text("("));
+                    if !vs.is_empty() {
+                        doc = doc.append(RcDoc::intersperse(
+                            vs.iter().map(PrettyPrint::to_doc),
                             RcDoc::text(",").append(RcDoc::space()),
-                        ))
-                        .append(RcDoc::text(")"))
+                        ));
+                    }
+                    if !ds.is_empty() {
+                        if !vs.is_empty() {
+                            doc = doc.append(RcDoc::text(";")).append(RcDoc::space());
+                        }
+                        doc = doc.append(RcDoc::intersperse(
+                            ds.iter().map(PrettyPrint::to_doc),
+                            RcDoc::text(",").append(RcDoc::space()),
+                        ));
+                    }
+                    doc = doc.append(RcDoc::text(")"));
                 }
+                doc
             }
         }
     }
@@ -112,7 +122,7 @@ impl PrettyPrint for Thunk {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("thunk")
             .append(RcDoc::space())
-            .append(self.id.to_doc())
+            .append(self.addr.to_doc())
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())
@@ -132,29 +142,20 @@ impl PrettyPrint for Thunk {
     }
 }
 
-impl PrettyPrint for Arg {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        match self {
-            Self::Value(v) => v.to_doc(),
-            Self::Thunk(d) => d.to_doc(),
-        }
-    }
-}
-
 impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::intersperse(self.0.iter().map(RcDoc::text), RcDoc::text("/"))
     }
 }
 
-impl PrettyPrint for Name {
+impl PrettyPrint for Addr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(&self.0)
+        RcDoc::text(format!("%{}", self.0))
     }
 }
 
 impl PrettyPrint for Identifier {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(format!("%{}", self.0))
+        RcDoc::text(&self.0)
     }
 }
