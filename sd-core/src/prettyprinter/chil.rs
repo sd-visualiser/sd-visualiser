@@ -5,6 +5,8 @@ use crate::language::chil::{
 };
 use pretty::RcDoc;
 
+const INDENTATION: isize = 2;
+
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc))
@@ -108,7 +110,7 @@ impl PrettyPrint for Value {
                         doc = doc
                             .append(RcDoc::line())
                             .append(RcDoc::concat(ds.iter().map(PrettyPrint::to_doc)))
-                            .nest(4);
+                            .nest(INDENTATION);
                     }
                     doc = doc.append(RcDoc::text(")"));
                 }
@@ -136,7 +138,7 @@ impl PrettyPrint for Thunk {
             .append(RcDoc::text("=>"))
             .append(RcDoc::line())
             .append(self.body.to_doc())
-            .nest(4)
+            .nest(INDENTATION)
             .append(RcDoc::line())
             .append(RcDoc::text("}"))
             .append(RcDoc::line())
