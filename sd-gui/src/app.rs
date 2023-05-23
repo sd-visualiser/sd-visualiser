@@ -260,7 +260,7 @@ impl eframe::App for App {
 
                 if ui.button("Compile").clicked() {
                     if let Err(err) = self.compile(ui.ctx()) {
-                        // Display error to user?
+                        self.toasts.error(err.to_string());
                         debug!("{:?}", err);
                     }
                 }
