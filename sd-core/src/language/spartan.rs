@@ -169,11 +169,20 @@ pub(crate) mod tests {
         Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
+    #[fixture]
+    pub(crate) fn buggy() -> Result<Expr> {
+        let mut pairs =
+            SpartanParser::parse(Rule::program, include_str!("../../../examples/buggy.sd"))
+                .context("Could not parse buggy program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
     #[rstest]
     #[case(basic_program())]
     #[case(free_vars())]
     #[case(thunks())]
     #[case(fact())]
+    #[case(buggy())]
     fn check_parse(#[case] expr: Result<Expr>) -> Result<()> {
         expr?;
         Ok(())

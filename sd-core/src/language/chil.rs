@@ -187,8 +187,19 @@ pub(crate) mod tests {
         Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
+    #[fixture]
+    fn fibonacci() -> Result<Expr> {
+        let mut pairs = ChilParser::parse(
+            Rule::program,
+            include_str!("../../../examples/fibonacci.chil"),
+        )
+        .context("Could not parse program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
     #[rstest]
     #[case(basic())]
+    #[case(fibonacci())]
     fn check_parse(#[case] expr: Result<Expr>) -> Result<()> {
         expr?;
         Ok(())
