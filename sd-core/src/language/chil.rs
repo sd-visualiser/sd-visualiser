@@ -72,19 +72,34 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::ty))]
 pub enum Type {
-    Atomic(AtomicType),
+    Base(BaseType),
+    Generic(GenericType),
+    Tuple(TupleType),
     Function(FunctionType),
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::atomic_ty))]
-pub struct AtomicType(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+#[pest_ast(rule(Rule::base_ty))]
+pub struct BaseType(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::generic_ty))]
+pub struct GenericType {
+    pub base: BaseType,
+    pub params: Vec<Type>,
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::tuple_ty))]
+pub struct TupleType {
+    pub types: Vec<Type>,
+}
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::function_ty))]
 pub struct FunctionType {
-    pub ins: Vec<Type>,
-    pub out: AtomicType,
+    pub domain: TupleType,
+    pub codomain: Box<Type>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]

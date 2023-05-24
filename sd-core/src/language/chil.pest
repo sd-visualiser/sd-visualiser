@@ -14,9 +14,12 @@ op = ${ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "+" | "-" | "*" | "=")* ~
 number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 string = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
-ty = { atomic_ty | function_ty }
-atomic_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
-function_ty = !{ "(" ~ (ty ~ ("," ~ ty)*)? ~ ")" ~ "->" ~ atomic_ty }
+ty = { generic_ty | base_ty | function_ty | tuple_ty }
+tys = _{ ty ~ ("," ~ ty)* }
+base_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "-")* }
+generic_ty = { base_ty ~ "<" ~ tys ~ ">" }
+tuple_ty = { "(" ~ tys? ~ ")" }
+function_ty = { tuple_ty ~ "->" ~ ty }
 
 variable = { addr | identifier ~ "(" ~ "id" ~ ":" ~ addr ~ ")" }
 variable_def = { variable ~ ":" ~ ty | variable }

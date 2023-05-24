@@ -1,7 +1,7 @@
 use super::PrettyPrint;
 use crate::language::chil::{
-    Addr, AtomicType, BindClause, Expr, FunctionType, Identifier, Op, Thunk, Type, Value, Variable,
-    VariableDef,
+    Addr, BaseType, BindClause, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType,
+    Type, Value, Variable, VariableDef,
 };
 use pretty::RcDoc;
 
@@ -62,30 +62,52 @@ impl PrettyPrint for VariableDef {
 impl PrettyPrint for Type {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Self::Atomic(aty) => aty.to_doc(),
+            Self::Base(bty) => bty.to_doc(),
+            Self::Generic(gty) => gty.to_doc(),
+            Self::Tuple(tty) => tty.to_doc(),
             Self::Function(fty) => fty.to_doc(),
         }
     }
 }
 
-impl PrettyPrint for AtomicType {
+impl PrettyPrint for BaseType {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(&self.0)
     }
 }
 
-impl PrettyPrint for FunctionType {
+impl PrettyPrint for GenericType {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        self.base
+            .to_doc()
+            .append(RcDoc::text("<"))
+            .append(RcDoc::intersperse(
+                self.params.iter().map(PrettyPrint::to_doc),
+                RcDoc::text(",").append(RcDoc::space()),
+            ))
+            .append(RcDoc::text(">"))
+    }
+}
+
+impl PrettyPrint for TupleType {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("(")
             .append(RcDoc::intersperse(
-                self.ins.iter().map(PrettyPrint::to_doc),
+                self.types.iter().map(PrettyPrint::to_doc),
                 RcDoc::text(",").append(RcDoc::space()),
             ))
             .append(RcDoc::text(")"))
+    }
+}
+
+impl PrettyPrint for FunctionType {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        self.domain
+            .to_doc()
             .append(RcDoc::space())
             .append(RcDoc::text("->"))
             .append(RcDoc::space())
-            .append(self.out.to_doc())
+            .append(self.codomain.to_doc())
     }
 }
 
