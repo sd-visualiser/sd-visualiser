@@ -2,21 +2,19 @@ use itertools::Itertools;
 use std::fmt::Debug;
 
 use crate::{
-    common::{advance_by, generate_permutation, InOut, Slice},
-    hypergraph::{InPort, Operation, OutPort, Thunk},
-    monoidal_wired::{MonoidalWiredGraph, MonoidalWiredOp},
+    common::{advance_by, generate_permutation, Direction, InOut, Link, MonoidalTerm, Slice},
+    hypergraph::{Operation, OutPort, Thunk},
+    monoidal_wired::{MonoidalWiredGraph, WiredOp},
 };
-use derivative::Derivative;
-use tracing::debug;
 
 impl<V, E> Slice<MonoidalOp<V, E>> {
     pub fn permutation_to_swaps(
-        start_ports: impl Iterator<Item = OutPort<V, E>>,
-        end_ports: impl Iterator<Item = OutPort<V, E>>,
+        start_ports: impl Iterator<Item = (OutPort<V, E>, Direction)>,
+        end_ports: impl Iterator<Item = (OutPort<V, E>, Direction)>,
     ) -> Vec<Self> {
         let mut perm_iter = generate_permutation(start_ports, end_ports).peekable();
 
-        let mut permutation: Vec<(OutPort<V, E>, usize)> = Vec::new();
+        let mut permutation: Vec<(Link<V, E>, usize)> = Vec::new();
 
         let mut finished = true;
         let mut slice_ops = Vec::new();
@@ -36,7 +34,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
                     }
                     _ => {
                         slice_ops.push(MonoidalOp::Copy {
-                            addr: port_1.clone(),
+                            addr: port_1.0.clone(),
                             copies: 1,
                         });
                         permutation.push((port_1, x));
@@ -45,7 +43,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
             } else {
                 finished = false;
                 slice_ops.push(MonoidalOp::Copy {
-                    addr: port_1.clone(),
+                    addr: port_1.0.clone(),
                     copies: 0,
                 });
             }
@@ -75,7 +73,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
                     }
                     _ => {
                         slice_ops.push(MonoidalOp::Copy {
-                            addr: s.0.clone(),
+                            addr: s.0 .0.clone(),
                             copies: 1,
                         });
                     }
@@ -91,13 +89,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Derivative)]
-#[derivative(Default(bound = ""))]
-pub struct MonoidalGraph<V, E> {
-    pub inputs: Vec<OutPort<V, E>>,
-    pub slices: Vec<Slice<MonoidalOp<V, E>>>,
-    pub outputs: Vec<InPort<V, E>>,
-}
+pub type MonoidalGraph<V, E> = MonoidalTerm<MonoidalOp<V, E>>;
 
 // impl<V, E> MonoidalGraph<O> {
 //     pub fn selected(&self) -> Option<(Vec<NodeIndex>, HashSet<NodeIndex>)> {
@@ -154,18 +146,31 @@ pub enum MonoidalOp<V, E> {
         expanded: bool,
     },
     Swap {
-        out_1: OutPort<V, E>,
-        out_2: OutPort<V, E>,
+        out_1: (OutPort<V, E>, Direction),
+        out_2: (OutPort<V, E>, Direction),
+    },
+    Backlink {
+        addr: OutPort<V, E>,
+    },
+    Cup {
+        addr: OutPort<V, E>,
+    },
+    Cap {
+        addr: OutPort<V, E>,
     },
 }
 
-impl<V, E> InOut<V, E> for MonoidalOp<V, E> {
+impl<V, E> InOut for MonoidalOp<V, E> {
+    type V = V;
+    type E = E;
+
     fn number_of_inputs(&self) -> usize {
         match self {
-            Self::Copy { .. } => 1,
+            Self::Copy { .. } | Self::Backlink { .. } => 1,
             Self::Operation { addr, .. } => addr.number_of_inputs(),
             Self::Thunk { addr, .. } => addr.number_of_inputs(),
-            Self::Swap { .. } => 2,
+            Self::Swap { .. } | Self::Cup { .. } => 2,
+            Self::Cap { .. } => 0,
         }
     }
 
@@ -174,45 +179,70 @@ impl<V, E> InOut<V, E> for MonoidalOp<V, E> {
             Self::Copy { copies, .. } => *copies,
             Self::Operation { addr, .. } => addr.number_of_outputs(),
             Self::Thunk { addr, .. } => addr.number_of_outputs(),
-            Self::Swap { .. } => 2,
+            Self::Backlink { .. } => 1,
+            Self::Cup { .. } => 0,
+            Self::Swap { .. } | Self::Cap { .. } => 2,
         }
     }
 
-    fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E>> + 'a>
-    where
-        V: 'a,
-        E: 'a,
-    {
+    fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
         match self {
             MonoidalOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat(addr.clone()).take(*copies))
+                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
             }
-            MonoidalOp::Operation { addr, .. } => {
-                Box::new(addr.inputs().map(|in_port| in_port.output()))
-            }
+            MonoidalOp::Operation { addr, .. } => Box::new(
+                addr.inputs()
+                    .map(|in_port| (in_port.output(), Direction::Forward)),
+            ),
             MonoidalOp::Thunk { addr, body, .. } => Box::new(
-                body.inputs
+                body.unordered_inputs
                     .iter()
-                    .filter_map(|port| addr.externalise_input(port).map(|x| x.output())),
+                    .chain(body.ordered_inputs.iter())
+                    .filter_map(|port| {
+                        addr.externalise_input(port)
+                            .map(|x| (x.output(), Direction::Forward))
+                    }),
             ),
             MonoidalOp::Swap { out_1, out_2 } => Box::new(vec![out_1, out_2].into_iter().cloned()),
+            MonoidalOp::Backlink { addr } => {
+                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
+            }
+            MonoidalOp::Cup { addr } => Box::new(
+                [
+                    (addr.clone(), Direction::Forward),
+                    (addr.clone(), Direction::Backward),
+                ]
+                .into_iter(),
+            ),
+            MonoidalOp::Cap { .. } => Box::new(std::iter::empty()),
         }
     }
 
-    fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E>> + 'a>
-    where
-        V: 'a,
-        E: 'a,
-    {
+    fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
         match self {
-            MonoidalOp::Copy { addr, .. } => Box::new(std::iter::once(addr.clone())),
-            MonoidalOp::Operation { addr, .. } => Box::new(addr.outputs()),
+            MonoidalOp::Copy { addr, .. } => {
+                Box::new(std::iter::once((addr.clone(), Direction::Forward)))
+            }
+            MonoidalOp::Operation { addr, .. } => {
+                Box::new(addr.outputs().map(|x| (x, Direction::Forward)))
+            }
             MonoidalOp::Thunk { addr, body, .. } => Box::new(
                 body.outputs
                     .iter()
-                    .map(|port| addr.externalise_output(port).unwrap()),
+                    .map(|port| (addr.externalise_output(port).unwrap(), Direction::Forward)),
             ),
             MonoidalOp::Swap { out_1, out_2 } => Box::new(vec![out_2, out_1].into_iter().cloned()),
+            MonoidalOp::Backlink { addr } => {
+                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
+            }
+            MonoidalOp::Cup { .. } => Box::new(std::iter::empty()),
+            MonoidalOp::Cap { addr } => Box::new(
+                [
+                    (addr.clone(), Direction::Forward),
+                    (addr.clone(), Direction::Backward),
+                ]
+                .into_iter(),
+            ),
         }
     }
 }
@@ -227,35 +257,43 @@ impl<V, E> MonoidalOp<V, E> {
     }
 }
 
-impl<V: Debug, E: Debug> From<&MonoidalWiredOp<V, E>> for MonoidalOp<V, E> {
-    fn from(op: &MonoidalWiredOp<V, E>) -> Self {
+impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<V, E> {
+    fn from(op: &WiredOp<V, E>) -> Self {
         match op {
-            MonoidalWiredOp::Copy { addr, copies } => MonoidalOp::Copy {
+            WiredOp::Copy { addr, copies } => MonoidalOp::Copy {
                 addr: addr.clone(),
                 copies: *copies,
             },
-            MonoidalWiredOp::Operation { addr } => Self::Operation {
+            WiredOp::Operation { addr } => Self::Operation {
                 addr: addr.clone(),
                 selected: false,
             },
-            MonoidalWiredOp::Thunk { addr, body, .. } => Self::Thunk {
+            WiredOp::Thunk { addr, body, .. } => Self::Thunk {
                 addr: addr.clone(),
                 body: body.into(),
                 expanded: true,
             },
+            WiredOp::Backlink { addr } => MonoidalOp::Backlink { addr: addr.clone() },
         }
     }
 }
 
 impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<V, E> {
     fn from(graph: &MonoidalWiredGraph<V, E>) -> Self {
-        let graph_inputs = {
-            let mut x = graph.unbound_inputs.clone();
-            x.append(&mut graph.bound_inputs.clone());
-            x
-        };
+        let inputs: Vec<OutPort<V, E>> = graph
+            .unordered_inputs
+            .iter()
+            .chain(graph.ordered_inputs.iter())
+            .cloned()
+            .collect();
+
+        let graph_inputs: Vec<(OutPort<V, E>, Direction)> = inputs
+            .iter()
+            .map(|out_port| (out_port.clone(), Direction::Forward))
+            .collect();
+
         let (open_ports, mut slices): (_, Vec<Slice<MonoidalOp<V, E>>>) = graph.slices.iter().fold(
-            (graph_inputs.clone(), vec![]),
+            (graph_inputs, vec![]),
             |(open_ports, mut slices), next_slice| {
                 slices.extend(Slice::permutation_to_swaps(
                     open_ports.into_iter(),
@@ -272,18 +310,20 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<V, E>
 
         slices.extend(Slice::permutation_to_swaps(
             open_ports.into_iter(),
-            graph.outputs.iter().map(InPort::output),
+            graph
+                .outputs
+                .iter()
+                .map(|in_port| (in_port.output(), Direction::Forward)),
         ));
 
         let mut graph = MonoidalGraph {
-            inputs: graph_inputs,
+            unordered_inputs: vec![],
+            ordered_inputs: inputs,
             slices,
             outputs: graph.outputs.clone(),
         };
 
-        debug!("Presquash: {:#?}", graph);
         graph.squash_layers();
-        debug!("Postsquash: {:#?}", graph);
 
         graph
     }

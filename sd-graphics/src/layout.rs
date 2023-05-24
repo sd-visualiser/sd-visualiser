@@ -170,7 +170,7 @@ fn layout_internal<V, E>(
         };
     }
 
-    let inputs = problem.add_variables(variable().min(0.0), graph.inputs.len());
+    let inputs = problem.add_variables(variable().min(0.0), graph.ordered_inputs.len());
     add_constraints_wires!(&inputs);
     wires.push(inputs);
     for slice in &graph.slices {
