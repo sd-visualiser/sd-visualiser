@@ -3,6 +3,7 @@
 use super::span_into_str;
 use super::spartan;
 
+use ordered_float::NotNaN;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
@@ -154,8 +155,59 @@ impl From<Value> for spartan::Value {
 }
 
 impl From<Op> for spartan::Op {
-    fn from(_op: Op) -> Self {
-        Self::Plus
+    fn from(op: Op) -> Self {
+        let parts = op.0;
+
+        if parts[0] == "+" || parts[0] == "throwing+" {
+            return Self::Plus;
+        }
+        if parts[0] == "-" || parts[0] == "throwing-" {
+            return Self::Minus;
+        }
+        if parts[0] == "*" || parts[0] == "throwing*" {
+            return Self::Times;
+        }
+        if parts[0] == "==" || parts[0] == "throwing==" {
+            return Self::Eq;
+        }
+
+        if parts[0] == "&&" {
+            return Self::And;
+        }
+        if parts[0] == "||" {
+            return Self::Or;
+        }
+        if parts[0] == "!" {
+            return Self::Not;
+        }
+
+        if parts[0] == "apply" {
+            return Self::App;
+        }
+        if parts[0] == "func" {
+            return Self::Lambda;
+        }
+
+        if parts[0] == "bool" {
+            if parts[1] == "true" {
+                return Self::Bool(true);
+            }
+            if parts[1] == "false" {
+                return Self::Bool(false);
+            }
+        }
+        if parts[0] == "int64" || parts[0] == "float64" {
+            if let Ok(x) = parts[1].parse::<f64>() {
+                if let Ok(n) = NotNaN::new(x) {
+                    return Self::Number(n);
+                }
+            }
+        }
+        if parts[0] == "string" && parts[1].starts_with('"') && parts[1].ends_with('"') {
+            return Self::String(parts[1].trim_matches('"').to_string());
+        }
+
+        Self::Identifier(parts.join("/"))
     }
 }
 

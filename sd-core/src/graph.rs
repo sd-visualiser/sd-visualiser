@@ -138,7 +138,7 @@ impl Syntax for Value {
                 .cloned()
                 .ok_or(ConvertError::VariableError(var.clone())),
             Value::Op { op, vs, ds } => {
-                let operation = fragment.add_operation(vs.len() + ds.len(), vec![()], *op);
+                let operation = fragment.add_operation(vs.len() + ds.len(), vec![()], op.clone());
                 for (v, in_port) in vs.iter().zip(operation.inputs()) {
                     let (out_port, strength) = v.process(fragment, mapping)?;
                     fragment.link(out_port, in_port, strength)?;

@@ -62,7 +62,7 @@ impl PrettyPrint for Value {
 
 impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        match *self {
+        match self {
             Self::Plus => RcDoc::text("plus"),
             Self::Minus => RcDoc::text("minus"),
             Self::Times => RcDoc::text("times"),
@@ -72,10 +72,14 @@ impl PrettyPrint for Op {
             Self::Not => RcDoc::text("not"),
             Self::If => RcDoc::text("if"),
             Self::App => RcDoc::text("app"),
-            Self::Rec => RcDoc::text("rec"),
-            Self::Int(n) => RcDoc::as_string(n),
-            Self::Bool(b) => RcDoc::as_string(b),
             Self::Lambda => RcDoc::text("lambda"),
+            Self::Rec => RcDoc::text("rec"),
+            Self::Bool(b) => RcDoc::as_string(b),
+            Self::Number(n) => RcDoc::as_string(n),
+            Self::String(s) => RcDoc::text("\"")
+                .append(RcDoc::as_string(s))
+                .append(RcDoc::text("\"")),
+            Self::Identifier(s) => RcDoc::as_string(s),
         }
     }
 }

@@ -3,6 +3,7 @@
 use super::span_into_str;
 
 use from_pest::Void;
+use ordered_float::NotNaN;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 use std::fmt::{Display, Write};
@@ -32,7 +33,7 @@ pub struct BindClause {
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Op {
     Plus,
@@ -44,10 +45,12 @@ pub enum Op {
     Not,
     If,
     App,
-    Rec,
-    Int(usize),
-    Bool(bool),
     Lambda,
+    Rec, // TODO: remove this
+    Bool(bool),
+    Number(NotNaN<f64>),
+    String(String),     // string literal
+    Identifier(String), // any other identifier
 }
 
 impl<'pest> from_pest::FromPest<'pest> for Op {
@@ -67,13 +70,20 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
             Some("not") => Ok(Self::Not),
             Some("if") => Ok(Self::If),
             Some("app") => Ok(Self::App),
+            Some("lambda") => Ok(Self::Lambda),
             Some("rec") => Ok(Self::Rec),
             Some("true") => Ok(Self::Bool(true)),
             Some("false") => Ok(Self::Bool(false)),
-            Some("lambda") => Ok(Self::Lambda),
-            Some(str) => str::parse(str)
-                .map(Self::Int)
-                .map_err(|_err| from_pest::ConversionError::NoMatch),
+            Some(str) => {
+                if let Ok(n) = str::parse::<f64>(str) {
+                    return Ok(Self::Number(NotNaN::new(n).unwrap()));
+                }
+                if str.starts_with('"') && str.ends_with('"') {
+                    return Ok(Self::String(str[1..str.len() - 1].to_string()));
+                }
+                // Technically this should be unreachable
+                Ok(Self::Identifier(str.to_string()))
+            }
             _ => Err(from_pest::ConversionError::NoMatch),
         }
     }
@@ -109,10 +119,12 @@ impl Display for Op {
             Self::Not => f.write_str("not"),
             Self::If => f.write_str("if"),
             Self::App => f.write_char('@'),
-            Self::Rec => f.write_char('μ'),
-            Self::Int(d) => f.write_str(&d.to_string()),
-            Self::Bool(b) => f.write_str(&b.to_string()),
             Self::Lambda => f.write_char('λ'),
+            Self::Rec => f.write_char('μ'),
+            Self::Bool(b) => f.write_str(&b.to_string()),
+            Self::Number(n) => f.write_str(&n.to_string()),
+            Self::String(_) => f.write_str("str"),
+            Self::Identifier(op) => f.write_str(op),
         }
     }
 }
