@@ -153,7 +153,7 @@ impl PrettyPrint for Op {
 
 impl PrettyPrint for Addr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(format!("%{}", self.0))
+        RcDoc::as_string(self.0).append(RcDoc::as_string(self.1))
     }
 }
 

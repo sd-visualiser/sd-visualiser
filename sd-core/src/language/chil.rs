@@ -10,7 +10,11 @@ use pest_derive::Parser;
 #[grammar = "language/chil.pest"]
 pub struct ChilParser;
 
-fn parse_addr(input: &str) -> usize {
+fn parse_addr_first(input: &str) -> char {
+    input.chars().next().unwrap()
+}
+
+fn parse_addr_second(input: &str) -> usize {
     input[1..].parse().unwrap()
 }
 
@@ -98,7 +102,10 @@ pub enum VariableDef {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::addr))]
-pub struct Addr(#[pest_ast(outer(with(span_into_str), with(parse_addr),))] pub usize);
+pub struct Addr(
+    #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
+    #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
+);
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::identifier))]
@@ -155,7 +162,7 @@ impl From<Op> for spartan::Op {
 impl From<Variable> for spartan::Variable {
     fn from(var: Variable) -> Self {
         Self(match var {
-            Variable::Addr(addr) => format!("var_{}", addr.0),
+            Variable::Addr(addr) => format!("var_{}", addr.1),
             Variable::Identifier(name, _addr) => name.0,
         })
     }
