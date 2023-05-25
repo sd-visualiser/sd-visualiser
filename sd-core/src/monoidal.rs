@@ -131,6 +131,28 @@ pub type MonoidalGraph<V, E> = MonoidalTerm<MonoidalOp<V, E>>;
 // }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub enum Orientation {
+    LeftToRight,
+    RightToLeft,
+}
+
+impl Orientation {
+    pub(crate) fn left(&self) -> Direction {
+        match self {
+            Orientation::LeftToRight => Direction::Forward,
+            Orientation::RightToLeft => Direction::Backward,
+        }
+    }
+
+    pub(crate) fn right(&self) -> Direction {
+        match self {
+            Orientation::LeftToRight => Direction::Backward,
+            Orientation::RightToLeft => Direction::Forward,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum MonoidalOp<V, E> {
     Copy {
         addr: OutPort<V, E>,
@@ -154,9 +176,13 @@ pub enum MonoidalOp<V, E> {
     },
     Cup {
         addr: OutPort<V, E>,
+        intermediate: Vec<Link<V, E>>,
+        orientation: Orientation,
     },
     Cap {
         addr: OutPort<V, E>,
+        intermediate: Vec<Link<V, E>>,
+        orientation: Orientation,
     },
 }
 
@@ -169,8 +195,9 @@ impl<V, E> InOut for MonoidalOp<V, E> {
             Self::Copy { .. } | Self::Backlink { .. } => 1,
             Self::Operation { addr, .. } => addr.number_of_inputs(),
             Self::Thunk { addr, .. } => addr.number_of_inputs(),
-            Self::Swap { .. } | Self::Cup { .. } => 2,
-            Self::Cap { .. } => 0,
+            Self::Swap { .. } => 2,
+            Self::Cup { intermediate, .. } => 2 + intermediate.len(),
+            Self::Cap { intermediate, .. } => intermediate.len(),
         }
     }
 
@@ -180,8 +207,9 @@ impl<V, E> InOut for MonoidalOp<V, E> {
             Self::Operation { addr, .. } => addr.number_of_outputs(),
             Self::Thunk { addr, .. } => addr.number_of_outputs(),
             Self::Backlink { .. } => 1,
-            Self::Cup { .. } => 0,
-            Self::Swap { .. } | Self::Cap { .. } => 2,
+            Self::Swap { .. } => 2,
+            Self::Cup { intermediate, .. } => intermediate.len(),
+            Self::Cap { intermediate, .. } => 2 + intermediate.len(),
         }
     }
 
@@ -207,14 +235,20 @@ impl<V, E> InOut for MonoidalOp<V, E> {
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
-            MonoidalOp::Cup { addr } => Box::new(
+            MonoidalOp::Cup {
+                addr,
+                intermediate,
+                orientation,
+            } => Box::new(
                 [
-                    (addr.clone(), Direction::Forward),
-                    (addr.clone(), Direction::Backward),
+                    vec![(addr.clone(), orientation.left())],
+                    intermediate.clone(),
+                    vec![(addr.clone(), orientation.right())],
                 ]
-                .into_iter(),
+                .into_iter()
+                .flatten(),
             ),
-            MonoidalOp::Cap { .. } => Box::new(std::iter::empty()),
+            MonoidalOp::Cap { intermediate, .. } => Box::new(intermediate.iter().cloned()),
         }
     }
 
@@ -235,13 +269,19 @@ impl<V, E> InOut for MonoidalOp<V, E> {
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
-            MonoidalOp::Cup { .. } => Box::new(std::iter::empty()),
-            MonoidalOp::Cap { addr } => Box::new(
+            MonoidalOp::Cup { intermediate, .. } => Box::new(intermediate.iter().cloned()),
+            MonoidalOp::Cap {
+                addr,
+                intermediate,
+                orientation,
+            } => Box::new(
                 [
-                    (addr.clone(), Direction::Forward),
-                    (addr.clone(), Direction::Backward),
+                    vec![(addr.clone(), orientation.left())],
+                    intermediate.clone(),
+                    vec![(addr.clone(), orientation.right())],
                 ]
-                .into_iter(),
+                .into_iter()
+                .flatten(),
             ),
         }
     }
