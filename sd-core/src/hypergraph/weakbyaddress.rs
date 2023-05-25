@@ -1,6 +1,8 @@
-use std::hash::Hash;
-use std::ops::{Deref, DerefMut};
-use std::sync::Weak;
+use std::{
+    hash::Hash,
+    ops::{Deref, DerefMut},
+    sync::Weak,
+};
 
 #[derive(Debug)]
 pub(super) struct WeakByAddress<T>(pub(super) Weak<T>);

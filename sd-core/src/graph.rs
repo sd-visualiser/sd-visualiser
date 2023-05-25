@@ -1,15 +1,18 @@
+#[cfg(test)]
+use std::collections::BTreeSet as HashSet;
 use std::collections::HashMap;
-use thiserror::Error;
-
-use crate::hypergraph::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort};
-use crate::language::spartan::{BindClause, Expr, Op, Thunk, Value, Variable};
-use crate::language::visitor::Visitable;
-
 #[cfg(not(test))]
 use std::collections::HashSet;
 
-#[cfg(test)]
-use std::collections::BTreeSet as HashSet;
+use thiserror::Error;
+
+use crate::{
+    hypergraph::{EdgeStrength, Fragment, Graph, HyperGraph, HyperGraphError, OutPort},
+    language::{
+        spartan::{BindClause, Expr, Op, Thunk, Value, Variable},
+        visitor::Visitable,
+    },
+};
 
 pub type SyntaxHyperGraphBuilder = HyperGraph<Op, ()>;
 pub type SyntaxHyperGraph = HyperGraph<Op, ()>;
@@ -242,8 +245,10 @@ mod tests {
 
     use crate::{
         graph::{SyntaxHyperGraph, Variables},
-        language::spartan::{tests::*, Expr, Variable},
-        language::visitor::Visitable,
+        language::{
+            spartan::{tests::*, Expr, Variable},
+            visitor::Visitable,
+        },
     };
 
     #[rstest]

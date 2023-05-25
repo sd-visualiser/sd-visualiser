@@ -1,16 +1,14 @@
-use std::collections::{HashMap, HashSet};
-use std::hash::Hash;
-use std::sync::RwLock;
 use std::{
+    collections::{HashMap, HashSet},
     fmt::Debug,
-    sync::{Arc, Weak},
+    hash::Hash,
+    sync::{Arc, RwLock, Weak},
 };
 
 use bimap::BiMap;
 use by_address::ByThinAddress;
 use delegate::delegate;
 use derivative::Derivative;
-
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;

@@ -1,10 +1,11 @@
 use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
+use derivative::Derivative;
+
 use crate::{
     common::{Direction, InOut, Link, MonoidalTerm, Slice},
     hypergraph::{GraphView, InPort, Node, Operation, OutPort, Thunk},
 };
-use derivative::Derivative;
 
 pub type MonoidalWiredGraph<V, E> = MonoidalTerm<WiredOp<V, E>>;
 

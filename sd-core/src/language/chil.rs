@@ -1,11 +1,10 @@
 #![allow(clippy::clone_on_copy)]
 
-use super::span_into_str;
-use super::spartan;
-
 use ordered_float::NotNaN;
 use pest_ast::FromPest;
 use pest_derive::Parser;
+
+use super::{span_into_str, spartan};
 
 #[derive(Parser)]
 #[grammar = "language/chil.pest"]

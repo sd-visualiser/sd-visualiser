@@ -1,9 +1,10 @@
+use pretty::RcDoc;
+
 use super::PrettyPrint;
 use crate::language::chil::{
     Addr, BaseType, BindClause, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType,
     Type, Value, Variable, VariableDef,
 };
-use pretty::RcDoc;
 
 const INDENTATION: isize = 2;
 

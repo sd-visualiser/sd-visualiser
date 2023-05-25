@@ -1,9 +1,10 @@
-use derivative::Derivative;
-use num::rational::Ratio;
 use std::{
     collections::{HashMap, VecDeque},
     hash::Hash,
 };
+
+use derivative::Derivative;
+use num::rational::Ratio;
 use tracing::debug;
 
 use crate::hypergraph::{InPort, OutPort};

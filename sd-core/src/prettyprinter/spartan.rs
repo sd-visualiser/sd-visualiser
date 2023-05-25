@@ -1,6 +1,7 @@
+use pretty::RcDoc;
+
 use super::PrettyPrint;
 use crate::language::spartan::{BindClause, Expr, Op, Thunk, Value, Variable};
-use pretty::RcDoc;
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -102,12 +103,14 @@ impl PrettyPrint for Thunk {
 
 #[cfg(test)]
 mod tests {
-    use crate::language::spartan::tests::*;
     use anyhow::Result;
     use insta::assert_snapshot;
     use rstest::rstest;
 
-    use crate::{language::spartan::Expr, prettyprinter::PrettyPrint};
+    use crate::{
+        language::spartan::{tests::*, Expr},
+        prettyprinter::PrettyPrint,
+    };
 
     #[rstest]
     #[case("basic_program", basic_program())]

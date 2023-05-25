@@ -1,15 +1,15 @@
 #![allow(clippy::clone_on_copy)]
 
-use super::span_into_str;
+use std::fmt::{Display, Write};
 
 use from_pest::Void;
 use ordered_float::NotNaN;
 use pest_ast::FromPest;
 use pest_derive::Parser;
-use std::fmt::{Display, Write};
-
 #[cfg(test)]
 use serde::Serialize;
+
+use super::span_into_str;
 
 #[derive(Parser)]
 #[grammar = "language/spartan.pest"]

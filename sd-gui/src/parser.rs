@@ -5,8 +5,7 @@ use eframe::egui::{
     Context,
 };
 use from_pest::{ConversionError, FromPest, Void};
-use pest::error;
-use pest::Parser as _;
+use pest::{error, Parser as _};
 use sd_core::language::{
     chil::{self, ChilParser},
     spartan::{self, SpartanParser},

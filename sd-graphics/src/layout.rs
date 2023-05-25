@@ -6,12 +6,11 @@ use sd_core::{
     common::InOut,
     monoidal::{MonoidalGraph, MonoidalOp},
 };
+#[cfg(test)]
+use serde::Serialize;
 use thiserror::Error;
 
 use crate::lp::LpProblem;
-
-#[cfg(test)]
-use serde::Serialize;
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
