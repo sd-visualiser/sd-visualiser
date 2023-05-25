@@ -366,9 +366,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
                 if !op.is_id() {
                     advance_by(&mut second_iter, op.number_of_outputs() - 1);
                     ops.push(op);
-                }
-
-                if !second.is_id() {
+                } else {
                     advance_by(&mut first_iter, second.number_of_inputs() - 1);
                     ops.push(second);
                 }
