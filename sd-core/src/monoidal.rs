@@ -3,7 +3,9 @@ use std::fmt::Debug;
 use itertools::Itertools;
 
 use crate::{
-    common::{advance_by, generate_permutation, Direction, InOut, Link, MonoidalTerm, Slice},
+    common::{
+        advance_by, generate_permutation, Direction, InOut, InOutIter, Link, MonoidalTerm, Slice,
+    },
     hypergraph::{Operation, OutPort, Thunk},
     monoidal_wired::{MonoidalWiredGraph, WiredOp},
 };
@@ -188,9 +190,6 @@ pub enum MonoidalOp<V, E> {
 }
 
 impl<V, E> InOut for MonoidalOp<V, E> {
-    type V = V;
-    type E = E;
-
     fn number_of_inputs(&self) -> usize {
         match self {
             Self::Copy { .. } | Self::Backlink { .. } => 1,
@@ -213,6 +212,11 @@ impl<V, E> InOut for MonoidalOp<V, E> {
             Self::Cap { intermediate, .. } => 2 + intermediate.len(),
         }
     }
+}
+
+impl<V, E> InOutIter for MonoidalOp<V, E> {
+    type V = V;
+    type E = E;
 
     fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
         match self {

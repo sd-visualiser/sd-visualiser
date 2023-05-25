@@ -13,6 +13,8 @@ use derivative::Derivative;
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::common::InOut;
+
 mod weakbyaddress;
 use self::weakbyaddress::WeakByAddress;
 
@@ -792,6 +794,18 @@ struct OperationInternal<V, E> {
     back_pointer: BackPointerInternal<V, E>,
 }
 
+impl<V, E, const BUILT: bool> InOut for Operation<V, E, BUILT> {
+    #[must_use]
+    fn number_of_inputs(&self) -> usize {
+        self.0.inputs.len()
+    }
+
+    #[must_use]
+    fn number_of_outputs(&self) -> usize {
+        self.0.outputs.len()
+    }
+}
+
 impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
     pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> + '_ {
         self.0
@@ -807,16 +821,6 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
             .iter()
             .cloned()
             .map(|o| OutPort(ByThinAddress(o)))
-    }
-
-    #[must_use]
-    pub fn number_of_inputs(&self) -> usize {
-        self.0.inputs.len()
-    }
-
-    #[must_use]
-    pub fn number_of_outputs(&self) -> usize {
-        self.0.outputs.len()
     }
 
     #[must_use]
@@ -898,6 +902,18 @@ struct ThunkInternal<V, E> {
     back_pointer: BackPointerInternal<V, E>,
 }
 
+impl<V, E, const BUILT: bool> InOut for Thunk<V, E, BUILT> {
+    #[must_use]
+    fn number_of_inputs(&self) -> usize {
+        self.0.free_variable_inputs.len()
+    }
+
+    #[must_use]
+    fn number_of_outputs(&self) -> usize {
+        self.0.outputs.len()
+    }
+}
+
 impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
     pub fn bound_inputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
         self.0
@@ -928,16 +944,6 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
             .output_order
             .iter()
             .map(|in_port| OutPort(self.0.outputs.get_by_left(in_port).unwrap().clone()))
-    }
-
-    #[must_use]
-    pub fn number_of_inputs(&self) -> usize {
-        self.0.free_variable_inputs.len()
-    }
-
-    #[must_use]
-    pub fn number_of_outputs(&self) -> usize {
-        self.0.outputs.len()
     }
 
     #[must_use]
@@ -1034,6 +1040,24 @@ where
     }
 }
 
+impl<V, E, const BUILT: bool> InOut for Node<V, E, BUILT> {
+    #[must_use]
+    fn number_of_inputs(&self) -> usize {
+        match self {
+            Node::Operation(op) => op.number_of_inputs(),
+            Node::Thunk(thunk) => thunk.number_of_inputs(),
+        }
+    }
+
+    #[must_use]
+    fn number_of_outputs(&self) -> usize {
+        match self {
+            Node::Operation(op) => op.number_of_outputs(),
+            Node::Thunk(thunk) => thunk.number_of_outputs(),
+        }
+    }
+}
+
 impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
     #[must_use]
     pub fn inputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
@@ -1048,22 +1072,6 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         match self {
             Node::Operation(op) => Box::new(op.outputs()),
             Node::Thunk(thunk) => Box::new(thunk.outputs()),
-        }
-    }
-
-    #[must_use]
-    pub fn number_of_inputs(&self) -> usize {
-        match self {
-            Node::Operation(op) => op.number_of_inputs(),
-            Node::Thunk(thunk) => thunk.number_of_inputs(),
-        }
-    }
-
-    #[must_use]
-    pub fn number_of_outputs(&self) -> usize {
-        match self {
-            Node::Operation(op) => op.number_of_outputs(),
-            Node::Thunk(thunk) => thunk.number_of_outputs(),
         }
     }
 

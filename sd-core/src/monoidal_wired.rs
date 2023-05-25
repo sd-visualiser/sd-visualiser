@@ -3,7 +3,7 @@ use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 use derivative::Derivative;
 
 use crate::{
-    common::{Direction, InOut, Link, MonoidalTerm, Slice},
+    common::{Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
     hypergraph::{GraphView, InPort, Node, Operation, OutPort, Thunk},
 };
 
@@ -28,9 +28,6 @@ pub enum WiredOp<V, E> {
 }
 
 impl<V, E> InOut for WiredOp<V, E> {
-    type V = V;
-    type E = E;
-
     fn number_of_inputs(&self) -> usize {
         match self {
             WiredOp::Copy { copies, .. } => *copies,
@@ -48,6 +45,11 @@ impl<V, E> InOut for WiredOp<V, E> {
             WiredOp::Backlink { .. } => 1,
         }
     }
+}
+
+impl<V, E> InOutIter for WiredOp<V, E> {
+    type V = V;
+    type E = E;
 
     fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
         match self {

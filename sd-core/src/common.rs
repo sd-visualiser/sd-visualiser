@@ -19,10 +19,13 @@ pub type Link<V, E> = (OutPort<V, E>, Direction);
 
 /// Specifies an operation which has inputs and outputs.
 pub trait InOut {
-    type V;
-    type E;
     fn number_of_inputs(&self) -> usize;
     fn number_of_outputs(&self) -> usize;
+}
+
+pub trait InOutIter {
+    type V;
+    type E;
     fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::V, Self::E>> + 'a>;
     fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::V, Self::E>> + 'a>;
 }
@@ -34,9 +37,6 @@ pub struct Slice<O> {
 }
 
 impl<O: InOut> InOut for Slice<O> {
-    type V = O::V;
-    type E = O::E;
-
     fn number_of_inputs(&self) -> usize {
         self.ops.iter().map(InOut::number_of_inputs).sum()
     }
@@ -44,19 +44,24 @@ impl<O: InOut> InOut for Slice<O> {
     fn number_of_outputs(&self) -> usize {
         self.ops.iter().map(InOut::number_of_outputs).sum()
     }
+}
+
+impl<O: InOutIter> InOutIter for Slice<O> {
+    type V = O::V;
+    type E = O::E;
 
     fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<O::V, O::E>> + 'a> {
-        Box::new(self.ops.iter().flat_map(InOut::inputs))
+        Box::new(self.ops.iter().flat_map(InOutIter::inputs))
     }
 
     fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<O::V, O::E>> + 'a> {
-        Box::new(self.ops.iter().flat_map(InOut::outputs))
+        Box::new(self.ops.iter().flat_map(InOutIter::outputs))
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct MonoidalTerm<T: InOut> {
+pub struct MonoidalTerm<T: InOutIter> {
     pub unordered_inputs: Vec<OutPort<T::V, T::E>>,
     pub ordered_inputs: Vec<OutPort<T::V, T::E>>, // We need to make sure these don't get reordered
     pub slices: Vec<Slice<T>>,
@@ -98,9 +103,9 @@ where
     })
 }
 
-impl<T: InOut> MonoidalTerm<T> {
+impl<T: InOutIter> MonoidalTerm<T> {
     pub fn minimise_swaps(&mut self) {
-        fn fold_slice<'a, T: InOut>(
+        fn fold_slice<'a, T: InOutIter>(
             ports_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
             slice: &'a mut Slice<T>,
         ) -> Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a> {
@@ -133,7 +138,7 @@ impl<T: InOut> MonoidalTerm<T> {
     }
 }
 
-impl<T: InOut> Slice<T> {
+impl<T: InOutIter> Slice<T> {
     pub fn minimise_swaps(&mut self, ports_below: impl Iterator<Item = Link<T::V, T::E>>) {
         let outputs = self.outputs();
 
@@ -155,7 +160,7 @@ impl<T: InOut> Slice<T> {
     }
 }
 
-impl<T: InOut> MonoidalTerm<Slice<T>> {
+impl<T: InOutIter> MonoidalTerm<Slice<T>> {
     #[must_use]
     pub fn flatten_graph(self) -> MonoidalTerm<T> {
         let MonoidalTerm {
@@ -173,7 +178,7 @@ impl<T: InOut> MonoidalTerm<Slice<T>> {
     }
 }
 
-impl<T: InOut> Slice<Slice<T>> {
+impl<T> Slice<Slice<T>> {
     #[must_use]
     pub fn flatten_slice(self) -> Slice<T> {
         Slice {
