@@ -258,7 +258,7 @@ mod tests {
     #[case(fact(), vec![])]
     fn free_var_test(#[case] expr: Result<Expr>, #[case] free_vars: Vec<Variable>) -> Result<()> {
         let expr = expr?;
-        let mut vars: Variables = Default::default();
+        let mut vars: Variables = Variables::default();
         expr.walk(&mut vars);
 
         assert_eq!(vars.free, free_vars.into_iter().collect());
