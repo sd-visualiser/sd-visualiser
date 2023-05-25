@@ -39,7 +39,7 @@ struct Panzoom {
 impl Default for Panzoom {
     fn default() -> Self {
         Self {
-            translation: Default::default(),
+            translation: Vec2::default(),
             zoom: 50.0,
         }
     }
@@ -62,6 +62,7 @@ fn lines_contained(line_col: &LineColLocation) -> Vec<usize> {
 
 impl App {
     /// Called once before the first frame.
+    #[must_use]
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
@@ -109,15 +110,14 @@ impl App {
 
         let parse = Parser::parse(ui.ctx(), &self.code, self.language);
         if let Err(ParseError::Chil(err)) = parse.as_ref() {
-            self.code_edit_error_ui(ui, &text_edit_out, err.to_string(), &err.line_col)
+            Self::code_edit_error_ui(ui, &text_edit_out, err.to_string(), &err.line_col);
         }
         if let Err(ParseError::Spartan(err)) = parse.as_ref() {
-            self.code_edit_error_ui(ui, &text_edit_out, err.to_string(), &err.line_col)
+            Self::code_edit_error_ui(ui, &text_edit_out, err.to_string(), &err.line_col);
         }
     }
 
     fn code_edit_error_ui(
-        &self,
         ui: &mut egui::Ui,
         text_edit_out: &TextEditOutput,
         err: String,
@@ -132,21 +132,21 @@ impl App {
                 let left = row.rect.min.x;
                 let right = row.rect.max.x;
                 let base = row.rect.max.y;
-                let count = row.glyphs.len() * SQUIGGLES_PER_CHAR;
+                let count = u16::try_from(row.glyphs.len() * SQUIGGLES_PER_CHAR).unwrap();
                 // Takes weighted average of 'left' and 'right' where
                 // 0 <= i <= count
                 let w_avg = |i: f32| {
-                    let count_f = count as f32;
+                    let count_f = f32::from(count);
                     (left * (count_f - i) + right * i) / count_f
                 };
                 for i in 0..count {
-                    let start: Pos2 =
-                        Pos2::from((w_avg(i as f32), base)) + text_edit_out.text_draw_pos.to_vec2();
+                    let start: Pos2 = Pos2::from((w_avg(f32::from(i)), base))
+                        + text_edit_out.text_draw_pos.to_vec2();
                     let control: Pos2 = Pos2::from((
-                        w_avg(i as f32 + 0.5),
-                        base + SQUIGGLE_HEIGHT * (((i + 1) % 2) as f32 - 0.5),
+                        w_avg(f32::from(i) + 0.5),
+                        base + SQUIGGLE_HEIGHT * (f32::from((i + 1) % 2) - 0.5),
                     )) + text_edit_out.text_draw_pos.to_vec2();
-                    let end: Pos2 = Pos2::from((w_avg((i + 1) as f32), base))
+                    let end: Pos2 = Pos2::from((w_avg(f32::from(i + 1)), base))
                         + text_edit_out.text_draw_pos.to_vec2();
                     painter.add(QuadraticBezierShape {
                         points: [start, control, end],
@@ -247,7 +247,7 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Reset").clicked() {
-                    self.panzoom = Default::default();
+                    self.panzoom = Panzoom::default();
                 }
                 if ui.button("Zoom In").clicked() {
                     self.panzoom.zoom *= 1.25;

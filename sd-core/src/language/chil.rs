@@ -132,7 +132,7 @@ pub struct Identifier(#[pest_ast(outer(with(span_into_str), with(str::to_string)
 impl From<Expr> for spartan::Expr {
     fn from(expr: Expr) -> Self {
         Self {
-            binds: expr.binds.into_iter().map(|bind| bind.into()).collect(),
+            binds: expr.binds.into_iter().map(Into::into).collect(),
             value: expr.value.into(),
         }
     }
@@ -219,7 +219,7 @@ impl From<Op> for spartan::Op {
             }
         }
         if parts[0] == "string" && parts[1].starts_with('"') && parts[1].ends_with('"') {
-            return Self::String(parts[1].trim_matches('"').to_string());
+            return Self::String(parts[1].trim_matches('"').to_owned());
         }
 
         Self::Identifier(parts.join("/"))
@@ -238,8 +238,7 @@ impl From<Variable> for spartan::Variable {
 impl From<VariableDef> for spartan::Variable {
     fn from(var: VariableDef) -> Self {
         match var {
-            VariableDef::Inferred(var) => var.into(),
-            VariableDef::Manifest { var, .. } => var.into(),
+            VariableDef::Inferred(var) | VariableDef::Manifest { var, .. } => var.into(),
         }
     }
 }

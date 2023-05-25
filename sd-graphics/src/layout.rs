@@ -78,10 +78,12 @@ impl<T> LayoutInternal<T> {
 pub type Layout = LayoutInternal<f32>;
 
 impl Layout {
+    #[must_use]
     pub fn width(&self) -> f32 {
         self.max - self.min
     }
 
+    #[must_use]
     pub fn height(&self) -> f32 {
         (0..self.nodes.len())
             .map(|j| self.slice_height(j))
@@ -89,6 +91,7 @@ impl Layout {
             + 1.0
     }
 
+    #[must_use]
     pub fn slice_height(&self, j: usize) -> f32 {
         self.nodes[j]
             .iter()
@@ -128,6 +131,7 @@ impl Layout {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn layout_internal<V, E>(
     graph: &MonoidalGraph<V, E>,
     problem: &mut LpProblem,

@@ -56,6 +56,7 @@ pub fn render<V: Display, E>(
     shapes
 }
 
+#[allow(clippy::too_many_lines)]
 fn generate_shapes<V: Display, E>(
     ui: &egui::Ui,
     response: &Response,
@@ -79,8 +80,8 @@ fn generate_shapes<V: Display, E>(
 
     for (j, slice) in graph.slices.iter_mut().enumerate() {
         let slice_height = layout.slice_height(j);
-        let y_in = y_offset;
-        let y_out = y_offset + slice_height;
+        let y_input = y_offset;
+        let y_output = y_offset + slice_height;
 
         let mut offset_i = 0;
         let mut offset_o = 0;
@@ -96,10 +97,10 @@ fn generate_shapes<V: Display, E>(
 
             match op {
                 MonoidalOp::Swap { .. } => {
-                    let in1 = transform.apply(x_ins[0], y_in);
-                    let in2 = transform.apply(x_ins[1], y_in);
-                    let out1 = transform.apply(x_outs[0], y_out);
-                    let out2 = transform.apply(x_outs[1], y_out);
+                    let in1 = transform.apply(x_ins[0], y_input);
+                    let in2 = transform.apply(x_ins[1], y_input);
+                    let out1 = transform.apply(x_outs[0], y_output);
+                    let out2 = transform.apply(x_outs[1], y_output);
 
                     shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(in1, out2),
@@ -122,16 +123,16 @@ fn generate_shapes<V: Display, E>(
                 } if *expanded => {
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
-                    let y_min = y_in + diff;
-                    let y_max = y_out - diff;
+                    let y_min = y_input + diff;
+                    let y_max = y_output - diff;
                     for &x in x_ins {
                         let thunk = transform.apply(x, y_min);
-                        let input = transform.apply(x, y_in);
+                        let input = transform.apply(x, y_input);
                         shapes.push(Shape::line_segment([input, thunk], default_stroke));
                     }
                     for &x in x_outs {
                         let thunk = transform.apply(x, y_max);
-                        let output = transform.apply(x, y_out);
+                        let output = transform.apply(x, y_output);
                         shapes.push(Shape::line_segment([thunk, output], default_stroke));
                     }
                     let thunk_rect = Rect::from_min_max(
@@ -153,17 +154,17 @@ fn generate_shapes<V: Display, E>(
                             dot,
                             RADIUS_ARG * transform.scale,
                             default_color,
-                        ))
+                        ));
                     }
                     generate_shapes(ui, &thunk_response, shapes, y_min, x_op, body, transform);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
-                    let y_op = (y_in + y_out) / 2.0;
+                    let y_op = (y_input + y_output) / 2.0;
                     let center = transform.apply(x_op, y_op);
 
                     for &x in x_ins {
-                        let input = transform.apply(x, y_in);
+                        let input = transform.apply(x, y_input);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
                             false,
@@ -173,7 +174,7 @@ fn generate_shapes<V: Display, E>(
                     }
 
                     for &x in x_outs {
-                        let output = transform.apply(x, y_out);
+                        let output = transform.apply(x, y_output);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
                             false,
@@ -188,7 +189,7 @@ fn generate_shapes<V: Display, E>(
                                 center,
                                 RADIUS_COPY * transform.scale,
                                 default_color,
-                            ))
+                            ));
                         }
                         MonoidalOp::Operation { addr, selected, .. } => {
                             let op_rect =
@@ -215,7 +216,7 @@ fn generate_shapes<V: Display, E>(
                                     center,
                                     Align2::CENTER_CENTER,
                                     addr.weight(),
-                                    Default::default(),
+                                    egui::FontId::default(),
                                     ui.visuals().strong_text_color(),
                                 ));
                             });
@@ -243,7 +244,7 @@ fn generate_shapes<V: Display, E>(
             offset_o += no;
         }
 
-        y_offset = y_out;
+        y_offset = y_output;
     }
 
     // Target

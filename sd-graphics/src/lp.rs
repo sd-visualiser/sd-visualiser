@@ -23,7 +23,7 @@ impl LpProblem {
     }
 
     pub(crate) fn add_constraint(&mut self, constraint: Constraint) {
-        self.constraints.push(constraint)
+        self.constraints.push(constraint);
     }
 
     pub(crate) fn minimise<S: Solver>(

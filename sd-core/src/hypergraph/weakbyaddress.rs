@@ -15,7 +15,7 @@ impl<T> Eq for WeakByAddress<T> {}
 
 impl<T> Hash for WeakByAddress<T> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self.0.as_ptr(), state)
+        std::ptr::hash(self.0.as_ptr(), state);
     }
 }
 

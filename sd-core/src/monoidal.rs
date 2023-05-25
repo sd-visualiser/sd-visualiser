@@ -54,7 +54,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
         let mut slices = Vec::new();
 
         if !finished {
-            slices.push(Slice { ops: slice_ops })
+            slices.push(Slice { ops: slice_ops });
         }
 
         while !finished {
@@ -83,7 +83,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
             }
 
             if !finished {
-                slices.push(Slice { ops: slice_ops })
+                slices.push(Slice { ops: slice_ops });
             }
         }
 
@@ -218,6 +218,7 @@ impl<V, E> InOut<V, E> for MonoidalOp<V, E> {
 }
 
 impl<V, E> MonoidalOp<V, E> {
+    #[must_use]
     pub fn is_id(&self) -> bool {
         match self {
             MonoidalOp::Copy { copies, .. } => *copies == 1,
@@ -271,7 +272,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<V, E>
 
         slices.extend(Slice::permutation_to_swaps(
             open_ports.into_iter(),
-            graph.outputs.iter().map(|in_port| in_port.output()),
+            graph.outputs.iter().map(InPort::output),
         ));
 
         let mut graph = MonoidalGraph {
@@ -324,18 +325,18 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
                 canonical = true;
                 second_iter.next().unwrap()
             };
-            if !first.is_id() {
-                if !second.is_id() {
-                    return false;
-                }
-                for _ in 1..first.number_of_outputs() {
-                    if second_iter.next().map(|x| x.is_id()) != Some(true) {
+            if first.is_id() {
+                for _ in 1..second.number_of_inputs() {
+                    if first_iter.next().map(MonoidalOp::is_id) != Some(true) {
                         return false;
                     }
                 }
             } else {
-                for _ in 1..second.number_of_inputs() {
-                    if first_iter.next().map(|x| x.is_id()) != Some(true) {
+                if !second.is_id() {
+                    return false;
+                }
+                for _ in 1..first.number_of_outputs() {
+                    if second_iter.next().map(MonoidalOp::is_id) != Some(true) {
                         return false;
                     }
                 }
@@ -363,12 +364,12 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
                     second = second_iter.next().unwrap();
                 }
 
-                if !op.is_id() {
-                    advance_by(&mut second_iter, op.number_of_outputs() - 1);
-                    ops.push(op);
-                } else {
+                if op.is_id() {
                     advance_by(&mut first_iter, second.number_of_inputs() - 1);
                     ops.push(second);
+                } else {
+                    advance_by(&mut second_iter, op.number_of_outputs() - 1);
+                    ops.push(op);
                 }
             }
         }

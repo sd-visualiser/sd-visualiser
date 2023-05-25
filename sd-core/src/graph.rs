@@ -32,8 +32,8 @@ struct Variables {
 impl Default for Variables {
     fn default() -> Self {
         Self {
-            free: Default::default(),
-            bound: vec![Default::default()],
+            free: HashSet::default(),
+            bound: vec![HashSet::default()],
         }
     }
 }
@@ -170,7 +170,7 @@ impl Syntax for Thunk {
     where
         F: Fragment<Op, ()> + Graph<Op, (), false>,
     {
-        let mut vars: Variables = Default::default();
+        let mut vars: Variables = Variables::default();
 
         self.walk(&mut vars);
 
@@ -213,7 +213,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
     type Error = ConvertError;
 
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
-        let mut vars: Variables = Default::default();
+        let mut vars: Variables = Variables::default();
 
         expr.walk(&mut vars);
 

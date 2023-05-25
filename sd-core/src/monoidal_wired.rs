@@ -125,19 +125,18 @@ struct MonoidalWiredGraphBuilder<V, E> {
 impl<V, E> MonoidalWiredGraphBuilder<V, E> {
     fn add_op(&mut self, op: MonoidalWiredOp<V, E>, layer: usize) {
         assert!(layer <= self.slices.len());
-        match self.slices.get_mut(layer) {
-            Some(slice) => slice,
-            None => {
-                self.slices.push(Default::default());
-                self.slices.get_mut(layer).unwrap()
-            }
+        if let Some(slice) = self.slices.get_mut(layer) {
+            slice
+        } else {
+            self.slices.push(Slice::default());
+            &mut self.slices[layer]
         }
         .ops
-        .push(op)
+        .push(op);
     }
 
-    fn insert_copies_for_port(&mut self, out_port: OutPort<V, E>) -> usize {
-        let mut layers = self.open_ports.remove(&out_port).unwrap();
+    fn insert_copies_for_port(&mut self, out_port: &OutPort<V, E>) -> usize {
+        let mut layers = self.open_ports.remove(out_port).unwrap();
         layers.sort_by_key(|x| Reverse(*x));
 
         while layers.len() > 1 {
@@ -164,7 +163,7 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
         let non_deleted_output_layers: Vec<_> = node
             .outputs()
             .filter(|x| x.inputs().next().is_some())
-            .map(|x| (x.clone(), self.insert_copies_for_port(x)))
+            .map(|x| (x.clone(), self.insert_copies_for_port(&x)))
             .collect();
 
         let node_layer = non_deleted_output_layers
@@ -173,19 +172,17 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
             .max()
             .unwrap_or_default();
 
-        non_deleted_output_layers
-            .into_iter()
-            .for_each(|(out_port, layer)| {
-                (layer..node_layer).for_each(|x| {
-                    self.add_op(
-                        MonoidalWiredOp::Copy {
-                            addr: out_port.clone(),
-                            copies: 1,
-                        },
-                        x,
-                    )
-                })
-            });
+        for (out_port, layer) in non_deleted_output_layers {
+            for x in layer..node_layer {
+                self.add_op(
+                    MonoidalWiredOp::Copy {
+                        addr: out_port.clone(),
+                        copies: 1,
+                    },
+                    x,
+                );
+            }
+        }
 
         node.inputs()
             .map(|in_port| InPort::output(&in_port))
@@ -193,7 +190,7 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
                 self.open_ports
                     .entry(out_port)
                     .or_default()
-                    .push(node_layer + 1)
+                    .push(node_layer + 1);
             });
 
         self.add_op(node.into(), node_layer);
@@ -208,7 +205,7 @@ where
         let mut builder = MonoidalWiredGraphBuilder::default();
         let outputs: Vec<InPort<V, E>> = graph.graph_outputs().collect();
 
-        for in_port in outputs.iter() {
+        for in_port in &outputs {
             builder
                 .open_ports
                 .entry(in_port.output())
@@ -218,29 +215,27 @@ where
 
         for node in graph.nodes() {
             // Use topsorted graph here
-            builder.insert_operation(node)
+            builder.insert_operation(node);
         }
 
         let remaining_ports: Vec<_> = builder.open_ports.keys().cloned().collect();
 
         let remaining_port_layers: Vec<_> = remaining_ports
             .into_iter()
-            .map(|out_port| (out_port.clone(), builder.insert_copies_for_port(out_port)))
+            .map(|out_port| (out_port.clone(), builder.insert_copies_for_port(&out_port)))
             .collect();
 
-        remaining_port_layers
-            .into_iter()
-            .for_each(|(out_port, layer)| {
-                (layer..builder.slices.len()).for_each(|x| {
-                    builder.add_op(
-                        MonoidalWiredOp::Copy {
-                            addr: out_port.clone(),
-                            copies: 1,
-                        },
-                        x,
-                    )
-                });
-            });
+        for (out_port, layer) in remaining_port_layers {
+            for x in layer..builder.slices.len() {
+                builder.add_op(
+                    MonoidalWiredOp::Copy {
+                        addr: out_port.clone(),
+                        copies: 1,
+                    },
+                    x,
+                );
+            }
+        }
 
         builder.slices.reverse();
 
@@ -268,7 +263,7 @@ impl<V, E> MonoidalWiredGraph<V, E> {
         }
 
         let ports_below = self.slices.iter_mut().rev().fold(
-            Box::new(self.outputs.iter().map(|in_port| in_port.output()))
+            Box::new(self.outputs.iter().map(InPort::output))
                 as Box<dyn Iterator<Item = OutPort<V, E>>>,
             fold_slice::<V, E>,
         );
@@ -304,6 +299,6 @@ impl<V, E> Slice<MonoidalWiredOp<V, E>> {
                 (_, 0) => usize::MAX.into(),
                 (x, y) => Ratio::new_raw(x, y),
             }
-        })
+        });
     }
 }

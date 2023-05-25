@@ -27,11 +27,11 @@ pub struct Slice<O> {
 
 impl<V, E, O: InOut<V, E>> InOut<V, E> for Slice<O> {
     fn number_of_inputs(&self) -> usize {
-        self.ops.iter().map(|op| op.number_of_inputs()).sum()
+        self.ops.iter().map(InOut::number_of_inputs).sum()
     }
 
     fn number_of_outputs(&self) -> usize {
-        self.ops.iter().map(|op| op.number_of_outputs()).sum()
+        self.ops.iter().map(InOut::number_of_outputs).sum()
     }
 
     fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E>> + 'a>
@@ -75,13 +75,13 @@ pub(crate) fn generate_permutation<'a, T: 'a>(
 where
     T: PartialEq + Eq + Hash,
 {
-    let mut end_map: HashMap<T, VecDeque<usize>> = Default::default();
+    let mut end_map: HashMap<T, VecDeque<usize>> = HashMap::default();
     for (idx, x) in end.enumerate() {
         end_map.entry(x).or_default().push_back(idx);
     }
 
     start.map(move |x| {
-        let index = end_map.get_mut(&x).and_then(|deque| deque.pop_front());
+        let index = end_map.get_mut(&x).and_then(VecDeque::pop_front);
         (x, index)
     })
 }

@@ -58,14 +58,14 @@ impl CodeTheme {
     pub fn dark() -> Self {
         Self {
             dark_mode: true,
-            syntect_theme: "Solarized (dark)".to_string(),
+            syntect_theme: "Solarized (dark)".to_owned(),
         }
     }
 
     pub fn light() -> Self {
         Self {
             dark_mode: false,
-            syntect_theme: "Solarized (light)".to_string(),
+            syntect_theme: "Solarized (light)".to_owned(),
         }
     }
 }
@@ -103,7 +103,7 @@ impl Highlighter {
                 // Fallback:
                 LayoutJob::simple(
                     code.into(),
-                    Default::default(),
+                    FontId::default(),
                     if theme.dark_mode {
                         egui::Color32::LIGHT_GRAY
                     } else {

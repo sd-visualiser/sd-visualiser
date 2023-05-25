@@ -82,7 +82,7 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
                     return Ok(Self::String(str[1..str.len() - 1].to_string()));
                 }
                 // Technically this should be unreachable
-                Ok(Self::Identifier(str.to_string()))
+                Ok(Self::Identifier(str.to_owned()))
             }
             _ => Err(from_pest::ConversionError::NoMatch),
         }
@@ -137,7 +137,7 @@ impl Display for Variable {
 
 impl From<&str> for Variable {
     fn from(value: &str) -> Self {
-        Variable(value.to_string())
+        Variable(value.to_owned())
     }
 }
 

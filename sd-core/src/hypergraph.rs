@@ -179,13 +179,14 @@ where
     fn new_boundary() -> Self {
         Self {
             node: None,
-            output: RwLock::new(Default::default()),
+            output: RwLock::new(Weak::default()),
         }
     }
 }
 macro_rules! get_node {
     ($port:ident) => {
         impl<V, E, const BUILT: bool> $port<V, E, BUILT> {
+            #[must_use]
             pub fn node(&self) -> Option<Node<V, E, BUILT>> {
                 Some(match self.0.node.as_ref()? {
                     WeakNodeInternal::Operation(weak_op) => {
@@ -210,6 +211,7 @@ get_node!(InPort);
 get_node!(OutPort);
 
 impl<V, E, const BUILT: bool> InPort<V, E, BUILT> {
+    #[must_use]
     pub fn output(&self) -> OutPort<V, E, BUILT> {
         assert!(BUILT);
         OutPort(ByThinAddress(
@@ -238,7 +240,7 @@ where
     fn new_boundary(weight: E) -> Self {
         Self {
             node: None,
-            inputs: RwLock::new(Default::default()),
+            inputs: RwLock::new(HashMap::default()),
             weight,
         }
     }
@@ -259,6 +261,7 @@ impl<V, E> OutPort<V, E> {
             .into_iter()
     }
 
+    #[must_use]
     pub fn number_of_inputs(&self) -> usize {
         self.0
             .inputs
@@ -267,6 +270,7 @@ impl<V, E> OutPort<V, E> {
             .len()
     }
 
+    #[must_use]
     pub fn weight(&self) -> &E {
         &self.0.weight
     }
@@ -285,6 +289,7 @@ where
     V: Debug,
     E: Debug,
 {
+    #[must_use]
     pub fn new(input_weights: Vec<E>, number_of_outputs: usize) -> Self {
         let graph_inputs = input_weights
             .into_iter()
@@ -296,80 +301,51 @@ where
             .collect();
 
         HyperGraph(HyperGraphInternal {
-            nodes: Default::default(),
+            nodes: Vec::default(),
             graph_inputs,
             graph_outputs,
         })
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn build(self) -> Result<HyperGraph<V, E, true>, V, E> {
         // check validity of hypergraph:
         // all inports linked to exactly one outport
+        fn check_inports_initialized<V, E>(
+            outport: &OutPort<V, E, false>,
+        ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
+        where
+            V: Debug,
+            E: Debug,
         {
-            fn check_inports_initialized<V, E>(
-                outport: OutPort<V, E, false>,
-            ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
-            where
-                V: Debug,
-                E: Debug,
-            {
-                outport
-                    .0
-                    .inputs
-                    .try_read()
-                    .expect("failed to lock outport inputs {outport.0.inputs:#?}")
-                    .iter()
-                    .all(|(weak_inport, _strength)| weak_inport.strong_count() > 0)
-                    .then_some(())
-                    .ok_or_else(|| HyperGraphBuildError::UninitializedOutPort(outport.clone()))
-            }
-
-            fn check_outport_initialized<V, E>(
-                inport: InPort<V, E, false>,
-            ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
-            where
-                V: Debug,
-                E: Debug,
-            {
-                (inport
-                    .0
-                    .output
-                    .try_read()
-                    .expect("failed to lock inport output {inport.0.output:#?}")
-                    .strong_count()
-                    > 0)
+            outport
+                .0
+                .inputs
+                .try_read()
+                .expect("failed to lock outport inputs {outport.0.inputs:#?}")
+                .iter()
+                .all(|(weak_inport, _strength)| weak_inport.strong_count() > 0)
                 .then_some(())
-                .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(inport.clone()))
-            }
-
-            for outport in self.graph_inputs() {
-                // check associated with hypergraph
-                assert!(&outport.0.node.is_none());
-                // check inputs initialised
-                check_inports_initialized(outport).map_err(HyperGraphError::BuildError)?;
-            }
-
-            for inport in self.graph_outputs() {
-                // check associated with hypergraph
-                assert!(&inport.0.node.is_none());
-                // check output initialised
-                check_outport_initialized(inport).map_err(HyperGraphError::BuildError)?;
-            }
-            for node in self.nodes() {
-                node.fold(&mut (), |no_state, n| {
-                    for inport in n.inputs() {
-                        check_outport_initialized(inport).map_err(HyperGraphError::BuildError)?;
-                    }
-                    for outport in n.outputs() {
-                        check_inports_initialized(outport).map_err(HyperGraphError::BuildError)?;
-                    }
-
-                    Ok(no_state)
-                })?;
-            }
+                .ok_or_else(|| HyperGraphBuildError::UninitializedOutPort(outport.clone()))
         }
 
-        let mut new = HyperGraph(self.0);
+        fn check_outport_initialized<V, E>(
+            inport: &InPort<V, E, false>,
+        ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
+        where
+            V: Debug,
+            E: Debug,
+        {
+            (inport
+                .0
+                .output
+                .try_read()
+                .expect("failed to lock inport output {inport.0.output:#?}")
+                .strong_count()
+                > 0)
+            .then_some(())
+            .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(inport.clone()))
+        }
 
         // topologically sort nodes
         fn next_strong<V, E>(node: &Node<V, E>) -> impl Iterator<Item = Node<V, E>>
@@ -465,6 +441,33 @@ where
             Ok(())
         }
 
+        for outport in self.graph_inputs() {
+            // check associated with hypergraph
+            assert!(&outport.0.node.is_none());
+            // check inputs initialised
+            check_inports_initialized(&outport).map_err(HyperGraphError::BuildError)?;
+        }
+
+        for inport in self.graph_outputs() {
+            // check associated with hypergraph
+            assert!(&inport.0.node.is_none());
+            // check output initialised
+            check_outport_initialized(&inport).map_err(HyperGraphError::BuildError)?;
+        }
+        for node in self.nodes() {
+            node.fold(&mut (), |no_state, n| {
+                for inport in n.inputs() {
+                    check_outport_initialized(&inport).map_err(HyperGraphError::BuildError)?;
+                }
+                for outport in n.outputs() {
+                    check_inports_initialized(&outport).map_err(HyperGraphError::BuildError)?;
+                }
+
+                Ok(no_state)
+            })?;
+        }
+
+        let mut new = HyperGraph(self.0);
         topsort_node_internals(&mut new.0.nodes)?;
 
         for node in new.nodes() {
@@ -524,9 +527,8 @@ pub trait Fragment<V, E> {
             return Err(HyperGraphError::OutputLinkError(OutPort(ByThinAddress(
                 existing,
             ))));
-        } else {
-            *out = Arc::downgrade(&out_port.0);
         }
+        *out = Arc::downgrade(&out_port.0);
         out_port
             .0
             .inputs
@@ -748,6 +750,7 @@ impl<V, E, const BUILT: bool> GraphView<V, E, BUILT> for Thunk<V, E, BUILT> {
     }
 }
 
+#[allow(clippy::inline_always)]
 impl<V, E> Graph<V, E, false> for ThunkCursor<V, E>
 where
     V: 'static,
@@ -756,8 +759,8 @@ where
     delegate! {
         to self.0 {
             fn graph_inputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + 'a> where V: 'a, E: 'a;
-        fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
-        fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
+            fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
+            fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
             fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, false>> + '_>;
         }
     }
@@ -770,8 +773,7 @@ enum NodeInternal<V, E> {
     Thunk(Arc<ThunkInternal<V, E>>),
 }
 
-#[derive(Derivative)]
-#[derivative(Debug(bound = ""))]
+#[derive(Debug)]
 enum BackPointerInternal<V, E> {
     Graph,
     Thunk(Weak<ThunkInternal<V, E>>),
@@ -809,22 +811,27 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
             .map(|o| OutPort(ByThinAddress(o)))
     }
 
+    #[must_use]
     pub fn number_of_inputs(&self) -> usize {
         self.0.inputs.len()
     }
 
+    #[must_use]
     pub fn number_of_outputs(&self) -> usize {
         self.0.outputs.len()
     }
 
+    #[must_use]
     pub fn weight(&self) -> &V {
         &self.0.weight
     }
 
+    #[must_use]
     pub fn depth(&self) -> usize {
         self.0.depth
     }
 
+    #[must_use]
     pub fn back_pointer(&self) -> BackPointer<V, E, BUILT> {
         match &self.0.back_pointer {
             BackPointerInternal::Graph => BackPointer::Graph,
@@ -861,7 +868,7 @@ where
                 .map(|weight| {
                     Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Operation(weak.clone())),
-                        inputs: RwLock::new(Default::default()),
+                        inputs: RwLock::new(HashMap::default()),
                         weight,
                     })
                 })
@@ -925,14 +932,17 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
             .map(|in_port| OutPort(self.0.outputs.get_by_left(in_port).unwrap().clone()))
     }
 
+    #[must_use]
     pub fn number_of_inputs(&self) -> usize {
         self.0.free_variable_inputs.len()
     }
 
+    #[must_use]
     pub fn number_of_outputs(&self) -> usize {
         self.0.outputs.len()
     }
 
+    #[must_use]
     pub fn externalise_input(&self, port: &OutPort<V, E, BUILT>) -> Option<InPort<V, E, BUILT>> {
         self.0
             .free_variable_inputs
@@ -940,6 +950,7 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
             .map(|in_port| InPort(in_port.clone()))
     }
 
+    #[must_use]
     pub fn externalise_output(&self, port: &InPort<V, E, BUILT>) -> Option<OutPort<V, E, BUILT>> {
         self.0
             .outputs
@@ -947,10 +958,12 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
             .map(|out_port| OutPort(out_port.clone()))
     }
 
+    #[must_use]
     pub fn depth(&self) -> usize {
         self.0.depth
     }
 
+    #[must_use]
     pub fn back_pointer(&self) -> BackPointer<V, E, BUILT> {
         match &self.0.back_pointer {
             BackPointerInternal::Graph => BackPointer::Graph,
@@ -1003,14 +1016,14 @@ where
                 .map(|(weight, inner_input)| {
                     let outer_output = Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        inputs: RwLock::new(Default::default()),
+                        inputs: RwLock::new(HashMap::default()),
                         weight,
                     });
                     (inner_input, ByThinAddress(outer_output))
                 })
                 .collect();
             ThunkInternal {
-                nodes: RwLock::new(Default::default()),
+                nodes: RwLock::new(Vec::default()),
                 free_variable_inputs,
                 input_order,
                 bound_variables,
@@ -1024,6 +1037,7 @@ where
 }
 
 impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
+    #[must_use]
     pub fn inputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
         match self {
             Node::Operation(op) => Box::new(op.inputs()),
@@ -1031,6 +1045,7 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         }
     }
 
+    #[must_use]
     pub fn outputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
         match self {
             Node::Operation(op) => Box::new(op.outputs()),
@@ -1038,6 +1053,7 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         }
     }
 
+    #[must_use]
     pub fn number_of_inputs(&self) -> usize {
         match self {
             Node::Operation(op) => op.number_of_inputs(),
@@ -1045,6 +1061,7 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         }
     }
 
+    #[must_use]
     pub fn number_of_outputs(&self) -> usize {
         match self {
             Node::Operation(op) => op.number_of_outputs(),
@@ -1069,6 +1086,7 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         Ok(acc)
     }
 
+    #[must_use]
     pub fn depth(&self) -> usize {
         match self {
             Node::Operation(op) => op.depth(),
@@ -1076,6 +1094,7 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         }
     }
 
+    #[must_use]
     pub fn back_pointer(&self) -> BackPointer<V, E, BUILT> {
         match self {
             Node::Operation(op) => op.back_pointer(),
