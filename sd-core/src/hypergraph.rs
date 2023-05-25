@@ -80,7 +80,7 @@ pub struct HyperGraph<V, E, const BUILT: bool = true>(HyperGraphInternal<V, E>);
     Hash(bound = "")
 )]
 pub struct Operation<V, E, const BUILT: bool = true>(ByThinAddress<Arc<OperationInternal<V, E>>>);
-#[derive(Debug, Derivative)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -89,7 +89,7 @@ pub struct Operation<V, E, const BUILT: bool = true>(ByThinAddress<Arc<Operation
 )]
 pub struct Thunk<V, E, const BUILT: bool = true>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 
-#[derive(Derivative)]
+#[derive(Debug, Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
@@ -108,21 +108,17 @@ enum WeakNodeInternal<V, E> {
     Thunk(Weak<ThunkInternal<V, E>>),
 }
 
-impl<V, E> Debug for InPort<V, E, true> {
+impl<V, E, const BUILT: bool> Debug for InPort<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("InPort")
-            .field("output", &self.output())
-            .finish()
+        let mut x = f.debug_struct("InPort");
+        if BUILT {
+            x.field("output", &self.output());
+        }
+        x.finish()
     }
 }
 
-impl<V, E> Debug for InPort<V, E, false> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("InPort").finish()
-    }
-}
-
-impl<V: Debug, E> Debug for Operation<V, E, true> {
+impl<V: Debug, E, const BUILT: bool> Debug for Operation<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Operation")
             .field("weight", self.weight())
@@ -132,12 +128,31 @@ impl<V: Debug, E> Debug for Operation<V, E, true> {
     }
 }
 
-impl<V: Debug, E> Debug for Operation<V, E, false> {
+impl<V: Debug, E: Debug, const BUILT: bool> Debug for Thunk<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Operation")
-            .field("weight", self.weight())
-            .field("inputs", &self.inputs().collect::<Vec<_>>())
-            .field("outputs", &self.outputs().collect::<Vec<_>>())
+        f.debug_struct("Thunk")
+            .field(
+                "free_vars",
+                &self
+                    .free_inputs()
+                    .map(|out_port| (self.externalise_input(&out_port), out_port))
+                    .collect::<Vec<_>>(),
+            )
+            .field(
+                "bound_inputs",
+                &self.bound_graph_inputs().collect::<Vec<_>>(),
+            )
+            .field("nodes", &self.nodes().collect::<Vec<_>>())
+            .field(
+                "outputs",
+                &self
+                    .graph_outputs()
+                    .map(|in_port| {
+                        let x = self.externalise_output(&in_port);
+                        (in_port, x)
+                    })
+                    .collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -194,8 +209,9 @@ macro_rules! get_node {
 get_node!(InPort);
 get_node!(OutPort);
 
-impl<V, E> InPort<V, E> {
-    pub fn output(&self) -> OutPort<V, E> {
+impl<V, E, const BUILT: bool> InPort<V, E, BUILT> {
+    pub fn output(&self) -> OutPort<V, E, BUILT> {
+        assert!(BUILT);
         OutPort(ByThinAddress(
             self.0
                 .output
@@ -917,14 +933,14 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
         self.0.outputs.len()
     }
 
-    pub fn externalise_input(&self, port: &OutPort<V, E>) -> Option<InPort<V, E>> {
+    pub fn externalise_input(&self, port: &OutPort<V, E, BUILT>) -> Option<InPort<V, E, BUILT>> {
         self.0
             .free_variable_inputs
             .get_by_right(&port.0)
             .map(|in_port| InPort(in_port.clone()))
     }
 
-    pub fn externalise_output(&self, port: &InPort<V, E>) -> Option<OutPort<V, E>> {
+    pub fn externalise_output(&self, port: &InPort<V, E, BUILT>) -> Option<OutPort<V, E, BUILT>> {
         self.0
             .outputs
             .get_by_left(&port.0)
