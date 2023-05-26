@@ -26,7 +26,7 @@ pub struct App {
     language: Language,
     hypergraph: SyntaxHyperGraph,
     monoidal_term: MonoidalWiredGraph<Op, ()>,
-    monoidal_graph: MonoidalGraph<Op, ()>,
+    monoidal_graph: MonoidalGraph<(Op, ())>,
     panzoom: Panzoom,
     toasts: Toasts,
 }

@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
-    common::InOut,
+    common::{Addr, InOut},
     monoidal::{MonoidalGraph, MonoidalOp},
 };
 #[cfg(test)]
@@ -131,8 +131,8 @@ impl Layout {
 }
 
 #[allow(clippy::too_many_lines)]
-fn layout_internal<V, E>(
-    graph: &MonoidalGraph<V, E>,
+fn layout_internal<T: Addr>(
+    graph: &MonoidalGraph<T>,
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable> {
     // STEP 1. Generate variables for each layer.
@@ -275,7 +275,7 @@ fn layout_internal<V, E>(
     }
 }
 
-pub fn layout<V, E>(graph: &MonoidalGraph<V, E>) -> Result<Layout, LayoutError> {
+pub fn layout<T: Addr>(graph: &MonoidalGraph<T>) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
     let layout = layout_internal(graph, &mut problem);

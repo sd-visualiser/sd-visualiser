@@ -8,7 +8,7 @@ use crate::{
     hypergraph::{GraphView, InPort, Node, Operation, OutPort, Thunk},
 };
 
-pub type MonoidalWiredGraph<V, E> = MonoidalTerm<WiredOp<V, E>>;
+pub type MonoidalWiredGraph<V, E> = MonoidalTerm<(V, E), WiredOp<V, E>>;
 
 #[derive(Clone, Debug, Derivative, Eq)]
 #[derivative(PartialEq(bound = ""))]
@@ -306,7 +306,7 @@ where
 
         builder.slices.reverse();
 
-        let mut graph = MonoidalTerm::<Slice<WiredOp<V, E>>> {
+        let mut graph = MonoidalTerm::<(V, E), Slice<WiredOp<V, E>>> {
             unordered_inputs: graph.unbound_graph_inputs().collect(),
             ordered_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,

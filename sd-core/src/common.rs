@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
+    fmt::Debug,
     hash::Hash,
 };
 
@@ -7,7 +8,21 @@ use derivative::Derivative;
 use num::rational::Ratio;
 use tracing::debug;
 
-use crate::hypergraph::{InPort, OutPort};
+use crate::hypergraph::{InPort, Operation, OutPort, Thunk};
+
+pub trait Addr {
+    type InPort: Clone + Eq + PartialEq + Hash;
+    type OutPort: Clone + Eq + PartialEq + Hash;
+    type Thunk: Clone + Eq + PartialEq + Hash + InOut;
+    type Operation: Clone + Eq + PartialEq + Hash + InOut;
+}
+
+impl<V, E> Addr for (V, E) {
+    type InPort = InPort<V, E>;
+    type OutPort = OutPort<V, E>;
+    type Thunk = Thunk<V, E>;
+    type Operation = Operation<V, E>;
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
@@ -69,13 +84,20 @@ impl<O: InOutIter> InOutIter for Slice<O> {
     }
 }
 
-#[derive(Clone, Debug, Derivative)]
-#[derivative(Default(bound = ""), PartialEq(bound = "T: PartialEq"), Hash, Eq)]
-pub struct MonoidalTerm<T: InOutIter> {
-    pub unordered_inputs: Vec<OutPort<T::V, T::E>>,
-    pub ordered_inputs: Vec<OutPort<T::V, T::E>>, // We need to make sure these don't get reordered
-    pub slices: Vec<Slice<T>>,
-    pub outputs: Vec<InPort<T::V, T::E>>,
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = "O: Clone"),
+    Eq(bound = "O: Eq"),
+    PartialEq(bound = "O: PartialEq"),
+    Hash(bound = "O: Hash"),
+    Debug(bound = "T::InPort: Debug, T::OutPort: Debug, O: Debug"),
+    Default(bound = "")
+)]
+pub struct MonoidalTerm<T: Addr, O> {
+    pub unordered_inputs: Vec<T::OutPort>,
+    pub ordered_inputs: Vec<T::OutPort>, // We need to make sure these don't get reordered
+    pub slices: Vec<Slice<O>>,
+    pub outputs: Vec<T::InPort>,
 }
 
 impl<'a, A, B> From<&'a Slice<A>> for Slice<B>
@@ -153,7 +175,7 @@ where
     out
 }
 
-impl<T: InOutIter> MonoidalTerm<T> {
+impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
     pub fn minimise_swaps(&mut self) {
         fn fold_slice<'a, T: InOutIter>(
             ports_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
@@ -216,9 +238,9 @@ impl<T: InOutIter> Slice<T> {
     }
 }
 
-impl<T: InOutIter> MonoidalTerm<Slice<T>> {
+impl<T: Addr, O> MonoidalTerm<T, Slice<O>> {
     #[must_use]
-    pub fn flatten_graph(self) -> MonoidalTerm<T> {
+    pub fn flatten_graph(self) -> MonoidalTerm<T, O> {
         let MonoidalTerm {
             unordered_inputs,
             ordered_inputs,

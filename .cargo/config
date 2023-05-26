@@ -8,7 +8,7 @@ rustflags = [
     "-Wclippy::decimal_literal_representation",
     "-Wclippy::exit",
     "-Wclippy::get_unwrap",
-    "-Wclippy::let_underscore_must_use",
+    # "-Wclippy::let_underscore_must_use",
     "-Wclippy::map_err_ignore",
     "-Wclippy::mem_forget",
     "-Wclippy::print_stderr",

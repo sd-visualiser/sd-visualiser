@@ -19,9 +19,9 @@ impl<V, E> Default for Layouter<V, E> {
 }
 
 impl<V: 'static + Send + Sync, E: 'static + Send + Sync>
-    ComputerMut<&MonoidalGraph<V, E>, Result<Arc<Layout>, LayoutError>> for Layouter<V, E>
+    ComputerMut<&MonoidalGraph<(V, E)>, Result<Arc<Layout>, LayoutError>> for Layouter<V, E>
 {
-    fn compute(&mut self, graph: &MonoidalGraph<V, E>) -> Result<Arc<Layout>, LayoutError> {
+    fn compute(&mut self, graph: &MonoidalGraph<(V, E)>) -> Result<Arc<Layout>, LayoutError> {
         event!(Level::DEBUG, "Generating Layout");
         Ok(Arc::new(layout(graph)?))
     }
@@ -30,7 +30,10 @@ impl<V: 'static + Send + Sync, E: 'static + Send + Sync>
 type LayoutCache<'a, V, E> = FrameCache<Result<Arc<Layout>, LayoutError>, Layouter<V, E>>;
 
 impl<V: 'static + Send + Sync + Hash, E: 'static + Send + Sync + Hash> Layouter<V, E> {
-    pub fn layout(ctx: &Context, graph: &MonoidalGraph<V, E>) -> Result<Arc<Layout>, LayoutError> {
+    pub fn layout(
+        ctx: &Context,
+        graph: &MonoidalGraph<(V, E)>,
+    ) -> Result<Arc<Layout>, LayoutError> {
         ctx.memory_mut(|mem| mem.caches.cache::<LayoutCache<'_, V, E>>().get(graph))
     }
 }

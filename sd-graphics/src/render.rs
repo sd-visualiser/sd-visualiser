@@ -40,7 +40,7 @@ pub fn render<V: Display, E>(
     response: &Response,
     layout: &Layout,
     scale: f32,
-    graph: &mut MonoidalGraph<V, E>,
+    graph: &mut MonoidalGraph<(V, E)>,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape> {
@@ -63,7 +63,7 @@ fn generate_shapes<V: Display, E>(
     shapes: &mut Vec<Shape>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &mut MonoidalGraph<V, E>,
+    graph: &mut MonoidalGraph<(V, E)>,
     transform: &Transform,
 ) {
     let default_stroke = ui.visuals().noninteractive().fg_stroke;
