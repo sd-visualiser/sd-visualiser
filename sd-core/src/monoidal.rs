@@ -28,6 +28,7 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
 
         while !finished {
             finished = true;
+            println!("Permutation {permutation:?}");
             let mut perm_iter = permutation.into_iter().enumerate();
             permutation = Vec::default();
 
@@ -49,12 +50,12 @@ impl<V, E> Slice<MonoidalOp<V, E>> {
                             permutation.push(None);
                         }
                         PermutationOutput::Paired(j) => {
-                            assert!(j < i);
+                            assert!(i < j);
                             finished = false;
                             permutation.push(None);
                             let mut intermediate = vec![];
 
-                            for _ in j..i {
+                            for _ in i + 1..j {
                                 let next = perm_iter.next().unwrap().1;
                                 permutation.push(next.clone());
                                 if let Some(next) = next {
