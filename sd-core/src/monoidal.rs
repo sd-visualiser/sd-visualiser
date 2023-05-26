@@ -227,6 +227,14 @@ impl<V, E> MonoidalOp<V, E> {
             }
         }
     }
+
+    #[must_use]
+    pub fn is_id(&self) -> bool {
+        match self {
+            MonoidalOp::Copy { copies, .. } => *copies == 1,
+            _ => false,
+        }
+    }
 }
 
 impl<V, E> InOut for MonoidalOp<V, E> {
@@ -320,16 +328,6 @@ impl<V, E> InOutIter for MonoidalOp<V, E> {
                 .into_iter()
                 .flatten(),
             ),
-        }
-    }
-}
-
-impl<V, E> MonoidalOp<V, E> {
-    #[must_use]
-    pub fn is_id(&self) -> bool {
-        match self {
-            MonoidalOp::Copy { copies, .. } => *copies == 1,
-            _ => false,
         }
     }
 }
