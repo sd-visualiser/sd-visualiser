@@ -69,8 +69,8 @@ impl<O: InOutIter> InOutIter for Slice<O> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, Derivative)]
-#[derivative(Default(bound = ""))]
+#[derive(Clone, Debug, Derivative)]
+#[derivative(Default(bound = ""), PartialEq(bound = "T: PartialEq"), Hash, Eq)]
 pub struct MonoidalTerm<T: InOutIter> {
     pub unordered_inputs: Vec<OutPort<T::V, T::E>>,
     pub ordered_inputs: Vec<OutPort<T::V, T::E>>, // We need to make sure these don't get reordered

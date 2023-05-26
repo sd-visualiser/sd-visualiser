@@ -1,6 +1,7 @@
 use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
+use itertools::Itertools;
 
 use crate::{
     common::{Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
@@ -9,7 +10,8 @@ use crate::{
 
 pub type MonoidalWiredGraph<V, E> = MonoidalTerm<WiredOp<V, E>>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Derivative, Eq)]
+#[derivative(PartialEq(bound = ""))]
 pub enum WiredOp<V, E> {
     Copy {
         addr: OutPort<V, E>,
@@ -128,29 +130,23 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
 
     fn input_layer(&self, out_port: &OutPort<V, E>) -> usize {
         let layers = self.open_ports.get(out_port);
-        let len = layers.map(Vec::len).unwrap_or_default();
         let max = layers
             .and_then(|x| x.iter().max())
             .copied()
             .unwrap_or_default();
 
-        if len > 1 {
+        if out_port.number_of_inputs() > 1 {
             max + 1
         } else {
             max
         }
     }
 
-    fn prepare_input(&mut self, out_port: &OutPort<V, E>, layer: usize) -> bool {
+    fn prepare_input(&mut self, out_port: &OutPort<V, E>, layer: usize) {
         let mut layers = self.open_ports.remove(out_port).unwrap_or_default();
-        let with_backlink =
-            layers.len() < out_port.number_of_inputs() || self.backlinks.contains_key(out_port);
         layers.sort_by_key(|x| Reverse(*x));
         if let Some(mut current_layer) = layers.pop() {
-            if current_layer == layer {
-                return false; // No copies are needed and we are already at the correct level
-            }
-            while current_layer + 2 <= layer {
+            while current_layer < layer {
                 let mut copies = 1;
                 while layers
                     .last()
@@ -172,46 +168,59 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
                 current_layer += 1;
             }
         }
-
-        if with_backlink {
-            self.add_op(
-                Slice {
-                    ops: vec![
-                        WiredOp::Copy {
-                            addr: out_port.clone(),
-                            copies: layers.len() + 2,
-                        },
-                        WiredOp::Backlink {
-                            addr: out_port.clone(),
-                        },
-                    ],
-                },
-                layer - 1,
-            );
-        } else if out_port.number_of_inputs() != 0 {
-            self.add_op(
-                Slice {
-                    ops: vec![WiredOp::Copy {
-                        addr: out_port.clone(),
-                        copies: layers.len() + 1,
-                    }],
-                },
-                layer - 1,
-            );
-        }
-        with_backlink
     }
 
-    fn insert_operation(&mut self, node: Node<V, E>) {
+    fn insert_backlink_on_layer(&mut self, out_port: OutPort<V, E>, layer: usize) {
+        let ops = &mut self.slices[layer]
+            .ops
+            .iter_mut()
+            .find(|x| x.outputs().map(|x| x.0).contains(&out_port))
+            .unwrap()
+            .ops;
+
+        let to_add = WiredOp::Backlink { addr: out_port };
+
+        if !ops.iter().contains(&to_add) {
+            ops.push(to_add);
+        }
+    }
+
+    fn insert_operation(&mut self, node: &Node<V, E>) {
         let node_layer = node
             .outputs()
             .map(|out_port| self.input_layer(&out_port))
             .max()
             .unwrap_or_default();
 
+        let mut ops = vec![node.clone().into()];
+
         node.outputs().for_each(|out_port| {
-            if self.prepare_input(&out_port, node_layer) {
-                self.backlinks.insert(out_port, node_layer);
+            let open_ports = self
+                .open_ports
+                .get(&out_port)
+                .map(Vec::len)
+                .unwrap_or_default();
+
+            if open_ports < out_port.number_of_inputs() {
+                if open_ports == 0 {
+                    // Only backlink
+                    ops.push(WiredOp::Backlink {
+                        addr: out_port.clone(),
+                    });
+                    self.backlinks.insert(out_port, node_layer + 1);
+                } else {
+                    // Backlink and other ports
+                    self.open_ports
+                        .entry(out_port.clone())
+                        .or_default()
+                        .push(node_layer - 1);
+                    self.prepare_input(&out_port, node_layer);
+                    self.insert_backlink_on_layer(out_port.clone(), node_layer - 1);
+                    self.backlinks.insert(out_port, node_layer);
+                }
+            } else {
+                // No backlink
+                self.prepare_input(&out_port, node_layer);
             }
         });
 
@@ -224,12 +233,7 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
                     .push(node_layer + 1);
             });
 
-        self.add_op(
-            Slice {
-                ops: vec![node.into()],
-            },
-            node_layer,
-        );
+        self.add_op(Slice { ops }, node_layer);
     }
 }
 
@@ -251,7 +255,7 @@ where
 
         for node in graph.nodes() {
             // Use topsorted graph here
-            builder.insert_operation(node);
+            builder.insert_operation(&node);
         }
 
         let remaining_ports: Vec<_> = builder.open_ports.keys().cloned().collect();
@@ -266,21 +270,16 @@ where
 
             let layer = if open_ports.len() == 1 {
                 let layer = open_ports[0] - 1;
-                for op in &mut builder.slices[layer].ops {
-                    if op.inputs().any(|in_port| in_port.0 == out_port) {
-                        op.ops.push(WiredOp::Backlink {
-                            addr: out_port.clone(),
-                        });
-                    }
-                }
+                builder.insert_backlink_on_layer(out_port.clone(), layer);
                 layer
             } else {
                 let layer = open_ports.iter().max().unwrap() + 1;
                 builder.prepare_input(&out_port, layer);
+                builder.insert_backlink_on_layer(out_port.clone(), layer);
                 layer
             };
 
-            for x in backlink + 1..layer {
+            for x in backlink..layer {
                 builder.add_op(
                     Slice {
                         ops: vec![WiredOp::Backlink {
