@@ -9,11 +9,14 @@
   inputs.nci.url = "github:yusdacra/nix-cargo-integration";
   inputs.nci.inputs.nixpkgs.follows = "nixpkgs";
   inputs.nci.inputs.parts.follows = "parts";
+  inputs.nci.inputs.rust-overlay.follows = "rust-overlay";
+  inputs.rust-overlay.url = "github:oxalica/rust-overlay";
 
   outputs =
     inputs @ { parts
     , nixpkgs
     , nci
+    , rust-overlay
     , ...
     }:
     let
@@ -81,11 +84,20 @@
             systems = [ "x86_64-linux" ];
             imports = [ nci.flakeModule ];
             perSystem = { self', config, lib, pkgs, system, ... }:
-              {
-                nci = nciFromPkgs pkgs "linux" { } { };
-                devShells.default = config.nci.outputs.sd.devShell;
-                packages.default = config.nci.outputs.sd-gui.packages.release;
+            {
+              _module.args.pkgs = import inputs.nixpkgs {
+                inherit system;
+                overlays = [
+                  inputs.rust-overlay.overlays.default
+                ];
+                config = { };
               };
+              nci = nciFromPkgs pkgs "linux" { } { };
+              devShells.default = config.nci.outputs.sd.devShell.overrideAttrs (oldAttrs: {
+                packages = (oldAttrs.packages or []) ++ [ (lib.hiPrio pkgs.rust-bin.nightly.latest.rustfmt) ];
+              });
+              packages.default = config.nci.outputs.sd-gui.packages.release;
+            };
           })
         (parts.lib.mkFlake { inherit inputs; } {
           systems = [ "x86_64-linux" ];
