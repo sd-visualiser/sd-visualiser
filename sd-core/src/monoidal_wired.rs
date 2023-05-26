@@ -266,7 +266,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
 
 impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<V, E>
 where
-    G: GraphView<V, E>,
+    G: GraphView<NodeWeight = V, EdgeWeight = E>,
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::default();

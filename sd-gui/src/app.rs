@@ -9,8 +9,11 @@ use eframe::{
 use egui_notify::Toasts;
 use pest::error::LineColLocation;
 use sd_core::{
-    graph::SyntaxHyperGraph, language::spartan::Op, monoidal::MonoidalGraph,
-    monoidal_wired::MonoidalWiredGraph, prettyprinter::PrettyPrint,
+    graph::{Name, SyntaxHyperGraph},
+    language::spartan::Op,
+    monoidal::MonoidalGraph,
+    monoidal_wired::MonoidalWiredGraph,
+    prettyprinter::PrettyPrint,
 };
 use tracing::{debug, event, Level};
 
@@ -25,8 +28,8 @@ pub struct App {
     code: String,
     language: Language,
     hypergraph: SyntaxHyperGraph,
-    monoidal_term: MonoidalWiredGraph<Op, ()>,
-    monoidal_graph: MonoidalGraph<(Op, ())>,
+    monoidal_term: MonoidalWiredGraph<Op, Name>,
+    monoidal_graph: MonoidalGraph<(Op, Name)>,
     panzoom: Panzoom,
     toasts: Toasts,
 }
@@ -218,7 +221,7 @@ impl App {
         self.hypergraph = SyntaxHyperGraph::try_from(&expr)?;
 
         event!(Level::DEBUG, "Converting to monoidal term");
-        self.monoidal_term = MonoidalWiredGraph::try_from(&self.hypergraph)?;
+        self.monoidal_term = MonoidalWiredGraph::from(&self.hypergraph);
         event!(Level::DEBUG, "Got term {:#?}", self.monoidal_term);
 
         event!(Level::DEBUG, "Inserting swaps and copies");
