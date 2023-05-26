@@ -1,4 +1,5 @@
 use std::{
+    cmp::min,
     collections::{HashMap, HashSet},
     fmt::Debug,
     hash::Hash,
@@ -9,6 +10,7 @@ use bimap::BiMap;
 use by_address::ByThinAddress;
 use delegate::delegate;
 use derivative::Derivative;
+use indexmap::IndexSet;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
@@ -365,56 +367,58 @@ where
                 .into_iter()
         }
 
-        fn topsort<V, E, T, TS>(xs: &mut Vec<T>, next: impl Fn(&T) -> TS) -> Result<(), V, E>
-        where
-            V: Debug,
-            E: Debug,
+        fn strongconnect<T, TS>(
+            next: impl (Fn(&T) -> TS) + Copy,
+            stack: &mut IndexSet<T>,
+            visited: &mut HashMap<T, usize>,
+            output: &mut Vec<T>,
+            node: &T,
+        ) where
             T: Clone + Hash + Eq,
             TS: Iterator<Item = T>,
         {
-            #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-            enum Mark {
-                Temporary,
-                Permanent,
-            }
-            let mut state: HashMap<_, _> = xs.drain(..).map(|x| (x, None)).collect();
-            while let Some((root, _)) = state.iter().find(|(_, seen)| seen.is_none()) {
-                // invariant: each x will appear in stack twice
-                // initially with state[x] = None, then with state[x] = Some(Mark::Temporary)
-                let mut stack = vec![root.clone()];
-                while let Some(cur) = stack.pop() {
-                    let mark = state.get_mut(&cur).unwrap();
-                    match mark {
-                        Some(Mark::Temporary) => {
-                            *mark = Some(Mark::Permanent); // backtracking from stack
-                            xs.push(cur);
-                        }
-                        Some(Mark::Permanent) => {}
-                        None => {
-                            *mark = Some(Mark::Temporary);
-                            stack.push(cur.clone());
-                            for n in next(&cur) {
-                                match state[&n] {
-                                    Some(Mark::Temporary) => {
-                                        return Err(HyperGraphError::BuildError(
-                                            HyperGraphBuildError::StrongCycle,
-                                        ));
-                                    }
-                                    Some(Mark::Permanent) => { /* don't visit n */ }
-                                    None => {
-                                        stack.push(n);
-                                    }
-                                }
-                            }
-                        }
-                    }
+            let index = stack.insert_full(node.clone()).0;
+            visited.insert(node.clone(), index);
+
+            for n in next(node) {
+                if !visited.contains_key(&n) {
+                    strongconnect(next, stack, visited, output, &n);
+                    let y = visited[&n];
+                    let x = visited.get_mut(node).unwrap();
+                    *x = min(*x, y);
+                } else if let Some(index) = stack.get_index_of(&n) {
+                    let x = visited.get_mut(node).unwrap();
+                    *x = min(*x, index);
                 }
             }
-            Ok(())
+
+            if Some(visited[node]) == stack.get_index_of(node) {
+                output.extend(stack.split_off(visited[node]));
+            }
+        }
+
+        fn tarjans<T, TS>(xs: Vec<T>, next: impl Fn(&T) -> TS) -> Vec<T>
+        where
+            T: Clone + Hash + Eq,
+            TS: Iterator<Item = T>,
+        {
+            let mut output: Vec<T> = Vec::default();
+
+            let mut stack: IndexSet<T> = IndexSet::default();
+
+            let mut visited: HashMap<T, usize> = HashMap::default();
+
+            for x in xs {
+                if !visited.contains_key(&x) {
+                    strongconnect(&next, &mut stack, &mut visited, &mut output, &x);
+                }
+            }
+
+            output
         }
 
         // proxy from NodeInternal to Node to get Hash impl
-        fn topsort_node_internals<V, E>(internals: &mut Vec<NodeInternal<V, E>>) -> Result<(), V, E>
+        fn topsort_node_internals<V, E>(internals: &mut Vec<NodeInternal<V, E>>)
         where
             V: Debug,
             E: Debug,
@@ -428,7 +432,8 @@ where
                     NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(ByThinAddress(thunk.clone()))),
                 })
                 .collect();
-            topsort::<V, E, _, _>(&mut nodes, next_strong)?;
+            // topsort::<V, E, _, _>(&mut nodes, next_strong)?;
+            nodes = tarjans(nodes, next_strong);
             *internals = nodes
                 .into_iter()
                 .map(|node| match node {
@@ -438,7 +443,6 @@ where
                     Node::Thunk(Thunk(ByThinAddress(thunk))) => NodeInternal::Thunk(thunk),
                 })
                 .collect();
-            Ok(())
         }
 
         for outport in self.graph_inputs() {
@@ -468,7 +472,7 @@ where
         }
 
         let mut new = HyperGraph(self.0);
-        topsort_node_internals(&mut new.0.nodes)?;
+        topsort_node_internals(&mut new.0.nodes);
 
         for node in new.nodes() {
             node.fold(&mut (), |no_state, n| {
@@ -480,7 +484,7 @@ where
                             .nodes
                             .try_write()
                             .expect("failed to lock thunk nodes");
-                        topsort_node_internals(&mut nodes)?;
+                        topsort_node_internals(&mut nodes);
                     }
                 }
                 Ok(no_state)
