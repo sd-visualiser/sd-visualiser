@@ -204,14 +204,14 @@ fn layout_internal<V, E>(
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
-            let op = &nodes[j][i];
+            let node = &nodes[j][i];
             let ins = &wires[j][offset_i..offset_i + ni];
             let outs = &wires[j + 1][offset_o..offset_o + no];
 
             // Distance constraints
             let constraints = [
-                (prev_in, Some(*op.min())),
-                (prev_out, Some(*op.min())),
+                (prev_in, Some(*node.min())),
+                (prev_out, Some(*node.min())),
                 (prev_op, ins.first().copied()),
                 (prev_op, outs.first().copied()),
                 (prev_in, outs.first().copied()),
@@ -222,6 +222,20 @@ fn layout_internal<V, E>(
             }
 
             match op {
+                MonoidalOp::Cup { .. } => {
+                    for (x, y) in ins[1..].iter().copied().zip(outs) {
+                        problem.add_constraint(Expression::eq(x.into(), y));
+                    }
+                }
+                MonoidalOp::Cap { .. } => {
+                    for (x, y) in outs[1..].iter().copied().zip(ins) {
+                        problem.add_constraint(Expression::eq(x.into(), y));
+                    }
+                }
+                _ => {}
+            }
+
+            match node {
                 Node::Atom(op) => {
                     // Fair averaging constraints
                     if ni > 0 {
@@ -244,7 +258,7 @@ fn layout_internal<V, E>(
                 }
             }
 
-            prev_op = Some(*op.max());
+            prev_op = Some(*node.max());
             prev_in = ins.last().copied();
             prev_out = outs.last().copied();
 

@@ -163,7 +163,33 @@ fn generate_shapes<V: Display, E>(
                     let y_op = (y_input + y_output) / 2.0;
                     let center = transform.apply(x_op, y_op);
 
-                    for &x in x_ins {
+                    let (x_ins_rem, x_outs_rem) = match op {
+                        MonoidalOp::Cap { .. } => {
+                            for &x in x_ins {
+                                let input = transform.apply(x, y_input);
+                                let output = transform.apply(x, y_output);
+                                shapes.push(Shape::LineSegment {
+                                    points: [input, output],
+                                    stroke: default_stroke,
+                                });
+                            }
+                            (vec![], vec![x_outs[0], *x_outs.last().unwrap()])
+                        }
+                        MonoidalOp::Cup { .. } => {
+                            for &x in x_outs {
+                                let input = transform.apply(x, y_input);
+                                let output = transform.apply(x, y_output);
+                                shapes.push(Shape::LineSegment {
+                                    points: [input, output],
+                                    stroke: default_stroke,
+                                });
+                            }
+                            (vec![x_ins[0], *x_ins.last().unwrap()], vec![])
+                        }
+                        _ => (x_ins.to_owned(), x_outs.to_owned()),
+                    };
+
+                    for x in x_ins_rem {
                         let input = transform.apply(x, y_input);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
@@ -173,7 +199,7 @@ fn generate_shapes<V: Display, E>(
                         )));
                     }
 
-                    for &x in x_outs {
+                    for x in x_outs_rem {
                         let output = transform.apply(x, y_output);
                         shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
