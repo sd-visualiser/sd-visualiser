@@ -1,76 +1,135 @@
+use ordered_float::NotNaN;
+
 use crate::{
-    common::Slice,
-    graph::Op,
-    hypergraph::NodeIndex,
-    language::spartan::{ActiveOp, PassiveOp},
+    common::{Addr, InOut, Slice},
+    language::spartan::Op,
     monoidal::{MonoidalGraph, MonoidalOp},
 };
 
-/// Corrresponds to the program `bind x = 1() in x`.
-pub fn int() -> MonoidalGraph<Op> {
-    use MonoidalOp::*;
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct SyntaxOp {
+    op: Op,
+    inputs: usize,
+}
 
-    MonoidalGraph {
-        inputs: 0,
-        slices: vec![Slice {
-            ops: vec![Operation {
-                addr: NodeIndex(0),
-                inputs: 0,
-                op_name: PassiveOp::Int(1).into(),
-                selected: false,
-            }],
-        }],
+impl InOut for SyntaxOp {
+    fn number_of_inputs(&self) -> usize {
+        self.inputs
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        1
     }
 }
 
-pub fn copy() -> MonoidalGraph<Op> {
-    use MonoidalOp::*;
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct SyntaxThunk {
+    inputs: usize,
+}
 
+impl InOut for SyntaxThunk {
+    fn number_of_inputs(&self) -> usize {
+        self.inputs
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        1
+    }
+}
+
+pub struct Syntax;
+
+impl Addr for Syntax {
+    type InPort = ();
+    type OutPort = ();
+    type Thunk = SyntaxThunk;
+    type Operation = SyntaxOp;
+}
+
+/// Corrresponds to the program `bind x = 1 in x`.
+#[must_use]
+pub fn int() -> MonoidalGraph<Syntax> {
     MonoidalGraph {
-        inputs: 1,
+        unordered_inputs: vec![],
+        ordered_inputs: vec![],
+        slices: vec![Slice {
+            ops: vec![MonoidalOp::Operation {
+                addr: SyntaxOp {
+                    op: Op::Number(NotNaN::new(1.0).unwrap()),
+                    inputs: 0,
+                },
+                selected: false,
+            }],
+        }],
+        outputs: vec![()],
+    }
+}
+
+#[must_use]
+pub fn copy() -> MonoidalGraph<Syntax> {
+    MonoidalGraph {
+        unordered_inputs: vec![],
+        ordered_inputs: vec![()],
         slices: vec![
             Slice {
-                ops: vec![Copy { copies: 2 }],
+                ops: vec![MonoidalOp::Copy {
+                    addr: (),
+                    copies: 2,
+                }],
             },
             Slice {
-                ops: vec![Copy { copies: 2 }, MonoidalOp::ID],
+                ops: vec![
+                    MonoidalOp::Copy {
+                        addr: (),
+                        copies: 2,
+                    },
+                    MonoidalOp::Copy {
+                        addr: (),
+                        copies: 1,
+                    },
+                ],
             },
         ],
+        outputs: vec![(), (), ()],
     }
 }
 
-pub fn thunk() -> MonoidalGraph<Op> {
-    use MonoidalOp::*;
-
+#[must_use]
+pub fn thunk() -> MonoidalGraph<Syntax> {
     let plus = MonoidalGraph {
-        inputs: 2,
+        unordered_inputs: vec![],
+        ordered_inputs: vec![(), ()],
         slices: vec![Slice {
-            ops: vec![Operation {
-                addr: NodeIndex(0),
-                inputs: 2,
-                op_name: ActiveOp::Plus.into(),
+            ops: vec![MonoidalOp::Operation {
+                addr: SyntaxOp {
+                    op: Op::Plus,
+                    inputs: 2,
+                },
                 selected: false,
             }],
         }],
+        outputs: vec![()],
     };
 
     MonoidalGraph {
-        inputs: 3,
+        unordered_inputs: vec![],
+        ordered_inputs: vec![(), (), ()],
         slices: vec![Slice {
             ops: vec![
-                Thunk {
-                    addr: NodeIndex(0),
-                    args: 1,
+                MonoidalOp::Thunk {
+                    addr: SyntaxThunk { inputs: 1 },
                     body: plus,
                     expanded: true,
                 },
-                Operation {
-                    addr: NodeIndex(1),
-                    inputs: 2,
-                    op_name: ActiveOp::Plus.into(),
+                MonoidalOp::Operation {
+                    addr: SyntaxOp {
+                        op: Op::Plus,
+                        inputs: 2,
+                    },
                     selected: false,
                 },
             ],
         }],
+        outputs: vec![(), ()],
     }
 }
