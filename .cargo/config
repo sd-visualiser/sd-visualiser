@@ -31,4 +31,5 @@ rustflags = [
     "-Aclippy::missing-panics-doc",
     "-Aclippy::module-name-repetitions",
     "-Aclippy::cast-precision-loss",
+    "-Aclippy::let_underscore_untyped",
 ]
