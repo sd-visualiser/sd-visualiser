@@ -95,7 +95,7 @@ impl<V, E> InOutIter for WiredOp<V, E> {
     }
 }
 
-impl<V, E> From<Node<V, E>> for WiredOp<V, E> {
+impl<V: Debug, E: Debug> From<Node<V, E>> for WiredOp<V, E> {
     fn from(value: Node<V, E>) -> Self {
         match value {
             Node::Operation(op) => WiredOp::Operation { addr: op },
@@ -107,15 +107,20 @@ impl<V, E> From<Node<V, E>> for WiredOp<V, E> {
     }
 }
 
+struct BacklinkData {
+    available_layer: usize,
+    originating_layer: usize,
+}
+
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 struct MonoidalWiredGraphBuilder<V, E> {
     slices: Vec<Slice<Slice<WiredOp<V, E>>>>,
     open_ports: HashMap<OutPort<V, E>, Vec<usize>>,
-    backlinks: HashMap<OutPort<V, E>, usize>,
+    backlinks: HashMap<OutPort<V, E>, BacklinkData>,
 }
 
-impl<V, E> MonoidalWiredGraphBuilder<V, E> {
+impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
     fn add_op(&mut self, op: Slice<WiredOp<V, E>>, layer: usize) {
         assert!(layer <= self.slices.len());
         if let Some(slice) = self.slices.get_mut(layer) {
@@ -170,11 +175,17 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
         }
     }
 
-    fn insert_backlink_on_layer(&mut self, out_port: OutPort<V, E>, layer: usize) {
+    fn insert_backlink_on_layer(&mut self, out_port: OutPort<V, E>, layer: usize, is_cap: bool) {
         let ops = &mut self.slices[layer]
             .ops
             .iter_mut()
-            .find(|x| x.outputs().map(|x| x.0).contains(&out_port))
+            .find(|x| {
+                if is_cap {
+                    x.inputs().map(|x| x.0).contains(&out_port)
+                } else {
+                    x.outputs().map(|x| x.0).contains(&out_port)
+                }
+            })
             .unwrap()
             .ops;
 
@@ -189,6 +200,10 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
         let node_layer = node
             .outputs()
             .map(|out_port| self.input_layer(&out_port))
+            .chain(
+                node.inputs()
+                    .filter_map(|x| self.backlinks.get(&x.output()).map(|x| x.originating_layer)),
+            )
             .max()
             .unwrap_or_default();
 
@@ -207,7 +222,13 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
                     ops.push(WiredOp::Backlink {
                         addr: out_port.clone(),
                     });
-                    self.backlinks.insert(out_port, node_layer + 1);
+                    self.backlinks.insert(
+                        out_port,
+                        BacklinkData {
+                            available_layer: node_layer + 1,
+                            originating_layer: node_layer,
+                        },
+                    );
                 } else {
                     // Backlink and other ports
                     self.open_ports
@@ -215,8 +236,14 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
                         .or_default()
                         .push(node_layer - 1);
                     self.prepare_input(&out_port, node_layer);
-                    self.insert_backlink_on_layer(out_port.clone(), node_layer - 1);
-                    self.backlinks.insert(out_port, node_layer);
+                    self.insert_backlink_on_layer(out_port.clone(), node_layer - 1, false);
+                    self.backlinks.insert(
+                        out_port,
+                        BacklinkData {
+                            available_layer: node_layer,
+                            originating_layer: node_layer,
+                        },
+                    );
                 }
             } else {
                 // No backlink
@@ -237,7 +264,7 @@ impl<V, E> MonoidalWiredGraphBuilder<V, E> {
     }
 }
 
-impl<G, V, E> From<&G> for MonoidalWiredGraph<V, E>
+impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<V, E>
 where
     G: GraphView<V, E>,
 {
@@ -254,6 +281,7 @@ where
         }
 
         for node in graph.nodes() {
+            println!("Node recieved: {node:#?}");
             // Use topsorted graph here
             builder.insert_operation(&node);
         }
@@ -270,16 +298,16 @@ where
 
             let layer = if open_ports.len() == 1 {
                 let layer = open_ports[0] - 1;
-                builder.insert_backlink_on_layer(out_port.clone(), layer);
+                builder.insert_backlink_on_layer(out_port.clone(), layer, true);
                 layer
             } else {
-                let layer = open_ports.iter().max().unwrap() + 1;
-                builder.prepare_input(&out_port, layer);
-                builder.insert_backlink_on_layer(out_port.clone(), layer);
+                let layer = *open_ports.iter().max().unwrap();
+                builder.prepare_input(&out_port, layer + 1);
+                builder.insert_backlink_on_layer(out_port.clone(), layer, true);
                 layer
             };
 
-            for x in backlink..layer {
+            for x in backlink.available_layer..layer {
                 builder.add_op(
                     Slice {
                         ops: vec![WiredOp::Backlink {

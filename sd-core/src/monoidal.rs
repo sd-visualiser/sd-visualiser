@@ -33,7 +33,6 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
 
         while !finished {
             finished = true;
-            println!("Permutation {permutation:?}");
             let mut perm_iter = permutation.into_iter().enumerate();
             permutation = Vec::default();
 
@@ -54,8 +53,7 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
                             });
                             permutation.push(None);
                         }
-                        PermutationOutput::Paired(j) => {
-                            assert!(i < j);
+                        PermutationOutput::Paired(j) if i < j => {
                             finished = false;
                             permutation.push(None);
                             let mut intermediate = vec![];
@@ -85,6 +83,11 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
                                     intermediate,
                                 });
                             }
+                        }
+                        PermutationOutput::Paired(j) => {
+                            finished = false;
+                            ops.push(MonoidalOp::id_from_link(link.clone()));
+                            permutation.push(Some((link, PermutationOutput::Paired(j))));
                         }
                     }
                 } else {
@@ -241,9 +244,10 @@ impl<T: Addr> MonoidalOp<T> {
     }
 
     #[must_use]
-    pub fn is_id(&self) -> bool {
+    pub fn is_id_or_backlink(&self) -> bool {
         match self {
             MonoidalOp::Copy { copies, .. } => *copies == 1,
+            MonoidalOp::Backlink { .. } => true,
             _ => false,
         }
     }
@@ -492,18 +496,18 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
                 canonical = true;
                 second_iter.next().unwrap()
             };
-            if first.is_id() {
+            if first.is_id_or_backlink() {
                 for _ in 1..second.number_of_inputs() {
-                    if first_iter.next().map(MonoidalOp::is_id) != Some(true) {
+                    if first_iter.next().map(MonoidalOp::is_id_or_backlink) != Some(true) {
                         return false;
                     }
                 }
             } else {
-                if !second.is_id() {
+                if !second.is_id_or_backlink() {
                     return false;
                 }
                 for _ in 1..first.number_of_outputs() {
-                    if second_iter.next().map(MonoidalOp::is_id) != Some(true) {
+                    if second_iter.next().map(MonoidalOp::is_id_or_backlink) != Some(true) {
                         return false;
                     }
                 }
@@ -531,7 +535,7 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
                     second = second_iter.next().unwrap();
                 }
 
-                if op.is_id() {
+                if op.is_id_or_backlink() {
                     advance_by(&mut first_iter, second.number_of_inputs() - 1);
                     ops.push(second);
                 } else {
