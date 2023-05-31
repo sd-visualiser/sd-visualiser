@@ -1,6 +1,6 @@
 use std::{
     cmp::min,
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     fmt::Debug,
     hash::Hash,
     sync::{Arc, RwLock, Weak},
@@ -224,7 +224,7 @@ impl<V, E, const BUILT: bool> InPort<V, E, BUILT> {
 #[derive(Debug)]
 struct OutPortInternal<V, E> {
     node: Option<WeakNodeInternal<V, E>>,
-    inputs: RwLock<HashSet<WeakByAddress<InPortInternal<V, E>>>>,
+    inputs: RwLock<IndexSet<WeakByAddress<InPortInternal<V, E>>>>,
     weight: E,
 }
 
@@ -236,7 +236,7 @@ where
     fn new_boundary(weight: E) -> Self {
         Self {
             node: None,
-            inputs: RwLock::new(HashSet::default()),
+            inputs: RwLock::new(IndexSet::default()),
             weight,
         }
     }
@@ -353,7 +353,7 @@ where
         {
             node.outputs()
                 .flat_map(|outport| outport.inputs().filter_map(|inport| inport.node()))
-                .collect::<HashSet<_>>()
+                .collect::<IndexSet<_>>()
                 .into_iter()
         }
 
@@ -886,7 +886,7 @@ where
                 .map(|weight| {
                     Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Operation(weak.clone())),
-                        inputs: RwLock::new(HashSet::default()),
+                        inputs: RwLock::new(IndexSet::default()),
                         weight,
                     })
                 })
@@ -1035,7 +1035,7 @@ where
                 .map(|(weight, inner_input)| {
                     let outer_output = Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        inputs: RwLock::new(HashSet::default()),
+                        inputs: RwLock::new(IndexSet::default()),
                         weight,
                     });
                     (inner_input, ByThinAddress(outer_output))

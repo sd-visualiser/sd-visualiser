@@ -45,7 +45,7 @@ impl Name {
 struct Environment<'env, F> {
     free_vars: &'env FreeVars,
     fragment: F,
-    inputs: HashMap<SyntaxInPort<false>, Variable>,
+    inputs: Vec<(SyntaxInPort<false>, Variable)>,
     outputs: HashMap<Variable, SyntaxOutPort<false>>,
 }
 
@@ -62,7 +62,7 @@ where
         Self {
             free_vars,
             fragment,
-            inputs: HashMap::default(),
+            inputs: Vec::default(),
             outputs: HashMap::default(),
         }
     }
@@ -84,12 +84,10 @@ where
             (Value::Variable(var), ProcessInput::Variable(var2)) => {
                 Err(ConvertError::Aliased(var2, var.clone()))
             }
-            (Value::Variable(var), ProcessInput::InPort(in_port)) => self
-                .inputs
-                .insert(in_port, var.clone())
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Shadowed(var.clone())),
+            (Value::Variable(var), ProcessInput::InPort(in_port)) => {
+                self.inputs.push((in_port, var.clone()));
+                Ok(())
+            }
             (Value::Op { op, vs, ds }, input) => {
                 let output_weight = if let ProcessInput::Variable(v) = &input {
                     Name::from_variable(v.clone())
@@ -153,11 +151,7 @@ where
         debug!("new thunk node {:?}", thunk_node);
 
         for (var, inport) in free.iter().cloned().zip(thunk_node.inputs()) {
-            self.inputs
-                .insert(inport, var.clone())
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Shadowed(var))?;
+            self.inputs.push((inport, var.clone()));
         }
 
         self.fragment
