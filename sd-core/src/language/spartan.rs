@@ -189,6 +189,32 @@ pub(crate) mod tests {
         Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
+    #[fixture]
+    pub(crate) fn bad() -> Result<Expr> {
+        let mut pairs =
+            SpartanParser::parse(Rule::program, include_str!("../../../examples/bad.sd"))
+                .context("Could not parse bad program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
+    #[fixture]
+    pub(crate) fn recursive() -> Result<Expr> {
+        let mut pairs = SpartanParser::parse(
+            Rule::program,
+            include_str!("../../../examples/recursive.sd"),
+        )
+        .context("Could not parse recursive program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
+    #[fixture]
+    pub(crate) fn nest() -> Result<Expr> {
+        let mut pairs =
+            SpartanParser::parse(Rule::program, include_str!("../../../examples/nest.sd"))
+                .context("Could not parse nest program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
     #[rstest]
     #[case(basic_program())]
     #[case(free_vars())]
