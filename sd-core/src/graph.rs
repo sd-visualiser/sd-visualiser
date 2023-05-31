@@ -66,10 +66,10 @@ where
                     self.fragment
                         .add_operation(vs.len() + ds.len(), [None], op.clone());
                 for (value, inport) in vs.iter().zip(operation_node.inputs()) {
-                    value.process_in(self, inport)?;
+                    self.process_value(value, inport)?;
                 }
                 for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
-                    thunk.process_in(self, inport)?;
+                    self.process_thunk(thunk, inport)?;
                 }
 
                 let outport = operation_node
@@ -79,6 +79,113 @@ where
                 Ok(outport)
             }
         }
+    }
+
+    /// Insert value into a hypergraph and update the environment.
+    ///
+    /// The caller expects the inport that is passed in to be linked.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if variables are malformed.
+    fn process_value(
+        &mut self,
+        value: &Value,
+        inport: SyntaxInPort<false>,
+    ) -> Result<(), ConvertError> {
+        match value {
+            Value::Variable(v) => self
+                .inputs
+                .insert(inport, v.clone())
+                .is_none()
+                .then_some(())
+                .ok_or(ConvertError::Aliased(v.clone())),
+            Value::Op { op, vs, ds } => {
+                // make operation node
+                let operation_node =
+                    self.fragment
+                        .add_operation(vs.len() + ds.len(), [None], op.clone());
+                for (value, inport) in vs.iter().zip(operation_node.inputs()) {
+                    self.process_value(value, inport)?;
+                }
+                for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
+                    self.process_thunk(thunk, inport)?;
+                }
+
+                let outport = operation_node
+                    .outputs()
+                    .next()
+                    .ok_or(ConvertError::NoOutputError)?;
+                tracing::debug!("operation node made, inputs processed, about to link");
+                self.fragment.link(outport, inport)?;
+
+                Ok(())
+            }
+        }
+    }
+
+    /// Insert thunk into a hypergraph and update the environment.
+    ///
+    /// The caller expects the inport that is passed in to be linked.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if variables are malformed.
+    fn process_thunk(
+        &mut self,
+        thunk: &Thunk,
+        inport: SyntaxInPort<false>,
+    ) -> Result<(), ConvertError> {
+        let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
+
+        for var in &thunk.args {
+            free.remove(var);
+        }
+        let thunk_node = self.fragment.add_thunk(
+            free.iter().cloned().map(Some),
+            thunk.args.iter().map(|name| Some(name.clone())),
+            [None],
+        );
+        debug!("new thunk node {:?}", thunk_node);
+
+        for (var, inport) in free.iter().cloned().zip(thunk_node.inputs()) {
+            self.inputs
+                .insert(inport, var.clone())
+                .is_none()
+                .then_some(())
+                .ok_or(ConvertError::Aliased(var))?;
+        }
+
+        self.fragment
+            .in_thunk(thunk_node.clone(), |inner_fragment| {
+                let mut thunk_env = Environment::new(self.free_vars, inner_fragment);
+
+                for (var, outport) in free.iter().cloned().zip(thunk_node.free_inputs()) {
+                    thunk_env
+                        .outputs
+                        .insert(var.clone(), outport)
+                        .is_none()
+                        .then_some(())
+                        .ok_or(ConvertError::Aliased(var))?;
+                }
+                for (var, outport) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
+                    thunk_env
+                        .outputs
+                        .insert(var.clone(), outport)
+                        .is_none()
+                        .then_some(())
+                        .ok_or(ConvertError::Aliased(var.clone()))?;
+                }
+                thunk_env.process_expr(&thunk.body)
+            })?;
+
+        let outport = thunk_node
+            .outputs()
+            .next()
+            .ok_or(ConvertError::NoOutputError)?;
+        self.fragment.link(outport, inport)?;
+
+        Ok(())
     }
 
     /// Insert expression into a hypergraph, consuming the environment.
@@ -106,7 +213,7 @@ where
             .graph_outputs()
             .next()
             .ok_or(ConvertError::NoOutputError)?;
-        expr.value.process_in(&mut self, graph_output)?;
+        self.process_value(&expr.value, graph_output)?;
 
         // link up loops
         for (inport, var) in self.inputs {
@@ -115,129 +222,6 @@ where
         }
 
         Ok(self.fragment)
-    }
-}
-
-trait ProcessIn {
-    /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
-    ///
-    /// The caller expects the inport that is passed in to be linked.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if variables are malformed.
-    fn process_in<F>(
-        &self,
-        environment: &mut Environment<F>,
-        inport: SyntaxInPort<false>,
-    ) -> Result<(), ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
-}
-
-impl ProcessIn for Value {
-    fn process_in<F>(
-        &self,
-        environment: &mut Environment<F>,
-        inport: SyntaxInPort<false>,
-    ) -> Result<(), ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
-    {
-        match self {
-            Value::Variable(v) => environment
-                .inputs
-                .insert(inport, v.clone())
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Aliased(v.clone())),
-            Value::Op { op, vs, ds } => {
-                // make operation node
-                let operation_node =
-                    environment
-                        .fragment
-                        .add_operation(vs.len() + ds.len(), [None], op.clone());
-                for (value, inport) in vs.iter().zip(operation_node.inputs()) {
-                    value.process_in(environment, inport)?;
-                }
-                for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
-                    thunk.process_in(environment, inport)?;
-                }
-
-                let outport = operation_node
-                    .outputs()
-                    .next()
-                    .ok_or(ConvertError::NoOutputError)?;
-                tracing::debug!("operation node made, inputs processed, about to link");
-                environment.fragment.link(outport, inport)?;
-
-                Ok(())
-            }
-        }
-    }
-}
-
-impl ProcessIn for Thunk {
-    fn process_in<F>(
-        &self,
-        environment: &mut Environment<F>,
-        inport: SyntaxInPort<false>,
-    ) -> Result<(), ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
-    {
-        let mut free: HashSet<_> = environment.free_vars[&self.body].iter().cloned().collect();
-
-        for var in &self.args {
-            free.remove(var);
-        }
-        let thunk_node = environment.fragment.add_thunk(
-            free.iter().cloned().map(Some),
-            self.args.iter().map(|name| Some(name.clone())),
-            [None],
-        );
-        debug!("new thunk node {:?}", thunk_node);
-
-        for (var, inport) in free.iter().cloned().zip(thunk_node.inputs()) {
-            environment
-                .inputs
-                .insert(inport, var.clone())
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Aliased(var))?;
-        }
-
-        environment
-            .fragment
-            .in_thunk(thunk_node.clone(), |inner_fragment| {
-                let mut thunk_env = Environment::new(environment.free_vars, inner_fragment);
-
-                for (var, outport) in free.iter().cloned().zip(thunk_node.free_inputs()) {
-                    thunk_env
-                        .outputs
-                        .insert(var.clone(), outport)
-                        .is_none()
-                        .then_some(())
-                        .ok_or(ConvertError::Aliased(var))?;
-                }
-                for (var, outport) in self.args.iter().zip(thunk_node.bound_inputs()) {
-                    thunk_env
-                        .outputs
-                        .insert(var.clone(), outport)
-                        .is_none()
-                        .then_some(())
-                        .ok_or(ConvertError::Aliased(var.clone()))?;
-                }
-                thunk_env.process_expr(&self.body)
-            })?;
-
-        let outport = thunk_node
-            .outputs()
-            .next()
-            .ok_or(ConvertError::NoOutputError)?;
-        environment.fragment.link(outport, inport)?;
-
-        Ok(())
     }
 }
 
