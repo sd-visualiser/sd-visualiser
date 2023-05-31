@@ -49,7 +49,7 @@ where
         }
     }
 
-    /// Insert this piece of syntax into a hypergraph and update the mapping of variables to outports.
+    /// Insert value into a hypergraph and update the environment.
     ///
     /// # Returns
     ///
@@ -81,7 +81,11 @@ where
         }
     }
 
-    /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
+    /// Insert expression into a hypergraph, consuming the environment.
+    ///
+    /// # Returns
+    ///
+    /// This function returns the completed fragment of the hypergraph.
     ///
     /// # Errors
     ///
