@@ -11,7 +11,6 @@ use sd_core::language::{
     spartan::{self, SpartanParser},
 };
 use thiserror::Error;
-use tracing::debug;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub enum Language {
@@ -55,7 +54,7 @@ impl ComputerMut<(&str, Language), Arc<Result<ParseOutput, ParseError>>> for Par
         &mut self,
         (source, language): (&str, Language),
     ) -> Arc<Result<ParseOutput, ParseError>> {
-        debug!("Parsing");
+        tracing::trace!("Parsing");
         Arc::new((|| match language {
             Language::Chil => {
                 let mut pairs = ChilParser::parse(chil::Rule::program, source)?;
