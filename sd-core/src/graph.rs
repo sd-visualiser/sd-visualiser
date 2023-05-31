@@ -36,6 +36,11 @@ struct Environment<'env, F> {
     outputs: HashMap<Variable, SyntaxOutPort<false>>,
 }
 
+enum ProcessInput {
+    Variable(Variable),
+    InPort(SyntaxInPort<false>),
+}
+
 impl<'env, F> Environment<'env, F>
 where
     F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
@@ -51,6 +56,9 @@ where
 
     /// Insert value into a hypergraph and update the environment.
     ///
+    /// If an `InPort` is passed in it should be linked.
+    /// If a `Variable` is passed in it should be assigned to the outport the value generates.
+    ///
     /// # Returns
     ///
     /// This function returns an outport, which should be linked by the caller.
@@ -58,52 +66,53 @@ where
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
-    fn process_value_out(&mut self, value: &Value) -> Result<SyntaxOutPort<false>, ConvertError> {
-        match value {
-            Value::Variable(var) => Err(ConvertError::Aliased(var.clone())),
-            Value::Op { op, vs, ds } => {
+    fn process_value(&mut self, value: &Value, input: ProcessInput) -> Result<(), ConvertError> {
+        match (value, input) {
+            (Value::Variable(var), ProcessInput::Variable(_)) => {
+                Err(ConvertError::Aliased(var.clone()))
+            }
+            (Value::Variable(var), ProcessInput::InPort(in_port)) => self
+                .inputs
+                .insert(in_port, var.clone())
+                .is_none()
+                .then_some(())
+                .ok_or(ConvertError::Aliased(var.clone())),
+            (Value::Op { op, vs, ds }, input) => {
+                let output_weight = if let ProcessInput::Variable(v) = &input {
+                    Some(v.clone())
+                } else {
+                    None
+                };
+
                 let operation_node =
                     self.fragment
-                        .add_operation(vs.len() + ds.len(), [None], op.clone());
+                        .add_operation(vs.len() + ds.len(), [output_weight], op.clone());
                 for (value, inport) in vs.iter().zip(operation_node.inputs()) {
-                    self.process_value(value, inport)?;
+                    self.process_value(value, ProcessInput::InPort(inport))?;
                 }
                 for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
                     self.process_thunk(thunk, inport)?;
                 }
 
-                let outport = operation_node
+                let out_port = operation_node
                     .outputs()
                     .next()
                     .ok_or(ConvertError::NoOutputError)?;
-                Ok(outport)
+
+                match input {
+                    ProcessInput::Variable(v) => {
+                        self.outputs
+                            .insert(v.clone(), out_port)
+                            .is_none()
+                            .then_some(())
+                            .ok_or(ConvertError::Aliased(v))?;
+                    }
+                    ProcessInput::InPort(in_port) => self.fragment.link(out_port, in_port)?,
+                }
+
+                Ok(())
             }
         }
-    }
-
-    /// Insert value into a hypergraph and update the environment.
-    ///
-    /// The caller expects the inport that is passed in to be linked.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if variables are malformed.
-    fn process_value(
-        &mut self,
-        value: &Value,
-        inport: SyntaxInPort<false>,
-    ) -> Result<(), ConvertError> {
-        if let Value::Variable(v) = value {
-            self.inputs
-                .insert(inport, v.clone())
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Aliased(v.clone()))?;
-        } else {
-            let outport = self.process_value_out(value)?;
-            self.fragment.link(outport, inport)?;
-        }
-        Ok(())
     }
 
     /// Insert thunk into a hypergraph and update the environment.
@@ -181,12 +190,7 @@ where
     /// This function will return an error if variables are malformed.
     fn process_expr(mut self, expr: &Expr) -> Result<F, ConvertError> {
         for bind in &expr.binds {
-            let outport = self.process_value_out(&bind.value)?;
-            self.outputs
-                .insert(bind.var.clone(), outport)
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Aliased(bind.var.clone()))?;
+            self.process_value(&bind.value, ProcessInput::Variable(bind.var.clone()))?;
         }
         debug!("processed binds: {:?}", self.outputs);
 
@@ -195,7 +199,7 @@ where
             .graph_outputs()
             .next()
             .ok_or(ConvertError::NoOutputError)?;
-        self.process_value(&expr.value, graph_output)?;
+        self.process_value(&expr.value, ProcessInput::InPort(graph_output))?;
 
         // link up loops
         for (inport, var) in self.inputs {
