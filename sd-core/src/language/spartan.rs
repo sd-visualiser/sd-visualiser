@@ -156,7 +156,7 @@ pub(crate) mod tests {
 
     #[fixture]
     pub(crate) fn free_vars() -> Result<Expr> {
-        let mut pairs = SpartanParser::parse(Rule::program, "bind x = y in z")
+        let mut pairs = SpartanParser::parse(Rule::program, "bind x = plus(y) in z")
             .context("Could not parse free variable program")?;
         Ok(Expr::from_pest(&mut pairs).unwrap())
     }

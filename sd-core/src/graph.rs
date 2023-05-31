@@ -60,7 +60,7 @@ where
     /// This function will return an error if variables are malformed.
     fn process_value_out(&mut self, value: &Value) -> Result<SyntaxOutPort<false>, ConvertError> {
         match value {
-            Value::Variable(var) => Ok(self.outputs[var].clone()),
+            Value::Variable(var) => Err(ConvertError::Aliased(var.clone())),
             Value::Op { op, vs, ds } => {
                 let operation_node =
                     self.fragment
