@@ -29,7 +29,7 @@ pub enum ConvertError {
     NoOutputError,
 }
 
-pub type Name = Option<String>;
+pub type Name = Option<Variable>;
 type Scope = Option<*const Thunk>;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
@@ -268,12 +268,8 @@ impl<'env> ProcessIn<'env> for Thunk {
             })
             .collect();
         let thunk_node = fragment.add_thunk(
-            free.iter().cloned().map(|Variable(name)| Some(name)),
-            bound
-                .iter()
-                .copied()
-                .cloned()
-                .map(|Variable(name)| Some(name)),
+            free.iter().cloned().map(Some),
+            bound.iter().copied().cloned().map(Some),
             [None],
         );
         debug!("new thunk node {:?}", thunk_node);
@@ -399,13 +395,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
         let free: Vec<_> = env.map[&None].free.iter().copied().cloned().collect();
         debug!("free variables: {:?}", free);
-        let mut graph = HyperGraph::new(
-            free.iter()
-                .cloned()
-                .map(|Variable(var)| Some(var))
-                .collect(),
-            1,
-        );
+        let mut graph = HyperGraph::new(free.iter().cloned().map(Some).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);
         for (var, outport) in free.iter().zip(graph.graph_inputs()) {
             env.outputs
