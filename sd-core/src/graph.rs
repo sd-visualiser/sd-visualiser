@@ -27,42 +27,20 @@ pub enum ConvertError {
 }
 
 pub type Name = Option<Variable>;
-type Scope = Option<*const Thunk>;
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-struct ScopedVariable {
-    var: Variable,
-    scope: Scope,
-}
 
 #[derive(Debug)]
 struct Environment<'env> {
     free_vars: &'env FreeVars,
-    current_scope: Scope,
-    inputs: HashMap<SyntaxInPort<false>, ScopedVariable>,
-    outputs: HashMap<ScopedVariable, SyntaxOutPort<false>>,
+    inputs: HashMap<SyntaxInPort<false>, Variable>,
+    outputs: HashMap<Variable, SyntaxOutPort<false>>,
 }
 
 impl<'env> Environment<'env> {
     fn new(free_vars: &'env FreeVars) -> Self {
         Self {
             free_vars,
-            current_scope: Option::default(),
             inputs: HashMap::default(),
             outputs: HashMap::default(),
-        }
-    }
-
-    fn set_scope(&mut self, scope: Scope) -> Scope {
-        let old = self.current_scope;
-        self.current_scope = scope;
-        old
-    }
-
-    fn scoped<'a>(&'a self, var: &'a Variable) -> ScopedVariable {
-        ScopedVariable {
-            var: var.clone(),
-            scope: self.current_scope,
         }
     }
 }
@@ -128,7 +106,7 @@ impl ProcessIn for Value {
         match self {
             Value::Variable(v) => environment
                 .inputs
-                .insert(inport, environment.scoped(v))
+                .insert(inport, v.clone())
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(v.clone())),
@@ -165,13 +143,7 @@ impl Process for Expr {
             let outport = bind.value.process_out(fragment, &mut environment)?;
             environment
                 .outputs
-                .insert(
-                    ScopedVariable {
-                        var: bind.var.clone(),
-                        scope: environment.current_scope,
-                    },
-                    outport,
-                )
+                .insert(bind.var.clone(), outport)
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(bind.var.clone()))?;
@@ -226,23 +198,14 @@ impl ProcessIn for Thunk {
                     thunk_node
                         .externalise_input(&outport)
                         .expect("no corresponding inport for outport in thunk"),
-                    ScopedVariable {
-                        var: var.clone(),
-                        scope: environment.current_scope,
-                    },
+                    var.clone(),
                 )
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
             thunk_env
                 .outputs
-                .insert(
-                    ScopedVariable {
-                        var: var.clone(),
-                        scope: Some(self),
-                    },
-                    outport,
-                )
+                .insert(var.clone(), outport)
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
@@ -250,25 +213,14 @@ impl ProcessIn for Thunk {
         for (var, outport) in self.args.iter().zip(thunk_node.bound_inputs()) {
             thunk_env
                 .outputs
-                .insert(
-                    ScopedVariable {
-                        var: var.clone(),
-                        scope: Some(self),
-                    },
-                    outport,
-                )
+                .insert(var.clone(), outport)
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
         }
-        thunk_env.set_scope(Some(self));
-        let current_scope = environment.current_scope;
         fragment.in_thunk(thunk_node.clone(), |mut inner_fragment| {
-            environment.set_scope(Some(self));
-
             self.body.process(&mut inner_fragment, thunk_env)
         })?;
-        environment.set_scope(current_scope);
 
         let outport = thunk_node
             .outputs()
@@ -290,7 +242,7 @@ impl ProcessOut for Value {
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
         match self {
-            Value::Variable(var) => Ok(environment.outputs[&environment.scoped(var)].clone()),
+            Value::Variable(var) => Ok(environment.outputs[var].clone()),
             Value::Op { op, vs, ds } => {
                 let operation_node =
                     fragment.add_operation(vs.len() + ds.len(), [None], op.clone());
@@ -330,13 +282,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         debug!("made initial hypergraph: {:?}", graph);
         for (var, outport) in free.iter().zip(graph.graph_inputs()) {
             env.outputs
-                .insert(
-                    ScopedVariable {
-                        var: var.clone(),
-                        scope: None,
-                    },
-                    outport,
-                )
+                .insert(var.clone(), outport)
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
