@@ -115,6 +115,15 @@ impl<V, E, const BUILT: bool> Debug for InPort<V, E, BUILT> {
         let mut x = f.debug_struct("InPort");
         if BUILT {
             x.field("output", &self.output());
+            x.field(
+                "strength",
+                &self
+                    .output()
+                    .inputs()
+                    .find(|(x, _)| x == self)
+                    .map(|(_, y)| y)
+                    .unwrap(),
+            );
         }
         x.finish()
     }
@@ -248,8 +257,9 @@ where
     }
 }
 
-impl<V, E> OutPort<V, E> {
-    pub fn inputs(&self) -> impl Iterator<Item = (InPort<V, E>, EdgeStrength)> {
+impl<V, E, const BUILT: bool> OutPort<V, E, BUILT> {
+    pub fn inputs(&self) -> impl Iterator<Item = (InPort<V, E, BUILT>, EdgeStrength)> {
+        assert!(BUILT);
         self.0
             .inputs
             .try_read()
