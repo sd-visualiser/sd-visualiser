@@ -44,27 +44,25 @@ struct ScopedVariable {
 }
 
 #[derive(Debug)]
-struct Environment {
-    free_vars: FreeVars,
+struct Environment<'env> {
+    free_vars: &'env FreeVars,
     map: HashMap<Scope, ThunkContext>,
     current_scope: Scope,
     inputs: HashMap<SyntaxInPort<false>, ScopedVariable>,
     outputs: HashMap<ScopedVariable, SyntaxOutPort<false>>,
 }
 
-impl Default for Environment {
-    fn default() -> Self {
+impl<'env> Environment<'env> {
+    fn new(free_vars: &'env FreeVars) -> Self {
         Self {
-            free_vars: FreeVars::default(),
+            free_vars,
             map: [(None, ThunkContext { parent: None })].into(),
             current_scope: Option::default(),
             inputs: HashMap::default(),
             outputs: HashMap::default(),
         }
     }
-}
 
-impl Environment {
     fn push(&mut self, scope: &Thunk) {
         self.map.insert(
             Some(scope),
@@ -99,7 +97,7 @@ impl Environment {
     }
 }
 
-impl<'ast> Visitor<'ast> for Environment {
+impl<'ast> Visitor<'ast> for Environment<'ast> {
     fn visit_thunk(&mut self, thunk: &'ast Thunk) {
         self.push(thunk);
     }
@@ -323,10 +321,13 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
     #[tracing::instrument(ret, err)]
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
-        let mut env: Environment = Environment::default();
+        let mut free_vars = FreeVars::default();
+
+        free_vars.expr(expr);
+
+        let mut env: Environment = Environment::new(&free_vars);
 
         expr.walk(&mut env);
-        env.free_vars.expr(expr);
 
         debug!("determined environment: {:?}", env);
 
@@ -387,7 +388,8 @@ mod tests {
     use rstest::rstest;
 
     use crate::{
-        graph::{Environment, SyntaxHyperGraph},
+        free_vars::FreeVars,
+        graph::SyntaxHyperGraph,
         language::{
             spartan::{
                 tests::{
@@ -407,11 +409,12 @@ mod tests {
     #[case(nest(), vec![])]
     fn free_var_test(#[case] expr: Result<Expr>, #[case] free_vars: Vec<Variable>) -> Result<()> {
         let expr = expr?;
-        let mut env: Environment = Environment::default();
-        env.free_vars.expr(&expr);
+
+        let mut fv = FreeVars::default();
+        fv.expr(&expr);
 
         assert_eq!(
-            env.free_vars[&expr].clone(),
+            fv[&expr].clone(),
             free_vars.into_iter().collect::<HashSet<_>>()
         );
 
