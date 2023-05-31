@@ -20,8 +20,10 @@ pub enum ConvertError {
     HyperGraphError(#[from] HyperGraphError<Op, Name>),
     #[error("Couldn't find location of variable `{0}`")]
     VariableError(Variable),
-    #[error("Variable aliased `{0}`")]
-    Aliased(Variable),
+    #[error("Attempted to alias `{0}` to `{1}`")]
+    Aliased(Variable, Variable),
+    #[error("Attempted to shadow `{0}`")]
+    Shadowed(Variable),
     #[error("Fragment did not have output")]
     NoOutputError,
 }
@@ -68,15 +70,15 @@ where
     /// This function will return an error if variables are malformed.
     fn process_value(&mut self, value: &Value, input: ProcessInput) -> Result<(), ConvertError> {
         match (value, input) {
-            (Value::Variable(var), ProcessInput::Variable(_)) => {
-                Err(ConvertError::Aliased(var.clone()))
+            (Value::Variable(var), ProcessInput::Variable(var2)) => {
+                Err(ConvertError::Aliased(var2, var.clone()))
             }
             (Value::Variable(var), ProcessInput::InPort(in_port)) => self
                 .inputs
                 .insert(in_port, var.clone())
                 .is_none()
                 .then_some(())
-                .ok_or(ConvertError::Aliased(var.clone())),
+                .ok_or(ConvertError::Shadowed(var.clone())),
             (Value::Op { op, vs, ds }, input) => {
                 let output_weight = if let ProcessInput::Variable(v) = &input {
                     Some(v.clone())
@@ -105,7 +107,7 @@ where
                             .insert(v.clone(), out_port)
                             .is_none()
                             .then_some(())
-                            .ok_or(ConvertError::Aliased(v))?;
+                            .ok_or(ConvertError::Shadowed(v))?;
                     }
                     ProcessInput::InPort(in_port) => self.fragment.link(out_port, in_port)?,
                 }
@@ -144,7 +146,7 @@ where
                 .insert(inport, var.clone())
                 .is_none()
                 .then_some(())
-                .ok_or(ConvertError::Aliased(var))?;
+                .ok_or(ConvertError::Shadowed(var))?;
         }
 
         self.fragment
@@ -157,7 +159,7 @@ where
                         .insert(var.clone(), outport)
                         .is_none()
                         .then_some(())
-                        .ok_or(ConvertError::Aliased(var))?;
+                        .ok_or(ConvertError::Shadowed(var))?;
                 }
                 for (var, outport) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
                     thunk_env
@@ -165,7 +167,7 @@ where
                         .insert(var.clone(), outport)
                         .is_none()
                         .then_some(())
-                        .ok_or(ConvertError::Aliased(var.clone()))?;
+                        .ok_or(ConvertError::Shadowed(var.clone()))?;
                 }
                 thunk_env.process_expr(&thunk.body)
             })?;
@@ -233,7 +235,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
                 .insert(var.clone(), outport)
                 .is_none()
                 .then_some(())
-                .ok_or(ConvertError::Aliased(var.clone()))?;
+                .ok_or(ConvertError::Shadowed(var.clone()))?;
         }
         debug!("processed free variables: {:?}", env.outputs);
 
