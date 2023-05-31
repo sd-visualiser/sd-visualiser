@@ -110,11 +110,7 @@ trait Process {
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
-    fn process<F>(
-        &self,
-        fragment: &mut F,
-        environment: &mut Environment,
-    ) -> Result<(), ConvertError>
+    fn process<F>(&self, fragment: &mut F, environment: Environment) -> Result<(), ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
@@ -161,16 +157,12 @@ impl ProcessIn for Value {
 }
 
 impl Process for Expr {
-    fn process<F>(
-        &self,
-        fragment: &mut F,
-        environment: &mut Environment,
-    ) -> Result<(), ConvertError>
+    fn process<F>(&self, fragment: &mut F, mut environment: Environment) -> Result<(), ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
         for bind in &self.binds {
-            let outport = bind.value.process_out(fragment, environment)?;
+            let outport = bind.value.process_out(fragment, &mut environment)?;
             environment
                 .outputs
                 .insert(
@@ -190,7 +182,16 @@ impl Process for Expr {
             .graph_outputs()
             .next()
             .ok_or(ConvertError::NoOutputError)?;
-        self.value.process_in(fragment, environment, graph_output)
+        self.value
+            .process_in(fragment, &mut environment, graph_output)?;
+
+        // link up loops
+        for (inport, var) in environment.inputs {
+            let outport = environment.outputs[&var].clone();
+            fragment.link(outport, inport).unwrap();
+        }
+
+        Ok(())
     }
 }
 
@@ -216,6 +217,8 @@ impl ProcessIn for Thunk {
         );
         debug!("new thunk node {:?}", thunk_node);
 
+        let mut thunk_env = Environment::new(environment.free_vars);
+
         for (var, outport) in free.into_iter().zip(thunk_node.free_inputs()) {
             environment
                 .inputs
@@ -231,7 +234,7 @@ impl ProcessIn for Thunk {
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
-            environment
+            thunk_env
                 .outputs
                 .insert(
                     ScopedVariable {
@@ -245,7 +248,7 @@ impl ProcessIn for Thunk {
                 .ok_or(ConvertError::Aliased(var.clone()))?;
         }
         for (var, outport) in self.args.iter().zip(thunk_node.bound_inputs()) {
-            environment
+            thunk_env
                 .outputs
                 .insert(
                     ScopedVariable {
@@ -258,11 +261,12 @@ impl ProcessIn for Thunk {
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
         }
+        thunk_env.set_scope(Some(self));
         let current_scope = environment.current_scope;
         fragment.in_thunk(thunk_node.clone(), |mut inner_fragment| {
             environment.set_scope(Some(self));
 
-            self.body.process(&mut inner_fragment, environment)
+            self.body.process(&mut inner_fragment, thunk_env)
         })?;
         environment.set_scope(current_scope);
 
@@ -339,14 +343,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         }
         debug!("processed free variables: {:?}", env.outputs);
 
-        expr.process(&mut graph, &mut env)?;
-
-        debug!(env = ?env);
-        // link up loops
-        for (inport, var) in env.inputs {
-            let outport = env.outputs[&var].clone();
-            graph.link(outport, inport).unwrap();
-        }
+        expr.process(&mut graph, env)?;
 
         Ok(graph.build()?)
     }
