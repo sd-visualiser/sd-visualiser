@@ -123,15 +123,11 @@ struct MonoidalWiredGraphBuilder<V, E> {
 
 impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
     fn add_op(&mut self, op: Slice<WiredOp<V, E>>, layer: usize) {
-        assert!(layer <= self.slices.len());
-        if let Some(slice) = self.slices.get_mut(layer) {
-            slice
-        } else {
+        while layer >= self.slices.len() {
             self.slices.push(Slice::default());
-            &mut self.slices[layer]
         }
-        .ops
-        .push(op);
+
+        self.slices[layer].ops.push(op);
     }
 
     fn input_layer(&self, out_port: &OutPort<V, E>) -> usize {
