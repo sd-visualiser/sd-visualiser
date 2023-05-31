@@ -104,6 +104,21 @@ trait ProcessIn {
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
 
+trait Process {
+    /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if variables are malformed.
+    fn process<F>(
+        &self,
+        fragment: &mut F,
+        environment: &mut Environment,
+    ) -> Result<(), ConvertError>
+    where
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
+}
+
 impl ProcessIn for Value {
     fn process_in<F>(
         &self,
@@ -145,12 +160,11 @@ impl ProcessIn for Value {
     }
 }
 
-impl ProcessIn for Expr {
-    fn process_in<F>(
+impl Process for Expr {
+    fn process<F>(
         &self,
         fragment: &mut F,
         environment: &mut Environment,
-        inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
@@ -172,7 +186,11 @@ impl ProcessIn for Expr {
         }
         debug!("processed binds: {:?}", environment.outputs);
 
-        self.value.process_in(fragment, environment, inport)
+        let graph_output = fragment
+            .graph_outputs()
+            .next()
+            .ok_or(ConvertError::NoOutputError)?;
+        self.value.process_in(fragment, environment, graph_output)
     }
 }
 
@@ -244,9 +262,7 @@ impl ProcessIn for Thunk {
         fragment.in_thunk(thunk_node.clone(), |mut inner_fragment| {
             environment.set_scope(Some(self));
 
-            let graph_output = inner_fragment.graph_outputs().next().unwrap();
-            self.body
-                .process_in(&mut inner_fragment, environment, graph_output)
+            self.body.process(&mut inner_fragment, environment)
         })?;
         environment.set_scope(current_scope);
 
@@ -323,8 +339,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         }
         debug!("processed free variables: {:?}", env.outputs);
 
-        let inport = graph.graph_outputs().next().unwrap();
-        expr.process_in(&mut graph, &mut env, inport)?;
+        expr.process(&mut graph, &mut env)?;
 
         debug!(env = ?env);
         // link up loops
