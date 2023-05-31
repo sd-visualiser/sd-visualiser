@@ -46,7 +46,6 @@ pub enum Op {
     If,
     App,
     Lambda,
-    Rec, // TODO: remove this
     Bool(bool),
     Number(NotNaN<f64>),
     String(String),     // string literal
@@ -71,7 +70,6 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
             Some("if") => Ok(Self::If),
             Some("app") => Ok(Self::App),
             Some("lambda") => Ok(Self::Lambda),
-            Some("rec") => Ok(Self::Rec),
             Some("true") => Ok(Self::Bool(true)),
             Some("false") => Ok(Self::Bool(false)),
             Some(str) => {
@@ -120,7 +118,6 @@ impl Display for Op {
             Self::If => f.write_str("if"),
             Self::App => f.write_char('@'),
             Self::Lambda => f.write_char('λ'),
-            Self::Rec => f.write_char('μ'),
             Self::Bool(b) => f.write_str(&b.to_string()),
             Self::Number(n) => f.write_str(&n.to_string()),
             Self::String(_) => f.write_str("str"),

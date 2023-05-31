@@ -74,7 +74,6 @@ impl PrettyPrint for Op {
             Self::If => RcDoc::text("if"),
             Self::App => RcDoc::text("app"),
             Self::Lambda => RcDoc::text("lambda"),
-            Self::Rec => RcDoc::text("rec"),
             Self::Bool(b) => RcDoc::as_string(b),
             Self::Number(n) => RcDoc::as_string(n),
             Self::String(s) => RcDoc::text("\"")

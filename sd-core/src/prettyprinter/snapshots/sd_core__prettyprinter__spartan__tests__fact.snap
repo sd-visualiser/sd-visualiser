@@ -2,13 +2,13 @@
 source: sd-core/src/prettyprinter/spartan.rs
 expression: expr.to_pretty()
 ---
-bind fact = rec(f . lambda(x .
+bind fact = lambda(x .
     bind y1 = eq(x, 1) in
     bind y2 = minus(x, 1) in
-    bind y3 = app(f, y2) in
+    bind y3 = app(fact, y2) in
     bind y4 = times(x, y3) in
     bind y5 = if(y1, 1, y4) in
     y5
-)) in
+) in
 bind a = app(fact, 5) in
 a

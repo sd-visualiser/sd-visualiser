@@ -11,7 +11,7 @@ value = { variable | op ~ ("(" ~ (thunks | values ~ (";" ~ thunks)?) ~ ")")? }
 thunks = _{ thunk ~ ("," ~ thunk)* }
 values = _{ value ~ ("," ~ value)* }
 
-op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "lambda" | "rec" | "true" | "false" | number | string }
+op = { "plus" | "minus" | "times" | "eq" | "and" | "or" | "not" | "if" | "app" | "lambda" | "true" | "false" | number | string }
 number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 string = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
