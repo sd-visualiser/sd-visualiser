@@ -14,6 +14,7 @@ use indexmap::IndexSet;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
+use tracing::Level;
 
 use crate::common::InOut;
 
@@ -501,7 +502,7 @@ pub trait Fragment: Graph<false> {
         output_weights: impl IntoIterator<Item = Self::EdgeWeight>,
     ) -> Thunk<Self::NodeWeight, Self::EdgeWeight, false>;
 
-    #[tracing::instrument(skip(self), err, ret)]
+    #[tracing::instrument(level=Level::DEBUG, skip(self), err, ret)]
     fn link(
         &mut self,
         out_port: OutPort<Self::NodeWeight, Self::EdgeWeight, false>,

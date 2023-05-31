@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, Level};
 
 use crate::{
     free_vars::FreeVars,
@@ -227,7 +227,7 @@ where
 impl TryFrom<&Expr> for SyntaxHyperGraph {
     type Error = ConvertError;
 
-    #[tracing::instrument(ret, err)]
+    #[tracing::instrument(level=Level::DEBUG, ret, err)]
     fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
         let mut free_vars = FreeVars::default();
 
