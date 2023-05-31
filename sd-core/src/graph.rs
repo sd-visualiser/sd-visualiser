@@ -182,7 +182,7 @@ pub(crate) trait ProcessOut<'env> {
         environment: &mut Environment<'env>,
     ) -> Result<SyntaxOutPort<false>, ConvertError>
     where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name> + Graph<false>;
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
 
 pub(crate) trait ProcessIn<'env> {
@@ -200,7 +200,7 @@ pub(crate) trait ProcessIn<'env> {
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name> + Graph<false>;
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
 
 impl<'env> ProcessIn<'env> for Value {
@@ -211,7 +211,7 @@ impl<'env> ProcessIn<'env> for Value {
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name> + Graph<false>,
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
         match self {
             Value::Variable(v) => environment
@@ -252,7 +252,7 @@ impl<'env> ProcessIn<'env> for Thunk {
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name> + Graph<false>,
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
         let free: Vec<_> = environment.map[&Some(self as *const Thunk)]
             .free
@@ -359,7 +359,7 @@ impl<'env> ProcessOut<'env> for Value {
         environment: &mut Environment<'env>,
     ) -> Result<SyntaxOutPort<false>, ConvertError>
     where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name> + Graph<false>,
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
         match self {
             Value::Variable(var) => Ok(environment.outputs[&environment.scoped(var)].clone()),
