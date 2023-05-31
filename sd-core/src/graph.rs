@@ -1,13 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
-use itertools::Itertools;
 use thiserror::Error;
 use tracing::debug;
 
 use crate::{
+    free_vars::FreeVars,
     hypergraph::{Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
     language::{
-        spartan::{BindClause, Expr, Op, Thunk, Value, Variable},
+        spartan::{Expr, Op, Thunk, Value, Variable},
         visitor::{Visitable, Visitor},
     },
 };
@@ -32,17 +32,9 @@ pub enum ConvertError {
 pub type Name = Option<Variable>;
 type Scope = Option<*const Thunk>;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-enum BoundVariable<'a> {
-    BindClause(&'a Variable),
-    Thunk(&'a Variable),
-}
-
 #[derive(Debug)]
-struct ThunkContext<'a> {
-    parent: Scope,                     // parent scope
-    bound: HashSet<BoundVariable<'a>>, // new variables
-    free: HashSet<&'a Variable>,       // free variables
+struct ThunkContext {
+    parent: Scope, // parent scope
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
@@ -52,25 +44,19 @@ struct ScopedVariable {
 }
 
 #[derive(Debug)]
-struct Environment<'a> {
-    map: HashMap<Scope, ThunkContext<'a>>,
+struct Environment {
+    free_vars: FreeVars,
+    map: HashMap<Scope, ThunkContext>,
     current_scope: Scope,
     inputs: HashMap<SyntaxInPort<false>, ScopedVariable>,
     outputs: HashMap<ScopedVariable, SyntaxOutPort<false>>,
 }
 
-impl<'a> Default for Environment<'a> {
+impl Default for Environment {
     fn default() -> Self {
         Self {
-            map: [(
-                None,
-                ThunkContext {
-                    parent: None,
-                    bound: HashSet::default(),
-                    free: HashSet::default(),
-                },
-            )]
-            .into(),
+            free_vars: FreeVars::default(),
+            map: [(None, ThunkContext { parent: None })].into(),
             current_scope: Option::default(),
             inputs: HashMap::default(),
             outputs: HashMap::default(),
@@ -78,14 +64,12 @@ impl<'a> Default for Environment<'a> {
     }
 }
 
-impl<'env> Environment<'env> {
-    fn push(&mut self, scope: &'env Thunk, bound: HashSet<&'env Variable>) {
+impl Environment {
+    fn push(&mut self, scope: &Thunk) {
         self.map.insert(
             Some(scope),
             ThunkContext {
                 parent: self.current_scope,
-                bound: bound.into_iter().map(BoundVariable::Thunk).collect(),
-                free: HashSet::default(),
             },
         );
         self.current_scope = Some(scope);
@@ -94,7 +78,7 @@ impl<'env> Environment<'env> {
     fn pop(&mut self) -> Option<Scope> {
         self.map
             .get(&self.current_scope)
-            .map(|ThunkContext { parent, .. }| {
+            .map(|ThunkContext { parent }| {
                 let old = self.current_scope;
                 self.current_scope = *parent;
                 old
@@ -107,31 +91,6 @@ impl<'env> Environment<'env> {
         old
     }
 
-    fn bind(&mut self, var: &'env Variable) -> bool {
-        let ThunkContext { bound, .. } = self.map.get_mut(&self.current_scope).unwrap();
-        bound.insert(BoundVariable::BindClause(var))
-    }
-
-    fn add_free(&mut self, var: &'env Variable) {
-        let scopestack = std::iter::successors(Some(self.current_scope), |scope| {
-            self.map[scope].parent.map(Some)
-        })
-        .chain(std::iter::once(None))
-        .take_while(|&scope| {
-            !(self.bound(scope).contains(&BoundVariable::Thunk(var))
-                || self.bound(scope).contains(&BoundVariable::BindClause(var)))
-        })
-        .collect::<Vec<_>>();
-        for scope in scopestack {
-            let ThunkContext { free, .. } = self.map.get_mut(&scope).unwrap();
-            free.insert(var);
-        }
-    }
-
-    fn bound(&self, scope: Scope) -> impl Iterator<Item = BoundVariable> {
-        self.map[&scope].bound.iter().copied()
-    }
-
     fn scoped<'a>(&'a self, var: &'a Variable) -> ScopedVariable {
         ScopedVariable {
             var: var.clone(),
@@ -140,25 +99,9 @@ impl<'env> Environment<'env> {
     }
 }
 
-impl<'ast> Visitor<'ast> for Environment<'ast> {
-    fn visit_bind_clause(&mut self, bind_clause: &'ast BindClause) {
-        debug!("visit bind");
-        assert!(
-            self.bind(&bind_clause.var),
-            "tried to rebind variable in same scope"
-        );
-    }
-
-    fn visit_value(&mut self, value: &'ast Value) {
-        if let Value::Variable(v) = value {
-            self.add_free(v);
-        }
-    }
-
+impl<'ast> Visitor<'ast> for Environment {
     fn visit_thunk(&mut self, thunk: &'ast Thunk) {
-        // make new scope for thunk
-        let args: HashSet<_> = thunk.args.iter().collect();
-        self.push(thunk, args);
+        self.push(thunk);
     }
 
     fn after_thunk(&mut self, _thunk: &'ast Thunk) {
@@ -166,7 +109,7 @@ impl<'ast> Visitor<'ast> for Environment<'ast> {
     }
 }
 
-trait ProcessOut<'env> {
+trait ProcessOut {
     /// Insert this piece of syntax into a hypergraph and update the mapping of variables to outports.
     ///
     /// # Returns
@@ -177,9 +120,9 @@ trait ProcessOut<'env> {
     ///
     /// This function will return an error if variables are malformed.
     fn process_out<F>(
-        &'env self,
+        &self,
         fragment: &mut F,
-        environment: &mut Environment<'env>,
+        environment: &mut Environment,
     ) -> Result<SyntaxOutPort<false>, ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
@@ -196,7 +139,7 @@ trait ProcessIn<'env> {
     fn process_in<F>(
         &'env self,
         fragment: &mut F,
-        environment: &mut Environment<'env>,
+        environment: &mut Environment,
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
@@ -207,7 +150,7 @@ impl<'env> ProcessIn<'env> for Value {
     fn process_in<F>(
         &'env self,
         fragment: &mut F,
-        environment: &mut Environment<'env>,
+        environment: &mut Environment,
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
@@ -246,30 +189,22 @@ impl<'env> ProcessIn<'env> for Value {
 
 impl<'env> ProcessIn<'env> for Thunk {
     fn process_in<F>(
-        &'env self,
+        &self,
         fragment: &mut F,
-        environment: &mut Environment<'env>,
+        environment: &mut Environment,
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
-        let free: Vec<_> = environment.map[&Some(self as *const Thunk)]
-            .free
-            .iter()
-            .copied()
-            .cloned()
-            .collect();
-        let bound: Vec<_> = environment
-            .bound(Some(self))
-            .filter_map(|bv| match bv {
-                BoundVariable::BindClause(_) => None,
-                BoundVariable::Thunk(var) => Some(var),
-            })
-            .collect();
+        let mut free: HashSet<_> = environment.free_vars[&self.body].iter().cloned().collect();
+
+        for var in &self.args {
+            free.remove(var);
+        }
         let thunk_node = fragment.add_thunk(
             free.iter().cloned().map(Some),
-            bound.iter().copied().cloned().map(Some),
+            self.args.iter().map(|name| Some(name.clone())),
             [None],
         );
         debug!("new thunk node {:?}", thunk_node);
@@ -352,11 +287,11 @@ impl<'env> ProcessIn<'env> for Thunk {
     }
 }
 
-impl<'env> ProcessOut<'env> for Value {
+impl ProcessOut for Value {
     fn process_out<F>(
-        &'env self,
+        &self,
         fragment: &mut F,
-        environment: &mut Environment<'env>,
+        environment: &mut Environment,
     ) -> Result<SyntaxOutPort<false>, ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
@@ -391,9 +326,11 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         let mut env: Environment = Environment::default();
 
         expr.walk(&mut env);
+        env.free_vars.expr(expr);
+
         debug!("determined environment: {:?}", env);
 
-        let free: Vec<_> = env.map[&None].free.iter().copied().cloned().collect();
+        let free: Vec<Variable> = env.free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
         let mut graph = HyperGraph::new(free.iter().cloned().map(Some).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);
@@ -453,7 +390,9 @@ mod tests {
         graph::{Environment, SyntaxHyperGraph},
         language::{
             spartan::{
-                tests::{bad, basic_program, buggy, fact, free_vars, nest, recursive, thunks},
+                tests::{
+                    aliasing, bad, basic_program, buggy, fact, free_vars, nest, recursive, thunks,
+                },
                 Expr, Variable,
             },
             visitor::Visitable,
@@ -469,15 +408,10 @@ mod tests {
     fn free_var_test(#[case] expr: Result<Expr>, #[case] free_vars: Vec<Variable>) -> Result<()> {
         let expr = expr?;
         let mut env: Environment = Environment::default();
-        expr.walk(&mut env);
+        env.free_vars.expr(&expr);
 
         assert_eq!(
-            env.map[&None]
-                .free
-                .iter()
-                .copied()
-                .cloned()
-                .collect::<HashSet<_>>(),
+            env.free_vars[&expr].clone(),
             free_vars.into_iter().collect::<HashSet<_>>()
         );
 
@@ -492,6 +426,7 @@ mod tests {
     #[case("free_vars", free_vars())]
     #[case("recursive", recursive())]
     #[case("thunks", thunks())]
+    #[case("aliasing", aliasing())]
     fn hypergraph_snapshots(#[case] name: &str, #[case] expr: Result<Expr>) -> Result<()> {
         let graph: SyntaxHyperGraph = (&expr?).try_into()?;
 

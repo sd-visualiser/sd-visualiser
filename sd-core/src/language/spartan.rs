@@ -212,6 +212,14 @@ pub(crate) mod tests {
         Ok(Expr::from_pest(&mut pairs).unwrap())
     }
 
+    #[fixture]
+    pub(crate) fn aliasing() -> Result<Expr> {
+        let mut pairs =
+            SpartanParser::parse(Rule::program, include_str!("../../../examples/aliasing.sd"))
+                .context("Could not parse aliasing program")?;
+        Ok(Expr::from_pest(&mut pairs).unwrap())
+    }
+
     #[rstest]
     #[case(basic_program())]
     #[case(free_vars())]
