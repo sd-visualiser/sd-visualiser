@@ -52,7 +52,7 @@ struct ScopedVariable {
 }
 
 #[derive(Debug)]
-pub(crate) struct Environment<'a> {
+struct Environment<'a> {
     map: HashMap<Scope, ThunkContext<'a>>,
     current_scope: Scope,
     inputs: HashMap<SyntaxInPort<false>, ScopedVariable>,
@@ -166,7 +166,7 @@ impl<'ast> Visitor<'ast> for Environment<'ast> {
     }
 }
 
-pub(crate) trait ProcessOut<'env> {
+trait ProcessOut<'env> {
     /// Insert this piece of syntax into a hypergraph and update the mapping of variables to outports.
     ///
     /// # Returns
@@ -185,7 +185,7 @@ pub(crate) trait ProcessOut<'env> {
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
 
-pub(crate) trait ProcessIn<'env> {
+trait ProcessIn<'env> {
     /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
     ///
     /// The caller expects the inport that is passed in to be linked.
