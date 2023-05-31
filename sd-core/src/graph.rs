@@ -194,29 +194,27 @@ impl ProcessIn for Thunk {
         );
         debug!("new thunk node {:?}", thunk_node);
 
+        for (var, inport) in free.iter().cloned().zip(thunk_node.inputs()) {
+            environment
+                .inputs
+                .insert(inport, var.clone())
+                .is_none()
+                .then_some(())
+                .ok_or(ConvertError::Aliased(var))?;
+        }
+
         environment
             .fragment
             .in_thunk(thunk_node.clone(), |inner_fragment| {
                 let mut thunk_env = Environment::new(environment.free_vars, inner_fragment);
 
-                for (var, outport) in free.into_iter().zip(thunk_node.free_inputs()) {
-                    environment
-                        .inputs
-                        .insert(
-                            thunk_node
-                                .externalise_input(&outport)
-                                .expect("no corresponding inport for outport in thunk"),
-                            var.clone(),
-                        )
-                        .is_none()
-                        .then_some(())
-                        .ok_or(ConvertError::Aliased(var.clone()))?;
+                for (var, outport) in free.iter().cloned().zip(thunk_node.free_inputs()) {
                     thunk_env
                         .outputs
                         .insert(var.clone(), outport)
                         .is_none()
                         .then_some(())
-                        .ok_or(ConvertError::Aliased(var.clone()))?;
+                        .ok_or(ConvertError::Aliased(var))?;
                 }
                 for (var, outport) in self.args.iter().zip(thunk_node.bound_inputs()) {
                     thunk_env
