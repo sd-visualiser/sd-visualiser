@@ -86,7 +86,7 @@ trait ProcessOut {
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
 
-trait ProcessIn<'env> {
+trait ProcessIn {
     /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
     ///
     /// The caller expects the inport that is passed in to be linked.
@@ -95,7 +95,7 @@ trait ProcessIn<'env> {
     ///
     /// This function will return an error if variables are malformed.
     fn process_in<F>(
-        &'env self,
+        &self,
         fragment: &mut F,
         environment: &mut Environment,
         inport: SyntaxInPort<false>,
@@ -104,9 +104,9 @@ trait ProcessIn<'env> {
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
 
-impl<'env> ProcessIn<'env> for Value {
+impl ProcessIn for Value {
     fn process_in<F>(
-        &'env self,
+        &self,
         fragment: &mut F,
         environment: &mut Environment,
         inport: SyntaxInPort<false>,
@@ -145,9 +145,9 @@ impl<'env> ProcessIn<'env> for Value {
     }
 }
 
-impl<'env> ProcessIn<'env> for Expr {
+impl ProcessIn for Expr {
     fn process_in<F>(
-        &'env self,
+        &self,
         fragment: &mut F,
         environment: &mut Environment,
         inport: SyntaxInPort<false>,
@@ -176,7 +176,7 @@ impl<'env> ProcessIn<'env> for Expr {
     }
 }
 
-impl<'env> ProcessIn<'env> for Thunk {
+impl ProcessIn for Thunk {
     fn process_in<F>(
         &self,
         fragment: &mut F,
