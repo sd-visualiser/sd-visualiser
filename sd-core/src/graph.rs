@@ -93,35 +93,17 @@ where
         value: &Value,
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError> {
-        match value {
-            Value::Variable(v) => self
-                .inputs
+        if let Value::Variable(v) = value {
+            self.inputs
                 .insert(inport, v.clone())
                 .is_none()
                 .then_some(())
-                .ok_or(ConvertError::Aliased(v.clone())),
-            Value::Op { op, vs, ds } => {
-                // make operation node
-                let operation_node =
-                    self.fragment
-                        .add_operation(vs.len() + ds.len(), [None], op.clone());
-                for (value, inport) in vs.iter().zip(operation_node.inputs()) {
-                    self.process_value(value, inport)?;
-                }
-                for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
-                    self.process_thunk(thunk, inport)?;
-                }
-
-                let outport = operation_node
-                    .outputs()
-                    .next()
-                    .ok_or(ConvertError::NoOutputError)?;
-                tracing::debug!("operation node made, inputs processed, about to link");
-                self.fragment.link(outport, inport)?;
-
-                Ok(())
-            }
+                .ok_or(ConvertError::Aliased(v.clone()))?;
+        } else {
+            let outport = self.process_value_out(value)?;
+            self.fragment.link(outport, inport)?;
         }
+        Ok(())
     }
 
     /// Insert thunk into a hypergraph and update the environment.
