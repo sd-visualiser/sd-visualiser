@@ -80,6 +80,38 @@ where
             }
         }
     }
+
+    /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if variables are malformed.
+    fn process_expr(mut self, expr: &Expr) -> Result<F, ConvertError> {
+        for bind in &expr.binds {
+            let outport = self.process_value_out(&bind.value)?;
+            self.outputs
+                .insert(bind.var.clone(), outport)
+                .is_none()
+                .then_some(())
+                .ok_or(ConvertError::Aliased(bind.var.clone()))?;
+        }
+        debug!("processed binds: {:?}", self.outputs);
+
+        let graph_output = self
+            .fragment
+            .graph_outputs()
+            .next()
+            .ok_or(ConvertError::NoOutputError)?;
+        expr.value.process_in(&mut self, graph_output)?;
+
+        // link up loops
+        for (inport, var) in self.inputs {
+            let outport = self.outputs[&var].clone();
+            self.fragment.link(outport, inport).unwrap();
+        }
+
+        Ok(self.fragment)
+    }
 }
 
 trait ProcessIn {
@@ -95,17 +127,6 @@ trait ProcessIn {
         environment: &mut Environment<F>,
         inport: SyntaxInPort<false>,
     ) -> Result<(), ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
-}
-
-trait Process {
-    /// Insert this piece of syntax into a hypergraph and update the mapping of inports to variables.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if variables are malformed.
-    fn process<F>(&self, environment: Environment<F>) -> Result<F, ConvertError>
     where
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
 }
@@ -149,39 +170,6 @@ impl ProcessIn for Value {
                 Ok(())
             }
         }
-    }
-}
-
-impl Process for Expr {
-    fn process<F>(&self, mut environment: Environment<F>) -> Result<F, ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
-    {
-        for bind in &self.binds {
-            let outport = environment.process_value_out(&bind.value)?;
-            environment
-                .outputs
-                .insert(bind.var.clone(), outport)
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Aliased(bind.var.clone()))?;
-        }
-        debug!("processed binds: {:?}", environment.outputs);
-
-        let graph_output = environment
-            .fragment
-            .graph_outputs()
-            .next()
-            .ok_or(ConvertError::NoOutputError)?;
-        self.value.process_in(&mut environment, graph_output)?;
-
-        // link up loops
-        for (inport, var) in environment.inputs {
-            let outport = environment.outputs[&var].clone();
-            environment.fragment.link(outport, inport).unwrap();
-        }
-
-        Ok(environment.fragment)
     }
 }
 
@@ -238,7 +226,7 @@ impl ProcessIn for Thunk {
                         .then_some(())
                         .ok_or(ConvertError::Aliased(var.clone()))?;
                 }
-                self.body.process(thunk_env)
+                thunk_env.process_expr(&self.body)
             })?;
 
         let outport = thunk_node
@@ -277,7 +265,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         }
         debug!("processed free variables: {:?}", env.outputs);
 
-        let graph = expr.process(env)?;
+        let graph = env.process_expr(expr)?;
 
         Ok(graph.build()?)
     }
