@@ -6,10 +6,7 @@ use tracing::debug;
 use crate::{
     free_vars::FreeVars,
     hypergraph::{Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{
-        spartan::{Expr, Op, Thunk, Value, Variable},
-        visitor::{Visitable, Visitor},
-    },
+    language::spartan::{Expr, Op, Thunk, Value, Variable},
 };
 
 pub type SyntaxHyperGraphBuilder = HyperGraph<Op, Name, false>;
@@ -32,11 +29,6 @@ pub enum ConvertError {
 pub type Name = Option<Variable>;
 type Scope = Option<*const Thunk>;
 
-#[derive(Debug)]
-struct ThunkContext {
-    parent: Scope, // parent scope
-}
-
 #[derive(Debug, PartialEq, Eq, Hash)]
 struct ScopedVariable {
     var: Variable,
@@ -46,7 +38,6 @@ struct ScopedVariable {
 #[derive(Debug)]
 struct Environment<'env> {
     free_vars: &'env FreeVars,
-    map: HashMap<Scope, ThunkContext>,
     current_scope: Scope,
     inputs: HashMap<SyntaxInPort<false>, ScopedVariable>,
     outputs: HashMap<ScopedVariable, SyntaxOutPort<false>>,
@@ -56,31 +47,10 @@ impl<'env> Environment<'env> {
     fn new(free_vars: &'env FreeVars) -> Self {
         Self {
             free_vars,
-            map: [(None, ThunkContext { parent: None })].into(),
             current_scope: Option::default(),
             inputs: HashMap::default(),
             outputs: HashMap::default(),
         }
-    }
-
-    fn push(&mut self, scope: &Thunk) {
-        self.map.insert(
-            Some(scope),
-            ThunkContext {
-                parent: self.current_scope,
-            },
-        );
-        self.current_scope = Some(scope);
-    }
-
-    fn pop(&mut self) -> Option<Scope> {
-        self.map
-            .get(&self.current_scope)
-            .map(|ThunkContext { parent }| {
-                let old = self.current_scope;
-                self.current_scope = *parent;
-                old
-            })
     }
 
     fn set_scope(&mut self, scope: Scope) -> Scope {
@@ -94,16 +64,6 @@ impl<'env> Environment<'env> {
             var: var.clone(),
             scope: self.current_scope,
         }
-    }
-}
-
-impl<'ast> Visitor<'ast> for Environment<'ast> {
-    fn visit_thunk(&mut self, thunk: &'ast Thunk) {
-        self.push(thunk);
-    }
-
-    fn after_thunk(&mut self, _thunk: &'ast Thunk) {
-        assert!(self.pop().is_some());
     }
 }
 
@@ -249,6 +209,7 @@ impl<'env> ProcessIn<'env> for Thunk {
                 .then_some(())
                 .ok_or(ConvertError::Aliased(var.clone()))?;
         }
+        let current_scope = environment.current_scope;
         fragment.in_thunk(thunk_node.clone(), |mut inner_fragment| {
             environment.set_scope(Some(self));
             for bind in &self.body.binds {
@@ -267,13 +228,11 @@ impl<'env> ProcessIn<'env> for Thunk {
                     .ok_or(ConvertError::Aliased(bind.var.clone()))?;
             }
             let graph_output = inner_fragment.graph_outputs().next().unwrap();
-            let res = self
-                .body
+            self.body
                 .value
-                .process_in(&mut inner_fragment, environment, graph_output);
-            environment.pop();
-            res
+                .process_in(&mut inner_fragment, environment, graph_output)
         })?;
+        environment.set_scope(current_scope);
 
         let outport = thunk_node
             .outputs()
@@ -326,8 +285,6 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         free_vars.expr(expr);
 
         let mut env: Environment = Environment::new(&free_vars);
-
-        expr.walk(&mut env);
 
         debug!("determined environment: {:?}", env);
 
