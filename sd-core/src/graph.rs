@@ -362,14 +362,11 @@ mod tests {
     use crate::{
         free_vars::FreeVars,
         graph::SyntaxHyperGraph,
-        language::{
-            spartan::{
-                tests::{
-                    aliasing, bad, basic_program, buggy, fact, free_vars, nest, recursive, thunks,
-                },
-                Expr, Variable,
+        language::spartan::{
+            tests::{
+                aliasing, bad, basic_program, buggy, fact, free_vars, nest, recursive, thunks,
             },
-            visitor::Visitable,
+            Expr, Variable,
         },
     };
 
