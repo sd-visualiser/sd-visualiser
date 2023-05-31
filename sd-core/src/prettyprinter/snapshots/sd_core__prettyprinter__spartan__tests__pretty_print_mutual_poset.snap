@@ -1,0 +1,8 @@
+---
+source: sd-core/src/prettyprinter/spartan.rs
+expression: expr.to_pretty()
+---
+bind b = times(a) in
+bind c = minus(b, a) in
+bind a = plus(b, c) in
+a

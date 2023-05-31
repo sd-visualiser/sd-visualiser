@@ -185,3 +185,18 @@ impl PrettyPrint for Identifier {
         RcDoc::text(&self.0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use dir_test::{dir_test, Fixture};
+    use insta::assert_snapshot;
+
+    use crate::{language::chil::Expr, prettyprinter::PrettyPrint};
+
+    #[allow(clippy::needless_pass_by_value)]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.chil", loader: crate::language::chil::tests::parse_chil, postfix: "pretty_print")]
+    fn pretty_print(fixture: Fixture<(&str, Expr)>) {
+        let (name, expr) = fixture.content();
+        assert_snapshot!(format!("pretty_print_{name}"), expr.to_pretty());
+    }
+}

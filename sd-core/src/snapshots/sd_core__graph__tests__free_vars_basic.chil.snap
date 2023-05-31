@@ -1,0 +1,9 @@
+---
+source: sd-core/src/graph.rs
+expression: variables
+---
+[
+    Variable(
+        "var_4",
+    ),
+]

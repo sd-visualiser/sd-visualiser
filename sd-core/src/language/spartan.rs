@@ -140,94 +140,31 @@ impl From<&str> for Variable {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use anyhow::{Context, Result};
+    use std::path::Path;
+
+    use dir_test::{dir_test, Fixture};
     use from_pest::FromPest;
     use pest::Parser;
-    use rstest::{fixture, rstest};
 
     use super::{Expr, Rule, SpartanParser};
 
-    #[fixture]
-    pub(crate) fn basic_program() -> Result<Expr> {
-        let mut pairs = SpartanParser::parse(Rule::program, "bind x = 1 in x")
-            .context("Could not parse basic program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
+    pub fn parse_sd(raw_path: &str) -> (&str, Expr) {
+        let path = Path::new(raw_path);
+        let program = std::fs::read_to_string(path).unwrap();
+        let mut pairs = SpartanParser::parse(Rule::program, &program).unwrap_or_else(|err| {
+            panic!(
+                "could not parse program {:?}\n{err:?}",
+                path.file_stem().unwrap()
+            )
+        });
+        let name = path.file_stem().unwrap().to_str().unwrap();
+        let expr = Expr::from_pest(&mut pairs).unwrap();
+        (name, expr)
     }
 
-    #[fixture]
-    pub(crate) fn free_vars() -> Result<Expr> {
-        let mut pairs = SpartanParser::parse(Rule::program, "bind x = plus(y) in z")
-            .context("Could not parse free variable program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    // Make this something meaningful
-    #[fixture]
-    pub(crate) fn thunks() -> Result<Expr> {
-        let mut pairs =
-            SpartanParser::parse(Rule::program, include_str!("../../../examples/thunks.sd"))
-                .context("Could not parse fact program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    pub(crate) fn fact() -> Result<Expr> {
-        let mut pairs =
-            SpartanParser::parse(Rule::program, include_str!("../../../examples/fact.sd"))
-                .context("Could not parse fact program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    pub(crate) fn buggy() -> Result<Expr> {
-        let mut pairs =
-            SpartanParser::parse(Rule::program, include_str!("../../../examples/buggy.sd"))
-                .context("Could not parse buggy program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    pub(crate) fn bad() -> Result<Expr> {
-        let mut pairs =
-            SpartanParser::parse(Rule::program, include_str!("../../../examples/bad.sd"))
-                .context("Could not parse bad program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    pub(crate) fn recursive() -> Result<Expr> {
-        let mut pairs = SpartanParser::parse(
-            Rule::program,
-            include_str!("../../../examples/recursive.sd"),
-        )
-        .context("Could not parse recursive program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    pub(crate) fn nest() -> Result<Expr> {
-        let mut pairs =
-            SpartanParser::parse(Rule::program, include_str!("../../../examples/nest.sd"))
-                .context("Could not parse nest program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[fixture]
-    pub(crate) fn aliasing() -> Result<Expr> {
-        let mut pairs =
-            SpartanParser::parse(Rule::program, include_str!("../../../examples/aliasing.sd"))
-                .context("Could not parse aliasing program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[rstest]
-    #[case(basic_program())]
-    #[case(free_vars())]
-    #[case(thunks())]
-    #[case(fact())]
-    #[case(buggy())]
-    fn check_parse(#[case] expr: Result<Expr>) -> Result<()> {
-        expr?;
-        Ok(())
+    #[allow(clippy::needless_pass_by_value)]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::spartan::tests::parse_sd, postfix: "check_parse")]
+    fn check_parse(fixture: Fixture<(&str, Expr)>) {
+        let (_name, _expr) = fixture.content();
     }
 }

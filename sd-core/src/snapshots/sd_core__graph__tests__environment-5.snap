@@ -1,0 +1,15 @@
+---
+source: sd-core/src/graph.rs
+expression: "env.map[&None].free.iter().copied().cloned().collect::<HashSet<_>>()"
+---
+{
+    Variable(
+        "toString",
+    ),
+    Variable(
+        "flush_0",
+    ),
+    Variable(
+        "print",
+    ),
+}

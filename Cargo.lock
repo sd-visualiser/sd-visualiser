@@ -715,6 +715,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "dir-test"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "035f15b4ae5cc91ca448fe9668799e3d9b09fd7381a7004e232769ff0efabb79"
+dependencies = [
+ "dir-test-macros",
+]
+
+[[package]]
+name = "dir-test-macros"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15699f408d3f58a1259b624d3c127721a442555136933d33cf387b81f5c9c89c"
+dependencies = [
+ "glob",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "dirs"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1167,6 +1188,12 @@ dependencies = [
  "log",
  "xml-rs",
 ]
+
+[[package]]
+name = "glob"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
 name = "glow"
@@ -2326,6 +2353,7 @@ dependencies = [
  "cargo-husky",
  "delegate",
  "derivative",
+ "dir-test",
  "from-pest",
  "indexmap",
  "insta",

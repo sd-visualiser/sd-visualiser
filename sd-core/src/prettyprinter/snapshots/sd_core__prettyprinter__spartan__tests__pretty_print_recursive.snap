@@ -1,0 +1,9 @@
+---
+source: sd-core/src/prettyprinter/spartan.rs
+expression: expr.to_pretty()
+---
+bind f = lambda(x .
+    bind g = lambda(y . app(f, y)) in
+    app(g, x)
+) in
+f

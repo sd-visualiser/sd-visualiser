@@ -244,36 +244,31 @@ impl From<VariableDef> for spartan::Variable {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use anyhow::{Context, Result};
+    use std::path::Path;
+
+    use dir_test::{dir_test, Fixture};
     use from_pest::FromPest;
     use pest::Parser;
-    use rstest::{fixture, rstest};
 
     use super::{ChilParser, Expr, Rule};
 
-    #[fixture]
-    fn basic() -> Result<Expr> {
-        let mut pairs =
-            ChilParser::parse(Rule::program, include_str!("../../../examples/basic.chil"))
-                .context("Could not parse program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
+    pub fn parse_chil(raw_path: &str) -> (&str, Expr) {
+        let path = Path::new(raw_path);
+        let program = std::fs::read_to_string(path).unwrap();
+        let mut pairs = ChilParser::parse(Rule::program, &program).unwrap_or_else(|err| {
+            panic!(
+                "could not parse program {:?}\n{err:?}",
+                path.file_stem().unwrap()
+            )
+        });
+        let name = path.file_stem().unwrap().to_str().unwrap();
+        let expr = Expr::from_pest(&mut pairs).unwrap();
+        (name, expr)
     }
 
-    #[fixture]
-    fn fibonacci() -> Result<Expr> {
-        let mut pairs = ChilParser::parse(
-            Rule::program,
-            include_str!("../../../examples/fibonacci.chil"),
-        )
-        .context("Could not parse program")?;
-        Ok(Expr::from_pest(&mut pairs).unwrap())
-    }
-
-    #[rstest]
-    #[case(basic())]
-    #[case(fibonacci())]
-    fn check_parse(#[case] expr: Result<Expr>) -> Result<()> {
-        expr?;
-        Ok(())
+    #[allow(clippy::needless_pass_by_value)]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.chil", loader: crate::language::chil::tests::parse_chil, postfix: "check_parse")]
+    fn check_parse(fixture: Fixture<(&str, Expr)>) {
+        let (_name, _expr) = fixture.content();
     }
 }

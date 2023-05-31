@@ -1,0 +1,88 @@
+---
+source: sd-core/src/prettyprinter/chil.rs
+expression: expr.to_pretty()
+---
+def recursive(id: @25) : (Int64) -> Int64 = func(
+  thunk %19 = { x(id: %26) : Int64 =>
+    def %20 : Int64 = null
+    def %21 : Int64 = atom(%20)
+    def %24 : Int64 = block(%21;
+      thunk %22 = { %23 : Int64 =>
+        def %27 : Int64 = int64/0
+        def %28 : Bool = throwing==(x(id: %26), %27)
+        def %36 : Unit = if(%28;
+          thunk %29 = {  =>
+            def %30 : Int64 = int64/0
+            def %31 : Nothing = break(%23, %30)
+            def %32 : Unit = unit
+            def %33 : Unit = seq(%31, %32)
+            output %33
+          }
+          thunk %34 = {  =>
+            def %35 : Unit = unit
+            output %35
+          }
+        )
+        def %37 : Int64 = int64/1
+        def %38 : Bool = throwing==(x(id: %26), %37)
+        def %46 : Unit = if(%38;
+          thunk %39 = {  =>
+            def %40 : Int64 = int64/1
+            def %41 : Nothing = break(%23, %40)
+            def %42 : Unit = unit
+            def %43 : Unit = seq(%41, %42)
+            output %43
+          }
+          thunk %44 = {  =>
+            def %45 : Unit = unit
+            output %45
+          }
+        )
+        def %47 : Int64 = int64/1
+        def %48 : Int64 = throwing-(x(id: %26), %47)
+        def %49 : Int64 = apply/1(recursive(id: @25), %48)
+        def %50 : Int64 = int64/2
+        def %51 : Int64 = throwing-(x(id: %26), %50)
+        def %52 : Int64 = apply/1(recursive(id: @25), %51)
+        def %53 : Int64 = throwing+(%49, %52)
+        def %54 : Nothing = break(%23, %53)
+        def %55 : Nothing = seq(%46, %54)
+        def %56 : Nothing = seq(%36, %55)
+        output %56
+      }
+    )
+    output %24
+  }
+)
+def main(id: @63) : () -> Int64 = func(
+  thunk %57 = {  =>
+    def %58 : Int64 = null
+    def %59 : Int64 = atom(%58)
+    def %62 : Int64 = block(%59;
+      thunk %60 = { %61 : Int64 =>
+        def %64 : Int64 = int64/21
+        def %65 : Int64 = apply/1(recursive(id: @25), %64)
+        def %67 : Struct-String = apply/1(toString(id: %66), %65)
+        def %70 : Unit = letc(%67;
+          thunk %68 = { %69 : Struct-String =>
+            def %72 : Bool = apply/1(flush_0(id: %71), %69)
+            def %75 : Unit = letc(%72;
+              thunk %73 = { %74 : Bool =>
+                def %77 : Unit = apply/2(print(id: %76), %69, %74)
+                output %77
+              }
+            )
+            output %75
+          }
+        )
+        def %78 : Int64 = int64/0
+        def %79 : Nothing = break(%61, %78)
+        def %80 : Nothing = seq(%70, %79)
+        output %80
+      }
+    )
+    output %62
+  }
+)
+def @81 = tuple/2(recursive(id: @25), main(id: @63))
+output %81

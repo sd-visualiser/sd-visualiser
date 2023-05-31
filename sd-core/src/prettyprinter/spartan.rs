@@ -102,24 +102,15 @@ impl PrettyPrint for Thunk {
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
+    use dir_test::{dir_test, Fixture};
     use insta::assert_snapshot;
-    use rstest::rstest;
 
-    use crate::{
-        language::spartan::{tests::*, Expr},
-        prettyprinter::PrettyPrint,
-    };
+    use crate::{language::spartan::Expr, prettyprinter::PrettyPrint};
 
-    #[rstest]
-    #[case("basic_program", basic_program())]
-    #[case("free_vars", free_vars())]
-    #[case("thunks", thunks())]
-    #[case("fact", fact())]
-    fn print_snapshots(#[case] name: &str, #[case] expr: Result<Expr>) -> Result<()> {
-        let expr = expr?;
-        // have to manually specify name due to https://github.com/la10736/rstest/issues/183
-        assert_snapshot!(name, expr.to_pretty());
-        Ok(())
+    #[allow(clippy::needless_pass_by_value)]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::spartan::tests::parse_sd, postfix: "pretty_print")]
+    fn pretty_print(fixture: Fixture<(&str, Expr)>) {
+        let (name, expr) = fixture.content();
+        assert_snapshot!(format!("pretty_print_{name}"), expr.to_pretty());
     }
 }

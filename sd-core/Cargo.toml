@@ -32,3 +32,4 @@ insta = { version = "1.29.0", features = ["ron", "redactions"] }
 slab = { version = "0.4.8", features = ["serde"] }
 rstest = "0.17.0"
 serde = "1.0.160"
+dir-test = "0.1.1"

@@ -1,0 +1,7 @@
+---
+source: sd-core/src/prettyprinter/spartan.rs
+expression: expr.to_pretty()
+---
+bind a = not(b) in
+bind b = not(a) in
+a

@@ -1,0 +1,7 @@
+---
+source: sd-core/src/prettyprinter/spartan.rs
+expression: expr.to_pretty()
+---
+bind c = eq(x, 1) in
+bind d = minus(x, 1) in
+c

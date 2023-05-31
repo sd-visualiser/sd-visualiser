@@ -252,53 +252,32 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
     use anyhow::Result;
-    use rstest::rstest;
+    use dir_test::{dir_test, Fixture};
 
-    use crate::{
-        free_vars::FreeVars,
-        graph::SyntaxHyperGraph,
-        language::spartan::{
-            tests::{
-                aliasing, bad, basic_program, buggy, fact, free_vars, nest, recursive, thunks,
-            },
-            Expr, Variable,
-        },
-    };
+    use crate::{free_vars::FreeVars, graph::SyntaxHyperGraph, language::spartan::Expr};
 
-    #[rstest]
-    #[case(basic_program(), vec![])]
-    #[case(free_vars(), vec!["y".into(), "z".into()])]
-    #[case(thunks(), vec!["x".into()])]
-    #[case(fact(), vec![])]
-    #[case(nest(), vec![])]
-    fn free_var_test(#[case] expr: Result<Expr>, #[case] free_vars: Vec<Variable>) -> Result<()> {
-        let expr = expr?;
+    #[allow(clippy::needless_pass_by_value)]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*", loader: crate::language::tests::parse, postfix: "free_vars")]
+    fn free_vars(fixture: Fixture<(&str, &str, Expr)>) {
+        let (lang, name, expr) = fixture.content();
 
         let mut fv = FreeVars::default();
-        fv.expr(&expr);
+        fv.expr(expr);
+        let mut variables = fv[expr].iter().cloned().collect::<Vec<_>>();
+        variables.sort();
 
-        assert_eq!(
-            fv[&expr].clone(),
-            free_vars.into_iter().collect::<HashSet<_>>()
-        );
-
-        Ok(())
+        insta::assert_debug_snapshot!(format!("free_vars_{name}.{lang}"), variables);
     }
 
-    #[rstest]
-    #[case("bad", bad())]
-    #[case("basic_program", basic_program())]
-    #[case("buggy", buggy())]
-    #[case("fact", fact())]
-    #[case("free_vars", free_vars())]
-    #[case("recursive", recursive())]
-    #[case("thunks", thunks())]
-    #[case("aliasing", aliasing())]
-    fn hypergraph_snapshots(#[case] name: &str, #[case] expr: Result<Expr>) -> Result<()> {
-        let graph: SyntaxHyperGraph = (&expr?).try_into()?;
+    #[allow(clippy::needless_pass_by_value)]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*", loader: crate::language::tests::parse, postfix: "hypergraph_snapshot")]
+    #[dir_test_attr(
+        #[allow(unused_must_use)]
+    )]
+    fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Expr)>) -> Result<()> {
+        let (lang, name, expr) = fixture.content();
+        let graph: SyntaxHyperGraph = expr.try_into()?;
 
         // insta::with_settings!({sort_maps => true}, {
         //     insta::assert_ron_snapshot!(name, graph);
