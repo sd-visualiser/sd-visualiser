@@ -2,7 +2,6 @@ pub mod common;
 pub mod examples;
 pub mod free_vars;
 pub mod graph;
-pub mod graph_example;
 pub mod hypergraph;
 pub mod language;
 pub mod monoidal;

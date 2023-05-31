@@ -28,7 +28,18 @@ pub enum ConvertError {
     NoOutputError,
 }
 
-pub type Name = Option<Variable>;
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum Name {
+    Thunk,
+    Value(Value),
+}
+
+impl Name {
+    #[must_use]
+    pub fn from_variable(var: Variable) -> Self {
+        Self::Value(Value::Variable(var))
+    }
+}
 
 #[derive(Debug)]
 struct Environment<'env, F> {
@@ -81,9 +92,9 @@ where
                 .ok_or(ConvertError::Shadowed(var.clone())),
             (Value::Op { op, vs, ds }, input) => {
                 let output_weight = if let ProcessInput::Variable(v) = &input {
-                    Some(v.clone())
+                    Name::from_variable(v.clone())
                 } else {
-                    None
+                    Name::Value(value.clone())
                 };
 
                 let operation_node =
@@ -135,9 +146,9 @@ where
             free.remove(var);
         }
         let thunk_node = self.fragment.add_thunk(
-            free.iter().cloned().map(Some),
-            thunk.args.iter().map(|name| Some(name.clone())),
-            [None],
+            free.iter().cloned().map(Name::from_variable),
+            thunk.args.iter().cloned().map(Name::from_variable),
+            [Name::Thunk],
         );
         debug!("new thunk node {:?}", thunk_node);
 
@@ -224,7 +235,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
         let free: Vec<Variable> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
-        let graph = HyperGraph::new(free.iter().cloned().map(Some).collect(), 1);
+        let graph = HyperGraph::new(free.iter().cloned().map(Name::from_variable).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);
 
         let mut env = Environment::new(&free_vars, graph);

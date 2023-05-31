@@ -1,4 +1,4 @@
-use std::{hash::Hash, marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, sync::Arc};
 
 use eframe::egui::{
     util::cache::{ComputerMut, FrameCache},
@@ -29,7 +29,7 @@ impl<V: 'static + Send + Sync, E: 'static + Send + Sync>
 
 type LayoutCache<'a, V, E> = FrameCache<Result<Arc<Layout>, LayoutError>, Layouter<V, E>>;
 
-impl<V: 'static + Send + Sync + Hash, E: 'static + Send + Sync + Hash> Layouter<V, E> {
+impl<V: 'static + Send + Sync, E: 'static + Send + Sync> Layouter<V, E> {
     pub fn layout(
         ctx: &Context,
         graph: &MonoidalGraph<(V, E)>,
