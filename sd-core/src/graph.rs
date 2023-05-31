@@ -36,7 +36,10 @@ struct Environment<'env, F> {
     outputs: HashMap<Variable, SyntaxOutPort<false>>,
 }
 
-impl<'env, F> Environment<'env, F> {
+impl<'env, F> Environment<'env, F>
+where
+    F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
+{
     fn new(free_vars: &'env FreeVars, fragment: F) -> Self {
         Self {
             free_vars,
@@ -45,9 +48,7 @@ impl<'env, F> Environment<'env, F> {
             outputs: HashMap::default(),
         }
     }
-}
 
-trait ProcessOut {
     /// Insert this piece of syntax into a hypergraph and update the mapping of variables to outports.
     ///
     /// # Returns
@@ -57,12 +58,28 @@ trait ProcessOut {
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
-    fn process_out<F>(
-        &self,
-        environment: &mut Environment<F>,
-    ) -> Result<SyntaxOutPort<false>, ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>;
+    fn process_value_out(&mut self, value: &Value) -> Result<SyntaxOutPort<false>, ConvertError> {
+        match value {
+            Value::Variable(var) => Ok(self.outputs[var].clone()),
+            Value::Op { op, vs, ds } => {
+                let operation_node =
+                    self.fragment
+                        .add_operation(vs.len() + ds.len(), [None], op.clone());
+                for (value, inport) in vs.iter().zip(operation_node.inputs()) {
+                    value.process_in(self, inport)?;
+                }
+                for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
+                    thunk.process_in(self, inport)?;
+                }
+
+                let outport = operation_node
+                    .outputs()
+                    .next()
+                    .ok_or(ConvertError::NoOutputError)?;
+                Ok(outport)
+            }
+        }
+    }
 }
 
 trait ProcessIn {
@@ -141,7 +158,7 @@ impl Process for Expr {
         F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
     {
         for bind in &self.binds {
-            let outport = bind.value.process_out(&mut environment)?;
+            let outport = environment.process_value_out(&bind.value)?;
             environment
                 .outputs
                 .insert(bind.var.clone(), outport)
@@ -231,38 +248,6 @@ impl ProcessIn for Thunk {
         environment.fragment.link(outport, inport)?;
 
         Ok(())
-    }
-}
-
-impl ProcessOut for Value {
-    fn process_out<F>(
-        &self,
-        environment: &mut Environment<F>,
-    ) -> Result<SyntaxOutPort<false>, ConvertError>
-    where
-        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
-    {
-        match self {
-            Value::Variable(var) => Ok(environment.outputs[var].clone()),
-            Value::Op { op, vs, ds } => {
-                let operation_node =
-                    environment
-                        .fragment
-                        .add_operation(vs.len() + ds.len(), [None], op.clone());
-                for (value, inport) in vs.iter().zip(operation_node.inputs()) {
-                    value.process_in(environment, inport)?;
-                }
-                for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
-                    thunk.process_in(environment, inport)?;
-                }
-
-                let outport = operation_node
-                    .outputs()
-                    .next()
-                    .ok_or(ConvertError::NoOutputError)?;
-                Ok(outport)
-            }
-        }
     }
 }
 
