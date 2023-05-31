@@ -15,7 +15,7 @@ use sd_core::{
     monoidal_wired::MonoidalWiredGraph,
     prettyprinter::PrettyPrint,
 };
-use tracing::{debug, event, Level};
+use tracing::debug;
 
 use crate::{
     highlighter::{highlight, CodeTheme},
@@ -217,16 +217,16 @@ impl App {
             }
         };
 
-        event!(Level::DEBUG, "Converting to hypergraph");
+        debug!("Converting to hypergraph");
         self.hypergraph = SyntaxHyperGraph::try_from(&expr)?;
 
-        event!(Level::DEBUG, "Converting to monoidal term");
+        debug!("Converting to monoidal term");
         self.monoidal_term = MonoidalWiredGraph::from(&self.hypergraph);
-        event!(Level::DEBUG, "Got term {:#?}", self.monoidal_term);
+        debug!("Got term {:#?}", self.monoidal_term);
 
-        event!(Level::DEBUG, "Inserting swaps and copies");
+        debug!("Inserting swaps and copies");
         self.monoidal_graph = MonoidalGraph::from(&self.monoidal_term);
-        event!(Level::DEBUG, "Got graph {:#?}", self.monoidal_graph);
+        debug!("Got graph {:#?}", self.monoidal_graph);
 
         Ok(())
     }

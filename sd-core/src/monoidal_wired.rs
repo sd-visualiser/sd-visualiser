@@ -2,6 +2,7 @@ use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
 use itertools::Itertools;
+use tracing::debug;
 
 use crate::{
     common::{Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
@@ -281,7 +282,7 @@ where
         }
 
         for node in graph.nodes() {
-            println!("Node recieved: {node:#?}");
+            debug!("Node recieved: {node:#?}");
             // Use topsorted graph here
             builder.insert_operation(&node);
         }

@@ -6,7 +6,7 @@ use eframe::egui::{
 };
 use sd_core::monoidal::MonoidalGraph;
 use sd_graphics::layout::{layout, Layout, LayoutError};
-use tracing::{event, Level};
+use tracing::debug;
 
 pub struct Layouter<V, E> {
     _pd: PhantomData<(V, E)>,
@@ -22,7 +22,7 @@ impl<V: 'static + Send + Sync, E: 'static + Send + Sync>
     ComputerMut<&MonoidalGraph<(V, E)>, Result<Arc<Layout>, LayoutError>> for Layouter<V, E>
 {
     fn compute(&mut self, graph: &MonoidalGraph<(V, E)>) -> Result<Arc<Layout>, LayoutError> {
-        event!(Level::DEBUG, "Generating Layout");
+        debug!("Calculating layout...");
         Ok(Arc::new(layout(graph)?))
     }
 }
