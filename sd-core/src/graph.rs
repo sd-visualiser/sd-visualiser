@@ -145,6 +145,37 @@ impl<'env> ProcessIn<'env> for Value {
     }
 }
 
+impl<'env> ProcessIn<'env> for Expr {
+    fn process_in<F>(
+        &'env self,
+        fragment: &mut F,
+        environment: &mut Environment,
+        inport: SyntaxInPort<false>,
+    ) -> Result<(), ConvertError>
+    where
+        F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
+    {
+        for bind in &self.binds {
+            let outport = bind.value.process_out(fragment, environment)?;
+            environment
+                .outputs
+                .insert(
+                    ScopedVariable {
+                        var: bind.var.clone(),
+                        scope: environment.current_scope,
+                    },
+                    outport,
+                )
+                .is_none()
+                .then_some(())
+                .ok_or(ConvertError::Aliased(bind.var.clone()))?;
+        }
+        debug!("processed binds: {:?}", environment.outputs);
+
+        self.value.process_in(fragment, environment, inport)
+    }
+}
+
 impl<'env> ProcessIn<'env> for Thunk {
     fn process_in<F>(
         &self,
@@ -212,24 +243,9 @@ impl<'env> ProcessIn<'env> for Thunk {
         let current_scope = environment.current_scope;
         fragment.in_thunk(thunk_node.clone(), |mut inner_fragment| {
             environment.set_scope(Some(self));
-            for bind in &self.body.binds {
-                let outport = bind.value.process_out(&mut inner_fragment, environment)?;
-                environment
-                    .outputs
-                    .insert(
-                        ScopedVariable {
-                            var: bind.var.clone(),
-                            scope: Some(self),
-                        },
-                        outport,
-                    )
-                    .is_none()
-                    .then_some(())
-                    .ok_or(ConvertError::Aliased(bind.var.clone()))?;
-            }
+
             let graph_output = inner_fragment.graph_outputs().next().unwrap();
             self.body
-                .value
                 .process_in(&mut inner_fragment, environment, graph_output)
         })?;
         environment.set_scope(current_scope);
@@ -307,24 +323,8 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
         }
         debug!("processed free variables: {:?}", env.outputs);
 
-        for bind in &expr.binds {
-            let outport = bind.value.process_out(&mut graph, &mut env)?;
-            env.outputs
-                .insert(
-                    ScopedVariable {
-                        var: bind.var.clone(),
-                        scope: None,
-                    },
-                    outport,
-                )
-                .is_none()
-                .then_some(())
-                .ok_or(ConvertError::Aliased(bind.var.clone()))?;
-        }
-        debug!("processed binds: {:?}", env.outputs);
-
-        let graph_output = graph.graph_outputs().next().unwrap();
-        expr.value.process_in(&mut graph, &mut env, graph_output)?;
+        let inport = graph.graph_outputs().next().unwrap();
+        expr.process_in(&mut graph, &mut env, inport)?;
 
         debug!(env = ?env);
         // link up loops
