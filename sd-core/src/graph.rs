@@ -111,10 +111,14 @@ where
                 let operation_node =
                     self.fragment
                         .add_operation(vs.len() + ds.len(), [output_weight], op.clone());
-                for (value, inport) in vs.iter().zip(operation_node.inputs()) {
+                for (value, inport) in vs
+                    .iter()
+                    .rev()
+                    .zip(operation_node.inputs().rev().skip(ds.len()))
+                {
                     self.process_value(value, ProcessInput::InPort(inport))?;
                 }
-                for (thunk, inport) in ds.iter().zip(operation_node.inputs().skip(vs.len())) {
+                for (thunk, inport) in ds.iter().rev().zip(operation_node.inputs().rev()) {
                     self.process_thunk(thunk, inport)?;
                 }
 
@@ -209,17 +213,17 @@ where
     ///
     /// This function will return an error if variables are malformed.
     fn process_expr(mut self, expr: &Expr) -> Result<F, ConvertError> {
-        for bind in &expr.binds {
-            self.process_value(&bind.value, ProcessInput::Variable(bind.var.clone()))?;
-        }
-        debug!("processed binds: {:?}", self.outputs);
-
         let graph_output = self
             .fragment
             .graph_outputs()
             .next()
             .ok_or(ConvertError::NoOutputError)?;
         self.process_value(&expr.value, ProcessInput::InPort(graph_output))?;
+
+        for bind in expr.binds.iter().rev() {
+            self.process_value(&bind.value, ProcessInput::Variable(bind.var.clone()))?;
+        }
+        debug!("processed binds: {:?}", self.outputs);
 
         // link up loops
         for (inport, var) in self.inputs {

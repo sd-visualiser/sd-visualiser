@@ -1,5 +1,5 @@
 use std::{
-    cmp::{min, Reverse},
+    cmp::min,
     collections::HashMap,
     fmt::Debug,
     hash::Hash,
@@ -409,7 +409,7 @@ where
             output
                 .into_iter()
                 .flat_map(|mut xs| {
-                    xs.sort_by_key(|x| original_ord.get_index_of(x).map(Reverse));
+                    xs.sort_by_key(|x| original_ord.get_index_of(x));
                     xs
                 })
                 .collect()
@@ -831,7 +831,8 @@ impl<V, E, const BUILT: bool> InOut for Operation<V, E, BUILT> {
 }
 
 impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
-    pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> + '_ {
+    #[must_use]
+    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = InPort<V, E, BUILT>> + '_ {
         self.0
             .inputs
             .iter()
@@ -839,7 +840,8 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
             .map(|i| InPort(ByThinAddress(i)))
     }
 
-    pub fn outputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
+    #[must_use]
+    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_ {
         self.0
             .outputs
             .iter()
