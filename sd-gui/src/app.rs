@@ -233,6 +233,8 @@ impl App {
         self.monoidal_graph = MonoidalGraph::from(&self.monoidal_term);
         debug!("Got graph {:#?}", self.monoidal_graph);
 
+        self.selections.clear();
+
         Ok(())
     }
 }
