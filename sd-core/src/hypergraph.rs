@@ -1,5 +1,5 @@
 use std::{
-    cmp::min,
+    cmp::{min, Reverse},
     collections::HashMap,
     fmt::Debug,
     hash::Hash,
@@ -361,7 +361,7 @@ where
             next: impl (Fn(&T) -> TS) + Copy,
             stack: &mut IndexSet<T>,
             visited: &mut HashMap<T, usize>,
-            output: &mut Vec<T>,
+            output: &mut Vec<Vec<T>>,
             node: &T,
         ) where
             T: Clone + Hash + Eq,
@@ -383,7 +383,8 @@ where
             }
 
             if Some(visited[node]) == stack.get_index_of(node) {
-                output.extend(stack.split_off(visited[node]));
+                let component = stack.split_off(visited[node]).into_iter().collect();
+                output.push(component);
             }
         }
 
@@ -392,19 +393,26 @@ where
             T: Clone + Hash + Eq,
             TS: Iterator<Item = T>,
         {
-            let mut output: Vec<T> = Vec::default();
+            let original_ord: IndexSet<T> = xs.into_iter().collect();
+            let mut output: Vec<Vec<T>> = Vec::default();
 
             let mut stack: IndexSet<T> = IndexSet::default();
 
             let mut visited: HashMap<T, usize> = HashMap::default();
 
-            for x in xs {
-                if !visited.contains_key(&x) {
-                    strongconnect(&next, &mut stack, &mut visited, &mut output, &x);
+            for x in &original_ord {
+                if !visited.contains_key(x) {
+                    strongconnect(&next, &mut stack, &mut visited, &mut output, x);
                 }
             }
 
             output
+                .into_iter()
+                .flat_map(|mut xs| {
+                    xs.sort_by_key(|x| original_ord.get_index_of(x).map(Reverse));
+                    xs
+                })
+                .collect()
         }
 
         // proxy from NodeInternal to Node to get Hash impl
