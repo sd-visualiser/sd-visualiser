@@ -157,10 +157,10 @@ fn generate_shapes<V, E>(
                         check_hover!([input, thunk], port.weight());
                         shapes.push(Shape::line_segment([input, thunk], default_stroke));
                     }
-                    for (&x, port) in x_outs.iter().zip(&body.outputs) {
+                    for (&x, port) in x_outs.iter().zip(addr.outputs()) {
                         let thunk = transform.apply(x, y_max);
                         let output = transform.apply(x, y_output);
-                        check_hover!([thunk, output], port.output().weight());
+                        check_hover!([thunk, output], port.weight());
                         shapes.push(Shape::line_segment([thunk, output], default_stroke));
                     }
                     let thunk_rect = Rect::from_min_max(
