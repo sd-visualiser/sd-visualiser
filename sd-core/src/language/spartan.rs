@@ -15,25 +15,25 @@ use super::span_into_str;
 #[grammar = "language/spartan.pest"]
 pub struct SpartanParser;
 
-#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::expr))]
 pub struct Expr {
     pub binds: Vec<BindClause>,
     pub value: Value,
 }
 
-#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::bind_clause))]
 pub struct BindClause {
     pub var: Variable,
     pub value: Value,
 }
 
-#[derive(Clone, Debug, FromPest, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Op {
     Plus,
@@ -87,7 +87,7 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
     }
 }
 
-#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::value))]
 pub enum Value {
     Variable(Variable),
@@ -98,7 +98,7 @@ pub enum Value {
     },
 }
 
-#[derive(Clone, Debug, FromPest, PartialEq, Eq)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::thunk))]
 pub struct Thunk {
     pub args: Vec<Variable>,

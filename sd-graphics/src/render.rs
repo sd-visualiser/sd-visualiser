@@ -1,12 +1,14 @@
-use std::fmt::Display;
+use std::{fmt::Display, hash::Hash};
 
 use egui::{
     emath::RectTransform,
     epaint::{CircleShape, CubicBezierShape, RectShape},
-    vec2, Align2, Color32, Pos2, Rect, Response, Rounding, Sense, Shape, Vec2,
+    show_tooltip_at_pointer, vec2, Align2, Color32, Pos2, Rect, Response, Rounding, Sense, Shape,
+    Vec2,
 };
+use indexmap::IndexSet;
 use sd_core::{
-    common::InOut,
+    common::{InOut, InOutIter},
     monoidal::{MonoidalGraph, MonoidalOp},
 };
 
@@ -35,7 +37,7 @@ impl Transform {
     }
 }
 
-pub fn render<V: Display, E>(
+pub fn render<V, E>(
     ui: &egui::Ui,
     response: &Response,
     layout: &Layout,
@@ -43,7 +45,11 @@ pub fn render<V: Display, E>(
     graph: &mut MonoidalGraph<(V, E)>,
     bounds: Vec2,
     to_screen: RectTransform,
-) -> Vec<Shape> {
+) -> Vec<Shape>
+where
+    V: Display,
+    E: Clone + Eq + PartialEq + Hash + Display,
+{
     let transform = Transform {
         scale,
         bounds,
@@ -57,7 +63,7 @@ pub fn render<V: Display, E>(
 }
 
 #[allow(clippy::too_many_lines)]
-fn generate_shapes<V: Display, E>(
+fn generate_shapes<V, E>(
     ui: &egui::Ui,
     response: &Response,
     shapes: &mut Vec<Shape>,
@@ -65,14 +71,29 @@ fn generate_shapes<V: Display, E>(
     layout: &Layout,
     graph: &mut MonoidalGraph<(V, E)>,
     transform: &Transform,
-) {
+) where
+    V: Display,
+    E: Clone + Eq + PartialEq + Hash + Display,
+{
     let default_stroke = ui.visuals().noninteractive().fg_stroke;
     let default_color = default_stroke.color;
 
+    let mut hover_points = IndexSet::new();
+    macro_rules! check_hover {
+        ($path:expr, $e:expr) => {
+            if let Some(hover_pos) = response.hover_pos() {
+                if $path.contains_point(hover_pos, 0.05 * transform.scale) {
+                    hover_points.insert($e.clone());
+                }
+            }
+        };
+    }
+
     // Source
-    for &x in layout.inputs() {
+    for (&x, port) in layout.inputs().iter().zip(&graph.ordered_inputs) {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
+        check_hover!([start, end], port.weight());
         shapes.push(Shape::line_segment([start, end], default_stroke));
     }
 
@@ -96,24 +117,29 @@ fn generate_shapes<V: Display, E>(
             let id = response.id.with((j, i));
 
             match op {
-                MonoidalOp::Swap { .. } => {
+                MonoidalOp::Swap { addr_1, addr_2 } => {
                     let in1 = transform.apply(x_ins[0], y_input);
                     let in2 = transform.apply(x_ins[1], y_input);
                     let out1 = transform.apply(x_outs[0], y_output);
                     let out2 = transform.apply(x_outs[1], y_output);
 
-                    shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
+                    let bezier = CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(in1, out2),
                         false,
                         Color32::TRANSPARENT,
                         default_stroke,
-                    )));
-                    shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
+                    );
+                    check_hover!(bezier, addr_1.0.weight());
+                    shapes.push(Shape::CubicBezier(bezier));
+
+                    let bezier = CubicBezierShape::from_points_stroke(
                         vertical_out_vertical_in(in2, out1),
                         false,
                         Color32::TRANSPARENT,
                         default_stroke,
-                    )));
+                    );
+                    check_hover!(bezier, addr_2.0.weight());
+                    shapes.push(Shape::CubicBezier(bezier));
                 }
                 MonoidalOp::Thunk {
                     addr,
@@ -125,14 +151,16 @@ fn generate_shapes<V: Display, E>(
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
-                    for &x in x_ins {
+                    for (&x, port) in x_ins.iter().zip(&body.ordered_inputs) {
                         let thunk = transform.apply(x, y_min);
                         let input = transform.apply(x, y_input);
+                        check_hover!([input, thunk], port.weight());
                         shapes.push(Shape::line_segment([input, thunk], default_stroke));
                     }
-                    for &x in x_outs {
+                    for (&x, port) in x_outs.iter().zip(&body.outputs) {
                         let thunk = transform.apply(x, y_max);
                         let output = transform.apply(x, y_output);
+                        check_hover!([thunk, output], port.output().weight());
                         shapes.push(Shape::line_segment([thunk, output], default_stroke));
                     }
                     let thunk_rect = Rect::from_min_max(
@@ -164,49 +192,78 @@ fn generate_shapes<V: Display, E>(
                     let center = transform.apply(x_op, y_op);
 
                     let (x_ins_rem, x_outs_rem) = match op {
-                        MonoidalOp::Cap { .. } => {
-                            for &x in x_ins {
+                        MonoidalOp::Cap { addr, intermediate } => {
+                            for (&x, (port, _)) in x_ins.iter().zip(intermediate) {
                                 let input = transform.apply(x, y_input);
                                 let output = transform.apply(x, y_output);
+                                check_hover!([input, output], port.weight());
                                 shapes.push(Shape::LineSegment {
                                     points: [input, output],
                                     stroke: default_stroke,
                                 });
                             }
-                            (vec![], vec![x_outs[0], *x_outs.last().unwrap()])
+                            (
+                                vec![],
+                                vec![
+                                    (x_outs[0], addr.0.clone()),
+                                    (*x_outs.last().unwrap(), addr.0.clone()),
+                                ],
+                            )
                         }
-                        MonoidalOp::Cup { .. } => {
-                            for &x in x_outs {
+                        MonoidalOp::Cup { addr, intermediate } => {
+                            for (&x, (port, _)) in x_outs.iter().zip(intermediate) {
                                 let input = transform.apply(x, y_input);
                                 let output = transform.apply(x, y_output);
+                                check_hover!([input, output], port.weight());
                                 shapes.push(Shape::LineSegment {
                                     points: [input, output],
                                     stroke: default_stroke,
                                 });
                             }
-                            (vec![x_ins[0], *x_ins.last().unwrap()], vec![])
+                            (
+                                vec![
+                                    (x_ins[0], addr.0.clone()),
+                                    (*x_ins.last().unwrap(), addr.0.clone()),
+                                ],
+                                vec![],
+                            )
                         }
-                        _ => (x_ins.to_owned(), x_outs.to_owned()),
+                        _ => (
+                            x_ins
+                                .iter()
+                                .copied()
+                                .zip(op.inputs().map(|(port, _)| port))
+                                .collect::<Vec<_>>(),
+                            x_outs
+                                .iter()
+                                .copied()
+                                .zip(op.outputs().map(|(port, _)| port))
+                                .collect::<Vec<_>>(),
+                        ),
                     };
 
-                    for x in x_ins_rem {
+                    for (x, port) in x_ins_rem {
                         let input = transform.apply(x, y_input);
-                        shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
+                        let bezier = CubicBezierShape::from_points_stroke(
                             vertical_out_horizontal_in(input, center),
                             false,
                             Color32::TRANSPARENT,
                             default_stroke,
-                        )));
+                        );
+                        check_hover!(bezier, port.weight());
+                        shapes.push(bezier.into());
                     }
 
-                    for x in x_outs_rem {
+                    for (x, port) in x_outs_rem {
                         let output = transform.apply(x, y_output);
-                        shapes.push(Shape::CubicBezier(CubicBezierShape::from_points_stroke(
+                        let bezier = CubicBezierShape::from_points_stroke(
                             horizontal_out_vertical_in(center, output),
                             false,
                             Color32::TRANSPARENT,
                             default_stroke,
-                        )));
+                        );
+                        check_hover!(bezier, port.weight());
+                        shapes.push(bezier.into());
                     }
 
                     match op {
@@ -274,10 +331,18 @@ fn generate_shapes<V: Display, E>(
     }
 
     // Target
-    for &x in layout.outputs() {
+    for (&x, port) in layout.outputs().iter().zip(&graph.outputs) {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
+        check_hover!([start, end], port.output().weight());
         shapes.push(Shape::line_segment([start, end], default_stroke));
+    }
+
+    // Show hover tooltips
+    for e in hover_points {
+        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
+            ui.label(e.to_string())
+        });
     }
 }
 
@@ -306,4 +371,37 @@ fn vertical_out_vertical_in(start: Pos2, end: Pos2) -> [Pos2; 4] {
         Pos2::new(end.x, 0.5 * start.y + 0.5 * end.y),
         end,
     ]
+}
+
+trait ContainsPoint {
+    // Check if a point lies on a line or curve (with the given tolerance).
+    fn contains_point(self, point: Pos2, tolerance: f32) -> bool;
+}
+
+impl ContainsPoint for [Pos2; 2] {
+    fn contains_point(self, point: Pos2, tolerance: f32) -> bool {
+        let [from, to] = self;
+        let distance = if from == to {
+            (from - point).length()
+        } else {
+            let vec = to - from;
+            let t = (point - from).dot(vec) / vec.length_sq();
+            let t = t.clamp(0.0, 1.0);
+            let projected = from + vec * t;
+            (projected - point).length()
+        };
+        distance < tolerance
+    }
+}
+
+const SAMPLES: u8 = 100;
+
+impl ContainsPoint for CubicBezierShape {
+    fn contains_point(self, point: Pos2, tolerance: f32) -> bool {
+        (0..=SAMPLES).any(|t| {
+            let t = f32::from(t) / f32::from(SAMPLES);
+            let p = self.sample(t);
+            p.distance(point) < tolerance
+        })
+    }
 }

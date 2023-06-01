@@ -9,6 +9,7 @@ repository = "https://github.com/calintat/sd-visualiser"
 [dependencies]
 egui = "0.21.0"
 good_lp = { version = "1.4.0", default_features = false, features = ["minilp"] }
+indexmap = "1.9.3"
 itertools = "0.10.5"
 sd-core = { path = "../sd-core" }
 thiserror = "1.0.40"

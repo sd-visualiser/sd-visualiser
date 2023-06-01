@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 
 use thiserror::Error;
 use tracing::{debug, Level};
@@ -7,6 +10,7 @@ use crate::{
     free_vars::FreeVars,
     hypergraph::{Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
     language::spartan::{Expr, Op, Thunk, Value, Variable},
+    prettyprinter::PrettyPrint,
 };
 
 pub type SyntaxHyperGraphBuilder = HyperGraph<Op, Name, false>;
@@ -28,10 +32,19 @@ pub enum ConvertError {
     NoOutputError,
 }
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub enum Name {
     Thunk,
     Value(Value),
+}
+
+impl Display for Name {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Thunk => f.write_str("<thunk>"),
+            Self::Value(v) => f.write_str(&v.to_pretty()),
+        }
+    }
 }
 
 impl Name {
