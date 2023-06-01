@@ -1,4 +1,8 @@
-use std::{fmt::Display, hash::Hash};
+use std::{
+    collections::HashSet,
+    fmt::Display,
+    hash::{BuildHasher, Hash},
+};
 
 use egui::{
     emath::RectTransform,
@@ -9,6 +13,7 @@ use egui::{
 use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter},
+    hypergraph::Operation,
     monoidal::{MonoidalGraph, MonoidalOp},
 };
 
@@ -37,18 +42,21 @@ impl Transform {
     }
 }
 
-pub fn render<V, E>(
+#[allow(clippy::too_many_arguments)]
+pub fn render<V, E, S>(
     ui: &egui::Ui,
     response: &Response,
     layout: &Layout,
     scale: f32,
     graph: &mut MonoidalGraph<(V, E)>,
+    selections: &mut HashSet<Operation<V, E>, S>,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape>
 where
     V: Display,
     E: Clone + Eq + PartialEq + Hash + Display,
+    S: BuildHasher,
 {
     let transform = Transform {
         scale,
@@ -58,22 +66,34 @@ where
     };
 
     let mut shapes = Vec::default();
-    generate_shapes(ui, response, &mut shapes, 0.0, layout, graph, &transform);
+    generate_shapes(
+        ui,
+        response,
+        &mut shapes,
+        0.0,
+        layout,
+        graph,
+        selections,
+        &transform,
+    );
     shapes
 }
 
+#[allow(clippy::too_many_arguments)]
 #[allow(clippy::too_many_lines)]
-fn generate_shapes<V, E>(
+fn generate_shapes<V, E, S>(
     ui: &egui::Ui,
     response: &Response,
     shapes: &mut Vec<Shape>,
     mut y_offset: f32,
     layout: &Layout,
     graph: &mut MonoidalGraph<(V, E)>,
+    selections: &mut HashSet<Operation<V, E>, S>,
     transform: &Transform,
 ) where
     V: Display,
     E: Clone + Eq + PartialEq + Hash + Display,
+    S: BuildHasher,
 {
     let default_stroke = ui.visuals().noninteractive().fg_stroke;
     let default_color = default_stroke.color;
@@ -184,7 +204,16 @@ fn generate_shapes<V, E>(
                             default_color,
                         ));
                     }
-                    generate_shapes(ui, &thunk_response, shapes, y_min, x_op, body, transform);
+                    generate_shapes(
+                        ui,
+                        &thunk_response,
+                        shapes,
+                        y_min,
+                        x_op,
+                        body,
+                        selections,
+                        transform,
+                    );
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
@@ -274,23 +303,24 @@ fn generate_shapes<V, E>(
                                 default_color,
                             ));
                         }
-                        MonoidalOp::Operation { addr, selected, .. } => {
+                        MonoidalOp::Operation { addr } => {
+                            let selected = selections.contains(addr);
                             let op_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let op_response = ui.interact(op_rect, id, Sense::click());
-                            if op_response.clicked() {
-                                *selected = !*selected;
+                            if op_response.clicked() && !selections.remove(addr) {
+                                selections.insert(addr.clone());
                             }
                             shapes.push(Shape::Circle(CircleShape {
                                 center,
                                 radius: RADIUS_OPERATION * transform.scale,
                                 fill: ui
                                     .style()
-                                    .interact_selectable(&op_response, *selected)
+                                    .interact_selectable(&op_response, selected)
                                     .bg_fill,
                                 stroke: ui
                                     .style()
-                                    .interact_selectable(&op_response, *selected)
+                                    .interact_selectable(&op_response, selected)
                                     .fg_stroke,
                             }));
                             ui.fonts(|fonts| {

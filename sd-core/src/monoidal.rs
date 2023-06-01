@@ -207,7 +207,6 @@ pub enum MonoidalOp<T: Addr> {
     },
     Operation {
         addr: T::Operation,
-        selected: bool,
     },
     Thunk {
         addr: T::Thunk,
@@ -359,10 +358,7 @@ impl<V, E> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
                 addr: addr.clone(),
                 copies: *copies,
             },
-            WiredOp::Operation { addr } => Self::Operation {
-                addr: addr.clone(),
-                selected: false,
-            },
+            WiredOp::Operation { addr } => Self::Operation { addr: addr.clone() },
             WiredOp::Thunk { addr, body, .. } => Self::Thunk {
                 addr: addr.clone(),
                 body: body.into(),

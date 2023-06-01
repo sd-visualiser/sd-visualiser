@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::anyhow;
 use eframe::{
     egui::{
@@ -10,6 +12,7 @@ use egui_notify::Toasts;
 use pest::error::LineColLocation;
 use sd_core::{
     graph::{Name, SyntaxHyperGraph},
+    hypergraph::Operation,
     language::spartan::Op,
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
@@ -30,6 +33,7 @@ pub struct App {
     hypergraph: SyntaxHyperGraph,
     monoidal_term: MonoidalWiredGraph<Op, Name>,
     monoidal_graph: MonoidalGraph<(Op, Name)>,
+    selections: HashSet<Operation<Op, Name>>,
     panzoom: Panzoom,
     toasts: Toasts,
 }
@@ -197,6 +201,7 @@ impl App {
             &layout,
             self.panzoom.zoom,
             &mut self.monoidal_graph,
+            &mut self.selections,
             response.rect.size(),
             to_screen,
         ));
