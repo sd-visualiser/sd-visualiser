@@ -19,10 +19,12 @@ use sd_core::{
 
 use crate::layout::Layout;
 
-pub const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
-pub const RADIUS_ARG: f32 = 0.05;
-pub const RADIUS_COPY: f32 = 0.1;
-pub const RADIUS_OPERATION: f32 = 0.2;
+const TOLERANCE: f32 = 0.1;
+
+const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
+const RADIUS_ARG: f32 = 0.05;
+const RADIUS_COPY: f32 = 0.1;
+const RADIUS_OPERATION: f32 = 0.2;
 
 // Specifies how to transform a layout position to a screen position.
 struct Transform {
@@ -102,7 +104,7 @@ fn generate_shapes<V, E, S>(
     macro_rules! check_hover {
         ($path:expr, $e:expr) => {
             if let Some(hover_pos) = response.hover_pos() {
-                if $path.contains_point(hover_pos, 0.05 * transform.scale) {
+                if $path.contains_point(hover_pos, TOLERANCE * transform.scale) {
                     hover_points.insert($e.clone());
                 }
             }
