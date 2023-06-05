@@ -21,6 +21,8 @@ use crate::common::InOut;
 mod weakbyaddress;
 use self::weakbyaddress::WeakByAddress;
 
+pub mod subgraph;
+
 #[derive(Debug, Error, Clone)]
 pub enum HyperGraphError<V, E>
 where
@@ -305,6 +307,17 @@ where
         })
     }
 
+    // Clone an entire thunk into the hypergraph
+    pub fn clone_thunk(&mut self, thunk: &Thunk<V, E, true>) -> Thunk<V, E, false>
+    where
+        V: Clone + Send + Sync,
+        E: Clone + Send + Sync,
+    {
+        let internal = ThunkInternal::from_existing(thunk);
+        self.0.nodes.push(NodeInternal::Thunk(internal.clone()));
+        Thunk(ByThinAddress(internal))
+    }
+
     #[allow(clippy::too_many_lines)]
     pub fn build(self) -> Result<HyperGraph<V, E, true>, V, E> {
         // check validity of hypergraph:
@@ -564,13 +577,7 @@ where
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
     ) -> Operation<V, E, false> {
-        let op = OperationInternal::new(
-            input_len,
-            output_weights,
-            weight,
-            0,
-            BackPointerInternal::Graph,
-        );
+        let op = OperationInternal::new(input_len, output_weights, weight);
         self.0.nodes.push(NodeInternal::Operation(op.clone()));
         Operation(ByThinAddress(op))
     }
@@ -581,13 +588,7 @@ where
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
     ) -> Thunk<V, E, false> {
-        let thunk = ThunkInternal::new(
-            free_variables,
-            bound_variables,
-            output_weights,
-            0,
-            BackPointerInternal::Graph,
-        );
+        let thunk = ThunkInternal::new(free_variables, bound_variables, output_weights);
         self.0.nodes.push(NodeInternal::Thunk(thunk.clone()));
         Thunk(ByThinAddress(thunk))
     }
@@ -604,13 +605,7 @@ where
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
     ) -> Operation<V, E, false> {
-        let op = OperationInternal::new(
-            input_len,
-            output_weights,
-            weight,
-            self.0 .0.depth + 1,
-            BackPointerInternal::Thunk(Arc::downgrade(&self.0 .0 .0)),
-        );
+        let op = OperationInternal::new(input_len, output_weights, weight);
         self.0
              .0
             .nodes
@@ -626,13 +621,7 @@ where
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
     ) -> Thunk<V, E, false> {
-        let thunk = ThunkInternal::new(
-            free_variables,
-            bound_variables,
-            output_weights,
-            self.0 .0.depth + 1,
-            BackPointerInternal::Thunk(Arc::downgrade(&self.0 .0 .0)),
-        );
+        let thunk = ThunkInternal::new(free_variables, bound_variables, output_weights);
         self.0
              .0
             .nodes
@@ -798,24 +787,10 @@ enum NodeInternal<V, E> {
 }
 
 #[derive(Debug)]
-enum BackPointerInternal<V, E> {
-    Graph,
-    Thunk(Weak<ThunkInternal<V, E>>),
-}
-
-#[derive(Debug)]
-pub enum BackPointer<V, E, const BUILT: bool = true> {
-    Graph,
-    Thunk(Thunk<V, E, BUILT>),
-}
-
-#[derive(Debug)]
 struct OperationInternal<V, E> {
     weight: V,
     inputs: Vec<Arc<InPortInternal<V, E>>>,
     outputs: Vec<Arc<OutPortInternal<V, E>>>,
-    depth: usize,
-    back_pointer: BackPointerInternal<V, E>,
 }
 
 impl<V, E, const BUILT: bool> InOut for Operation<V, E, BUILT> {
@@ -853,21 +828,6 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
     pub fn weight(&self) -> &V {
         &self.0.weight
     }
-
-    #[must_use]
-    pub fn depth(&self) -> usize {
-        self.0.depth
-    }
-
-    #[must_use]
-    pub fn back_pointer(&self) -> BackPointer<V, E, BUILT> {
-        match &self.0.back_pointer {
-            BackPointerInternal::Graph => BackPointer::Graph,
-            BackPointerInternal::Thunk(a) => BackPointer::Thunk(Thunk(ByThinAddress(
-                a.upgrade().expect("back pointer unexpectedly dropped"),
-            ))),
-        }
-    }
 }
 
 impl<V, E> OperationInternal<V, E>
@@ -875,13 +835,7 @@ where
     V: Debug + Send + Sync,
     E: Debug + Send + Sync,
 {
-    fn new(
-        input_len: usize,
-        output_weights: impl IntoIterator<Item = E>,
-        weight: V,
-        depth: usize,
-        back_pointer: BackPointerInternal<V, E>,
-    ) -> Arc<Self> {
+    fn new(input_len: usize, output_weights: impl IntoIterator<Item = E>, weight: V) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let inputs = (0..input_len)
                 .map(|_| {
@@ -905,8 +859,6 @@ where
                 weight,
                 inputs,
                 outputs,
-                depth,
-                back_pointer,
             }
         })
     }
@@ -924,8 +876,6 @@ struct ThunkInternal<V, E> {
     bound_variables: Vec<Arc<OutPortInternal<V, E>>>,
     outputs: InOutMap<V, E>,
     output_order: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
-    depth: usize,
-    back_pointer: BackPointerInternal<V, E>,
 }
 
 impl<V, E, const BUILT: bool> InOut for Thunk<V, E, BUILT> {
@@ -987,21 +937,6 @@ impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
             .get_by_left(&port.0)
             .map(|out_port| OutPort(out_port.clone()))
     }
-
-    #[must_use]
-    pub fn depth(&self) -> usize {
-        self.0.depth
-    }
-
-    #[must_use]
-    pub fn back_pointer(&self) -> BackPointer<V, E, BUILT> {
-        match &self.0.back_pointer {
-            BackPointerInternal::Graph => BackPointer::Graph,
-            BackPointerInternal::Thunk(a) => BackPointer::Thunk(Thunk(ByThinAddress(
-                a.upgrade().expect("back pointer unexpectedly dropped"),
-            ))),
-        }
-    }
 }
 
 impl<V, E> ThunkInternal<V, E>
@@ -1013,45 +948,42 @@ where
         free_variables: impl IntoIterator<Item = E>,
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
-        depth: usize,
-        back_pointer: BackPointerInternal<V, E>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let input_order: Vec<_> = free_variables
                 .into_iter()
                 .map(|fv| ByThinAddress(Arc::new(OutPortInternal::new_boundary(fv))))
                 .collect();
+
             let free_variable_inputs = input_order
                 .iter()
-                .cloned()
-                .map(|inner_output| {
-                    let outer_input = Arc::new(InPortInternal {
+                .map(|_| {
+                    ByThinAddress(Arc::new(InPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
                         output: RwLock::new(Weak::new()),
-                    });
-                    (ByThinAddress(outer_input), inner_output)
+                    }))
                 })
+                .zip(input_order.iter().cloned())
                 .collect();
+
             let bound_variables = bound_variables
                 .into_iter()
                 .map(|bv| Arc::new(OutPortInternal::new_boundary(bv)))
                 .collect();
 
-            let outputs: BiMap<_, _> = output_weights
+            let (output_order, outputs): (Vec<_>, BiMap<_, _>) = output_weights
                 .into_iter()
-                .zip(std::iter::repeat(ByThinAddress(Arc::new(
-                    InPortInternal::new_boundary(),
-                ))))
-                .map(|(weight, inner_input)| {
-                    let outer_output = Arc::new(OutPortInternal {
+                .map(|weight| {
+                    let inner_output = ByThinAddress(Arc::new(InPortInternal::new_boundary()));
+                    let outer_output = ByThinAddress(Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
                         inputs: RwLock::new(IndexSet::default()),
                         weight,
-                    });
-                    (inner_input, ByThinAddress(outer_output))
+                    }));
+                    (inner_output.clone(), (inner_output, outer_output))
                 })
-                .collect();
-            let output_order = outputs.left_values().cloned().collect();
+                .unzip();
+
             ThunkInternal {
                 nodes: RwLock::new(Vec::default()),
                 free_variable_inputs,
@@ -1059,8 +991,47 @@ where
                 bound_variables,
                 outputs,
                 output_order,
-                depth,
-                back_pointer,
+            }
+        })
+    }
+
+    fn from_existing<const BUILT: bool>(thunk: &Thunk<V, E, BUILT>) -> Arc<Self>
+    where
+        E: Clone,
+    {
+        Arc::new_cyclic(|weak: &Weak<Self>| {
+            let internal = &thunk.0 .0;
+            let free_variable_inputs = thunk
+                .inputs()
+                .map(|_| {
+                    ByThinAddress(Arc::new(InPortInternal {
+                        node: Some(WeakNodeInternal::Thunk(weak.clone())),
+                        output: RwLock::new(Weak::new()),
+                    }))
+                })
+                .zip(internal.input_order.iter().cloned())
+                .collect();
+
+            let outputs = internal
+                .output_order
+                .iter()
+                .cloned()
+                .zip(thunk.outputs().map(|out_port| {
+                    ByThinAddress(Arc::new(OutPortInternal {
+                        node: Some(WeakNodeInternal::Thunk(weak.clone())),
+                        inputs: RwLock::new(IndexSet::default()),
+                        weight: out_port.weight().clone(),
+                    }))
+                }))
+                .collect();
+
+            ThunkInternal {
+                nodes: RwLock::new(internal.nodes.read().expect("Could not unlock").clone()),
+                free_variable_inputs,
+                input_order: internal.input_order.clone(),
+                bound_variables: internal.bound_variables.clone(),
+                outputs,
+                output_order: internal.output_order.clone(),
             }
         })
     }
@@ -1116,21 +1087,5 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
             acc = combine(acc, cur)?;
         }
         Ok(acc)
-    }
-
-    #[must_use]
-    pub fn depth(&self) -> usize {
-        match self {
-            Node::Operation(op) => op.depth(),
-            Node::Thunk(thunk) => thunk.depth(),
-        }
-    }
-
-    #[must_use]
-    pub fn back_pointer(&self) -> BackPointer<V, E, BUILT> {
-        match self {
-            Node::Operation(op) => op.back_pointer(),
-            Node::Thunk(thunk) => thunk.back_pointer(),
-        }
     }
 }
