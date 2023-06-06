@@ -288,7 +288,7 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
             }
             MonoidalOp::Operation { addr, .. } => Box::new(
                 addr.inputs()
-                    .map(|in_port| (in_port.output(), Direction::Forward)),
+                    .map(|in_port| (in_port.link(), Direction::Forward)),
             ),
             MonoidalOp::Thunk { addr, body, .. } => Box::new(
                 body.unordered_inputs
@@ -296,7 +296,7 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
                     .chain(body.ordered_inputs.iter())
                     .filter_map(|port| {
                         addr.externalise_input(port)
-                            .map(|x| (x.output(), Direction::Forward))
+                            .map(|x| (x.link(), Direction::Forward))
                     }),
             ),
             MonoidalOp::Swap { addr_1, addr_2 } => {
@@ -435,7 +435,7 @@ impl<V, E> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
             graph
                 .outputs
                 .iter()
-                .map(|in_port| (in_port.output(), Direction::Forward)),
+                .map(|in_port| (in_port.link(), Direction::Forward)),
             true,
         ));
 
@@ -444,7 +444,7 @@ impl<V, E> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
             graph
                 .outputs
                 .iter()
-                .map(|in_port| (in_port.output(), Direction::Forward)),
+                .map(|in_port| (in_port.link(), Direction::Forward)),
         ));
 
         let mut graph = MonoidalGraph {

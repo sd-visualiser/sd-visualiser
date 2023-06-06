@@ -366,7 +366,7 @@ fn generate_shapes<V, E, S>(
     for (&x, port) in layout.outputs().iter().zip(&graph.outputs) {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
-        check_hover!([start, end], port.output().weight());
+        check_hover!([start, end], port.link().weight());
         shapes.push(Shape::line_segment([start, end], default_stroke));
     }
 

@@ -51,7 +51,7 @@ where
     pub fn generate_subgraph(&self, selection: &HashSet<Node<V, E>>) -> HyperGraph<V, E> {
         let global_inputs: HashSet<OutPort<V, E>> = selection
             .iter()
-            .flat_map(|node| node.inputs().map(|in_port| in_port.output()))
+            .flat_map(|node| node.inputs().map(|in_port| in_port.link()))
             .filter(|out_port| {
                 out_port
                     .node()
@@ -61,7 +61,7 @@ where
             .collect();
         let global_outputs: HashSet<InPort<V, E>> = selection
             .iter()
-            .flat_map(|node| node.outputs().flat_map(|out_port| out_port.inputs()))
+            .flat_map(|node| node.outputs().flat_map(|out_port| out_port.links()))
             .filter(|in_port| {
                 in_port
                     .node()
@@ -107,7 +107,7 @@ where
         // Link up ports
 
         for (x, y) in in_port_map {
-            builder.link(out_port_map[&y.output()].clone(), x).unwrap();
+            builder.link(out_port_map[&y.link()].clone(), x).unwrap();
         }
 
         builder.build().unwrap()

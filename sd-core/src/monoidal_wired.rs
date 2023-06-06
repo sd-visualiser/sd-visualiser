@@ -61,12 +61,12 @@ impl<V, E> InOutIter for WiredOp<V, E> {
             }
             WiredOp::Operation { addr } => Box::new(
                 addr.inputs()
-                    .map(|in_port| (in_port.output(), Direction::Forward)),
+                    .map(|in_port| (in_port.link(), Direction::Forward)),
             ),
             WiredOp::Thunk { addr, body } => {
                 Box::new(body.unordered_inputs.iter().filter_map(|port| {
                     addr.externalise_input(port)
-                        .map(|x| (x.output(), Direction::Forward))
+                        .map(|x| (x.link(), Direction::Forward))
                 }))
             }
             WiredOp::Backlink { addr } => {
@@ -137,7 +137,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             .copied()
             .unwrap_or_default();
 
-        if out_port.number_of_inputs() > 1 {
+        if out_port.number_of_links() > 1 {
             max + 1
         } else {
             max
@@ -199,7 +199,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             .map(|out_port| self.input_layer(&out_port))
             .chain(
                 node.inputs()
-                    .filter_map(|x| self.backlinks.get(&x.output()).map(|x| x.originating_layer)),
+                    .filter_map(|x| self.backlinks.get(&x.link()).map(|x| x.originating_layer)),
             )
             .max()
             .unwrap_or_default();
@@ -213,7 +213,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
                 .map(Vec::len)
                 .unwrap_or_default();
 
-            if open_ports < out_port.number_of_inputs() {
+            if open_ports < out_port.number_of_links() {
                 if open_ports == 0 {
                     // Only backlink
                     ops.push(WiredOp::Backlink {
@@ -249,7 +249,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         });
 
         node.inputs()
-            .map(|in_port| InPort::output(&in_port))
+            .map(|in_port| InPort::link(&in_port))
             .for_each(|out_port| {
                 self.open_ports
                     .entry(out_port)
@@ -272,7 +272,7 @@ where
         for in_port in &outputs {
             builder
                 .open_ports
-                .entry(in_port.output())
+                .entry(in_port.link())
                 .or_default()
                 .push(0);
         }

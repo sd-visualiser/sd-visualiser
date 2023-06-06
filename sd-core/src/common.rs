@@ -189,7 +189,7 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
             Box::new(
                 self.outputs
                     .iter()
-                    .map(|in_port| (in_port.output(), Direction::Forward)),
+                    .map(|in_port| (in_port.link(), Direction::Forward)),
             ) as Box<dyn Iterator<Item = Link<T::V, T::E>>>,
             fold_slice::<T>,
         );

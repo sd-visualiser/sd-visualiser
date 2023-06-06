@@ -110,7 +110,7 @@ impl<V, E, const BUILT: bool> Debug for InPort<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut x = f.debug_struct("InPort");
         if BUILT {
-            x.field("output", &self.output());
+            x.field("link", &self.link());
         }
         x.finish()
     }
@@ -166,7 +166,7 @@ impl<V, E, const BUILT: bool> Debug for OutPort<V, E, BUILT> {
 #[derive(Debug)]
 struct InPortInternal<V, E> {
     node: Option<WeakNodeInternal<V, E>>,
-    output: RwLock<Weak<OutPortInternal<V, E>>>,
+    link: RwLock<Weak<OutPortInternal<V, E>>>,
 }
 
 impl<V, E> InPortInternal<V, E>
@@ -177,7 +177,7 @@ where
     fn new_boundary() -> Self {
         Self {
             node: None,
-            output: RwLock::new(Weak::default()),
+            link: RwLock::new(Weak::default()),
         }
     }
 }
@@ -210,11 +210,11 @@ get_node!(OutPort);
 
 impl<V, E, const BUILT: bool> InPort<V, E, BUILT> {
     #[must_use]
-    pub fn output(&self) -> OutPort<V, E, BUILT> {
+    pub fn link(&self) -> OutPort<V, E, BUILT> {
         assert!(BUILT);
         OutPort(ByThinAddress(
             self.0
-                .output
+                .link
                 .try_read()
                 .expect("Lock unexpectedly taken")
                 .upgrade()
@@ -226,7 +226,7 @@ impl<V, E, const BUILT: bool> InPort<V, E, BUILT> {
 #[derive(Debug)]
 struct OutPortInternal<V, E> {
     node: Option<WeakNodeInternal<V, E>>,
-    inputs: RwLock<IndexSet<WeakByAddress<InPortInternal<V, E>>>>,
+    links: RwLock<IndexSet<WeakByAddress<InPortInternal<V, E>>>>,
     weight: E,
 }
 
@@ -238,17 +238,17 @@ where
     fn new_boundary(weight: E) -> Self {
         Self {
             node: None,
-            inputs: RwLock::new(IndexSet::default()),
+            links: RwLock::new(IndexSet::default()),
             weight,
         }
     }
 }
 
 impl<V, E, const BUILT: bool> OutPort<V, E, BUILT> {
-    pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> {
+    pub fn links(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> {
         assert!(BUILT);
         self.0
-            .inputs
+            .links
             .try_read()
             .expect("Lock unexpectedly taken")
             .iter()
@@ -261,9 +261,9 @@ impl<V, E, const BUILT: bool> OutPort<V, E, BUILT> {
     }
 
     #[must_use]
-    pub fn number_of_inputs(&self) -> usize {
+    pub fn number_of_links(&self) -> usize {
         self.0
-            .inputs
+            .links
             .try_read()
             .expect("Lock unexpectedly taken")
             .len()
@@ -331,7 +331,7 @@ where
         {
             outport
                 .0
-                .inputs
+                .links
                 .try_read()
                 .expect("failed to lock outport inputs {outport.0.inputs:#?}")
                 .iter()
@@ -349,7 +349,7 @@ where
         {
             (inport
                 .0
-                .output
+                .link
                 .try_read()
                 .expect("failed to lock inport output {inport.0.output:#?}")
                 .strong_count()
@@ -365,7 +365,7 @@ where
             E: Debug,
         {
             node.outputs()
-                .flat_map(|outport| outport.inputs().filter_map(|inport| inport.node()))
+                .flat_map(|outport| outport.links().filter_map(|inport| inport.node()))
                 .collect::<IndexSet<_>>()
                 .into_iter()
         }
@@ -533,11 +533,7 @@ pub trait Fragment: Graph<false> {
         Self::NodeWeight: Debug,
         Self::EdgeWeight: Debug,
     {
-        let mut out = in_port
-            .0
-            .output
-            .try_write()
-            .expect("Lock unexpectedly taken");
+        let mut out = in_port.0.link.try_write().expect("Lock unexpectedly taken");
         if let Some(existing) = out.upgrade() {
             return Err(HyperGraphError::OutputLinkError(OutPort(ByThinAddress(
                 existing,
@@ -546,7 +542,7 @@ pub trait Fragment: Graph<false> {
         *out = Arc::downgrade(&out_port.0);
         out_port
             .0
-            .inputs
+            .links
             .try_write()
             .expect("Lock unexpectedly taken")
             .insert(WeakByAddress(Arc::downgrade(&in_port.0)));
@@ -841,7 +837,7 @@ where
                 .map(|_| {
                     Arc::new(InPortInternal {
                         node: Some(WeakNodeInternal::Operation(weak.clone())),
-                        output: RwLock::new(Weak::new()),
+                        link: RwLock::new(Weak::new()),
                     })
                 })
                 .collect();
@@ -850,7 +846,7 @@ where
                 .map(|weight| {
                     Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Operation(weak.clone())),
-                        inputs: RwLock::new(IndexSet::default()),
+                        links: RwLock::new(IndexSet::default()),
                         weight,
                     })
                 })
@@ -960,7 +956,7 @@ where
                 .map(|_| {
                     ByThinAddress(Arc::new(InPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        output: RwLock::new(Weak::new()),
+                        link: RwLock::new(Weak::new()),
                     }))
                 })
                 .zip(input_order.iter().cloned())
@@ -977,7 +973,7 @@ where
                     let inner_output = ByThinAddress(Arc::new(InPortInternal::new_boundary()));
                     let outer_output = ByThinAddress(Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        inputs: RwLock::new(IndexSet::default()),
+                        links: RwLock::new(IndexSet::default()),
                         weight,
                     }));
                     (inner_output.clone(), (inner_output, outer_output))
@@ -1006,7 +1002,7 @@ where
                 .map(|_| {
                     ByThinAddress(Arc::new(InPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        output: RwLock::new(Weak::new()),
+                        link: RwLock::new(Weak::new()),
                     }))
                 })
                 .zip(internal.input_order.iter().cloned())
@@ -1019,7 +1015,7 @@ where
                 .zip(thunk.outputs().map(|out_port| {
                     ByThinAddress(Arc::new(OutPortInternal {
                         node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        inputs: RwLock::new(IndexSet::default()),
+                        links: RwLock::new(IndexSet::default()),
                         weight: out_port.weight().clone(),
                     }))
                 }))
