@@ -2,7 +2,6 @@ use std::{
     cmp::min,
     collections::HashMap,
     fmt::Debug,
-    hash::Hash,
     sync::{Arc, RwLock, Weak},
 };
 
@@ -11,6 +10,7 @@ use by_address::ByThinAddress;
 use delegate::delegate;
 use derivative::Derivative;
 use indexmap::IndexSet;
+use itertools::Itertools;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
@@ -302,34 +302,21 @@ where
             .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(inport.clone()))
         }
 
-        // topologically sort nodes
-        fn next_strong<V, E>(node: &Node<V, E>) -> impl Iterator<Item = Node<V, E>>
-        where
+        fn strongconnect<V, E>(
+            stack: &mut IndexSet<Node<V, E>>,
+            visited: &mut HashMap<Node<V, E>, usize>,
+            output: &mut Vec<Vec<Node<V, E>>>,
+            node: &Node<V, E>,
+        ) where
             V: Debug,
             E: Debug,
-        {
-            node.outputs()
-                .flat_map(|outport| outport.links().filter_map(|inport| inport.node()))
-                .collect::<IndexSet<_>>()
-                .into_iter()
-        }
-
-        fn strongconnect<T, TS>(
-            next: impl (Fn(&T) -> TS) + Copy,
-            stack: &mut IndexSet<T>,
-            visited: &mut HashMap<T, usize>,
-            output: &mut Vec<Vec<T>>,
-            node: &T,
-        ) where
-            T: Clone + Hash + Eq,
-            TS: Iterator<Item = T>,
         {
             let index = stack.insert_full(node.clone()).0;
             visited.insert(node.clone(), index);
 
-            for n in next(node) {
+            for n in node.successors() {
                 if !visited.contains_key(&n) {
-                    strongconnect(next, stack, visited, output, &n);
+                    strongconnect(stack, visited, output, &n);
                     let y = visited[&n];
                     let x = visited.get_mut(node).unwrap();
                     *x = min(*x, y);
@@ -345,21 +332,21 @@ where
             }
         }
 
-        fn tarjans<T, TS>(xs: Vec<T>, next: impl Fn(&T) -> TS) -> Vec<T>
+        fn tarjans<V, E>(xs: Vec<Node<V, E>>) -> Vec<Node<V, E>>
         where
-            T: Clone + Hash + Eq,
-            TS: Iterator<Item = T>,
+            V: Debug,
+            E: Debug,
         {
-            let original_ord: IndexSet<T> = xs.into_iter().collect();
-            let mut output: Vec<Vec<T>> = Vec::default();
+            let original_ord: IndexSet<Node<V, E>> = xs.into_iter().collect();
+            let mut output: Vec<Vec<Node<V, E>>> = Vec::default();
 
-            let mut stack: IndexSet<T> = IndexSet::default();
+            let mut stack: IndexSet<Node<V, E>> = IndexSet::default();
 
-            let mut visited: HashMap<T, usize> = HashMap::default();
+            let mut visited: HashMap<Node<V, E>, usize> = HashMap::default();
 
             for x in &original_ord {
                 if !visited.contains_key(x) {
-                    strongconnect(&next, &mut stack, &mut visited, &mut output, x);
+                    strongconnect(&mut stack, &mut visited, &mut output, x);
                 }
             }
 
@@ -387,8 +374,7 @@ where
                     NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(ByThinAddress(thunk.clone()))),
                 })
                 .collect();
-            // topsort::<V, E, _, _>(&mut nodes, next_strong)?;
-            nodes = tarjans(nodes, next_strong);
+            nodes = tarjans(nodes);
             *internals = nodes
                 .into_iter()
                 .map(|node| match node {
@@ -1027,5 +1013,13 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
             acc = combine(acc, cur)?;
         }
         Ok(acc)
+    }
+}
+
+impl<V, E> Node<V, E> {
+    fn successors(&self) -> impl Iterator<Item = Self> + '_ {
+        self.outputs()
+            .flat_map(|outport| outport.links().filter_map(|inport| inport.node()))
+            .unique()
     }
 }
