@@ -5,7 +5,7 @@ use tracing::{debug, Level};
 
 use crate::{
     free_vars::FreeVars,
-    hypergraph::{Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
+    hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
     language::spartan::{Expr, Op, Thunk, Value, Variable},
 };
 

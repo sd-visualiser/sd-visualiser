@@ -3,7 +3,7 @@ use std::{
     fmt::Debug,
 };
 
-use super::{Fragment, Graph, GraphView, HyperGraph, InPort, Node, Operation, OutPort};
+use super::{fragment::Fragment, Graph, GraphView, HyperGraph, InPort, Node, Operation, OutPort};
 use crate::common::InOut;
 
 fn normalise_graphview<G: GraphView>(
