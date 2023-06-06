@@ -14,7 +14,7 @@ use indexmap::IndexSet;
 use pretty::RcDoc;
 use sd_core::{
     common::{InOut, InOutIter},
-    hypergraph::{Node, Operation, OutPort},
+    hypergraph::{Graph, Node, Operation, OutPort},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
 };
@@ -200,7 +200,12 @@ fn generate_shapes<V, E, S>(
                         Rounding::none(),
                         ui.style().interact(&thunk_response).fg_stroke,
                     ));
-                    for &x in x_op.inputs().iter().rev().take(addr.bound_inputs().count()) {
+                    for &x in x_op
+                        .inputs()
+                        .iter()
+                        .rev()
+                        .take(addr.bound_graph_inputs().count())
+                    {
                         let dot = transform.apply(x, y_min);
                         shapes.push(Shape::circle_filled(
                             dot,

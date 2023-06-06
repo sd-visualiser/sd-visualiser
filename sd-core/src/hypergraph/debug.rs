@@ -37,7 +37,7 @@ impl<V: Debug, E: Debug, const BUILT: bool> Debug for Thunk<V, E, BUILT> {
             .field(
                 "free_vars",
                 &self
-                    .free_inputs()
+                    .unbound_graph_inputs()
                     .map(|out_port| (self.externalise_input(&out_port), out_port))
                     .collect::<Vec<_>>(),
             )

@@ -151,7 +151,7 @@ where
             .in_thunk(thunk_node.clone(), |inner_fragment| {
                 let mut thunk_env = Environment::new(self.free_vars, inner_fragment);
 
-                for (var, outport) in free.iter().cloned().zip(thunk_node.free_inputs()) {
+                for (var, outport) in free.iter().cloned().zip(thunk_node.unbound_graph_inputs()) {
                     thunk_env
                         .outputs
                         .insert(var.clone(), outport)
@@ -159,7 +159,7 @@ where
                         .then_some(())
                         .ok_or(ConvertError::Shadowed(var))?;
                 }
-                for (var, outport) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
+                for (var, outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
                     thunk_env
                         .outputs
                         .insert(var.clone(), outport)

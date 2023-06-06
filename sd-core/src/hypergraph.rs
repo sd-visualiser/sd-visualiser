@@ -654,11 +654,17 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for Thunk<V, E, BUILT> {
     type NodeWeight = V;
     type EdgeWeight = E;
     fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
-        Box::new(self.free_inputs())
+        Box::new(self.0.input_order.iter().cloned().map(OutPort))
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
-        Box::new(self.bound_inputs())
+        Box::new(
+            self.0
+                .bound_variables
+                .iter()
+                .cloned()
+                .map(|o| OutPort(ByThinAddress(o))),
+        )
     }
 
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
@@ -817,18 +823,6 @@ impl<V, E, const BUILT: bool> InOut for Thunk<V, E, BUILT> {
 }
 
 impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
-    pub fn bound_inputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
-        self.0
-            .bound_variables
-            .iter()
-            .cloned()
-            .map(|o| OutPort(ByThinAddress(o)))
-    }
-
-    pub fn free_inputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
-        self.0.input_order.iter().cloned().map(OutPort)
-    }
-
     pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> + '_ {
         self.0.input_order.iter().map(|out_port| {
             InPort(
