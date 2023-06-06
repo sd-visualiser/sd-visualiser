@@ -464,10 +464,12 @@ pub trait Graph<const BUILT: bool> {
 pub trait GraphView<const BUILT: bool = true>: Graph<BUILT> {
     fn nodes(
         &self,
-    ) -> Box<dyn Iterator<Item = Node<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
+    ) -> Box<dyn DoubleEndedIterator<Item = Node<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
     fn operations<'a>(
         &'a self,
-    ) -> Box<dyn Iterator<Item = Operation<Self::NodeWeight, Self::EdgeWeight, BUILT>> + 'a>
+    ) -> Box<
+        dyn DoubleEndedIterator<Item = Operation<Self::NodeWeight, Self::EdgeWeight, BUILT>> + 'a,
+    >
     where
         Self::NodeWeight: 'a,
         Self::EdgeWeight: 'a,
@@ -479,7 +481,7 @@ pub trait GraphView<const BUILT: bool = true>: Graph<BUILT> {
     }
     fn thunks<'a>(
         &'a self,
-    ) -> Box<dyn Iterator<Item = Thunk<Self::NodeWeight, Self::EdgeWeight, BUILT>> + 'a>
+    ) -> Box<dyn DoubleEndedIterator<Item = Thunk<Self::NodeWeight, Self::EdgeWeight, BUILT>> + 'a>
     where
         Self::NodeWeight: 'a,
         Self::EdgeWeight: 'a,
@@ -520,7 +522,7 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for HyperGraph<V, E, BUILT> {
 }
 
 impl<V, E, const BUILT: bool> GraphView<BUILT> for HyperGraph<V, E, BUILT> {
-    fn nodes(&self) -> Box<dyn Iterator<Item = Node<V, E, BUILT>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, BUILT>> + '_> {
         Box::new(self.0.nodes.iter().cloned().map(|node| match node {
             NodeInternal::Operation(operation) => {
                 Node::Operation(Operation(ByThinAddress(operation)))
@@ -553,7 +555,7 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for Thunk<V, E, BUILT> {
 }
 
 impl<V, E, const BUILT: bool> GraphView<BUILT> for Thunk<V, E, BUILT> {
-    fn nodes(&self) -> Box<dyn Iterator<Item = Node<V, E, BUILT>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, BUILT>> + '_> {
         Box::new(
             self.0
                 .nodes

@@ -1,4 +1,5 @@
 pub mod common;
+pub mod decompile;
 pub mod examples;
 pub mod free_vars;
 pub mod graph;
