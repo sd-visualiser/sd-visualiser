@@ -18,6 +18,7 @@ use tracing::Level;
 
 use crate::common::InOut;
 
+mod debug;
 mod weakbyaddress;
 use self::weakbyaddress::WeakByAddress;
 
@@ -106,63 +107,6 @@ enum WeakNodeInternal<V, E> {
     Thunk(Weak<ThunkInternal<V, E>>),
 }
 
-impl<V, E, const BUILT: bool> Debug for InPort<V, E, BUILT> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut x = f.debug_struct("InPort");
-        if BUILT {
-            x.field("link", &self.link());
-        }
-        x.finish()
-    }
-}
-
-impl<V: Debug, E, const BUILT: bool> Debug for Operation<V, E, BUILT> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Operation")
-            .field("weight", self.weight())
-            .field("inputs", &self.inputs().collect::<Vec<_>>())
-            .field("outputs", &self.outputs().collect::<Vec<_>>())
-            .finish()
-    }
-}
-
-impl<V: Debug, E: Debug, const BUILT: bool> Debug for Thunk<V, E, BUILT> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Thunk")
-            .field(
-                "free_vars",
-                &self
-                    .free_inputs()
-                    .map(|out_port| (self.externalise_input(&out_port), out_port))
-                    .collect::<Vec<_>>(),
-            )
-            .field(
-                "bound_inputs",
-                &self.bound_graph_inputs().collect::<Vec<_>>(),
-            )
-            .field("nodes", &self.nodes().collect::<Vec<_>>())
-            .field(
-                "outputs",
-                &self
-                    .graph_outputs()
-                    .map(|in_port| {
-                        let x = self.externalise_output(&in_port);
-                        (in_port, x)
-                    })
-                    .collect::<Vec<_>>(),
-            )
-            .finish()
-    }
-}
-
-impl<V, E, const BUILT: bool> Debug for OutPort<V, E, BUILT> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("OutPort")
-            .field(&Arc::as_ptr(&self.0))
-            .finish()
-    }
-}
-
 #[derive(Debug)]
 struct InPortInternal<V, E> {
     node: Option<WeakNodeInternal<V, E>>,
@@ -208,10 +152,9 @@ macro_rules! get_node {
 get_node!(InPort);
 get_node!(OutPort);
 
-impl<V, E, const BUILT: bool> InPort<V, E, BUILT> {
+impl<V, E> InPort<V, E> {
     #[must_use]
-    pub fn link(&self) -> OutPort<V, E, BUILT> {
-        assert!(BUILT);
+    pub fn link(&self) -> OutPort<V, E> {
         OutPort(ByThinAddress(
             self.0
                 .link
@@ -245,8 +188,14 @@ where
 }
 
 impl<V, E, const BUILT: bool> OutPort<V, E, BUILT> {
-    pub fn links(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> {
-        assert!(BUILT);
+    #[must_use]
+    pub fn weight(&self) -> &E {
+        &self.0.weight
+    }
+}
+
+impl<V, E> OutPort<V, E> {
+    pub fn links(&self) -> impl Iterator<Item = InPort<V, E>> {
         self.0
             .links
             .try_read()
@@ -267,11 +216,6 @@ impl<V, E, const BUILT: bool> OutPort<V, E, BUILT> {
             .try_read()
             .expect("Lock unexpectedly taken")
             .len()
-    }
-
-    #[must_use]
-    pub fn weight(&self) -> &E {
-        &self.0.weight
     }
 }
 
