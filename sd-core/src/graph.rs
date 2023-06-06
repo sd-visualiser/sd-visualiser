@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Display,
-};
+use std::collections::{HashMap, HashSet};
 
 use thiserror::Error;
 use tracing::{debug, Level};
@@ -10,7 +7,6 @@ use crate::{
     free_vars::FreeVars,
     hypergraph::{Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
     language::spartan::{Expr, Op, Thunk, Value, Variable},
-    prettyprinter::PrettyPrint,
 };
 
 pub type SyntaxHyperGraphBuilder = HyperGraph<Op, Name, false>;
@@ -32,27 +28,7 @@ pub enum ConvertError {
     NoOutputError,
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub enum Name {
-    Thunk,
-    Value(Value),
-}
-
-impl Display for Name {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Thunk => f.write_str("<thunk>"),
-            Self::Value(v) => f.write_str(&v.to_pretty()),
-        }
-    }
-}
-
-impl Name {
-    #[must_use]
-    pub fn from_variable(var: Variable) -> Self {
-        Self::Value(Value::Variable(var))
-    }
-}
+pub type Name = Option<Variable>;
 
 #[derive(Debug)]
 struct Environment<'env, F> {
@@ -103,9 +79,9 @@ where
             }
             (Value::Op { op, vs, ds }, input) => {
                 let output_weight = if let ProcessInput::Variable(v) = &input {
-                    Name::from_variable(v.clone())
+                    Some(v.clone())
                 } else {
-                    Name::Value(value.clone())
+                    None
                 };
 
                 let operation_node =
@@ -161,9 +137,9 @@ where
             free.remove(var);
         }
         let thunk_node = self.fragment.add_thunk(
-            free.iter().cloned().map(Name::from_variable),
-            thunk.args.iter().cloned().map(Name::from_variable),
-            [Name::Thunk],
+            free.iter().cloned().map(Some),
+            thunk.args.iter().cloned().map(Some),
+            [None],
         );
         debug!("new thunk node {:?}", thunk_node);
 
@@ -246,7 +222,7 @@ impl TryFrom<&Expr> for SyntaxHyperGraph {
 
         let free: Vec<Variable> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
-        let graph = HyperGraph::new(free.iter().cloned().map(Name::from_variable).collect(), 1);
+        let graph = HyperGraph::new(free.iter().cloned().map(Some).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);
 
         let mut env = Environment::new(&free_vars, graph);

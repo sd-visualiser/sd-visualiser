@@ -11,10 +11,12 @@ use egui::{
     Vec2,
 };
 use indexmap::IndexSet;
+use pretty::RcDoc;
 use sd_core::{
     common::{InOut, InOutIter},
-    hypergraph::Operation,
+    hypergraph::{Node, Operation, OutPort},
     monoidal::{MonoidalGraph, MonoidalOp},
+    prettyprinter::PrettyPrint,
 };
 
 use crate::layout::Layout;
@@ -50,14 +52,14 @@ pub fn render<V, E, S>(
     response: &Response,
     layout: &Layout,
     scale: f32,
-    graph: &mut MonoidalGraph<(V, E)>,
-    selections: &mut HashSet<Operation<V, E>, S>,
+    graph: &mut MonoidalGraph<(V, Option<E>)>,
+    selections: &mut HashSet<Operation<V, Option<E>>, S>,
     bounds: Vec2,
     to_screen: RectTransform,
 ) -> Vec<Shape>
 where
-    V: Display,
-    E: Clone + Eq + PartialEq + Hash + Display,
+    V: Clone + Eq + PartialEq + Hash + Display + PrettyPrint,
+    E: Clone + Eq + PartialEq + Hash + PrettyPrint,
     S: BuildHasher,
 {
     let transform = Transform {
@@ -89,12 +91,12 @@ fn generate_shapes<V, E, S>(
     shapes: &mut Vec<Shape>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &mut MonoidalGraph<(V, E)>,
-    selections: &mut HashSet<Operation<V, E>, S>,
+    graph: &mut MonoidalGraph<(V, Option<E>)>,
+    selections: &mut HashSet<Operation<V, Option<E>>, S>,
     transform: &Transform,
 ) where
-    V: Display,
-    E: Clone + Eq + PartialEq + Hash + Display,
+    V: Clone + Eq + PartialEq + Hash + Display + PrettyPrint,
+    E: Clone + Eq + PartialEq + Hash + PrettyPrint,
     S: BuildHasher,
 {
     let default_stroke = ui.visuals().noninteractive().fg_stroke;
@@ -102,10 +104,10 @@ fn generate_shapes<V, E, S>(
 
     let mut hover_points = IndexSet::new();
     macro_rules! check_hover {
-        ($path:expr, $e:expr) => {
+        ($path:expr, $port:expr) => {
             if let Some(hover_pos) = response.hover_pos() {
                 if $path.contains_point(hover_pos, TOLERANCE * transform.scale) {
-                    hover_points.insert($e.clone());
+                    hover_points.insert(DummyValue::from_port($port));
                 }
             }
         };
@@ -115,7 +117,7 @@ fn generate_shapes<V, E, S>(
     for (&x, port) in layout.inputs().iter().zip(&graph.ordered_inputs) {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
-        check_hover!([start, end], port.weight());
+        check_hover!([start, end], port);
         shapes.push(Shape::line_segment([start, end], default_stroke));
     }
 
@@ -151,7 +153,7 @@ fn generate_shapes<V, E, S>(
                         Color32::TRANSPARENT,
                         default_stroke,
                     );
-                    check_hover!(bezier, addr_1.0.weight());
+                    check_hover!(bezier, &addr_1.0);
                     shapes.push(Shape::CubicBezier(bezier));
 
                     let bezier = CubicBezierShape::from_points_stroke(
@@ -160,7 +162,7 @@ fn generate_shapes<V, E, S>(
                         Color32::TRANSPARENT,
                         default_stroke,
                     );
-                    check_hover!(bezier, addr_2.0.weight());
+                    check_hover!(bezier, &addr_2.0);
                     shapes.push(Shape::CubicBezier(bezier));
                 }
                 MonoidalOp::Thunk {
@@ -176,13 +178,13 @@ fn generate_shapes<V, E, S>(
                     for (&x, port) in x_ins.iter().zip(&body.ordered_inputs) {
                         let thunk = transform.apply(x, y_min);
                         let input = transform.apply(x, y_input);
-                        check_hover!([input, thunk], port.weight());
+                        check_hover!([input, thunk], port);
                         shapes.push(Shape::line_segment([input, thunk], default_stroke));
                     }
                     for (&x, port) in x_outs.iter().zip(addr.outputs()) {
                         let thunk = transform.apply(x, y_max);
                         let output = transform.apply(x, y_output);
-                        check_hover!([thunk, output], port.weight());
+                        check_hover!([thunk, output], &port);
                         shapes.push(Shape::line_segment([thunk, output], default_stroke));
                     }
                     let thunk_rect = Rect::from_min_max(
@@ -227,7 +229,7 @@ fn generate_shapes<V, E, S>(
                             for (&x, (port, _)) in x_ins.iter().zip(intermediate) {
                                 let input = transform.apply(x, y_input);
                                 let output = transform.apply(x, y_output);
-                                check_hover!([input, output], port.weight());
+                                check_hover!([input, output], port);
                                 shapes.push(Shape::LineSegment {
                                     points: [input, output],
                                     stroke: default_stroke,
@@ -245,7 +247,7 @@ fn generate_shapes<V, E, S>(
                             for (&x, (port, _)) in x_outs.iter().zip(intermediate) {
                                 let input = transform.apply(x, y_input);
                                 let output = transform.apply(x, y_output);
-                                check_hover!([input, output], port.weight());
+                                check_hover!([input, output], port);
                                 shapes.push(Shape::LineSegment {
                                     points: [input, output],
                                     stroke: default_stroke,
@@ -281,7 +283,7 @@ fn generate_shapes<V, E, S>(
                             Color32::TRANSPARENT,
                             default_stroke,
                         );
-                        check_hover!(bezier, port.weight());
+                        check_hover!(bezier, &port);
                         shapes.push(bezier.into());
                     }
 
@@ -293,7 +295,7 @@ fn generate_shapes<V, E, S>(
                             Color32::TRANSPARENT,
                             default_stroke,
                         );
-                        check_hover!(bezier, port.weight());
+                        check_hover!(bezier, &port);
                         shapes.push(bezier.into());
                     }
 
@@ -366,14 +368,14 @@ fn generate_shapes<V, E, S>(
     for (&x, port) in layout.outputs().iter().zip(&graph.outputs) {
         let start = transform.apply(x, y_offset);
         let end = transform.apply(x, y_offset + 0.5);
-        check_hover!([start, end], port.link().weight());
+        check_hover!([start, end], &port.link());
         shapes.push(Shape::line_segment([start, end], default_stroke));
     }
 
     // Show hover tooltips
     for e in hover_points {
         show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
-            ui.label(e.to_string())
+            ui.label(e.to_pretty())
         });
     }
 }
@@ -435,5 +437,55 @@ impl ContainsPoint for CubicBezierShape {
             let p = self.sample(t);
             p.distance(point) < tolerance
         })
+    }
+}
+
+/// A dummy value is like a `spartan::Value` but with anonymous thunks and (possibly) free variables.
+#[derive(Clone, Eq, PartialEq, Hash)]
+pub enum DummyValue<Op, Var> {
+    Thunk,
+    FreeVar,
+    BoundVar(Var),
+    Operation(Op, Vec<DummyValue<Op, Var>>),
+}
+
+impl<Op: Clone, Var: Clone> DummyValue<Op, Var> {
+    fn from_port(out_port: &OutPort<Op, Option<Var>>) -> Self {
+        match out_port.weight() {
+            Some(var) => Self::BoundVar(var.clone()),
+            None => match out_port.node() {
+                None => Self::FreeVar, // technically should be unreachable
+                Some(Node::Thunk(_)) => Self::Thunk,
+                Some(Node::Operation(op)) => Self::Operation(
+                    op.weight().clone(),
+                    op.inputs()
+                        .map(|in_port| Self::from_port(&in_port.link()))
+                        .collect(),
+                ),
+            },
+        }
+    }
+}
+
+impl<Op: PrettyPrint, Var: PrettyPrint> PrettyPrint for DummyValue<Op, Var> {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        match self {
+            Self::Thunk => RcDoc::text("<thunk>"),
+            Self::FreeVar => RcDoc::text("<free var>"),
+            Self::BoundVar(var) => var.to_doc(),
+            Self::Operation(op, vs) => {
+                if vs.is_empty() {
+                    op.to_doc()
+                } else {
+                    op.to_doc()
+                        .append(RcDoc::text("("))
+                        .append(RcDoc::intersperse(
+                            vs.iter().map(PrettyPrint::to_doc),
+                            RcDoc::text(",").append(RcDoc::space()),
+                        ))
+                        .append(RcDoc::text(")"))
+                }
+            }
+        }
     }
 }
