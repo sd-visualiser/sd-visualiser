@@ -69,7 +69,14 @@
                     trunk
                     wasm-bindgen-cli
                     binaryen
+                  ] ++ lib.optionals (target == "linux") [
+                    pkg-config
+                    atk
+                    gdk-pixbuf
+                    gtk3
+                    pango
                   ]);
+                  XDG_DATA_DIRS = with pkgs; "${gtk3}/share/gsettings-schemas/${gtk3.name}";
                 };
               } // extraOverrides;
               depsOverrides = extraDepsOverrides;
@@ -84,39 +91,43 @@
             systems = [ "x86_64-linux" ];
             imports = [ nci.flakeModule ];
             perSystem = { self', config, lib, pkgs, system, ... }:
-            {
-              _module.args.pkgs = import inputs.nixpkgs {
-                inherit system;
-                overlays = [
-                  inputs.rust-overlay.overlays.default
-                ];
-                config = { };
-              };
-              nci = nciFromPkgs pkgs "linux" { } { };
-              devShells.default = config.nci.outputs.sd.devShell.overrideAttrs (oldAttrs: {
-                packages = (oldAttrs.packages or []) ++ [ (lib.hiPrio pkgs.rust-bin.nightly.latest.rustfmt) ];
-              });
-              packages.default = config.nci.outputs.sd-gui.packages.release;
-            };
-          })
-        (parts.lib.mkFlake { inherit inputs; } {
-          systems = [ "x86_64-linux" ];
-          imports = [ nci.flakeModule ];
-          perSystem = { self', config, lib, pkgs, system, ... }:
-            {
-              nci = nciFromPkgs pkgs "windows"
-                {
-                  set-target = {
-                    CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
-                  };
-                }
-                {
-                  set-target = {
-                    CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
-                  };
+              {
+                _module.args.pkgs = import inputs.nixpkgs {
+                  inherit system;
+                  overlays = [
+                    inputs.rust-overlay.overlays.default
+                  ];
+                  config = { };
                 };
-            };
-        }))
+                nci = nciFromPkgs pkgs "linux" { } { };
+                devShells.default = config.nci.outputs.sd.devShell.overrideAttrs (oldAttrs: {
+                  packages = (oldAttrs.packages or [ ]) ++ [ (lib.hiPrio pkgs.rust-bin.nightly.latest.rustfmt) ];
+                });
+                packages.default = config.nci.outputs.sd-gui.packages.release;
+              };
+          })
+        (parts.lib.mkFlake
+          {
+            inherit inputs;
+          }
+          {
+            systems = [ "x86_64-linux" ];
+            imports = [ nci.flakeModule ];
+            perSystem = { self', config, lib, pkgs, system, ... }:
+              {
+                nci = nciFromPkgs pkgs "windows"
+                  {
+                    set-target = {
+                      CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
+                    };
+                  }
+                  {
+                    set-target = {
+                      CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
+                    };
+                  };
+              };
+          }))
       (parts.lib.mkFlake { inherit inputs; } {
         systems = [ "x86_64-linux" ];
         imports = [ nci.flakeModule ];

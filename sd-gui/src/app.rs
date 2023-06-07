@@ -190,6 +190,23 @@ impl eframe::App for App {
                     ui.radio_value(&mut self.language, Language::Spartan, "Spartan");
                 });
 
+                #[cfg(not(target_arch = "wasm32"))]
+                if ui.button("Import file").clicked() {
+                    if let Some(path) = rfd::FileDialog::new().pick_file() {
+                        match path.extension() {
+                            Some(ext) if ext == "sd" => {
+                                self.language = Language::Spartan;
+                            }
+                            Some(ext) if ext == "chil" => {
+                                self.language = Language::Chil;
+                            }
+                            Some(_) | None => { /* do nothing */ }
+                        }
+                        self.code = std::fs::read_to_string(path)
+                            .expect("file picker returned invalid path");
+                    }
+                }
+
                 ui.separator();
 
                 if ui.button("Reset").clicked() {
