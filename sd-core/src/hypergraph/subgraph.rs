@@ -4,7 +4,22 @@ use std::{
 };
 
 use super::{fragment::Fragment, Graph, GraphView, HyperGraph, InPort, Node, Operation, OutPort};
-use crate::common::InOut;
+use crate::{common::InOut, graph::Name, language::spartan::Variable};
+
+pub trait Free {
+    fn is_var(&self) -> bool;
+    fn generate_free(number: usize) -> Self;
+}
+
+impl Free for Name {
+    fn is_var(&self) -> bool {
+        self.is_some()
+    }
+
+    fn generate_free(number: usize) -> Self {
+        Some(Variable(format!("<fresh{number}>")))
+    }
+}
 
 fn normalise_graphview<G: GraphView>(
     graph_view: &G,
@@ -40,7 +55,7 @@ fn contains_selection<G: GraphView>(
 impl<V, E> HyperGraph<V, E>
 where
     V: Debug + Send + Sync + Clone,
-    E: Debug + Send + Sync + Clone,
+    E: Debug + Send + Sync + Clone + Free,
 {
     #[must_use]
     pub fn normalise_selection(&self, selection: &HashSet<Operation<V, E>>) -> HashSet<Node<V, E>> {
@@ -59,9 +74,11 @@ where
                     .is_none()
             })
             .collect();
+
         let global_outputs: HashSet<InPort<V, E>> = selection
             .iter()
-            .flat_map(|node| node.outputs().flat_map(|out_port| out_port.links()))
+            .flat_map(Node::outputs)
+            .flat_map(|out_port| out_port.links())
             .filter(|in_port| {
                 in_port
                     .node()
@@ -70,7 +87,17 @@ where
             })
             .collect();
 
-        let input_weights: Vec<E> = global_inputs.iter().map(OutPort::weight).cloned().collect();
+        let mut input_weights: Vec<E> =
+            global_inputs.iter().map(OutPort::weight).cloned().collect();
+
+        let mut count = 0;
+
+        for name in &mut input_weights {
+            if !name.is_var() {
+                *name = E::generate_free(count);
+                count += 1;
+            }
+        }
 
         let mut builder = HyperGraph::new(input_weights, global_outputs.len());
 
