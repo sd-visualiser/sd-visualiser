@@ -1,0 +1,30 @@
+---
+source: sd-core/src/graph.rs
+expression: variables
+---
+[
+    Variable(
+        "ADEnvironment_422",
+    ),
+    Variable(
+        "TangentAdd_580",
+    ),
+    Variable(
+        "TangentZero_592",
+    ),
+    Variable(
+        "concat_140",
+    ),
+    Variable(
+        "empty_134",
+    ),
+    Variable(
+        "println_142",
+    ),
+    Variable(
+        "toString_138",
+    ),
+    Variable(
+        "var_198",
+    ),
+]

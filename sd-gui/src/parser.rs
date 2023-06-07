@@ -42,7 +42,7 @@ pub enum ParseError {
     #[error("Spartan parsing error:\n{0}")]
     Spartan(#[from] error::Error<spartan::Rule>),
 
-    #[error("Conversion error:\n{0:?}")]
+    #[error("Conversion error:\n{0}")]
     Conversion(#[from] ConversionError<Void>),
 }
 

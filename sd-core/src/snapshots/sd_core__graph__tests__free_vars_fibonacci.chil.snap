@@ -4,12 +4,12 @@ expression: variables
 ---
 [
     Variable(
-        "flush_0",
+        "flush_0_71",
     ),
     Variable(
-        "print",
+        "print_76",
     ),
     Variable(
-        "toString",
+        "toString_66",
     ),
 ]

@@ -1,0 +1,101 @@
+---
+source: sd-core/src/prettyprinter/chil.rs
+expression: expr.to_pretty()
+---
+def goo2(id: @61) : (Float64) -> Float64 = func(
+  thunk %55 = { x(id: %62) : Float64 =>
+    def %56 : Float64 = null
+    def %57 : Float64 = atom(%56)
+    def %60 : Float64 = block(%57;
+      thunk %58 = { %59 : Float64 =>
+        def %63 : Float64 = float64/0.000000
+        def %64 : Bool = throwing>(x(id: %62), %63)
+        def %188 : Bool = typeCast/Bool/Bool(%64)
+        def %69 : Float64 = if(%188;
+          thunk %65 = {  =>
+            def %66 : Float64 = apply/1(goo1(id: @44), x(id: %62))
+            def %190 : Float64 = typeCast/Float64/Float64(%66)
+            output %190
+          }
+          thunk %67 = {  =>
+            def %68 : Float64 = apply/1(hi(id: @34), x(id: %62))
+            def %191 : Float64 = typeCast/Float64/Float64(%68)
+            output %191
+          }
+        )
+        def %70 : Nothing = break(%59, %69)
+        output %70
+      }
+    )
+    def %192 : Float64 = typeCast/Float64/Float64(%60)
+    output %192
+  }
+)
+def foo2(id: @94) : (Float64) -> Float64 = func(
+  thunk %88 = { x(id: %95) : Float64 =>
+    def %89 : Float64 = null
+    def %90 : Float64 = atom(%89)
+    def %93 : Float64 = block(%90;
+      thunk %91 = { %92 : Float64 =>
+        def %96 : Float64 = float64/0.000000
+        def %97 : Bool = throwing>(x(id: %95), %96)
+        def %179 : Bool = typeCast/Bool/Bool(%97)
+        def %102 : Float64 = if(%179;
+          thunk %98 = {  =>
+            def %99 : Float64 = apply/1(foo1(id: @77), x(id: %95))
+            def %181 : Float64 = typeCast/Float64/Float64(%99)
+            output %181
+          }
+          thunk %100 = {  =>
+            def %101 : Float64 = apply/1(hi(id: @34), x(id: %95))
+            def %182 : Float64 = typeCast/Float64/Float64(%101)
+            output %182
+          }
+        )
+        def %103 : Nothing = break(%92, %102)
+        output %103
+      }
+    )
+    def %183 : Float64 = typeCast/Float64/Float64(%93)
+    output %183
+  }
+)
+def BackProp_3094_3100(id: @3100) : (Class-Object, Class-Object, Float64) -> Unit = func(
+  thunk %3097 = { env(id: %3170) : Class-Object, __auto_param_274(id: %3098) : Class-__AD__Accumulators_6_ha, __auto_param_275(id: %3099) : Float64 =>
+    def %3101 : Class-__AD__Accumulators_6_ha = deref(__auto_param_274(id: %3098))
+    def %3102 : Float64 = field/1(%3101)
+    def %9386 : Float64 = plus(__auto_param_275(id: %3099), %3102)
+    def %3104 : Unit = asg/1(%9386, __auto_param_274(id: %3098))
+    output %3104
+  }
+)
+def @3173 : Class-__Auto__Environment_20 = class/1/0(%198)
+def Class-Object_tangentAdd(id: @574) : (Class-Object, Class-Object) -> Class-Object = func(
+  thunk %571 = { __auto_param_48(id: %572) : Class-Object, __auto_param_49(id: %573) : Class-Object =>
+    def %576 : Interface-ADEnvironment = typeCast/Class-Object/Interface-ADEnvironment(__auto_param_48(id: %572))
+    def %577 : Interface-ADEnvironment = typeCast/Class-Object/Interface-ADEnvironment(__auto_param_49(id: %573))
+    def %575 : Bool = instanceof(__auto_param_48(id: %572), ADEnvironment(id: %422))
+    def %582 : Interface-ADEnvironment = if(%575;
+      thunk %579 = {  =>
+        def %581 : Interface-ADEnvironment = invoke(%576, TangentAdd(id: %580), %577)
+        output %581
+      }
+      thunk %578 = {  =>
+        output %577
+      }
+    )
+    def %583 : Class-Object = typeCast/Interface-ADEnvironment/Class-Object(%582)
+    output %583
+  }
+)
+def Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit>_tangentAdd(id: @1661) : (Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit>, Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit>) -> Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit> = func(
+  thunk %1658 = { __auto_param_142(id: %1659) : Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit>, __auto_param_143(id: %1660) : Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit> =>
+    def %1662 : Class-Object = field/0(__auto_param_142(id: %1659))
+    def %1663 : Class-Object = field/0(__auto_param_143(id: %1660))
+    def %1665 : Class-Object = apply/2(Class-Object_tangentAdd(id: @574), %1662, %1663)
+    def %1664 : (Class-Object, Class-Object, Float64) -> Unit = null
+    def %1666 : Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit> = tuple/2(%1665, %1664)
+    output %1666
+  }
+)
+output goo2(id: @61)

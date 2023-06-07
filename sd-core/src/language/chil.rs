@@ -122,9 +122,22 @@ pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
 );
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::identifier))]
-pub struct Identifier(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Identifier(pub String);
+
+impl<'pest> from_pest::FromPest<'pest> for Identifier {
+    type Rule = Rule;
+    type FatalError = from_pest::Void;
+
+    fn from_pest(
+        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        match pest.next().map(|pair| pair.as_str()) {
+            Some(str) => Ok(Identifier(str.to_owned())),
+            _ => Err(from_pest::ConversionError::NoMatch),
+        }
+    }
+}
 
 // Conversion to spartan
 
@@ -229,7 +242,7 @@ impl From<Variable> for spartan::Variable {
     fn from(var: Variable) -> Self {
         Self(match var {
             Variable::Addr(addr) => format!("var_{}", addr.1),
-            Variable::Identifier(name, _addr) => name.0,
+            Variable::Identifier(name, addr) => format!("{}_{}", name.0, addr.1),
         })
     }
 }

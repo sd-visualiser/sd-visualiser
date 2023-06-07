@@ -151,7 +151,7 @@ impl App {
 
     fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
         let parse = Parser::parse(ctx, &self.code, self.language);
-        let expr = match parse.as_ref().as_ref().map_err(|e| anyhow!("{:?}", e))? {
+        let expr = match parse.as_ref().as_ref().map_err(|e| anyhow!("{}", e))? {
             ParseOutput::ChilExpr(expr) => {
                 // Prettify the code.
                 self.code = expr.to_pretty();
@@ -224,7 +224,7 @@ impl eframe::App for App {
                 if ui.button("Compile").clicked() {
                     if let Err(err) = self.compile(ui.ctx()) {
                         self.toasts.error(err.to_string());
-                        debug!("{:?}", err);
+                        debug!("{}", err);
                     }
                 }
 
