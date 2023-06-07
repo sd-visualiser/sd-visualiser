@@ -1,55 +1,29 @@
-use std::collections::HashSet;
-
 use anyhow::anyhow;
 use eframe::{
     egui::{
         self, show_tooltip_at_pointer, text_edit::TextEditOutput, FontDefinitions, Id, RichText,
     },
-    emath,
-    epaint::{Color32, FontId, Pos2, QuadraticBezierShape, Rect, Rounding, Shape, Stroke, Vec2},
+    epaint::{Color32, FontId, Pos2, QuadraticBezierShape, Stroke},
 };
 use egui_notify::Toasts;
 use pest::error::LineColLocation;
-use sd_core::{
-    graph::{Name, SyntaxHyperGraph},
-    hypergraph::Operation,
-    language::spartan::Op,
-    monoidal::MonoidalGraph,
-    monoidal_wired::MonoidalWiredGraph,
-    prettyprinter::PrettyPrint,
-};
+use sd_core::{graph::SyntaxHyperGraph, prettyprinter::PrettyPrint};
 use tracing::debug;
 
 use crate::{
+    graph_ui::GraphUi,
     highlighter::{highlight, CodeTheme},
-    layout::Layouter,
     parser::{Language, ParseError, ParseOutput, Parser},
+    selection::Selection,
 };
 
 #[derive(Default)]
 pub struct App {
     code: String,
     language: Language,
-    hypergraph: SyntaxHyperGraph,
-    monoidal_term: MonoidalWiredGraph<Op, Name>,
-    monoidal_graph: MonoidalGraph<(Op, Name)>,
-    selections: HashSet<Operation<Op, Name>>,
-    panzoom: Panzoom,
+    graph_ui: GraphUi,
+    selections: Vec<Selection>,
     toasts: Toasts,
-}
-
-struct Panzoom {
-    translation: Vec2,
-    zoom: f32,
-}
-
-impl Default for Panzoom {
-    fn default() -> Self {
-        Self {
-            translation: Vec2::default(),
-            zoom: 50.0,
-        }
-    }
 }
 
 fn is_in_line(cursor: usize, line_col: &LineColLocation) -> bool {
@@ -179,32 +153,12 @@ impl App {
         }
     }
 
-    fn graph_ui(&mut self, ui: &mut egui::Ui) {
-        let (response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
-        let to_screen = emath::RectTransform::from_to(
-            Rect::from_min_size(Pos2::ZERO, response.rect.size()),
-            response.rect.translate(self.panzoom.translation),
-        );
-        self.panzoom.translation += response.drag_delta();
-
-        // Background
-        painter.add(Shape::rect_filled(
-            response.rect,
-            Rounding::none(),
-            ui.visuals().faint_bg_color,
-        ));
-        let layout = Layouter::layout(ui.ctx(), &self.monoidal_graph).unwrap();
-        painter.extend(sd_graphics::render::render(
-            ui,
-            &response,
-            &layout,
-            self.panzoom.zoom,
-            &mut self.monoidal_graph,
-            &mut self.selections,
-            response.rect.size(),
-            to_screen,
-        ));
+    fn selection_ui(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            for selection in &mut self.selections {
+                ui.toggle_value(&mut selection.displayed, &selection.name);
+            }
+        });
     }
 
     fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
@@ -223,15 +177,9 @@ impl App {
         };
 
         debug!("Converting to hypergraph");
-        self.hypergraph = SyntaxHyperGraph::try_from(&expr)?;
+        let hypergraph = SyntaxHyperGraph::try_from(&expr)?;
 
-        debug!("Converting to monoidal term");
-        self.monoidal_term = MonoidalWiredGraph::from(&self.hypergraph);
-        debug!("Got term {:#?}", self.monoidal_term);
-
-        debug!("Inserting swaps and copies");
-        self.monoidal_graph = MonoidalGraph::from(&self.monoidal_term);
-        debug!("Got graph {:#?}", self.monoidal_graph);
+        self.graph_ui.compile(hypergraph);
 
         self.selections.clear();
 
@@ -257,13 +205,13 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Reset").clicked() {
-                    self.panzoom = Panzoom::default();
+                    self.graph_ui.reset();
                 }
                 if ui.button("Zoom In").clicked() {
-                    self.panzoom.zoom *= 1.25;
+                    self.graph_ui.zoom_in();
                 }
                 if ui.button("Zoom Out").clicked() {
-                    self.panzoom.zoom /= 1.25;
+                    self.graph_ui.zoom_out();
                 }
 
                 ui.separator();
@@ -275,15 +223,25 @@ impl eframe::App for App {
                     }
                 }
 
-                if ui.button("Gather").clicked() {
-                    // if let Some((prefix, _selection)) = self.monoidal_graph.selected() {
-                    //     let _graph = self.hypergraph.recurse(&prefix).unwrap();
-                    //     // TODO(@calintat): Find the subgraph of graph containing the selected nodes.
-                    // } else {
-                    //     self.toasts.warning("No nodes selected");
-                    // }
+                if ui.button("Save selection").clicked() {
+                    self.selections.push(Selection::new(
+                        &self.graph_ui.current_selection,
+                        format!("Selection {}", self.selections.len()),
+                        self.graph_ui.hypergraph(),
+                    ));
+                    self.graph_ui.current_selection.clear();
                 }
             });
+        });
+
+        for selection in &mut self.selections {
+            selection.ui(ctx);
+        }
+
+        egui::SidePanel::right("selection_panel").show(ctx, |ui| {
+            egui::ScrollArea::vertical()
+                .id_source("selections")
+                .show(ui, |ui| self.selection_ui(ui));
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
@@ -293,7 +251,7 @@ impl eframe::App for App {
                     .show(&mut columns[0], |ui| self.code_edit_ui(ui));
                 egui::ScrollArea::both()
                     .id_source("graph")
-                    .show(&mut columns[1], |ui| self.graph_ui(ui));
+                    .show(&mut columns[1], |ui| self.graph_ui.ui(ui));
             });
         });
 
