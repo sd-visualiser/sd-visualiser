@@ -88,7 +88,7 @@ where
         }
     }
 
-    // Check the operation has a unique output.
+    // Check the graph has a unique output.
     let port = graph
         .graph_outputs()
         .exactly_one()

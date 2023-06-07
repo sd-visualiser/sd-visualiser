@@ -11,8 +11,8 @@ use sd_core::{graph::SyntaxHyperGraph, prettyprinter::PrettyPrint};
 use tracing::debug;
 
 use crate::{
+    code_ui::code_ui,
     graph_ui::GraphUi,
-    highlighter::{highlight, CodeTheme},
     parser::{Language, ParseError, ParseOutput, Parser},
     selection::Selection,
 };
@@ -75,19 +75,7 @@ impl App {
     }
 
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
-        let theme = CodeTheme::from_style(ui.style());
-
-        let mut layouter = |ui: &egui::Ui, source: &str, _wrap_width: f32| {
-            let layout_job = highlight(ui.ctx(), &theme, source, self.language.name());
-            ui.fonts(|f| f.layout_job(layout_job))
-        };
-
-        let text_edit_out = egui::TextEdit::multiline(&mut self.code)
-            .code_editor()
-            .desired_width(f32::INFINITY)
-            .layouter(&mut layouter)
-            .min_size(ui.available_size())
-            .show(ui);
+        let text_edit_out = code_ui(ui, &mut self.code, self.language);
 
         let parse = Parser::parse(ui.ctx(), &self.code, self.language);
         if let Err(ParseError::Chil(err)) = parse.as_ref() {
