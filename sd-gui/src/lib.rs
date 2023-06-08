@@ -6,5 +6,6 @@ pub(crate) mod highlighter;
 pub(crate) mod layout;
 pub(crate) mod parser;
 pub(crate) mod selection;
+pub(crate) mod squiggly_line;
 
 pub use app::App;
