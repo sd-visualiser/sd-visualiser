@@ -12,7 +12,13 @@ use crate::{
     monoidal_wired::{MonoidalWiredGraph, WiredOp},
 };
 
-impl<T: Addr> Slice<MonoidalOp<T>> {
+impl<T: Addr> Slice<MonoidalOp<T>>
+where
+    T::Operation: Debug,
+    T::Thunk: Debug,
+    T::InPort: Debug,
+    T::OutPort: Debug,
+{
     pub fn insert_caps_cups_deletes(
         start_ports: impl Iterator<Item = (T::OutPort, Direction)>,
         end_ports: impl Iterator<Item = (T::OutPort, Direction)>,
@@ -110,44 +116,49 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
         start_ports: impl Iterator<Item = (T::OutPort, Direction)>,
         end_ports: impl Iterator<Item = (T::OutPort, Direction)>,
     ) -> Vec<Self> {
-        let mut permutation: Vec<((T::OutPort, Direction), usize)> =
-            generate_permutation(start_ports, end_ports)
-                .into_iter()
-                .map(|(x, y)| (x, Option::<usize>::from(y).unwrap()))
-                .collect();
+        let permutation = generate_permutation(start_ports, end_ports)
+            .into_iter()
+            .map(|(x, y)| (x, Option::<usize>::from(y).unwrap()));
 
-        let mut finished = false;
+        let mut non_trivial = false;
 
-        let mut slices = Vec::new();
+        let mut slice_ops = Vec::new();
 
-        while !finished {
-            let mut slice_ops = Vec::new();
-            let mut permutation_iter = permutation.iter_mut().peekable();
-            finished = true;
+        let mut chunk_start = 0;
+        let mut current_chunk_addr: Vec<(T::OutPort, Direction)> = vec![];
+        let mut current_chunk_out_to_in: Vec<usize> = vec![];
 
-            while let Some(s) = permutation_iter.next() {
-                match permutation_iter.peek() {
-                    Some((port, x)) if &s.1 > x => {
-                        finished = false;
-                        slice_ops.push(MonoidalOp::Swap {
-                            addrs: vec![s.0.clone(), port.clone()],
-                            out_to_in: vec![1, 0],
-                        });
-                        let t = permutation_iter.next().unwrap();
-                        std::mem::swap(s, t);
-                    }
-                    _ => {
-                        slice_ops.push(MonoidalOp::id_from_link(s.0.clone()));
-                    }
+        for (link, destination) in permutation {
+            let target = destination - chunk_start;
+
+            while current_chunk_out_to_in.len() <= target {
+                current_chunk_out_to_in.push(0);
+            }
+
+            current_chunk_out_to_in[target] = current_chunk_addr.len();
+            current_chunk_addr.push(link);
+
+            if current_chunk_out_to_in.len() == current_chunk_addr.len() {
+                // Chunk is finished
+
+                let addrs = std::mem::take(&mut current_chunk_addr);
+                let out_to_in = std::mem::take(&mut current_chunk_out_to_in);
+
+                chunk_start += addrs.len();
+
+                if addrs.len() == 1 {
+                    slice_ops.push(MonoidalOp::id_from_link(addrs.into_iter().next().unwrap()));
+                } else {
+                    slice_ops.push(MonoidalOp::Swap { addrs, out_to_in });
+                    non_trivial = true;
                 }
             }
-
-            if !finished {
-                slices.push(Slice { ops: slice_ops });
-            }
         }
-
-        slices
+        if non_trivial {
+            vec![Slice { ops: slice_ops }]
+        } else {
+            vec![]
+        }
     }
 }
 
@@ -258,7 +269,7 @@ impl<T: Addr> InOut for MonoidalOp<T> {
             Self::Copy { .. } | Self::Backlink { .. } => 1,
             Self::Operation { addr, .. } => addr.number_of_inputs(),
             Self::Thunk { addr, .. } => addr.number_of_inputs(),
-            Self::Swap { .. } => 2,
+            Self::Swap { addrs, .. } => addrs.len(),
             Self::Cup { intermediate, .. } => 2 + intermediate.len(),
             Self::Cap { intermediate, .. } => intermediate.len(),
         }
@@ -270,7 +281,7 @@ impl<T: Addr> InOut for MonoidalOp<T> {
             Self::Operation { addr, .. } => addr.number_of_outputs(),
             Self::Thunk { addr, .. } => addr.number_of_outputs(),
             Self::Backlink { .. } => 1,
-            Self::Swap { .. } => 2,
+            Self::Swap { addrs, .. } => addrs.len(),
             Self::Cup { intermediate, .. } => intermediate.len(),
             Self::Cap { intermediate, .. } => 2 + intermediate.len(),
         }
@@ -349,7 +360,7 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
     }
 }
 
-impl<V, E> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
+impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
     fn from(op: &WiredOp<V, E>) -> Self {
         match op {
             WiredOp::Copy { addr, copies } => MonoidalOp::Copy {
@@ -388,7 +399,7 @@ impl<V, E> Extend<Slice<MonoidalOp<(V, E)>>> for MonoidalGraphBuilder<V, E> {
     }
 }
 
-impl<V, E> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
+impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
     fn from(graph: &MonoidalWiredGraph<V, E>) -> Self {
         let inputs: Vec<OutPort<V, E>> = graph
             .unordered_inputs
@@ -458,7 +469,13 @@ impl<V, E> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
     }
 }
 
-impl<T: Addr> MonoidalGraph<T> {
+impl<T: Addr> MonoidalGraph<T>
+where
+    T::Operation: Debug,
+    T::Thunk: Debug,
+    T::InPort: Debug,
+    T::OutPort: Debug,
+{
     fn squash_layers(&mut self) {
         self.slices = std::mem::take(&mut self.slices)
             .into_iter()
@@ -476,7 +493,13 @@ impl<T: Addr> MonoidalGraph<T> {
     }
 }
 
-impl<T: Addr> Slice<MonoidalOp<T>> {
+impl<T: Addr> Slice<MonoidalOp<T>>
+where
+    T::Operation: Debug,
+    T::Thunk: Debug,
+    T::InPort: Debug,
+    T::OutPort: Debug,
+{
     fn check_mergeablity(&self, other: &Self) -> bool {
         let mut first_iter = self.ops.iter();
         let mut second_iter = other.ops.iter();

@@ -114,7 +114,7 @@ impl Layout {
                 Node::Thunk(body) => body.height(),
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
-            .unwrap()
+            .unwrap_or_default()
             + 1.0
     }
 
