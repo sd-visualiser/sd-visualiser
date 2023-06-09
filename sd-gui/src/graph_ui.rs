@@ -54,7 +54,7 @@ impl GraphUi {
             self.panzoom.zoom,
             &mut self.monoidal_graph,
             &mut self.current_selection,
-            response.rect.size(),
+            response.rect,
             to_screen,
         ));
     }

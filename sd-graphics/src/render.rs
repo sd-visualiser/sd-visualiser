@@ -34,7 +34,7 @@ const RADIUS_OPERATION: f32 = 0.2;
 struct Transform {
     scale: f32,
     layout_bounds: Vec2,
-    bounds: Vec2,
+    bounds: Rect,
     to_screen: RectTransform,
 }
 
@@ -43,7 +43,7 @@ impl Transform {
         // Scale by a constant and translate to the centre of the bounding box.
         self.to_screen.transform_pos(
             Pos2::new(x * self.scale, y * self.scale)
-                + (self.bounds - self.layout_bounds * self.scale) / 2.0,
+                + (self.bounds.size() - self.layout_bounds * self.scale) / 2.0,
         )
     }
 }
@@ -56,7 +56,7 @@ pub fn render<V, E, S>(
     scale: f32,
     graph: &mut MonoidalGraph<(V, Option<E>)>,
     selections: &mut HashSet<Operation<V, Option<E>>, S>,
-    bounds: Vec2,
+    bounds: Rect,
     to_screen: RectTransform,
 ) -> Vec<Shape>
 where
@@ -193,7 +193,8 @@ fn generate_shapes<V, E, S>(
                         transform.apply(x_op.min, y_min),
                         transform.apply(x_op.max, y_max),
                     );
-                    let thunk_response = ui.interact(thunk_rect, id, Sense::click());
+                    let thunk_response =
+                        ui.interact(thunk_rect.intersect(transform.bounds), id, Sense::click());
                     if thunk_response.clicked() {
                         *expanded = false;
                     }
@@ -318,7 +319,11 @@ fn generate_shapes<V, E, S>(
                             let selected = selections.contains(addr);
                             let op_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
-                            let op_response = ui.interact(op_rect, id, Sense::click());
+                            let op_response = ui.interact(
+                                op_rect.intersect(transform.bounds),
+                                id,
+                                Sense::click(),
+                            );
                             if op_response.clicked() && !selections.remove(addr) {
                                 selections.insert(addr.clone());
                             }
@@ -348,7 +353,11 @@ fn generate_shapes<V, E, S>(
                         MonoidalOp::Thunk { expanded, .. } => {
                             let thunk_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
-                            let thunk_response = ui.interact(thunk_rect, id, Sense::click());
+                            let thunk_response = ui.interact(
+                                thunk_rect.intersect(transform.bounds),
+                                id,
+                                Sense::click(),
+                            );
                             if thunk_response.clicked() {
                                 *expanded = true;
                             }
