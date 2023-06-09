@@ -23,6 +23,8 @@ use crate::layout::Layout;
 
 const TOLERANCE: f32 = 0.1;
 
+const TEXT_SIZE: f32 = 0.28;
+
 const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
 const RADIUS_ARG: f32 = 0.05;
 const RADIUS_COPY: f32 = 0.1;
@@ -338,7 +340,7 @@ fn generate_shapes<V, E, S>(
                                     center,
                                     Align2::CENTER_CENTER,
                                     addr.weight(),
-                                    egui::FontId::default(),
+                                    egui::FontId::proportional(TEXT_SIZE * transform.scale),
                                     ui.visuals().strong_text_color(),
                                 ));
                             });
