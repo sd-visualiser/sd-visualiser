@@ -130,8 +130,8 @@ impl<T: Addr> Slice<MonoidalOp<T>> {
                     Some((port, x)) if &s.1 > x => {
                         finished = false;
                         slice_ops.push(MonoidalOp::Swap {
-                            addr_1: s.0.clone(),
-                            addr_2: port.clone(),
+                            addrs: vec![s.0.clone(), port.clone()],
+                            out_to_in: vec![1, 0],
                         });
                         let t = permutation_iter.next().unwrap();
                         std::mem::swap(s, t);
@@ -214,8 +214,8 @@ pub enum MonoidalOp<T: Addr> {
         expanded: bool,
     },
     Swap {
-        addr_1: (T::OutPort, Direction),
-        addr_2: (T::OutPort, Direction),
+        addrs: Vec<(T::OutPort, Direction)>,
+        out_to_in: Vec<usize>,
     },
     Backlink {
         addr: T::OutPort,
@@ -299,9 +299,7 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
                             .map(|x| (x.link(), Direction::Forward))
                     }),
             ),
-            MonoidalOp::Swap { addr_1, addr_2 } => {
-                Box::new(vec![addr_1, addr_2].into_iter().cloned())
-            }
+            MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
@@ -331,8 +329,8 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
                     .iter()
                     .map(|port| (addr.externalise_output(port).unwrap(), Direction::Forward)),
             ),
-            MonoidalOp::Swap { addr_1, addr_2 } => {
-                Box::new(vec![addr_2, addr_1].into_iter().cloned())
+            MonoidalOp::Swap { addrs, out_to_in } => {
+                Box::new(out_to_in.iter().map(|idx| addrs[*idx].clone()))
             }
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))

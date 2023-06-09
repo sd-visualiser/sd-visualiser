@@ -24,7 +24,7 @@ pub enum Node<T> {
     // If the atom is a swap we want to remember where it’s inputs are
     Atom {
         pos: T,
-        swap_offset: Option<(usize, usize)>,
+        swap_offset: Option<(usize, usize, usize, usize)>,
     },
     Thunk(LayoutInternal<T>),
 }
@@ -100,12 +100,13 @@ impl Layout {
             .iter()
             .map(|n| match n {
                 Node::Atom {
-                    swap_offset: Some((a, b)),
+                    swap_offset: Some((in_left, in_right, out_left, out_right)),
                     ..
                 } => {
                     f32::sqrt(
-                        (self.wires[j][*a + 1] - self.wires[j][*a] + self.wires[j + 1][*b + 1]
-                            - self.wires[j + 1][*b])
+                        (self.wires[j][*in_right] - self.wires[j][*in_left]
+                            + self.wires[j + 1][*out_right]
+                            - self.wires[j + 1][*out_left])
                             / 2.0,
                     ) - 1.0
                 }
@@ -205,9 +206,14 @@ fn layout_internal<T: Addr>(
                     MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
                         Node::Thunk(layout_internal(body, problem))
                     }
-                    MonoidalOp::Swap { .. } => Node::Atom {
+                    MonoidalOp::Swap { out_to_in, .. } => Node::Atom {
                         pos: problem.add_variable(variable().min(0.0)),
-                        swap_offset: Some((input_offset, output_offset)),
+                        swap_offset: Some((
+                            input_offset,
+                            input_offset + out_to_in.len() - 1,
+                            output_offset,
+                            output_offset + out_to_in.len() - 1,
+                        )),
                     },
                     _ => Node::Atom {
                         pos: problem.add_variable(variable().min(0.0)),

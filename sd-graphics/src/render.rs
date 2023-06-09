@@ -161,29 +161,20 @@ fn generate_shapes<V, E, S>(
             let id = response.id.with((j, i));
 
             match op {
-                MonoidalOp::Swap { addr_1, addr_2 } => {
-                    let in1 = transform.apply(x_ins[0], y_input);
-                    let in2 = transform.apply(x_ins[1], y_input);
-                    let out1 = transform.apply(x_outs[0], y_output);
-                    let out2 = transform.apply(x_outs[1], y_output);
+                MonoidalOp::Swap { addrs, out_to_in } => {
+                    for (out_idx, in_idx) in out_to_in.iter().enumerate() {
+                        let in_wire = transform.apply(x_ins[*in_idx], y_input);
+                        let out_wire = transform.apply(x_outs[out_idx], y_output);
 
-                    let bezier = CubicBezierShape::from_points_stroke(
-                        vertical_out_vertical_in(in1, out2),
-                        false,
-                        Color32::TRANSPARENT,
-                        default_stroke,
-                    );
-                    check_hover!(bezier, &addr_1.0);
-                    shapes.push(Shape::CubicBezier(bezier));
-
-                    let bezier = CubicBezierShape::from_points_stroke(
-                        vertical_out_vertical_in(in2, out1),
-                        false,
-                        Color32::TRANSPARENT,
-                        default_stroke,
-                    );
-                    check_hover!(bezier, &addr_2.0);
-                    shapes.push(Shape::CubicBezier(bezier));
+                        let bezier = CubicBezierShape::from_points_stroke(
+                            vertical_out_vertical_in(in_wire, out_wire),
+                            false,
+                            Color32::TRANSPARENT,
+                            default_stroke,
+                        );
+                        check_hover!(bezier, &addrs[*in_idx].0);
+                        shapes.push(Shape::CubicBezier(bezier));
+                    }
                 }
                 MonoidalOp::Thunk {
                     addr,
