@@ -130,6 +130,16 @@ fn generate_shapes<V, E, S>(
         let y_input = y_offset;
         let y_output = y_offset + slice_height;
 
+        y_offset = y_output;
+
+        // If the slice is out of view, do not render anything.
+        let top = transform.apply(0.0, y_input).y;
+        let bottom = transform.apply(0.0, y_output).y;
+        let range = transform.bounds.y_range();
+        if bottom < *range.start() || top > *range.end() {
+            continue;
+        }
+
         let mut offset_i = 0;
         let mut offset_o = 0;
         for (i, op) in slice.ops.iter_mut().enumerate() {
@@ -378,8 +388,6 @@ fn generate_shapes<V, E, S>(
             offset_i += ni;
             offset_o += no;
         }
-
-        y_offset = y_output;
     }
 
     // Target
