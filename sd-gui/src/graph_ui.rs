@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use eframe::{
     egui, emath,
-    epaint::{Pos2, Rect, Rounding, Shape, Vec2},
+    epaint::{Pos2, Rect, Rounding, Shape},
 };
 use sd_core::{
     graph::{Name, SyntaxHyperGraph},
@@ -35,10 +35,13 @@ impl GraphUi {
         let (response, painter) =
             ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
         let to_screen = emath::RectTransform::from_to(
-            Rect::from_min_size(Pos2::ZERO, response.rect.size()),
-            response.rect.translate(self.panzoom.translation),
+            Rect::from_center_size(
+                self.panzoom.translation,
+                response.rect.size() / self.panzoom.zoom,
+            ),
+            response.rect,
         );
-        self.panzoom.translation += response.drag_delta();
+        self.panzoom.translation -= response.drag_delta() / self.panzoom.zoom;
 
         // Background
         painter.add(Shape::rect_filled(
@@ -59,7 +62,7 @@ impl GraphUi {
         ));
     }
 
-    pub(crate) fn compile(&mut self, hypergraph: SyntaxHyperGraph) {
+    pub(crate) fn compile(&mut self, hypergraph: SyntaxHyperGraph, ctx: &egui::Context) {
         self.hypergraph = hypergraph;
 
         debug!("Converting to monoidal term");
@@ -70,11 +73,17 @@ impl GraphUi {
         self.monoidal_graph = MonoidalGraph::from(&self.monoidal_term);
         debug!("Got graph {:#?}", self.monoidal_graph);
 
+        self.reset(ctx);
+
         self.current_selection.clear();
     }
 
-    pub(crate) fn reset(&mut self) {
-        self.panzoom = Panzoom::default();
+    pub(crate) fn reset(&mut self, ctx: &egui::Context) {
+        let layout = Layouter::layout(ctx, &self.monoidal_graph).unwrap();
+        self.panzoom = Panzoom {
+            translation: Pos2::new(layout.width() / 2.0, layout.height() / 2.0),
+            ..Panzoom::default()
+        }
     }
 
     pub(crate) fn zoom_in(&mut self) {
@@ -87,14 +96,14 @@ impl GraphUi {
 }
 
 struct Panzoom {
-    translation: Vec2,
+    translation: Pos2,
     zoom: f32,
 }
 
 impl Default for Panzoom {
     fn default() -> Self {
         Self {
-            translation: Vec2::default(),
+            translation: Pos2::default(),
             zoom: 50.0,
         }
     }

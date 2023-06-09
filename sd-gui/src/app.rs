@@ -90,7 +90,7 @@ impl App {
         debug!("Converting to hypergraph");
         let hypergraph = SyntaxHyperGraph::try_from(&expr)?;
 
-        self.graph_ui.compile(hypergraph);
+        self.graph_ui.compile(hypergraph, ctx);
 
         self.selections.clear();
 
@@ -133,7 +133,7 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Reset").clicked() {
-                    self.graph_ui.reset();
+                    self.graph_ui.reset(ui.ctx());
                 }
                 if ui.button("Zoom In").clicked() {
                     self.graph_ui.zoom_in();
@@ -156,6 +156,7 @@ impl eframe::App for App {
                         &self.graph_ui.current_selection,
                         format!("Selection {}", self.selections.len()),
                         self.graph_ui.hypergraph(),
+                        ui.ctx(),
                     ));
                     self.graph_ui.current_selection.clear();
                 }

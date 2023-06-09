@@ -23,6 +23,7 @@ impl Selection {
         selected_nodes: &HashSet<Operation<Op, Name>>,
         name: String,
         containing_graph: &SyntaxHyperGraph,
+        ctx: &egui::Context,
     ) -> Self {
         let mut graph_ui = GraphUi::default();
 
@@ -32,7 +33,7 @@ impl Selection {
         let code = decompile(&hypergraph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
 
-        graph_ui.compile(hypergraph);
+        graph_ui.compile(hypergraph, ctx);
 
         Selection {
             code,

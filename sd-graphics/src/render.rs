@@ -33,7 +33,6 @@ const RADIUS_OPERATION: f32 = 0.2;
 // Specifies how to transform a layout position to a screen position.
 struct Transform {
     scale: f32,
-    layout_bounds: Vec2,
     bounds: Rect,
     to_screen: RectTransform,
 }
@@ -41,10 +40,7 @@ struct Transform {
 impl Transform {
     fn apply(&self, x: f32, y: f32) -> Pos2 {
         // Scale by a constant and translate to the centre of the bounding box.
-        self.to_screen.transform_pos(
-            Pos2::new(x * self.scale, y * self.scale)
-                + (self.bounds.size() - self.layout_bounds * self.scale) / 2.0,
-        )
+        self.to_screen.transform_pos(Pos2::new(x, y))
     }
 }
 
@@ -68,7 +64,6 @@ where
         scale,
         bounds,
         to_screen,
-        layout_bounds: vec2(layout.width(), layout.height()),
     };
 
     let mut shapes = Vec::default();
