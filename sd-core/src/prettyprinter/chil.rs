@@ -170,7 +170,7 @@ impl PrettyPrint for Thunk {
 
 impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::intersperse(self.0.iter().map(RcDoc::text), RcDoc::text("/"))
+        RcDoc::text(&self.0)
     }
 }
 

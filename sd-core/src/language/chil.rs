@@ -52,7 +52,7 @@ pub enum Value {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct Op(pub Vec<String>);
+pub struct Op(pub String);
 
 impl<'pest> from_pest::FromPest<'pest> for Op {
     type Rule = Rule;
@@ -62,7 +62,7 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
         pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
     ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
         match pest.next().map(|pair| pair.as_str()) {
-            Some(str) => Ok(Self(str.split('/').map(str::to_string).collect())),
+            Some(str) => Ok(Self(str.to_owned())),
             _ => Err(from_pest::ConversionError::NoMatch),
         }
     }
@@ -183,80 +183,44 @@ impl From<Value> for spartan::Value {
 
 impl From<Op> for spartan::Op {
     fn from(op: Op) -> Self {
-        let parts = op.0;
+        let str = op.0;
 
-        if parts[0] == "+" || parts[0] == "throwing+" {
-            return Self::Plus;
-        }
-        if parts[0] == "-" || parts[0] == "throwing-" {
-            return Self::Minus;
-        }
-        if parts[0] == "*" || parts[0] == "throwing*" {
-            return Self::Times;
-        }
-        if parts[0] == "/" || parts[0] == "throwing/" {
-            return Self::Div;
-        }
-        if parts[0] == "%" || parts[0] == "throwing%" {
-            return Self::Rem;
-        }
-
-        if parts[0] == "&&" || parts[0] == "throwing&&" {
-            return Self::And;
-        }
-        if parts[0] == "||" || parts[0] == "throwing||" {
-            return Self::Or;
-        }
-        if parts[0] == "!" || parts[0] == "throwing!" {
-            return Self::Not;
+        match str.as_str() {
+            "+" | "throwing+" => return Self::Plus,
+            "-" | "throwing-" => return Self::Minus,
+            "*" | "throwing*" => return Self::Times,
+            "/" | "throwing/" => return Self::Div,
+            "%" | "throwing%" => return Self::Rem,
+            "&&" | "throwing&&" => return Self::And,
+            "||" | "throwing||" => return Self::Or,
+            "!" | "throwing!" => return Self::Not,
+            "==" | "throwing==" => return Self::Eq,
+            "!=" | "throwing!=" => return Self::Neq,
+            "<" | "throwing<" => return Self::Lt,
+            "<=" | "throwing<=" => return Self::Leq,
+            ">" | "throwing>" => return Self::Gt,
+            ">=" | "throwing>=" => return Self::Geq,
+            "func" => return Self::Lambda,
+            "bool/true" => return Self::Bool(true),
+            "bool/false" => return Self::Bool(false),
+            _ => (),
         }
 
-        if parts[0] == "==" || parts[0] == "throwing==" {
-            return Self::Eq;
-        }
-        if parts[0] == "!=" || parts[0] == "throwing!=" {
-            return Self::Neq;
-        }
-        if parts[0] == "<" || parts[0] == "throwing<" {
-            return Self::Lt;
-        }
-        if parts[0] == "<=" || parts[0] == "throwing<=" {
-            return Self::Leq;
-        }
-        if parts[0] == ">" || parts[0] == "throwing>" {
-            return Self::Gt;
-        }
-        if parts[0] == ">=" || parts[0] == "throwing>=" {
-            return Self::Geq;
-        }
-
-        if parts[0] == "apply" {
+        if str.starts_with("apply/") {
             return Self::App;
         }
-        if parts[0] == "func" {
-            return Self::Lambda;
+        if let Some(rest) = str.strip_prefix("int64/").or(str.strip_prefix("float64/")) {
+            if let Ok(n) = rest.parse::<f64>() {
+                return Self::Number(NotNaN::new(n).unwrap());
+            }
+        }
+        if let Some(rest) = str.strip_prefix("string/") {
+            if rest.starts_with('"') && rest.ends_with('"') {
+                return Self::String(rest.trim_matches('"').to_owned());
+            }
         }
 
-        if parts[0] == "bool" {
-            if parts[1] == "true" {
-                return Self::Bool(true);
-            }
-            if parts[1] == "false" {
-                return Self::Bool(false);
-            }
-        }
-        if parts[0] == "int64" || parts[0] == "float64" {
-            if let Ok(x) = parts[1].parse::<f64>() {
-                if let Ok(n) = NotNaN::new(x) {
-                    return Self::Number(n);
-                }
-            }
-        }
-        if parts[0] == "string" && parts[1].starts_with('"') && parts[1].ends_with('"') {
-            return Self::String(parts[1].trim_matches('"').to_owned());
-        }
-
-        Self::Identifier(parts.join("/"))
+        Self::Identifier(str)
     }
 }
 
