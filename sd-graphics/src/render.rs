@@ -72,16 +72,26 @@ where
     };
 
     let mut shapes = Vec::default();
+    let mut hover_points = IndexSet::default();
     generate_shapes(
         ui,
         response,
         &mut shapes,
+        &mut hover_points,
         0.0,
         layout,
         graph,
         selections,
         &transform,
     );
+
+    // Show hover tooltips
+    for e in hover_points {
+        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
+            ui.label(e.to_pretty())
+        });
+    }
+
     shapes
 }
 
@@ -91,6 +101,7 @@ fn generate_shapes<V, E, S>(
     ui: &egui::Ui,
     response: &Response,
     shapes: &mut Vec<Shape>,
+    hover_points: &mut IndexSet<DummyValue<V, E>>,
     mut y_offset: f32,
     layout: &Layout,
     graph: &mut MonoidalGraph<(V, Option<E>)>,
@@ -104,7 +115,6 @@ fn generate_shapes<V, E, S>(
     let default_stroke = ui.visuals().noninteractive().fg_stroke;
     let default_color = default_stroke.color;
 
-    let mut hover_points = IndexSet::new();
     macro_rules! check_hover {
         ($path:expr, $port:expr) => {
             if let Some(hover_pos) = response.hover_pos() {
@@ -136,8 +146,11 @@ fn generate_shapes<V, E, S>(
         let top = transform.apply(0.0, y_input).y;
         let bottom = transform.apply(0.0, y_output).y;
         let range = transform.bounds.y_range();
-        if bottom < *range.start() || top > *range.end() {
+        if bottom < *range.start() {
             continue;
+        }
+        if top > *range.end() {
+            return;
         }
 
         let mut offset_i = 0;
@@ -230,6 +243,7 @@ fn generate_shapes<V, E, S>(
                         ui,
                         &thunk_response,
                         shapes,
+                        hover_points,
                         y_min,
                         x_op,
                         body,
@@ -396,13 +410,6 @@ fn generate_shapes<V, E, S>(
         let end = transform.apply(x, y_offset + 0.5);
         check_hover!([start, end], &port.link());
         shapes.push(Shape::line_segment([start, end], default_stroke));
-    }
-
-    // Show hover tooltips
-    for e in hover_points {
-        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
-            ui.label(e.to_pretty())
-        });
     }
 }
 
