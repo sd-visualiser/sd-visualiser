@@ -463,7 +463,11 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             outputs: graph.outputs.clone(),
         };
 
+        graph.check_in_out_count();
+
         graph.squash_layers();
+
+        graph.check_in_out_count();
 
         graph
     }

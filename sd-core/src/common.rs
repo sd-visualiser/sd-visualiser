@@ -100,6 +100,21 @@ pub struct MonoidalTerm<T: Addr, O> {
     pub outputs: Vec<T::InPort>,
 }
 
+impl<T: Addr, O: InOut + Debug> MonoidalTerm<T, O> {
+    pub(crate) fn check_in_out_count(&self) {
+        let mut input_count = self.unordered_inputs.len() + self.ordered_inputs.len();
+        for slice in &self.slices {
+            assert!(
+                input_count == slice.number_of_inputs(),
+                "{slice:?} has the wrong number of inputs"
+            );
+
+            input_count = slice.number_of_outputs();
+        }
+        assert_eq!(input_count, self.outputs.len());
+    }
+}
+
 impl<'a, A, B> From<&'a Slice<A>> for Slice<B>
 where
     B: From<&'a A>,
