@@ -140,7 +140,6 @@ where
 
             if current_chunk_out_to_in.len() == current_chunk_addr.len() {
                 // Chunk is finished
-
                 let addrs = std::mem::take(&mut current_chunk_addr);
                 let out_to_in = std::mem::take(&mut current_chunk_out_to_in);
 
@@ -425,16 +424,17 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
                 true,
             ));
 
+            let end_slices =
+                Slice::insert_caps_cups_deletes(next_slice.inputs(), builder.open_ports(), false);
+
             builder.extend(Slice::permutation_to_swaps(
                 builder.open_ports(),
-                next_slice.inputs(),
+                end_slices
+                    .get(0)
+                    .map_or(next_slice.inputs(), InOutIter::inputs),
             ));
 
-            builder.extend(Slice::insert_caps_cups_deletes(
-                next_slice.inputs(),
-                builder.open_ports(),
-                false,
-            ));
+            builder.extend(end_slices);
 
             builder.extend([next_slice.into()]);
         }
