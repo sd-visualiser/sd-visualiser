@@ -339,16 +339,18 @@ fn generate_shapes<V, E, S>(
                                     .interact_selectable(&op_response, selected)
                                     .fg_stroke,
                             }));
-                            ui.fonts(|fonts| {
-                                shapes.push(Shape::text(
-                                    fonts,
-                                    center,
-                                    Align2::CENTER_CENTER,
-                                    addr.weight(),
-                                    egui::FontId::proportional(TEXT_SIZE * transform.scale),
-                                    ui.visuals().strong_text_color(),
-                                ));
-                            });
+                            if transform.scale > 10.0 {
+                                ui.fonts(|fonts| {
+                                    shapes.push(Shape::text(
+                                        fonts,
+                                        center,
+                                        Align2::CENTER_CENTER,
+                                        addr.weight(),
+                                        egui::FontId::proportional(TEXT_SIZE * transform.scale),
+                                        ui.visuals().strong_text_color(),
+                                    ));
+                                });
+                            }
                         }
                         MonoidalOp::Thunk { expanded, .. } => {
                             let thunk_rect =
