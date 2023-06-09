@@ -194,18 +194,40 @@ impl From<Op> for spartan::Op {
         if parts[0] == "*" || parts[0] == "throwing*" {
             return Self::Times;
         }
+        if parts[0] == "/" || parts[0] == "throwing/" {
+            return Self::Div;
+        }
+        if parts[0] == "%" || parts[0] == "throwing%" {
+            return Self::Rem;
+        }
+
+        if parts[0] == "&&" || parts[0] == "throwing&&" {
+            return Self::And;
+        }
+        if parts[0] == "||" || parts[0] == "throwing||" {
+            return Self::Or;
+        }
+        if parts[0] == "!" || parts[0] == "throwing!" {
+            return Self::Not;
+        }
+
         if parts[0] == "==" || parts[0] == "throwing==" {
             return Self::Eq;
         }
-
-        if parts[0] == "&&" {
-            return Self::And;
+        if parts[0] == "!=" || parts[0] == "throwing!=" {
+            return Self::Neq;
         }
-        if parts[0] == "||" {
-            return Self::Or;
+        if parts[0] == "<" || parts[0] == "throwing<" {
+            return Self::Lt;
         }
-        if parts[0] == "!" {
-            return Self::Not;
+        if parts[0] == "<=" || parts[0] == "throwing<=" {
+            return Self::Leq;
+        }
+        if parts[0] == ">" || parts[0] == "throwing>" {
+            return Self::Gt;
+        }
+        if parts[0] == ">=" || parts[0] == "throwing>=" {
+            return Self::Geq;
         }
 
         if parts[0] == "apply" {

@@ -39,17 +39,57 @@ pub enum Op {
     Plus,
     Minus,
     Times,
-    Eq,
+    Div,
+    Rem,
     And,
     Or,
     Not,
-    If,
+    Eq,
+    Neq,
+    Lt,
+    Leq,
+    Gt,
+    Geq,
     App,
     Lambda,
     Bool(bool),
     Number(NotNaN<f64>),
     String(String),     // string literal
     Identifier(String), // any other identifier
+}
+
+impl From<&str> for Op {
+    fn from(str: &str) -> Self {
+        match str {
+            "plus" => Self::Plus,
+            "minus" => Self::Minus,
+            "times" => Self::Times,
+            "div" => Self::Div,
+            "rem" => Self::Rem,
+            "and" => Self::And,
+            "or" => Self::Or,
+            "not" => Self::Not,
+            "eq" => Self::Eq,
+            "neq" => Self::Neq,
+            "lt" => Self::Lt,
+            "leq" => Self::Leq,
+            "gt" => Self::Gt,
+            "geq" => Self::Geq,
+            "app" => Self::App,
+            "lambda" => Self::Lambda,
+            "true" => Self::Bool(true),
+            "false" => Self::Bool(false),
+            _ => {
+                if let Ok(n) = str::parse::<f64>(str) {
+                    return Self::Number(NotNaN::new(n).unwrap());
+                }
+                if str.starts_with('"') && str.ends_with('"') {
+                    return Self::String(str[1..str.len() - 1].to_string());
+                }
+                Self::Identifier(str.to_owned())
+            }
+        }
+    }
 }
 
 impl<'pest> from_pest::FromPest<'pest> for Op {
@@ -59,31 +99,9 @@ impl<'pest> from_pest::FromPest<'pest> for Op {
     fn from_pest(
         pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
     ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
-        match pest.next().map(|pair| pair.as_str()) {
-            Some("plus") => Ok(Self::Plus),
-            Some("minus") => Ok(Self::Minus),
-            Some("times") => Ok(Self::Times),
-            Some("eq") => Ok(Self::Eq),
-            Some("and") => Ok(Self::And),
-            Some("or") => Ok(Self::Or),
-            Some("not") => Ok(Self::Not),
-            Some("if") => Ok(Self::If),
-            Some("app") => Ok(Self::App),
-            Some("lambda") => Ok(Self::Lambda),
-            Some("true") => Ok(Self::Bool(true)),
-            Some("false") => Ok(Self::Bool(false)),
-            Some(str) => {
-                if let Ok(n) = str::parse::<f64>(str) {
-                    return Ok(Self::Number(NotNaN::new(n).unwrap()));
-                }
-                if str.starts_with('"') && str.ends_with('"') {
-                    return Ok(Self::String(str[1..str.len() - 1].to_string()));
-                }
-                // Technically this should be unreachable
-                Ok(Self::Identifier(str.to_owned()))
-            }
-            _ => Err(from_pest::ConversionError::NoMatch),
-        }
+        pest.next()
+            .map(|pair| pair.as_str().into())
+            .ok_or(from_pest::ConversionError::NoMatch)
     }
 }
 
@@ -111,11 +129,17 @@ impl Display for Op {
             Self::Plus => f.write_char('+'),
             Self::Minus => f.write_char('-'),
             Self::Times => f.write_char('×'),
+            Self::Div => f.write_char('/'),
+            Self::Rem => f.write_char('%'),
+            Self::And => f.write_char('∧'),
+            Self::Or => f.write_char('∨'),
+            Self::Not => f.write_char('¬'),
             Self::Eq => f.write_char('='),
-            Self::And => f.write_str("and"),
-            Self::Or => f.write_str("or"),
-            Self::Not => f.write_str("not"),
-            Self::If => f.write_str("if"),
+            Self::Neq => f.write_char('≠'),
+            Self::Lt => f.write_char('<'),
+            Self::Leq => f.write_char('≤'),
+            Self::Gt => f.write_char('>'),
+            Self::Geq => f.write_char('≥'),
             Self::App => f.write_char('@'),
             Self::Lambda => f.write_char('λ'),
             Self::Bool(b) => f.write_str(&b.to_string()),

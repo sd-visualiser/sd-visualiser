@@ -365,7 +365,7 @@ fn generate_shapes<V, E, S>(
                                         center,
                                         Align2::CENTER_CENTER,
                                         addr.weight(),
-                                        egui::FontId::proportional(TEXT_SIZE * transform.scale),
+                                        egui::FontId::monospace(TEXT_SIZE * transform.scale),
                                         ui.visuals().strong_text_color(),
                                     ));
                                 });
