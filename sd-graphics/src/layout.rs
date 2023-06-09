@@ -21,35 +21,39 @@ pub enum LayoutError {
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Node<T> {
-    Atom(T),
+    // If the atom is a swap we want to remember where it’s inputs are
+    Atom {
+        pos: T,
+        swap_offset: Option<(usize, usize)>,
+    },
     Thunk(LayoutInternal<T>),
 }
 
 impl<T> Node<T> {
     pub fn min(&self) -> &T {
         match self {
-            Self::Atom(x) => x,
+            Self::Atom { pos, .. } => pos,
             Self::Thunk(layout) => &layout.min,
         }
     }
 
     pub fn max(&self) -> &T {
         match self {
-            Self::Atom(x) => x,
+            Self::Atom { pos, .. } => pos,
             Self::Thunk(layout) => &layout.max,
         }
     }
 
     pub fn unwrap_atom(&self) -> &T {
         match self {
-            Self::Atom(x) => x,
+            Self::Atom { pos, .. } => pos,
             Self::Thunk(_layout) => panic!(),
         }
     }
 
     pub fn unwrap_thunk(&self) -> &LayoutInternal<T> {
         match self {
-            Self::Atom(_x) => panic!(),
+            Self::Atom { .. } => panic!(),
             Self::Thunk(layout) => layout,
         }
     }
@@ -95,7 +99,17 @@ impl Layout {
         self.nodes[j]
             .iter()
             .map(|n| match n {
-                Node::Atom(_) => 0.0,
+                Node::Atom {
+                    swap_offset: Some((a, b)),
+                    ..
+                } => {
+                    f32::sqrt(
+                        (self.wires[j][*a + 1] - self.wires[j][*a] + self.wires[j + 1][*b + 1]
+                            - self.wires[j + 1][*b])
+                            / 2.0,
+                    ) - 1.0
+                }
+                Node::Atom { .. } => 0.0,
                 Node::Thunk(body) => body.height(),
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
@@ -113,7 +127,10 @@ impl Layout {
                 .map(|ns| {
                     ns.into_iter()
                         .map(|n| match n {
-                            Node::Atom(x) => Node::Atom(solution.value(x) as f32),
+                            Node::Atom { pos, swap_offset } => Node::Atom {
+                                pos: solution.value(pos) as f32,
+                                swap_offset,
+                            },
                             Node::Thunk(layout) => {
                                 Node::Thunk(Self::from_solution(layout, solution))
                             }
@@ -177,14 +194,29 @@ fn layout_internal<T: Addr>(
         add_constraints_wires!(&outputs);
         wires.push(outputs);
 
+        let mut input_offset = 0;
+        let mut output_offset = 0;
+
         let ns = slice
             .ops
             .iter()
-            .map(|op| match op {
-                MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
-                    Node::Thunk(layout_internal(body, problem))
-                }
-                _ => Node::Atom(problem.add_variable(variable().min(0.0))),
+            .map(|op| {
+                let node = match op {
+                    MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
+                        Node::Thunk(layout_internal(body, problem))
+                    }
+                    MonoidalOp::Swap { .. } => Node::Atom {
+                        pos: problem.add_variable(variable().min(0.0)),
+                        swap_offset: Some((input_offset, output_offset)),
+                    },
+                    _ => Node::Atom {
+                        pos: problem.add_variable(variable().min(0.0)),
+                        swap_offset: None,
+                    },
+                };
+                input_offset += op.number_of_inputs();
+                output_offset += op.number_of_outputs();
+                node
             })
             .collect_vec();
         add_constraints_nodes!(&ns);
@@ -236,15 +268,15 @@ fn layout_internal<T: Addr>(
             }
 
             match node {
-                Node::Atom(op) => {
+                Node::Atom { pos, .. } => {
                     // Fair averaging constraints
                     if ni > 0 {
                         let sum_ins: Expression = ins.iter().sum();
-                        problem.add_constraint((*op * ni as f64).eq(sum_ins));
+                        problem.add_constraint((*pos * ni as f64).eq(sum_ins));
                     }
                     if no > 0 {
                         let sum_outs: Expression = outs.iter().sum();
-                        problem.add_constraint((*op * no as f64).eq(sum_outs));
+                        problem.add_constraint((*pos * no as f64).eq(sum_outs));
                     }
                 }
                 Node::Thunk(layout) => {
