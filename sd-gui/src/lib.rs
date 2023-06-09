@@ -9,3 +9,4 @@ pub(crate) mod selection;
 pub(crate) mod squiggly_line;
 
 pub use app::App;
+pub use parser::Language;

@@ -54,6 +54,12 @@ impl App {
         App::default()
     }
 
+    pub fn set_file(&mut self, code: String, language: Language) {
+        self.code = code;
+        self.language = language;
+        // Could be worth triggering a compile here
+    }
+
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
         let text_edit_out = code_ui(ui, &mut self.code, self.language);
 
@@ -116,17 +122,16 @@ impl eframe::App for App {
                 #[cfg(not(target_arch = "wasm32"))]
                 if ui.button("Import file").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
-                        match path.extension() {
-                            Some(ext) if ext == "sd" => {
-                                self.language = Language::Spartan;
-                            }
-                            Some(ext) if ext == "chil" => {
-                                self.language = Language::Chil;
-                            }
-                            Some(_) | None => { /* do nothing */ }
-                        }
-                        self.code = std::fs::read_to_string(path)
-                            .expect("file picker returned invalid path");
+                        let language = match path.extension() {
+                            Some(ext) if ext == "sd" => Language::Spartan,
+                            Some(ext) if ext == "chil" => Language::Chil,
+                            Some(_) | None => self.language,
+                        };
+                        self.set_file(
+                            std::fs::read_to_string(path)
+                                .expect("file picker returned invalid path"),
+                            language,
+                        );
                     }
                 }
 
