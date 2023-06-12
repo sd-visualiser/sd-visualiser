@@ -1,5 +1,5 @@
 use good_lp::{
-    Constraint, IntoAffineExpression, ProblemVariables, Solver, SolverModel, Variable,
+    Constraint, Expression, IntoAffineExpression, ProblemVariables, Solver, SolverModel, Variable,
     VariableDefinition,
 };
 
@@ -7,6 +7,7 @@ use good_lp::{
 pub(crate) struct LpProblem {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
+    objective: Expression,
 }
 
 impl LpProblem {
@@ -22,19 +23,22 @@ impl LpProblem {
         self.problem.add_vector(var_def, len)
     }
 
+    pub(crate) fn add_objective(&mut self, objective: impl IntoAffineExpression) {
+        self.objective += objective;
+    }
+
     pub(crate) fn add_constraint(&mut self, constraint: Constraint) {
         self.constraints.push(constraint);
     }
 
     pub(crate) fn minimise<S: Solver>(
         self,
-        objective: impl IntoAffineExpression,
         solver: S,
     ) -> Result<
         <<S as Solver>::Model as SolverModel>::Solution,
         <<S as Solver>::Model as SolverModel>::Error,
     > {
-        let mut model = self.problem.minimise(objective).using(solver);
+        let mut model = self.problem.minimise(self.objective).using(solver);
         for c in self.constraints {
             model.add_constraint(c);
         }

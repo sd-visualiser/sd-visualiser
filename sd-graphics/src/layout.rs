@@ -22,9 +22,12 @@ pub enum LayoutError {
 #[cfg_attr(test, derive(Serialize))]
 pub enum Node<T> {
     // If the atom is a swap we want to remember where it’s inputs are
-    Atom {
+    Atom(T),
+    Swap {
         pos: T,
-        swap_offset: Option<(usize, usize, usize, usize)>,
+        input_offset: usize,
+        output_offset: usize,
+        out_to_in: Vec<usize>,
     },
     Thunk(LayoutInternal<T>),
 }
@@ -32,28 +35,28 @@ pub enum Node<T> {
 impl<T> Node<T> {
     pub fn min(&self) -> &T {
         match self {
-            Self::Atom { pos, .. } => pos,
+            Self::Atom(pos) | Self::Swap { pos, .. } => pos,
             Self::Thunk(layout) => &layout.min,
         }
     }
 
     pub fn max(&self) -> &T {
         match self {
-            Self::Atom { pos, .. } => pos,
+            Self::Atom(pos) | Self::Swap { pos, .. } => pos,
             Self::Thunk(layout) => &layout.max,
         }
     }
 
     pub fn unwrap_atom(&self) -> &T {
         match self {
-            Self::Atom { pos, .. } => pos,
+            Self::Atom(pos) | Self::Swap { pos, .. } => pos,
             Self::Thunk(_layout) => panic!(),
         }
     }
 
     pub fn unwrap_thunk(&self) -> &LayoutInternal<T> {
         match self {
-            Self::Atom { .. } => panic!(),
+            Self::Atom { .. } | Self::Swap { .. } => panic!(),
             Self::Thunk(layout) => layout,
         }
     }
@@ -99,18 +102,24 @@ impl Layout {
         self.nodes[j]
             .iter()
             .map(|n| match n {
-                Node::Atom {
-                    swap_offset: Some((in_left, in_right, out_left, out_right)),
+                Node::Swap {
+                    input_offset,
+                    output_offset,
+                    out_to_in,
                     ..
                 } => {
+                    let in_left = *input_offset;
+                    let in_right = input_offset + out_to_in.len() - 1;
+                    let out_left = *output_offset;
+                    let out_right = output_offset + out_to_in.len() - 1;
                     f32::sqrt(
-                        (self.wires[j][*in_right] - self.wires[j][*in_left]
-                            + self.wires[j + 1][*out_right]
-                            - self.wires[j + 1][*out_left])
+                        (self.wires[j][in_right] - self.wires[j][in_left]
+                            + self.wires[j + 1][out_right]
+                            - self.wires[j + 1][out_left])
                             / 2.0,
                     ) - 1.0
                 }
-                Node::Atom { .. } => 0.0,
+                Node::Atom(_) => 0.0,
                 Node::Thunk(body) => body.height(),
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
@@ -128,9 +137,17 @@ impl Layout {
                 .map(|ns| {
                     ns.into_iter()
                         .map(|n| match n {
-                            Node::Atom { pos, swap_offset } => Node::Atom {
+                            Node::Atom(pos) => Node::Atom(solution.value(pos) as f32),
+                            Node::Swap {
+                                pos,
+                                input_offset,
+                                output_offset,
+                                out_to_in,
+                            } => Node::Swap {
                                 pos: solution.value(pos) as f32,
-                                swap_offset,
+                                input_offset,
+                                output_offset,
+                                out_to_in,
                             },
                             Node::Thunk(layout) => {
                                 Node::Thunk(Self::from_solution(layout, solution))
@@ -160,39 +177,36 @@ fn layout_internal<T: Addr>(
     let mut nodes = Vec::default();
     let mut wires = Vec::default();
 
-    macro_rules! add_constraints_wires {
-        ($vs:expr) => {
-            if let Some(x) = $vs.first().copied() {
-                problem.add_constraint((x - min).geq(0.5));
-            }
-            if let Some(x) = $vs.last().copied() {
-                problem.add_constraint((max - x).geq(0.5));
-            }
-            for (x, y) in $vs.iter().copied().tuple_windows() {
-                problem.add_constraint((y - x).geq(1.0));
-            }
-        };
-    }
-    macro_rules! add_constraints_nodes {
-        ($ns:expr) => {
-            if let Some(x) = $ns.first() {
-                problem.add_constraint((*x.min() - min).geq(0.5));
-            }
-            if let Some(x) = $ns.last() {
-                problem.add_constraint((max - *x.max()).geq(0.5));
-            }
-            for (x, y) in $ns.iter().tuple_windows() {
-                problem.add_constraint((*y.min() - *x.max()).geq(1.0));
-            }
-        };
-    }
+    let add_constraints_wires = |problem: &mut LpProblem, vs: &Vec<Variable>| {
+        if let Some(x) = vs.first().copied() {
+            problem.add_constraint((x - min).geq(0.5));
+        }
+        if let Some(x) = vs.last().copied() {
+            problem.add_constraint((max - x).geq(0.5));
+        }
+        for (x, y) in vs.iter().copied().tuple_windows() {
+            problem.add_constraint((y - x).geq(1.0));
+        }
+    };
+
+    let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<Node<Variable>>| {
+        if let Some(x) = ns.first() {
+            problem.add_constraint((*x.min() - min).geq(0.5));
+        }
+        if let Some(x) = ns.last() {
+            problem.add_constraint((max - *x.max()).geq(0.5));
+        }
+        for (x, y) in ns.iter().tuple_windows() {
+            problem.add_constraint((*y.min() - *x.max()).geq(1.0));
+        }
+    };
 
     let inputs = problem.add_variables(variable().min(0.0), graph.ordered_inputs.len());
-    add_constraints_wires!(&inputs);
+    add_constraints_wires(problem, &inputs);
     wires.push(inputs);
     for slice in &graph.slices {
         let outputs = problem.add_variables(variable().min(0.0), slice.number_of_outputs());
-        add_constraints_wires!(&outputs);
+        add_constraints_wires(problem, &outputs);
         wires.push(outputs);
 
         let mut input_offset = 0;
@@ -206,26 +220,20 @@ fn layout_internal<T: Addr>(
                     MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
                         Node::Thunk(layout_internal(body, problem))
                     }
-                    MonoidalOp::Swap { out_to_in, .. } => Node::Atom {
+                    MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         pos: problem.add_variable(variable().min(0.0)),
-                        swap_offset: Some((
-                            input_offset,
-                            input_offset + out_to_in.len() - 1,
-                            output_offset,
-                            output_offset + out_to_in.len() - 1,
-                        )),
+                        input_offset,
+                        output_offset,
+                        out_to_in: out_to_in.clone(),
                     },
-                    _ => Node::Atom {
-                        pos: problem.add_variable(variable().min(0.0)),
-                        swap_offset: None,
-                    },
+                    _ => Node::Atom(problem.add_variable(variable().min(0.0))),
                 };
                 input_offset += op.number_of_inputs();
                 output_offset += op.number_of_outputs();
                 node
             })
             .collect_vec();
-        add_constraints_nodes!(&ns);
+        add_constraints_nodes(problem, &ns);
         nodes.push(ns);
     }
 
@@ -274,7 +282,7 @@ fn layout_internal<T: Addr>(
             }
 
             match node {
-                Node::Atom { pos, .. } => {
+                Node::Atom(pos) => {
                     // Fair averaging constraints
                     if ni > 0 {
                         let sum_ins: Expression = ins.iter().sum();
@@ -285,6 +293,17 @@ fn layout_internal<T: Addr>(
                         problem.add_constraint((*pos * no as f64).eq(sum_outs));
                     }
                 }
+                Node::Swap { pos, out_to_in, .. } => {
+                    let in_outs: Expression = ins.iter().chain(outs.iter()).sum();
+                    problem.add_constraint((*pos * (ni + no) as f64).eq(in_outs));
+
+                    for (i, j) in out_to_in.iter().copied().enumerate() {
+                        let distance = problem.add_variable(variable().min(0.0));
+                        problem.add_constraint((ins[j] - outs[i]).leq(distance));
+                        problem.add_constraint((outs[i] - ins[j]).leq(distance));
+                        problem.add_objective(distance);
+                    }
+                }
                 Node::Thunk(layout) => {
                     // Align internal wires with the external ones.
                     for (&x, &y) in ins.iter().zip(layout.inputs()) {
@@ -293,6 +312,8 @@ fn layout_internal<T: Addr>(
                     for (&x, &y) in outs.iter().zip(layout.outputs()) {
                         problem.add_constraint((x - y).eq(0.0));
                     }
+
+                    problem.add_objective(layout.max - layout.min);
                 }
             }
 
@@ -317,7 +338,8 @@ pub fn layout<T: Addr>(graph: &MonoidalGraph<T>) -> Result<Layout, LayoutError> 
     let mut problem = LpProblem::default();
 
     let layout = layout_internal(graph, &mut problem);
-    let solution = problem.minimise(layout.max, good_lp::default_solver)?;
+    problem.add_objective(layout.max);
+    let solution = problem.minimise(good_lp::default_solver)?;
 
     Ok(Layout::from_solution(layout, &solution))
 }

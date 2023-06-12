@@ -7,10 +7,7 @@ LayoutInternal(
   max: 1.0,
   nodes: [
     [
-      Atom(
-        pos: 0.5,
-        swap_offset: None,
-      ),
+      Atom(0.5),
     ],
   ],
   wires: [

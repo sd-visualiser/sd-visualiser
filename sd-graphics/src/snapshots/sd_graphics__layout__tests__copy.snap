@@ -7,20 +7,11 @@ LayoutInternal(
   max: 3.0,
   nodes: [
     [
-      Atom(
-        pos: 1.75,
-        swap_offset: None,
-      ),
+      Atom(1.75),
     ],
     [
-      Atom(
-        pos: 1.0,
-        swap_offset: None,
-      ),
-      Atom(
-        pos: 2.5,
-        swap_offset: None,
-      ),
+      Atom(1.0),
+      Atom(2.5),
     ],
   ],
   wires: [
