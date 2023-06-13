@@ -36,25 +36,22 @@ where
     E: Clone + Eq + PartialEq + Hash + PrettyPrint,
     S: BuildHasher,
 {
+    let bounds = *to_screen.to();
+    let viewport = *to_screen.from();
+
     let transform = Transform {
         scale,
-        bounds: *to_screen.to(),
+        bounds,
         to_screen,
     };
 
     let mut shapes: Vec<Shape<(V, Option<E>)>> = Vec::default();
     let mut hover_points = IndexSet::default();
-    generate_shapes(
-        &mut shapes,
-        0.0,
-        layout,
-        graph,
-        expanded,
-        transform.to_screen.from(),
-    );
+    generate_shapes(&mut shapes, 0.0, layout, graph, expanded);
 
     let final_shapes: Vec<egui::Shape> = shapes
         .into_iter()
+        .filter(|shape| viewport.intersects(shape.bounding_box()))
         .map(|shape| {
             shape.to_egui_shape(
                 ui,
@@ -84,7 +81,6 @@ fn generate_shapes<V, E>(
     layout: &Layout,
     graph: &MonoidalGraph<(V, Option<E>)>,
     expanded: &mut Expanded<Thunk<V, Option<E>>>,
-    viewport: &Rect,
 ) where
     V: Clone + Eq + PartialEq + Hash + Display + PrettyPrint,
     E: Clone + Eq + PartialEq + Hash + PrettyPrint,
@@ -108,15 +104,6 @@ fn generate_shapes<V, E>(
         let y_output = y_offset + slice_height;
 
         y_offset = y_output;
-
-        // If the slice is out of view, do not render anything.
-        let range = viewport.y_range();
-        if y_output < *range.start() {
-            continue;
-        }
-        if y_input > *range.end() {
-            return;
-        }
 
         let mut offset_i = 0;
         let mut offset_o = 0;
@@ -180,7 +167,7 @@ fn generate_shapes<V, E>(
                             radius: RADIUS_ARG,
                         });
                     }
-                    generate_shapes(shapes, y_min, x_op, body, expanded, viewport);
+                    generate_shapes(shapes, y_min, x_op, body, expanded);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();

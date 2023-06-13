@@ -5,7 +5,7 @@ use std::{
 
 use egui::{
     epaint::{CircleShape, CubicBezierShape, RectShape},
-    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense,
+    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Vec2,
 };
 use indexmap::IndexSet;
 use sd_core::{
@@ -170,6 +170,23 @@ impl<V, E> Shape<(V, Option<E>)> {
                 } else {
                     egui::Shape::Noop
                 }
+            }
+        }
+    }
+
+    pub(crate) fn bounding_box(&self) -> Rect {
+        match self {
+            Shape::Line { start, end, .. } => Rect::from_two_pos(*start, *end),
+            Shape::CubicBezier { points, .. } => Rect::from_points(points),
+            Shape::Rectangle { rect, .. } => *rect,
+            Shape::CircleFilled { center, radius } => {
+                Rect::from_center_size(*center, Vec2::new(*radius, *radius))
+            }
+            Shape::Circle { center, .. } => {
+                Rect::from_center_size(*center, Vec2::new(RADIUS_OPERATION, RADIUS_OPERATION))
+            }
+            Shape::Text { center, .. } => {
+                Rect::from_center_size(*center, Vec2::new(f32::INFINITY, 1.0))
             }
         }
     }
