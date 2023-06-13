@@ -133,12 +133,12 @@ where
     ) -> Result<(), ConvertError> {
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
-        for var in &thunk.args {
+        for (var, _) in &thunk.args {
             free.remove(var);
         }
         let thunk_node = self.fragment.add_thunk(
             free.iter().cloned().map(Some),
-            thunk.args.iter().cloned().map(Some),
+            thunk.args.iter().cloned().map(|(var, _)| Some(var)),
             [None],
         );
         debug!("new thunk node {:?}", thunk_node);
@@ -159,7 +159,7 @@ where
                         .then_some(())
                         .ok_or(ConvertError::Shadowed(var))?;
                 }
-                for (var, outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
+                for ((var, _), outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
                     thunk_env
                         .outputs
                         .insert(var.clone(), outport)

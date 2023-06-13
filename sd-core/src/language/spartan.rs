@@ -2,8 +2,9 @@
 
 use std::fmt::{Display, Write};
 
-use from_pest::Void;
+use from_pest::{ConversionError, FromPest, Void};
 use ordered_float::NotNaN;
+use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 #[cfg(test)]
@@ -11,23 +12,39 @@ use serde::Serialize;
 
 use super::span_into_str;
 
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct SpartanSpec;
+
+impl super::Language for SpartanSpec {
+    type Op = Op;
+    type Var = Variable;
+    type Ty = Type;
+    type Addr = Addr;
+
+    type Rule = Rule;
+
+    fn expr_rule() -> Self::Rule {
+        Rule::expr
+    }
+    fn bind_rule() -> Self::Rule {
+        Rule::bind
+    }
+    fn value_rule() -> Self::Rule {
+        Rule::value
+    }
+    fn thunk_rule() -> Self::Rule {
+        Rule::thunk
+    }
+}
+
+pub type Expr = super::Expr<SpartanSpec>;
+pub type Bind = super::Bind<SpartanSpec>;
+pub type Value = super::Value<SpartanSpec>;
+pub type Thunk = super::Thunk<SpartanSpec>;
+
 #[derive(Parser)]
 #[grammar = "language/spartan.pest"]
 pub struct SpartanParser;
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::expr))]
-pub struct Expr {
-    pub binds: Vec<BindClause>,
-    pub value: Value,
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::bind_clause))]
-pub struct BindClause {
-    pub var: Variable,
-    pub value: Value,
-}
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable))]
@@ -102,35 +119,17 @@ impl From<&str> for Op {
     }
 }
 
-impl<'pest> from_pest::FromPest<'pest> for Op {
+impl<'pest> FromPest<'pest> for Op {
     type Rule = Rule;
     type FatalError = Void;
 
     fn from_pest(
-        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        pest: &mut Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, ConversionError<Self::FatalError>> {
         pest.next()
             .map(|pair| pair.as_str().into())
-            .ok_or(from_pest::ConversionError::NoMatch)
+            .ok_or(ConversionError::NoMatch)
     }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::value))]
-pub enum Value {
-    Variable(Variable),
-    Op {
-        op: Op,
-        vs: Vec<Value>,
-        ds: Vec<Thunk>,
-    },
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::thunk))]
-pub struct Thunk {
-    pub args: Vec<Variable>,
-    pub body: Expr,
 }
 
 impl Display for Op {
@@ -174,6 +173,30 @@ impl Display for Variable {
 impl From<&str> for Variable {
     fn from(value: &str) -> Self {
         Variable(value.to_owned())
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Type;
+
+impl<'pest> FromPest<'pest> for Type {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(_: &mut Pairs<'pest, Rule>) -> Result<Self, ConversionError<Void>> {
+        Ok(Type)
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Addr;
+
+impl<'pest> FromPest<'pest> for Addr {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(_: &mut Pairs<'pest, Rule>) -> Result<Self, ConversionError<Void>> {
+        Ok(Addr)
     }
 }
 

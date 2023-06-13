@@ -1,10 +1,42 @@
 #![allow(clippy::clone_on_copy)]
 
+use from_pest::{ConversionError, FromPest, Void};
 use ordered_float::NotNaN;
+use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
 use super::{span_into_str, spartan};
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct ChilSpec;
+
+impl super::Language for ChilSpec {
+    type Op = Op;
+    type Var = Variable;
+    type Ty = Option<Type>;
+    type Addr = Addr;
+
+    type Rule = Rule;
+
+    fn expr_rule() -> Self::Rule {
+        Rule::expr
+    }
+    fn bind_rule() -> Self::Rule {
+        Rule::bind
+    }
+    fn value_rule() -> Self::Rule {
+        Rule::value
+    }
+    fn thunk_rule() -> Self::Rule {
+        Rule::thunk
+    }
+}
+
+pub type Expr = super::Expr<ChilSpec>;
+pub type Bind = super::Bind<ChilSpec>;
+pub type Value = super::Value<ChilSpec>;
+pub type Thunk = super::Thunk<ChilSpec>;
 
 #[derive(Parser)]
 #[grammar = "language/chil.pest"]
@@ -18,52 +50,19 @@ fn parse_addr_second(input: &str) -> usize {
     input[1..].parse().unwrap()
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::expr))]
-pub struct Expr {
-    pub binds: Vec<BindClause>,
-    pub value: Value,
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::bind_clause))]
-pub struct BindClause {
-    pub var: VariableDef,
-    pub value: Value,
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::thunk))]
-pub struct Thunk {
-    pub addr: Addr,
-    pub args: Vec<VariableDef>,
-    pub body: Expr,
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::value))]
-pub enum Value {
-    Variable(Variable),
-    Op {
-        op: Op,
-        vs: Vec<Value>,
-        ds: Vec<Thunk>,
-    },
-}
-
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Op(pub String);
 
-impl<'pest> from_pest::FromPest<'pest> for Op {
+impl<'pest> FromPest<'pest> for Op {
     type Rule = Rule;
-    type FatalError = from_pest::Void;
+    type FatalError = Void;
 
     fn from_pest(
-        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        pest: &mut Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, ConversionError<Self::FatalError>> {
         match pest.next().map(|pair| pair.as_str()) {
             Some(str) => Ok(Self(str.to_owned())),
-            _ => Err(from_pest::ConversionError::NoMatch),
+            _ => Err(ConversionError::NoMatch),
         }
     }
 }
@@ -109,13 +108,6 @@ pub enum Variable {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::variable_def))]
-pub enum VariableDef {
-    Inferred(Variable),
-    Manifest { var: Variable, ty: Type },
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::addr))]
 pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
@@ -125,16 +117,16 @@ pub struct Addr(
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Identifier(pub String);
 
-impl<'pest> from_pest::FromPest<'pest> for Identifier {
+impl<'pest> FromPest<'pest> for Identifier {
     type Rule = Rule;
-    type FatalError = from_pest::Void;
+    type FatalError = Void;
 
     fn from_pest(
-        pest: &mut pest::iterators::Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, from_pest::ConversionError<Self::FatalError>> {
+        pest: &mut Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, ConversionError<Self::FatalError>> {
         match pest.next().map(|pair| pair.as_str()) {
             Some(str) => Ok(Identifier(str.to_owned())),
-            _ => Err(from_pest::ConversionError::NoMatch),
+            _ => Err(ConversionError::NoMatch),
         }
     }
 }
@@ -150,10 +142,11 @@ impl From<Expr> for spartan::Expr {
     }
 }
 
-impl From<BindClause> for spartan::BindClause {
-    fn from(bind: BindClause) -> Self {
+impl From<Bind> for spartan::Bind {
+    fn from(bind: Bind) -> Self {
         Self {
             var: bind.var.into(),
+            ty: spartan::Type,
             value: bind.value.into(),
         }
     }
@@ -162,7 +155,12 @@ impl From<BindClause> for spartan::BindClause {
 impl From<Thunk> for spartan::Thunk {
     fn from(thunk: Thunk) -> Self {
         Self {
-            args: thunk.args.into_iter().map(Into::into).collect(),
+            addr: spartan::Addr,
+            args: thunk
+                .args
+                .into_iter()
+                .map(|(var, _)| (var.into(), spartan::Type))
+                .collect(),
             body: thunk.body.into(),
         }
     }
@@ -235,14 +233,6 @@ impl From<Variable> for spartan::Variable {
             Variable::Addr(addr) => format!("var_{}", addr.1),
             Variable::Identifier(name, addr) => format!("{}_{}", name.0, addr.1),
         })
-    }
-}
-
-impl From<VariableDef> for spartan::Variable {
-    fn from(var: VariableDef) -> Self {
-        match var {
-            VariableDef::Inferred(var) | VariableDef::Manifest { var, .. } => var.into(),
-        }
     }
 }
 

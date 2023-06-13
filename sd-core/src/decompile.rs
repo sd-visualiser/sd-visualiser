@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     graph::Name,
     hypergraph::{Graph, GraphView, Node},
-    language::spartan::{BindClause, Expr, Op, Thunk as SThunk, Value},
+    language::spartan::{Addr, Bind, Expr, Op, Thunk as SThunk, Type, Value},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -69,16 +69,21 @@ where
                     .map_err(|_err| DecompilationError::MultipleOutputs)?;
 
                 if let Some(var) = port.weight().clone() {
-                    binds.push(BindClause { var, value });
+                    binds.push(Bind {
+                        var,
+                        value,
+                        ty: Type,
+                    });
                 } else {
                     node_to_syntax.insert(node, Either::Left(value));
                 }
             }
             Node::Thunk(thunk) => {
                 let x = Either::Right(SThunk {
+                    addr: Addr,
                     args: thunk
                         .bound_graph_inputs()
-                        .map(|out_port| out_port.weight().clone())
+                        .map(|out_port| out_port.weight().clone().map(|var| (var, Type)))
                         .collect::<Option<Vec<_>>>()
                         .ok_or(DecompilationError::Corrupt)?,
                     body: decompile(thunk)?,

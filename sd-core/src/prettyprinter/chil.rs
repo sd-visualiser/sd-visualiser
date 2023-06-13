@@ -2,8 +2,8 @@ use pretty::RcDoc;
 
 use super::PrettyPrint;
 use crate::language::chil::{
-    Addr, BaseType, BindClause, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType,
-    Type, Value, Variable, VariableDef,
+    Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType, Type,
+    Value, Variable,
 };
 
 const INDENTATION: isize = 2;
@@ -17,11 +17,11 @@ impl PrettyPrint for Expr {
     }
 }
 
-impl PrettyPrint for BindClause {
+impl PrettyPrint for Bind {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("def")
             .append(RcDoc::space())
-            .append(self.var.to_doc())
+            .append(format_var_with_ty(&self.var, &self.ty))
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())
@@ -46,17 +46,15 @@ impl PrettyPrint for Variable {
     }
 }
 
-impl PrettyPrint for VariableDef {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        match self {
-            Self::Inferred(var) => var.to_doc(),
-            Self::Manifest { var, ty } => var
-                .to_doc()
-                .append(RcDoc::space())
-                .append(RcDoc::text(":"))
-                .append(RcDoc::space())
-                .append(ty.to_doc()),
-        }
+fn format_var_with_ty<'a>(var: &'a Variable, ty: &'a Option<Type>) -> RcDoc<'a, ()> {
+    match ty {
+        None => var.to_doc(),
+        Some(ty) => var
+            .to_doc()
+            .append(RcDoc::space())
+            .append(RcDoc::text(":"))
+            .append(RcDoc::space())
+            .append(ty.to_doc()),
     }
 }
 
@@ -154,7 +152,9 @@ impl PrettyPrint for Thunk {
             .append(RcDoc::text("{"))
             .append(RcDoc::space())
             .append(RcDoc::intersperse(
-                self.args.iter().map(PrettyPrint::to_doc),
+                self.args
+                    .iter()
+                    .map(|(var, ty)| format_var_with_ty(var, ty)),
                 RcDoc::text(",").append(RcDoc::space()),
             ))
             .append(RcDoc::space())

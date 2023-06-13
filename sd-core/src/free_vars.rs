@@ -53,7 +53,7 @@ impl FreeVars {
 
     pub(crate) fn thunk(&mut self, vars: &mut HashSet<Variable>, thunk: &Thunk) {
         self.expr(&thunk.body);
-        let arg_set: HashSet<Variable> = thunk.args.iter().cloned().collect();
+        let arg_set: HashSet<Variable> = thunk.args.iter().map(|(var, _)| var).cloned().collect();
         vars.extend(self[&thunk.body].difference(&arg_set).cloned());
     }
 }

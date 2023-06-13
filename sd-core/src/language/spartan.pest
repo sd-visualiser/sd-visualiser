@@ -2,8 +2,8 @@ program = _{ SOI ~ expr ~ EOI }
 
 keyword = { "bind" | "in" }
 
-expr = { bind_clause* ~ value }
-bind_clause = { "bind" ~ variable ~ "=" ~ value ~ "in" }
+expr = { bind* ~ value }
+bind = { "bind" ~ variable ~ "=" ~ value ~ "in" }
 
 thunk = { variable* ~ "." ~ expr }
 
