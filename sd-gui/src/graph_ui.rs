@@ -14,7 +14,7 @@ use sd_core::{
 use sd_graphics::expanded::Expanded;
 use tracing::debug;
 
-use crate::layout::Layouter;
+use crate::shape_generator::ShapeGenerator;
 
 #[derive(Default)]
 pub(crate) struct GraphUi {
@@ -45,19 +45,20 @@ impl GraphUi {
         );
         self.panzoom.translation -= response.drag_delta() / self.panzoom.zoom;
 
+        let shapes =
+            ShapeGenerator::generate_shapes(ui.ctx(), &self.monoidal_graph, &self.expanded);
         // Background
         painter.add(Shape::rect_filled(
             response.rect,
             Rounding::none(),
             ui.visuals().faint_bg_color,
         ));
-        let layout = Layouter::layout(ui.ctx(), &self.monoidal_graph, &self.expanded).unwrap();
+
         painter.extend(sd_graphics::render::render(
             ui,
+            &shapes.shapes,
             &response,
-            &layout,
             self.panzoom.zoom,
-            &self.monoidal_graph,
             &mut self.expanded,
             &mut self.current_selection,
             to_screen,
@@ -83,9 +84,9 @@ impl GraphUi {
     }
 
     pub(crate) fn reset(&mut self, ctx: &egui::Context) {
-        let layout = Layouter::layout(ctx, &self.monoidal_graph, &self.expanded).unwrap();
+        let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
         self.panzoom = Panzoom {
-            translation: Pos2::new(layout.width() / 2.0, layout.height() / 2.0),
+            translation: Pos2::new(shapes.width / 2.0, shapes.height / 2.0),
             ..Panzoom::default()
         }
     }

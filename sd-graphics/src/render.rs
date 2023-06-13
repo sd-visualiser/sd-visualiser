@@ -23,10 +23,9 @@ use crate::{
 #[allow(clippy::too_many_arguments)]
 pub fn render<V, E, S>(
     ui: &egui::Ui,
+    shapes: &[Shape<(V, Option<E>)>],
     response: &Response,
-    layout: &Layout,
     scale: f32,
-    graph: &MonoidalGraph<(V, Option<E>)>,
     expanded: &mut Expanded<Thunk<V, Option<E>>>,
     selections: &mut HashSet<Operation<V, Option<E>>, S>,
     to_screen: RectTransform,
@@ -45,12 +44,10 @@ where
         to_screen,
     };
 
-    let mut shapes: Vec<Shape<(V, Option<E>)>> = Vec::default();
     let mut hover_points = IndexSet::default();
-    generate_shapes(&mut shapes, 0.0, layout, graph, expanded);
 
     let final_shapes: Vec<egui::Shape> = shapes
-        .into_iter()
+        .iter()
         .filter(|shape| viewport.intersects(shape.bounding_box()))
         .map(|shape| {
             shape.to_egui_shape(
@@ -75,15 +72,14 @@ where
 }
 
 #[allow(clippy::too_many_lines)]
-fn generate_shapes<V, E>(
+pub fn generate_shapes<V, E>(
     shapes: &mut Vec<Shape<(V, Option<E>)>>,
     mut y_offset: f32,
     layout: &Layout,
     graph: &MonoidalGraph<(V, Option<E>)>,
-    expanded: &mut Expanded<Thunk<V, Option<E>>>,
+    expanded: &Expanded<Thunk<V, Option<E>>>,
 ) where
-    V: Clone + Eq + PartialEq + Hash + Display + PrettyPrint,
-    E: Clone + Eq + PartialEq + Hash + PrettyPrint,
+    V: Display,
 {
     // Source
     for (&x, addr) in layout.inputs().iter().zip(&graph.ordered_inputs) {

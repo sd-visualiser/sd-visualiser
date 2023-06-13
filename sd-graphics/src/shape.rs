@@ -48,6 +48,12 @@ pub enum Shape<T: Addr> {
     },
 }
 
+pub struct Shapes<T: Addr> {
+    pub shapes: Vec<Shape<T>>,
+    pub width: f32,
+    pub height: f32,
+}
+
 impl<V, E> Shape<(V, Option<E>)> {
     #[allow(clippy::too_many_lines)]
     pub(crate) fn to_egui_shape<S>(
