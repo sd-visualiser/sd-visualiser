@@ -60,7 +60,6 @@ impl GraphUi {
             &self.monoidal_graph,
             &mut self.expanded,
             &mut self.current_selection,
-            response.rect,
             to_screen,
         ));
     }

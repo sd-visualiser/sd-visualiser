@@ -29,7 +29,6 @@ pub fn render<V, E, S>(
     graph: &MonoidalGraph<(V, Option<E>)>,
     expanded: &mut Expanded<Thunk<V, Option<E>>>,
     selections: &mut HashSet<Operation<V, Option<E>>, S>,
-    bounds: Rect,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
@@ -39,7 +38,7 @@ where
 {
     let transform = Transform {
         scale,
-        bounds,
+        bounds: *to_screen.to(),
         to_screen,
     };
 
