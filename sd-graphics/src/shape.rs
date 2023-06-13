@@ -75,9 +75,11 @@ impl<V, E> Shape<(V, Option<E>)> {
 
         macro_rules! check_hover {
             ($path:expr, $port:expr) => {
-                if let Some(hover_pos) = response.hover_pos() {
-                    if $path.contains_point(hover_pos, TOLERANCE * transform.scale) {
-                        hover_points.insert(DummyValue::from_port($port));
+                if let Some(hover_pos) = response.ctx.input(|i| i.pointer.hover_pos()) {
+                    if response.rect.contains(hover_pos) {
+                        if $path.contains_point(hover_pos, TOLERANCE * transform.scale) {
+                            hover_points.insert(DummyValue::from_port($port));
+                        }
                     }
                 }
             };
