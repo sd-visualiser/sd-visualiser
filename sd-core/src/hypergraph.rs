@@ -385,7 +385,7 @@ where
 
 pub struct ThunkCursor<V, E>(Thunk<V, E, false>);
 
-pub trait Graph<const BUILT: bool> {
+pub trait Graph<const BUILT: bool = true> {
     type NodeWeight;
     type EdgeWeight;
     fn bound_graph_inputs(
@@ -406,9 +406,6 @@ pub trait Graph<const BUILT: bool> {
     fn graph_outputs(
         &self,
     ) -> Box<dyn Iterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
-}
-
-pub trait GraphView<const BUILT: bool = true>: Graph<BUILT> {
     fn nodes(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = Node<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
@@ -466,9 +463,7 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for HyperGraph<V, E, BUILT> {
                 .map(|inport| InPort(ByThinAddress(inport))),
         )
     }
-}
 
-impl<V, E, const BUILT: bool> GraphView<BUILT> for HyperGraph<V, E, BUILT> {
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, BUILT>> + '_> {
         Box::new(self.0.nodes.iter().cloned().map(|node| match node {
             NodeInternal::Operation(operation) => {
@@ -499,9 +494,7 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for Thunk<V, E, BUILT> {
     fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
         Box::new(self.0.output_order.iter().cloned().map(InPort))
     }
-}
 
-impl<V, E, const BUILT: bool> GraphView<BUILT> for Thunk<V, E, BUILT> {
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, BUILT>> + '_> {
         Box::new(
             self.0
@@ -536,6 +529,7 @@ where
             fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
             fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
             fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, false>> + '_>;
+            fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, false>> + '_>;
         }
     }
 }

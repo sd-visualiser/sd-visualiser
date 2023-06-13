@@ -4,7 +4,7 @@ use itertools::{Either, Itertools};
 use thiserror::Error;
 
 use crate::{
-    hypergraph::{Graph, GraphView, Node},
+    hypergraph::{Graph, Node},
     language::{Bind, Expr, Language, Thunk, Value},
 };
 
@@ -18,7 +18,7 @@ pub enum DecompilationError {
 }
 
 pub fn decompile<T>(
-    graph: &impl GraphView<NodeWeight = T::Op, EdgeWeight = Option<T::Var>>,
+    graph: &impl Graph<NodeWeight = T::Op, EdgeWeight = Option<T::Var>>,
 ) -> Result<Expr<T>, DecompilationError>
 where
     T: Language,

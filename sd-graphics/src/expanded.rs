@@ -5,7 +5,7 @@ use std::{
 
 use derivative::Derivative;
 use indexmap::IndexMap;
-use sd_core::hypergraph::{GraphView, HyperGraph, Thunk};
+use sd_core::hypergraph::{Graph, HyperGraph, Thunk};
 
 #[derive(Clone, Debug, Derivative)]
 #[derivative(Default(bound = ""))]

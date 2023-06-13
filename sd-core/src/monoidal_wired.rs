@@ -6,7 +6,7 @@ use tracing::debug;
 
 use crate::{
     common::{Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
-    hypergraph::{GraphView, InPort, Node, Operation, OutPort, Thunk},
+    hypergraph::{Graph, InPort, Node, Operation, OutPort, Thunk},
 };
 
 pub type MonoidalWiredGraph<V, E> = MonoidalTerm<(V, E), WiredOp<V, E>>;
@@ -263,7 +263,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
 
 impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<V, E>
 where
-    G: GraphView<NodeWeight = V, EdgeWeight = E>,
+    G: Graph<NodeWeight = V, EdgeWeight = E>,
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::default();

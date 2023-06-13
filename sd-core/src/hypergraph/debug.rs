@@ -2,7 +2,7 @@ use std::{fmt::Debug, sync::Arc};
 
 use by_address::ByThinAddress;
 
-use super::{Graph, GraphView, InPort, Operation, OutPort, Thunk};
+use super::{Graph, InPort, Operation, OutPort, Thunk};
 
 impl<V, E, const BUILT: bool> Debug for InPort<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

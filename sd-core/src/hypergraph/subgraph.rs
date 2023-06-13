@@ -3,7 +3,7 @@ use std::{
     fmt::Debug,
 };
 
-use super::{fragment::Fragment, Graph, GraphView, HyperGraph, InPort, Node, Operation, OutPort};
+use super::{fragment::Fragment, Graph, HyperGraph, InPort, Node, Operation, OutPort};
 use crate::{
     common::InOut,
     language::{chil, spartan},
@@ -34,7 +34,7 @@ impl Free for Option<spartan::Variable> {
     }
 }
 
-fn normalise_graphview<G: GraphView>(
+fn normalise_graph<G: Graph>(
     graph_view: &G,
     selection: &HashSet<Operation<G::NodeWeight, G::EdgeWeight>>,
 ) -> HashSet<Node<G::NodeWeight, G::EdgeWeight>> {
@@ -48,14 +48,14 @@ fn normalise_graphview<G: GraphView>(
 
     if selected_nodes.len() == 1 {
         if let Node::Thunk(thunk) = selected_nodes.iter().next().unwrap() {
-            return normalise_graphview(thunk, selection);
+            return normalise_graph(thunk, selection);
         }
     }
 
     selected_nodes
 }
 
-fn contains_selection<G: GraphView>(
+fn contains_selection<G: Graph>(
     graph_view: &G,
     selection: &HashSet<Operation<G::NodeWeight, G::EdgeWeight>>,
 ) -> bool {
@@ -72,7 +72,7 @@ where
 {
     #[must_use]
     pub fn normalise_selection(&self, selection: &HashSet<Operation<V, E>>) -> HashSet<Node<V, E>> {
-        normalise_graphview(self, selection)
+        normalise_graph(self, selection)
     }
 
     #[must_use]
