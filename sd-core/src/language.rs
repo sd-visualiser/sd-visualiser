@@ -1,5 +1,9 @@
-use std::{fmt::Debug, hash::Hash};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
+use derivative::Derivative;
 use from_pest::{ConversionError, FromPest, Void};
 use pest::{iterators::Pairs, RuleType};
 
@@ -11,8 +15,8 @@ pub(crate) fn span_into_str(span: pest::Span) -> &str {
 }
 
 pub trait Language {
-    type Op: Clone + Eq + PartialEq + Hash + Debug;
-    type Var: Clone + Eq + PartialEq + Hash + Debug;
+    type Op: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync + 'static;
+    type Var: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync + 'static;
     type Ty: Clone + Eq + PartialEq + Hash + Debug;
     type Addr: Clone + Eq + PartialEq + Hash + Debug;
 
@@ -23,20 +27,41 @@ pub trait Language {
     fn thunk_rule() -> Self::Rule;
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
 pub struct Expr<T: Language> {
     pub binds: Vec<Bind<T>>,
     pub value: Value<T>,
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
 pub struct Bind<T: Language> {
     pub var: T::Var,
     pub ty: T::Ty,
     pub value: Value<T>,
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
 pub enum Value<T: Language> {
     Variable(T::Var),
     Op {
@@ -46,7 +71,14 @@ pub enum Value<T: Language> {
     },
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
 pub struct Thunk<T: Language> {
     pub addr: T::Addr,
     pub args: Vec<(T::Var, T::Ty)>,

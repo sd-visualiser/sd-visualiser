@@ -12,10 +12,9 @@ use serde::Serialize;
 
 use super::span_into_str;
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct SpartanSpec;
+pub struct Spartan;
 
-impl super::Language for SpartanSpec {
+impl super::Language for Spartan {
     type Op = Op;
     type Var = Variable;
     type Ty = Type;
@@ -37,10 +36,10 @@ impl super::Language for SpartanSpec {
     }
 }
 
-pub type Expr = super::Expr<SpartanSpec>;
-pub type Bind = super::Bind<SpartanSpec>;
-pub type Value = super::Value<SpartanSpec>;
-pub type Thunk = super::Thunk<SpartanSpec>;
+pub type Expr = super::Expr<Spartan>;
+pub type Bind = super::Bind<Spartan>;
+pub type Value = super::Value<Spartan>;
+pub type Thunk = super::Thunk<Spartan>;
 
 #[derive(Parser)]
 #[grammar = "language/spartan.pest"]
@@ -176,7 +175,7 @@ impl From<&str> for Variable {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub struct Type;
 
 impl<'pest> FromPest<'pest> for Type {
@@ -188,7 +187,7 @@ impl<'pest> FromPest<'pest> for Type {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
 pub struct Addr;
 
 impl<'pest> FromPest<'pest> for Addr {

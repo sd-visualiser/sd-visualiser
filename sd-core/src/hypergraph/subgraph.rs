@@ -4,20 +4,33 @@ use std::{
 };
 
 use super::{fragment::Fragment, Graph, GraphView, HyperGraph, InPort, Node, Operation, OutPort};
-use crate::{common::InOut, graph::Name, language::spartan::Variable};
+use crate::{
+    common::InOut,
+    language::{chil, spartan},
+};
 
 pub trait Free {
     fn is_var(&self) -> bool;
     fn generate_free(number: usize) -> Self;
 }
 
-impl Free for Name {
+impl Free for Option<chil::Variable> {
     fn is_var(&self) -> bool {
         self.is_some()
     }
 
     fn generate_free(number: usize) -> Self {
-        Some(Variable(format!("<fresh{number}>")))
+        Some(chil::Variable::Addr(chil::Addr('?', number)))
+    }
+}
+
+impl Free for Option<spartan::Variable> {
+    fn is_var(&self) -> bool {
+        self.is_some()
+    }
+
+    fn generate_free(number: usize) -> Self {
+        Some(spartan::Variable(format!("<fresh{number}>")))
     }
 }
 

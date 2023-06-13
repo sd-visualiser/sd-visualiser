@@ -5,7 +5,7 @@ use sd_core::{
     decompile::decompile,
     graph::{Name, SyntaxHyperGraph},
     hypergraph::Operation,
-    language::spartan::Op,
+    language::spartan::{Op, Spartan},
     prettyprinter::PrettyPrint,
 };
 
@@ -30,7 +30,7 @@ impl Selection {
         let normalised = containing_graph.normalise_selection(selected_nodes);
         let hypergraph = containing_graph.generate_subgraph(&normalised);
 
-        let code = decompile(&hypergraph)
+        let code = decompile::<Spartan>(&hypergraph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
 
         graph_ui.compile(hypergraph, ctx);

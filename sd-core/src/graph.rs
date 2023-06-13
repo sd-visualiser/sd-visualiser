@@ -1,53 +1,58 @@
-use std::collections::{HashMap, HashSet};
+#![allow(clippy::type_complexity)]
 
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+};
+
+use derivative::Derivative;
 use thiserror::Error;
 use tracing::{debug, Level};
 
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::spartan::{Expr, Op, Thunk, Value, Variable},
+    language::{spartan, Expr, Language, Thunk, Value},
 };
 
-pub type SyntaxHyperGraphBuilder = HyperGraph<Op, Name, false>;
-pub type SyntaxHyperGraph = HyperGraph<Op, Name>;
-pub type SyntaxInPort<const BUILT: bool = true> = InPort<Op, Name, BUILT>;
-pub type SyntaxOutPort<const BUILT: bool = true> = OutPort<Op, Name, BUILT>;
+pub type Name = Option<spartan::Variable>;
+pub type SyntaxHyperGraph = HyperGraph<spartan::Op, Name>;
 
-#[derive(Debug, Error)]
-pub enum ConvertError {
+#[derive(Derivative, Error)]
+#[derivative(Debug(bound = ""))]
+pub enum ConvertError<T: Language> {
     #[error("Error constructing hypergraph")]
-    HyperGraphError(#[from] HyperGraphError<Op, Name>),
+    HyperGraphError(#[from] HyperGraphError<T::Op, Option<T::Var>>),
     #[error("Couldn't find location of variable `{0}`")]
-    VariableError(Variable),
+    VariableError(T::Var),
     #[error("Attempted to alias `{0}` to `{1}`")]
-    Aliased(Variable, Variable),
+    Aliased(T::Var, T::Var),
     #[error("Attempted to shadow `{0}`")]
-    Shadowed(Variable),
+    Shadowed(T::Var),
     #[error("Fragment did not have output")]
     NoOutputError,
 }
 
-pub type Name = Option<Variable>;
-
-#[derive(Debug)]
-struct Environment<'env, F> {
-    free_vars: &'env FreeVars,
+#[derive(Derivative)]
+#[derivative(Debug(bound = "F: Debug"))]
+struct Environment<'env, F, T: Language> {
+    free_vars: &'env FreeVars<T>,
     fragment: F,
-    inputs: Vec<(SyntaxInPort<false>, Variable)>,
-    outputs: HashMap<Variable, SyntaxOutPort<false>>,
+    inputs: Vec<(InPort<T::Op, Option<T::Var>, false>, T::Var)>,
+    outputs: HashMap<T::Var, OutPort<T::Op, Option<T::Var>, false>>,
 }
 
-enum ProcessInput {
-    Variable(Variable),
-    InPort(SyntaxInPort<false>),
+enum ProcessInput<T: Language> {
+    Variable(T::Var),
+    InPort(InPort<T::Op, Option<T::Var>, false>),
 }
 
-impl<'env, F> Environment<'env, F>
+impl<'env, T, F> Environment<'env, F, T>
 where
-    F: Fragment<NodeWeight = Op, EdgeWeight = Name>,
+    T: Language,
+    F: Fragment<NodeWeight = T::Op, EdgeWeight = Option<T::Var>>,
 {
-    fn new(free_vars: &'env FreeVars, fragment: F) -> Self {
+    fn new(free_vars: &'env FreeVars<T>, fragment: F) -> Self {
         Self {
             free_vars,
             fragment,
@@ -68,7 +73,11 @@ where
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
-    fn process_value(&mut self, value: &Value, input: ProcessInput) -> Result<(), ConvertError> {
+    fn process_value(
+        &mut self,
+        value: &Value<T>,
+        input: ProcessInput<T>,
+    ) -> Result<(), ConvertError<T>> {
         match (value, input) {
             (Value::Variable(var), ProcessInput::Variable(var2)) => {
                 Err(ConvertError::Aliased(var2, var.clone()))
@@ -128,9 +137,9 @@ where
     /// This function will return an error if variables are malformed.
     fn process_thunk(
         &mut self,
-        thunk: &Thunk,
-        inport: SyntaxInPort<false>,
-    ) -> Result<(), ConvertError> {
+        thunk: &Thunk<T>,
+        inport: InPort<T::Op, Option<T::Var>, false>,
+    ) -> Result<(), ConvertError<T>> {
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
         for (var, _) in &thunk.args {
@@ -188,7 +197,7 @@ where
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
-    fn process_expr(mut self, expr: &Expr) -> Result<F, ConvertError> {
+    fn process_expr(mut self, expr: &Expr<T>) -> Result<F, ConvertError<T>> {
         let graph_output = self
             .fragment
             .graph_outputs()
@@ -211,16 +220,16 @@ where
     }
 }
 
-impl TryFrom<&Expr> for SyntaxHyperGraph {
-    type Error = ConvertError;
+impl<T: Language> TryFrom<&Expr<T>> for HyperGraph<T::Op, Option<T::Var>> {
+    type Error = ConvertError<T>;
 
     #[tracing::instrument(level=Level::DEBUG, ret, err)]
-    fn try_from(expr: &Expr) -> Result<Self, Self::Error> {
+    fn try_from(expr: &Expr<T>) -> Result<Self, Self::Error> {
         let mut free_vars = FreeVars::default();
 
         free_vars.expr(expr);
 
-        let free: Vec<Variable> = free_vars[expr].iter().cloned().collect();
+        let free: Vec<T::Var> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
         let graph = HyperGraph::new(free.iter().cloned().map(Some).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);

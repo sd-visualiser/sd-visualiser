@@ -1,5 +1,7 @@
 #![allow(clippy::clone_on_copy)]
 
+use std::fmt::Display;
+
 use from_pest::{ConversionError, FromPest, Void};
 use ordered_float::NotNaN;
 use pest::iterators::Pairs;
@@ -8,10 +10,9 @@ use pest_derive::Parser;
 
 use super::{span_into_str, spartan};
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct ChilSpec;
+pub struct Chil;
 
-impl super::Language for ChilSpec {
+impl super::Language for Chil {
     type Op = Op;
     type Var = Variable;
     type Ty = Option<Type>;
@@ -33,10 +34,10 @@ impl super::Language for ChilSpec {
     }
 }
 
-pub type Expr = super::Expr<ChilSpec>;
-pub type Bind = super::Bind<ChilSpec>;
-pub type Value = super::Value<ChilSpec>;
-pub type Thunk = super::Thunk<ChilSpec>;
+pub type Expr = super::Expr<Chil>;
+pub type Bind = super::Bind<Chil>;
+pub type Value = super::Value<Chil>;
+pub type Thunk = super::Thunk<Chil>;
 
 #[derive(Parser)]
 #[grammar = "language/chil.pest"]
@@ -52,6 +53,12 @@ fn parse_addr_second(input: &str) -> usize {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Op(pub String);
+
+impl Display for Op {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl<'pest> FromPest<'pest> for Op {
     type Rule = Rule;
@@ -107,15 +114,36 @@ pub enum Variable {
     Identifier(Identifier, Addr),
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+impl Display for Variable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Variable::Addr(addr) => write!(f, "{addr}"),
+            Variable::Identifier(id, addr) => write!(f, "{id}(id: {addr})"),
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Default, FromPest)]
 #[pest_ast(rule(Rule::addr))]
 pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
     #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
 );
 
+impl Display for Addr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.0, self.1)
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Identifier(pub String);
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
+    }
+}
 
 impl<'pest> FromPest<'pest> for Identifier {
     type Rule = Rule;

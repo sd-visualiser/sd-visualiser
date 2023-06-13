@@ -4,9 +4,8 @@ use itertools::{Either, Itertools};
 use thiserror::Error;
 
 use crate::{
-    graph::Name,
     hypergraph::{Graph, GraphView, Node},
-    language::spartan::{Addr, Bind, Expr, Op, Thunk as SThunk, Type, Value},
+    language::{Bind, Expr, Language, Thunk, Value},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -18,14 +17,18 @@ pub enum DecompilationError {
     MultipleOutputs,
 }
 
-pub fn decompile<G>(graph: &G) -> Result<Expr, DecompilationError>
+pub fn decompile<T>(
+    graph: &impl GraphView<NodeWeight = T::Op, EdgeWeight = Option<T::Var>>,
+) -> Result<Expr<T>, DecompilationError>
 where
-    G: GraphView<NodeWeight = Op, EdgeWeight = Name>,
+    T: Language,
+    T::Ty: Default,
+    T::Addr: Default,
 {
     let mut binds = Vec::default();
 
     // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).
-    let mut node_to_syntax = HashMap::<Node<_, _>, Either<Value, SThunk>>::default();
+    let mut node_to_syntax = HashMap::<Node<_, _>, Either<Value<T>, Thunk<T>>>::default();
 
     for node in graph.nodes().rev() {
         match &node {
@@ -72,18 +75,20 @@ where
                     binds.push(Bind {
                         var,
                         value,
-                        ty: Type,
+                        ty: T::Ty::default(),
                     });
                 } else {
                     node_to_syntax.insert(node, Either::Left(value));
                 }
             }
             Node::Thunk(thunk) => {
-                let x = Either::Right(SThunk {
-                    addr: Addr,
+                let x = Either::Right(Thunk {
+                    addr: T::Addr::default(),
                     args: thunk
                         .bound_graph_inputs()
-                        .map(|out_port| out_port.weight().clone().map(|var| (var, Type)))
+                        .map(|out_port| {
+                            out_port.weight().clone().map(|var| (var, T::Ty::default()))
+                        })
                         .collect::<Option<Vec<_>>>()
                         .ok_or(DecompilationError::Corrupt)?,
                     body: decompile(thunk)?,
