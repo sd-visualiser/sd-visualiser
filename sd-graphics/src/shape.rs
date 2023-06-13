@@ -3,9 +3,10 @@ use std::{
     hash::{BuildHasher, Hash},
 };
 
+use derivative::Derivative;
 use egui::{
     epaint::{CircleShape, CubicBezierShape, RectShape},
-    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Vec2,
+    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
 use sd_core::{
@@ -20,6 +21,8 @@ use crate::{
     expanded::Expanded,
 };
 
+#[derive(Derivative)]
+#[derivative(Clone(bound = "T::OutPort: Clone, T::Thunk: Clone, T::Operation: Clone"))]
 pub enum Shape<T: Addr> {
     Line {
         start: Pos2,
@@ -55,24 +58,41 @@ pub struct Shapes<T: Addr> {
 }
 
 impl<V, E> Shape<(V, Option<E>)> {
-    #[allow(clippy::too_many_lines)]
-    pub(crate) fn to_egui_shape<S>(
+    pub(crate) fn apply_transform(&mut self, transform: &Transform) {
+        match self {
+            Shape::Line { start, end, .. } => {
+                *start = transform.apply(*start);
+                *end = transform.apply(*end);
+            }
+            Shape::CubicBezier { points, .. } => {
+                points[0] = transform.apply(points[0]);
+                points[1] = transform.apply(points[1]);
+                points[2] = transform.apply(points[2]);
+                points[3] = transform.apply(points[3]);
+            }
+            Shape::Rectangle { rect, .. } => {
+                rect.min = transform.apply(rect.min);
+                rect.max = transform.apply(rect.max);
+            }
+            Shape::CircleFilled { center, radius } => {
+                *center = transform.apply(*center);
+                *radius *= transform.scale;
+            }
+            Shape::Circle { center, .. } | Shape::Text { center, .. } => {
+                *center = transform.apply(*center);
+            }
+        }
+    }
+
+    pub(crate) fn collect_hovers(
         &self,
-        ui: &egui::Ui,
-        transform: &Transform,
         response: &Response,
-        expanded: &mut Expanded<Thunk<V, Option<E>>>,
-        selections: &mut HashSet<Operation<V, Option<E>>, S>,
+        transform: &Transform,
         hover_points: &mut IndexSet<DummyValue<V, E>>,
-    ) -> egui::Shape
-    where
+    ) where
         V: Clone + PartialEq + Eq + Hash,
         E: Clone + PartialEq + Eq + Hash,
-        S: BuildHasher,
     {
-        let default_stroke = ui.visuals().noninteractive().fg_stroke;
-        let default_color = default_stroke.color;
-
         macro_rules! check_hover {
             ($path:expr, $port:expr) => {
                 if let Some(hover_pos) = response.ctx.input(|i| i.pointer.hover_pos()) {
@@ -87,35 +107,52 @@ impl<V, E> Shape<(V, Option<E>)> {
 
         match self {
             Shape::Line { start, end, addr } => {
-                let start = transform.apply(*start);
-                let end = transform.apply(*end);
-                check_hover!([start, end], addr);
-                egui::Shape::line_segment([start, end], default_stroke)
+                check_hover!([*start, *end], addr);
             }
             Shape::CubicBezier { points, addr } => {
-                let points = [
-                    transform.apply(points[0]),
-                    transform.apply(points[1]),
-                    transform.apply(points[2]),
-                    transform.apply(points[3]),
-                ];
                 let bezier = CubicBezierShape::from_points_stroke(
-                    points,
+                    *points,
+                    false,
+                    Color32::TRANSPARENT,
+                    Stroke::default(),
+                );
+                check_hover!(bezier, addr);
+            }
+            _ => {}
+        }
+    }
+
+    pub(crate) fn to_egui_shape<S>(
+        &self,
+        ui: &egui::Ui,
+        transform: &Transform,
+        expanded: &mut Expanded<Thunk<V, Option<E>>>,
+        selections: &mut HashSet<Operation<V, Option<E>>, S>,
+    ) -> egui::Shape
+    where
+        V: Clone + PartialEq + Eq + Hash,
+        E: Clone + PartialEq + Eq + Hash,
+        S: BuildHasher,
+    {
+        let default_stroke = ui.visuals().noninteractive().fg_stroke;
+        let default_color = default_stroke.color;
+
+        match self {
+            Shape::Line { start, end, .. } => {
+                egui::Shape::line_segment([*start, *end], default_stroke)
+            }
+            Shape::CubicBezier { points, .. } => {
+                let bezier = CubicBezierShape::from_points_stroke(
+                    *points,
                     false,
                     Color32::TRANSPARENT,
                     default_stroke,
                 );
-                check_hover!(bezier, addr);
                 egui::Shape::CubicBezier(bezier)
             }
             Shape::Rectangle { rect, addr } => {
-                let thunk_rect = Rect {
-                    min: transform.apply(rect.min),
-                    max: transform.apply(rect.max),
-                };
-
                 let thunk_response = ui.interact(
-                    thunk_rect.intersect(transform.bounds),
+                    rect.intersect(transform.bounds),
                     Id::new(addr),
                     Sense::click(),
                 );
@@ -127,7 +164,7 @@ impl<V, E> Shape<(V, Option<E>)> {
                     stroke.color = stroke.color.gamma_multiply(0.35);
                 }
                 egui::Shape::Rect(RectShape {
-                    rect: thunk_rect,
+                    rect: *rect,
                     rounding: Rounding::none(),
                     fill: if expanded[addr] {
                         Color32::default()
@@ -138,13 +175,11 @@ impl<V, E> Shape<(V, Option<E>)> {
                 })
             }
             Shape::CircleFilled { center, radius } => {
-                let center = transform.apply(*center);
-                egui::Shape::circle_filled(center, radius * transform.scale, default_color)
+                egui::Shape::circle_filled(*center, *radius, default_color)
             }
             Shape::Circle { center, addr } => {
-                let center = transform.apply(*center);
                 let selected = selections.contains(addr);
-                let op_rect = Rect::from_center_size(center, BOX_SIZE * transform.scale);
+                let op_rect = Rect::from_center_size(*center, BOX_SIZE * transform.scale);
                 let op_response = ui.interact(
                     op_rect.intersect(transform.bounds),
                     Id::new(addr),
@@ -154,7 +189,7 @@ impl<V, E> Shape<(V, Option<E>)> {
                     selections.insert(addr.clone());
                 }
                 egui::Shape::Circle(CircleShape {
-                    center,
+                    center: *center,
                     radius: RADIUS_OPERATION * transform.scale,
                     fill: ui
                         .style()
@@ -168,11 +203,10 @@ impl<V, E> Shape<(V, Option<E>)> {
             }
             Shape::Text { text, center } => {
                 if transform.scale > 10.0 {
-                    let center = transform.apply(*center);
                     ui.fonts(|fonts| {
                         egui::Shape::text(
                             fonts,
-                            center,
+                            *center,
                             Align2::CENTER_CENTER,
                             text,
                             egui::FontId::monospace(TEXT_SIZE * transform.scale),

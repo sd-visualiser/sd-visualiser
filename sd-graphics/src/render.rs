@@ -50,14 +50,10 @@ where
         .iter()
         .filter(|shape| viewport.intersects(shape.bounding_box()))
         .map(|shape| {
-            shape.to_egui_shape(
-                ui,
-                &transform,
-                response,
-                expanded,
-                selections,
-                &mut hover_points,
-            )
+            let mut s = shape.clone();
+            s.apply_transform(&transform);
+            s.collect_hovers(response, &transform, &mut hover_points);
+            s.to_egui_shape(ui, &transform, expanded, selections)
         })
         .collect();
 
