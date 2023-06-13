@@ -120,6 +120,10 @@ impl<V, E> Shape<(V, Option<E>)> {
                 if thunk_response.clicked() {
                     expanded[addr] = !expanded[addr];
                 }
+                let mut stroke = ui.style().interact(&thunk_response).fg_stroke;
+                if expanded[addr] {
+                    stroke.color = stroke.color.gamma_multiply(0.35);
+                }
                 egui::Shape::Rect(RectShape {
                     rect: thunk_rect,
                     rounding: Rounding::none(),
@@ -128,7 +132,7 @@ impl<V, E> Shape<(V, Option<E>)> {
                     } else {
                         ui.style().interact(&thunk_response).bg_fill
                     },
-                    stroke: ui.style().interact(&thunk_response).fg_stroke,
+                    stroke,
                 })
             }
             Shape::CircleFilled { center, radius } => {
