@@ -4,8 +4,11 @@ use eframe::egui::{
     util::cache::{ComputerMut, FrameCache},
     Context,
 };
-use sd_core::monoidal::MonoidalGraph;
-use sd_graphics::layout::{layout, Layout, LayoutError};
+use sd_core::{hypergraph::Thunk, monoidal::MonoidalGraph};
+use sd_graphics::{
+    expanded::Expanded,
+    layout::{layout, Layout, LayoutError},
+};
 use tracing::debug;
 
 pub struct Layouter<V, E> {
@@ -19,11 +22,15 @@ impl<V, E> Default for Layouter<V, E> {
 }
 
 impl<V: 'static + Send + Sync, E: 'static + Send + Sync>
-    ComputerMut<&MonoidalGraph<(V, E)>, Result<Arc<Layout>, LayoutError>> for Layouter<V, E>
+    ComputerMut<(&MonoidalGraph<(V, E)>, &Expanded<Thunk<V, E>>), Result<Arc<Layout>, LayoutError>>
+    for Layouter<V, E>
 {
-    fn compute(&mut self, graph: &MonoidalGraph<(V, E)>) -> Result<Arc<Layout>, LayoutError> {
+    fn compute(
+        &mut self,
+        (graph, expanded): (&MonoidalGraph<(V, E)>, &Expanded<Thunk<V, E>>),
+    ) -> Result<Arc<Layout>, LayoutError> {
         debug!("Calculating layout...");
-        Ok(Arc::new(layout(graph)?))
+        Ok(Arc::new(layout(graph, expanded)?))
     }
 }
 
@@ -33,7 +40,12 @@ impl<V: 'static + Send + Sync, E: 'static + Send + Sync> Layouter<V, E> {
     pub fn layout(
         ctx: &Context,
         graph: &MonoidalGraph<(V, E)>,
+        expanded: &Expanded<Thunk<V, E>>,
     ) -> Result<Arc<Layout>, LayoutError> {
-        ctx.memory_mut(|mem| mem.caches.cache::<LayoutCache<'_, V, E>>().get(graph))
+        ctx.memory_mut(|mem| {
+            mem.caches
+                .cache::<LayoutCache<'_, V, E>>()
+                .get((graph, expanded))
+        })
     }
 }

@@ -14,12 +14,12 @@ use indexmap::IndexSet;
 use pretty::RcDoc;
 use sd_core::{
     common::{InOut, InOutIter},
-    hypergraph::{Graph, Node, Operation, OutPort},
+    hypergraph::{Graph, Node, Operation, OutPort, Thunk},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
 };
 
-use crate::layout::Layout;
+use crate::{expanded::Expanded, layout::Layout};
 
 const TOLERANCE: f32 = 0.1;
 
@@ -50,7 +50,8 @@ pub fn render<V, E, S>(
     response: &Response,
     layout: &Layout,
     scale: f32,
-    graph: &mut MonoidalGraph<(V, Option<E>)>,
+    graph: &MonoidalGraph<(V, Option<E>)>,
+    expanded: &mut Expanded<Thunk<V, Option<E>>>,
     selections: &mut HashSet<Operation<V, Option<E>>, S>,
     bounds: Rect,
     to_screen: RectTransform,
@@ -76,6 +77,7 @@ where
         0.0,
         layout,
         graph,
+        expanded,
         selections,
         &transform,
     );
@@ -99,7 +101,8 @@ fn generate_shapes<V, E, S>(
     hover_points: &mut IndexSet<DummyValue<V, E>>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &mut MonoidalGraph<(V, Option<E>)>,
+    graph: &MonoidalGraph<(V, Option<E>)>,
+    expanded: &mut Expanded<Thunk<V, Option<E>>>,
     selections: &mut HashSet<Operation<V, Option<E>>, S>,
     transform: &Transform,
 ) where
@@ -130,7 +133,7 @@ fn generate_shapes<V, E, S>(
 
     y_offset += 0.5;
 
-    for (j, slice) in graph.slices.iter_mut().enumerate() {
+    for (j, slice) in graph.slices.iter().enumerate() {
         let slice_height = layout.slice_height(j);
         let y_input = y_offset;
         let y_output = y_offset + slice_height;
@@ -150,7 +153,7 @@ fn generate_shapes<V, E, S>(
 
         let mut offset_i = 0;
         let mut offset_o = 0;
-        for (i, op) in slice.ops.iter_mut().enumerate() {
+        for (i, op) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
 
@@ -176,12 +179,7 @@ fn generate_shapes<V, E, S>(
                         shapes.push(Shape::CubicBezier(bezier));
                     }
                 }
-                MonoidalOp::Thunk {
-                    addr,
-                    body,
-                    expanded,
-                    ..
-                } if *expanded => {
+                MonoidalOp::Thunk { addr, body, .. } if expanded[addr] => {
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
@@ -205,7 +203,7 @@ fn generate_shapes<V, E, S>(
                     let thunk_response =
                         ui.interact(thunk_rect.intersect(transform.bounds), id, Sense::click());
                     if thunk_response.clicked() {
-                        *expanded = false;
+                        expanded[addr] = false;
                     }
                     shapes.push(Shape::rect_stroke(
                         thunk_rect,
@@ -233,6 +231,7 @@ fn generate_shapes<V, E, S>(
                         y_min,
                         x_op,
                         body,
+                        expanded,
                         selections,
                         transform,
                     );
@@ -362,7 +361,7 @@ fn generate_shapes<V, E, S>(
                                 });
                             }
                         }
-                        MonoidalOp::Thunk { expanded, .. } => {
+                        MonoidalOp::Thunk { addr, .. } => {
                             let thunk_rect =
                                 Rect::from_center_size(center, BOX_SIZE * transform.scale);
                             let thunk_response = ui.interact(
@@ -371,7 +370,7 @@ fn generate_shapes<V, E, S>(
                                 Sense::click(),
                             );
                             if thunk_response.clicked() {
-                                *expanded = true;
+                                expanded[addr] = true;
                             }
                             shapes.push(Shape::Rect(RectShape {
                                 rect: thunk_rect,

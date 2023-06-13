@@ -7,6 +7,7 @@ license = "BSD-3-Clause"
 repository = "https://github.com/calintat/sd-visualiser"
 
 [dependencies]
+derivative = "2.2.0"
 egui = "0.21.0"
 good_lp = { version = "1.4.0", default_features = false, features = ["minilp"] }
 indexmap = "1.9.3"

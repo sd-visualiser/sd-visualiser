@@ -117,7 +117,6 @@ pub fn thunk() -> MonoidalGraph<Syntax> {
                 MonoidalOp::Thunk {
                     addr: SyntaxThunk { inputs: 1 },
                     body: plus,
-                    expanded: true,
                 },
                 MonoidalOp::Operation {
                     addr: SyntaxOp {

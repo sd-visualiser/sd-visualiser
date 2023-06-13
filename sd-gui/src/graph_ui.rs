@@ -6,11 +6,12 @@ use eframe::{
 };
 use sd_core::{
     graph::{Name, SyntaxHyperGraph},
-    hypergraph::Operation,
+    hypergraph::{Operation, Thunk},
     language::spartan::Op,
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
 };
+use sd_graphics::expanded::Expanded;
 use tracing::debug;
 
 use crate::layout::Layouter;
@@ -20,6 +21,7 @@ pub(crate) struct GraphUi {
     hypergraph: SyntaxHyperGraph,
     monoidal_term: MonoidalWiredGraph<Op, Name>,
     monoidal_graph: MonoidalGraph<(Op, Name)>,
+    expanded: Expanded<Thunk<Op, Name>>,
     pub(crate) current_selection: HashSet<Operation<Op, Name>>,
     panzoom: Panzoom,
 }
@@ -49,13 +51,14 @@ impl GraphUi {
             Rounding::none(),
             ui.visuals().faint_bg_color,
         ));
-        let layout = Layouter::layout(ui.ctx(), &self.monoidal_graph).unwrap();
+        let layout = Layouter::layout(ui.ctx(), &self.monoidal_graph, &self.expanded).unwrap();
         painter.extend(sd_graphics::render::render(
             ui,
             &response,
             &layout,
             self.panzoom.zoom,
-            &mut self.monoidal_graph,
+            &self.monoidal_graph,
+            &mut self.expanded,
             &mut self.current_selection,
             response.rect,
             to_screen,
@@ -63,6 +66,8 @@ impl GraphUi {
     }
 
     pub(crate) fn compile(&mut self, hypergraph: SyntaxHyperGraph, ctx: &egui::Context) {
+        self.expanded = Expanded::from_graph(&hypergraph);
+
         self.hypergraph = hypergraph;
 
         debug!("Converting to monoidal term");
@@ -79,7 +84,7 @@ impl GraphUi {
     }
 
     pub(crate) fn reset(&mut self, ctx: &egui::Context) {
-        let layout = Layouter::layout(ctx, &self.monoidal_graph).unwrap();
+        let layout = Layouter::layout(ctx, &self.monoidal_graph, &self.expanded).unwrap();
         self.panzoom = Panzoom {
             translation: Pos2::new(layout.width() / 2.0, layout.height() / 2.0),
             ..Panzoom::default()

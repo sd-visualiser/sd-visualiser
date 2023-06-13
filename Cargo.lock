@@ -2644,6 +2644,7 @@ name = "sd-graphics"
 version = "0.1.0"
 dependencies = [
  "cargo-husky",
+ "derivative",
  "egui",
  "good_lp",
  "indexmap",

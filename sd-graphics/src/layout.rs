@@ -10,7 +10,7 @@ use sd_core::{
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::lp::LpProblem;
+use crate::{expanded::Expanded, lp::LpProblem};
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
@@ -168,6 +168,7 @@ impl Layout {
 #[allow(clippy::too_many_lines)]
 fn layout_internal<T: Addr>(
     graph: &MonoidalGraph<T>,
+    expanded: &Expanded<T::Thunk>,
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable> {
     // STEP 1. Generate variables for each layer.
@@ -217,8 +218,8 @@ fn layout_internal<T: Addr>(
             .iter()
             .map(|op| {
                 let node = match op {
-                    MonoidalOp::Thunk { body, expanded, .. } if *expanded => {
-                        Node::Thunk(layout_internal(body, problem))
+                    MonoidalOp::Thunk { body, addr, .. } if expanded[addr] => {
+                        Node::Thunk(layout_internal(body, expanded, problem))
                     }
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         pos: problem.add_variable(variable().min(0.0)),
@@ -334,10 +335,13 @@ fn layout_internal<T: Addr>(
     }
 }
 
-pub fn layout<T: Addr>(graph: &MonoidalGraph<T>) -> Result<Layout, LayoutError> {
+pub fn layout<T: Addr>(
+    graph: &MonoidalGraph<T>,
+    expanded: &Expanded<T::Thunk>,
+) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
-    let layout = layout_internal(graph, &mut problem);
+    let layout = layout_internal(graph, expanded, &mut problem);
     problem.add_objective(layout.max);
     let solution = problem.minimise(good_lp::default_solver)?;
 
@@ -349,18 +353,19 @@ mod tests {
     use sd_core::examples;
 
     use super::layout;
+    use crate::expanded::Expanded;
 
     #[test]
     fn int() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::int()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::int(), &Expanded::default()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn copy() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::copy()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::copy(), &Expanded::default()).expect("Layout failed"));
         });
     }
 }

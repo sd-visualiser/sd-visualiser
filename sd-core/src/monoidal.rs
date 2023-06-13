@@ -182,7 +182,6 @@ pub enum MonoidalOp<T: Addr> {
     Thunk {
         addr: T::Thunk,
         body: MonoidalGraph<T>,
-        expanded: bool,
     },
     Swap {
         addrs: Vec<(T::OutPort, Direction)>,
@@ -331,7 +330,6 @@ impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
             WiredOp::Thunk { addr, body, .. } => Self::Thunk {
                 addr: addr.clone(),
                 body: body.into(),
-                expanded: true,
             },
             WiredOp::Backlink { addr } => MonoidalOp::Backlink { addr: addr.clone() },
         }
