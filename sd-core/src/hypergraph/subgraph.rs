@@ -6,7 +6,8 @@ use std::{
 use super::{fragment::Fragment, Graph, HyperGraph, InPort, Node, Operation, OutPort};
 use crate::{
     common::InOut,
-    language::{chil, spartan},
+    graph::Name,
+    language::{chil, spartan, Language},
 };
 
 pub trait Free {
@@ -14,23 +15,37 @@ pub trait Free {
     fn generate_free(number: usize) -> Self;
 }
 
-impl Free for Option<chil::Variable> {
+impl Free for chil::Variable {
     fn is_var(&self) -> bool {
-        self.is_some()
+        true
     }
 
     fn generate_free(number: usize) -> Self {
-        Some(chil::Variable::Addr(chil::Addr('?', number)))
+        Self::Addr(chil::Addr('?', number))
     }
 }
 
-impl Free for Option<spartan::Variable> {
+impl Free for spartan::Variable {
     fn is_var(&self) -> bool {
-        self.is_some()
+        true
     }
 
     fn generate_free(number: usize) -> Self {
-        Some(spartan::Variable(format!("<fresh{number}>")))
+        Self(format!("<fresh{number}>"))
+    }
+}
+
+impl<T> Free for Name<T>
+where
+    T: Language,
+    T::Var: Free,
+{
+    fn is_var(&self) -> bool {
+        matches!(self, Name::Variable(_))
+    }
+
+    fn generate_free(number: usize) -> Self {
+        Self::Variable(T::Var::generate_free(number))
     }
 }
 

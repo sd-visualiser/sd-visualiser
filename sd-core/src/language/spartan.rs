@@ -187,8 +187,14 @@ impl<'pest> FromPest<'pest> for Type {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Addr;
+
+impl Display for Addr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("")
+    }
+}
 
 impl<'pest> FromPest<'pest> for Addr {
     type Rule = Rule;

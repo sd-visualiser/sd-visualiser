@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use eframe::egui;
 use sd_core::{
     decompile::decompile,
-    graph::{Name, SyntaxHyperGraph},
+    graph::{Name, Op, SyntaxHyperGraph},
     hypergraph::Operation,
-    language::spartan::{Op, Spartan},
+    language::spartan::Spartan,
     prettyprinter::PrettyPrint,
 };
 

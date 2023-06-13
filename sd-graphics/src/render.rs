@@ -1,14 +1,12 @@
-use std::{
-    collections::HashSet,
-    fmt::Display,
-    hash::{BuildHasher, Hash},
-};
+use std::{collections::HashSet, fmt::Display, hash::BuildHasher};
 
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter},
+    graph::{Name, Op},
     hypergraph::{Graph, Operation, Thunk},
+    language::Language,
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
 };
@@ -21,18 +19,17 @@ use crate::{
 };
 
 #[allow(clippy::too_many_arguments)]
-pub fn render<V, E, S>(
+pub fn render<T, S>(
     ui: &egui::Ui,
-    shapes: &[Shape<(V, Option<E>)>],
+    shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
     scale: f32,
-    expanded: &mut Expanded<Thunk<V, Option<E>>>,
-    selections: &mut HashSet<Operation<V, Option<E>>, S>,
+    expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
+    selections: &mut HashSet<Operation<Op<T>, Name<T>>, S>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
-    V: Clone + Eq + PartialEq + Hash + Display + PrettyPrint,
-    E: Clone + Eq + PartialEq + Hash + PrettyPrint,
+    T: Language,
     S: BuildHasher,
 {
     let bounds = *to_screen.to();
@@ -69,11 +66,11 @@ where
 
 #[allow(clippy::too_many_lines)]
 pub fn generate_shapes<V, E>(
-    shapes: &mut Vec<Shape<(V, Option<E>)>>,
+    shapes: &mut Vec<Shape<(V, E)>>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &MonoidalGraph<(V, Option<E>)>,
-    expanded: &Expanded<Thunk<V, Option<E>>>,
+    graph: &MonoidalGraph<(V, E)>,
+    expanded: &Expanded<Thunk<V, E>>,
 ) where
     V: Display,
 {

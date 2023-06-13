@@ -15,10 +15,10 @@ pub(crate) fn span_into_str(span: pest::Span) -> &str {
 }
 
 pub trait Language {
-    type Op: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync + 'static;
-    type Var: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync + 'static;
+    type Op: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
+    type Var: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
     type Ty: Clone + Eq + PartialEq + Hash + Debug;
-    type Addr: Clone + Eq + PartialEq + Hash + Debug;
+    type Addr: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;

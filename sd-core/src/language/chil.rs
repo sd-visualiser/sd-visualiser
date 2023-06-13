@@ -123,7 +123,7 @@ impl Display for Variable {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, Default, FromPest)]
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::addr))]
 pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,

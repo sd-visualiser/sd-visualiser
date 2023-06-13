@@ -1,7 +1,10 @@
+use derivative::Derivative;
 use egui::{emath::RectTransform, epaint::CubicBezierShape, vec2, Pos2, Rect, Vec2};
 use pretty::RcDoc;
 use sd_core::{
+    graph::{Name, Op},
     hypergraph::{Node, OutPort},
+    language::Language,
     prettyprinter::PrettyPrint,
 };
 
@@ -27,43 +30,57 @@ impl Transform {
 }
 
 /// A dummy value is like a `spartan::Value` but with anonymous thunks and (possibly) free variables.
-#[derive(Clone, Eq, PartialEq, Hash)]
-pub enum DummyValue<Op, Var> {
-    Thunk,
-    FreeVar,
-    BoundVar(Var),
-    Operation(Op, Vec<DummyValue<Op, Var>>),
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+pub enum DummyValue<T: Language> {
+    Thunk(T::Addr),
+    BoundVar(T::Var),
+    Operation(T::Op, Vec<DummyValue<T>>),
 }
 
-impl<Op: Clone, Var: Clone> DummyValue<Op, Var> {
-    pub(crate) fn from_port(out_port: &OutPort<Op, Option<Var>>) -> Self {
+impl<T: Language> DummyValue<T> {
+    pub(crate) fn from_port(out_port: &OutPort<Op<T>, Name<T>>) -> Self {
         match out_port.weight() {
-            Some(var) => Self::BoundVar(var.clone()),
-            None => match out_port.node() {
-                None => Self::FreeVar, // technically should be unreachable
-                Some(Node::Thunk(_)) => Self::Thunk,
+            Name::Variable(var) => Self::BoundVar(var.clone()),
+            Name::Thunk(addr) => Self::Thunk(addr.clone()),
+            Name::Null => match out_port.node() {
                 Some(Node::Operation(op)) => Self::Operation(
-                    op.weight().clone(),
+                    op.weight().0.clone(),
                     op.inputs()
                         .map(|in_port| Self::from_port(&in_port.link()))
                         .collect(),
                 ),
+                _ => unreachable!(),
             },
         }
     }
 }
 
-impl<Op: PrettyPrint, Var: PrettyPrint> PrettyPrint for DummyValue<Op, Var> {
+impl<T: Language> PrettyPrint for DummyValue<T> {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
-            Self::Thunk => RcDoc::text("<thunk>"),
-            Self::FreeVar => RcDoc::text("<free var>"),
-            Self::BoundVar(var) => var.to_doc(),
+            Self::Thunk(addr) => {
+                let addr = addr.to_string();
+                if addr.is_empty() {
+                    RcDoc::text("<thunk>")
+                } else {
+                    RcDoc::text("thunk")
+                        .append(RcDoc::space())
+                        .append(RcDoc::as_string(addr))
+                }
+            }
+            Self::BoundVar(var) => RcDoc::as_string(var),
             Self::Operation(op, vs) => {
                 if vs.is_empty() {
-                    op.to_doc()
+                    RcDoc::as_string(op)
                 } else {
-                    op.to_doc()
+                    RcDoc::as_string(op)
                         .append(RcDoc::text("("))
                         .append(RcDoc::intersperse(
                             vs.iter().map(PrettyPrint::to_doc),

@@ -19,21 +19,13 @@ impl<V, E> Default for ShapeGenerator<V, E> {
 }
 
 impl<V: 'static + Send + Sync + Display, E: 'static + Send + Sync>
-    ComputerMut<
-        (
-            &MonoidalGraph<(V, Option<E>)>,
-            &Expanded<Thunk<V, Option<E>>>,
-        ),
-        Arc<Shapes<(V, Option<E>)>>,
-    > for ShapeGenerator<V, E>
+    ComputerMut<(&MonoidalGraph<(V, E)>, &Expanded<Thunk<V, E>>), Arc<Shapes<(V, E)>>>
+    for ShapeGenerator<V, E>
 {
     fn compute(
         &mut self,
-        (graph, expanded): (
-            &MonoidalGraph<(V, Option<E>)>,
-            &Expanded<Thunk<V, Option<E>>>,
-        ),
-    ) -> Arc<Shapes<(V, Option<E>)>> {
+        (graph, expanded): (&MonoidalGraph<(V, E)>, &Expanded<Thunk<V, E>>),
+    ) -> Arc<Shapes<(V, E)>> {
         debug!("Calculating layout...");
         let layout = layout(graph, expanded).unwrap();
         debug!("Calculating shapes...");
@@ -48,14 +40,14 @@ impl<V: 'static + Send + Sync + Display, E: 'static + Send + Sync>
     }
 }
 
-type ShapeCache<'a, V, E> = FrameCache<Arc<Shapes<(V, Option<E>)>>, ShapeGenerator<V, E>>;
+type ShapeCache<'a, V, E> = FrameCache<Arc<Shapes<(V, E)>>, ShapeGenerator<V, E>>;
 
 impl<V: 'static + Send + Sync + Display, E: 'static + Send + Sync> ShapeGenerator<V, E> {
     pub fn generate_shapes(
         ctx: &Context,
-        graph: &MonoidalGraph<(V, Option<E>)>,
-        expanded: &Expanded<Thunk<V, Option<E>>>,
-    ) -> Arc<Shapes<(V, Option<E>)>> {
+        graph: &MonoidalGraph<(V, E)>,
+        expanded: &Expanded<Thunk<V, E>>,
+    ) -> Arc<Shapes<(V, E)>> {
         ctx.memory_mut(|mem| {
             mem.caches
                 .cache::<ShapeCache<'_, V, E>>()

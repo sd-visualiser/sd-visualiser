@@ -5,9 +5,8 @@ use eframe::{
     epaint::{Pos2, Rect, Rounding, Shape},
 };
 use sd_core::{
-    graph::{Name, SyntaxHyperGraph},
+    graph::{Name, Op, SyntaxHyperGraph},
     hypergraph::{Operation, Thunk},
-    language::spartan::Op,
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
 };

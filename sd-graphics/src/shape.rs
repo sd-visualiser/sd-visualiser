@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    hash::{BuildHasher, Hash},
-};
+use std::{collections::HashSet, hash::BuildHasher};
 
 use derivative::Derivative;
 use egui::{
@@ -11,7 +8,8 @@ use egui::{
 use indexmap::IndexSet;
 use sd_core::{
     common::Addr,
-    hypergraph::{Operation, Thunk},
+    graph::{Name, Op},
+    language::Language,
 };
 
 use crate::{
@@ -57,7 +55,7 @@ pub struct Shapes<T: Addr> {
     pub height: f32,
 }
 
-impl<V, E> Shape<(V, Option<E>)> {
+impl<T: Addr> Shape<T> {
     pub(crate) fn apply_transform(&mut self, transform: &Transform) {
         match self {
             Shape::Line { start, end, .. } => {
@@ -83,16 +81,15 @@ impl<V, E> Shape<(V, Option<E>)> {
             }
         }
     }
+}
 
+impl<T: Language> Shape<(Op<T>, Name<T>)> {
     pub(crate) fn collect_hovers(
         &self,
         response: &Response,
         transform: &Transform,
-        hover_points: &mut IndexSet<DummyValue<V, E>>,
-    ) where
-        V: Clone + PartialEq + Eq + Hash,
-        E: Clone + PartialEq + Eq + Hash,
-    {
+        hover_points: &mut IndexSet<DummyValue<T>>,
+    ) {
         macro_rules! check_hover {
             ($path:expr, $port:expr) => {
                 if let Some(hover_pos) = response.ctx.input(|i| i.pointer.hover_pos()) {
@@ -121,17 +118,17 @@ impl<V, E> Shape<(V, Option<E>)> {
             _ => {}
         }
     }
+}
 
+impl<T: Addr> Shape<T> {
     pub(crate) fn into_egui_shape<S>(
         self,
         ui: &egui::Ui,
         transform: &Transform,
-        expanded: &mut Expanded<Thunk<V, Option<E>>>,
-        selections: &mut HashSet<Operation<V, Option<E>>, S>,
+        expanded: &mut Expanded<T::Thunk>,
+        selections: &mut HashSet<T::Operation, S>,
     ) -> egui::Shape
     where
-        V: Clone + PartialEq + Eq + Hash,
-        E: Clone + PartialEq + Eq + Hash,
         S: BuildHasher,
     {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;

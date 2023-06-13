@@ -2,7 +2,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug,
+    fmt::{Debug, Display},
 };
 
 use derivative::Derivative;
@@ -12,17 +12,56 @@ use tracing::{debug, Level};
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{spartan, Expr, Language, Thunk, Value},
+    language::{spartan::Spartan, Expr, Language, Thunk, Value},
 };
 
-pub type Name = Option<spartan::Variable>;
-pub type SyntaxHyperGraph = HyperGraph<spartan::Op, Name>;
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+pub struct Op<T: Language = Spartan>(pub T::Op);
+
+impl<T: Language> Display for Op<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+pub enum Name<T: Language = Spartan> {
+    Null,
+    Thunk(T::Addr),
+    Variable(T::Var),
+}
+
+impl<T: Language> Display for Name<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Name::Null => write!(f, ""),
+            Name::Thunk(_addr) => write!(f, ""),
+            Name::Variable(var) => write!(f, "{var}"),
+        }
+    }
+}
+
+pub type SyntaxHyperGraph<T = Spartan> = HyperGraph<Op<T>, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
 pub enum ConvertError<T: Language> {
     #[error("Error constructing hypergraph")]
-    HyperGraphError(#[from] HyperGraphError<T::Op, Option<T::Var>>),
+    HyperGraphError(#[from] HyperGraphError<Op<T>, Name<T>>),
     #[error("Couldn't find location of variable `{0}`")]
     VariableError(T::Var),
     #[error("Attempted to alias `{0}` to `{1}`")]
@@ -38,19 +77,19 @@ pub enum ConvertError<T: Language> {
 struct Environment<'env, F, T: Language> {
     free_vars: &'env FreeVars<T>,
     fragment: F,
-    inputs: Vec<(InPort<T::Op, Option<T::Var>, false>, T::Var)>,
-    outputs: HashMap<T::Var, OutPort<T::Op, Option<T::Var>, false>>,
+    inputs: Vec<(InPort<Op<T>, Name<T>, false>, T::Var)>,
+    outputs: HashMap<T::Var, OutPort<Op<T>, Name<T>, false>>,
 }
 
 enum ProcessInput<T: Language> {
     Variable(T::Var),
-    InPort(InPort<T::Op, Option<T::Var>, false>),
+    InPort(InPort<Op<T>, Name<T>, false>),
 }
 
 impl<'env, T, F> Environment<'env, F, T>
 where
-    T: Language,
-    F: Fragment<NodeWeight = T::Op, EdgeWeight = Option<T::Var>>,
+    T: Language + 'static,
+    F: Fragment<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
 {
     fn new(free_vars: &'env FreeVars<T>, fragment: F) -> Self {
         Self {
@@ -88,14 +127,16 @@ where
             }
             (Value::Op { op, vs, ds }, input) => {
                 let output_weight = if let ProcessInput::Variable(v) = &input {
-                    Some(v.clone())
+                    Name::Variable(v.clone())
                 } else {
-                    None
+                    Name::Null
                 };
 
-                let operation_node =
-                    self.fragment
-                        .add_operation(vs.len() + ds.len(), [output_weight], op.clone());
+                let operation_node = self.fragment.add_operation(
+                    vs.len() + ds.len(),
+                    [output_weight],
+                    Op(op.clone()),
+                );
                 for (value, inport) in vs
                     .iter()
                     .rev()
@@ -138,7 +179,7 @@ where
     fn process_thunk(
         &mut self,
         thunk: &Thunk<T>,
-        inport: InPort<T::Op, Option<T::Var>, false>,
+        inport: InPort<Op<T>, Name<T>, false>,
     ) -> Result<(), ConvertError<T>> {
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
@@ -146,9 +187,13 @@ where
             free.remove(var);
         }
         let thunk_node = self.fragment.add_thunk(
-            free.iter().cloned().map(Some),
-            thunk.args.iter().cloned().map(|(var, _)| Some(var)),
-            [None],
+            free.iter().cloned().map(Name::Variable),
+            thunk
+                .args
+                .iter()
+                .cloned()
+                .map(|(var, _)| Name::Variable(var)),
+            [Name::Thunk(thunk.addr.clone())],
         );
         debug!("new thunk node {:?}", thunk_node);
 
@@ -220,7 +265,7 @@ where
     }
 }
 
-impl<T: Language> TryFrom<&Expr<T>> for HyperGraph<T::Op, Option<T::Var>> {
+impl<T: Language + 'static> TryFrom<&Expr<T>> for SyntaxHyperGraph<T> {
     type Error = ConvertError<T>;
 
     #[tracing::instrument(level=Level::DEBUG, ret, err)]
@@ -231,7 +276,7 @@ impl<T: Language> TryFrom<&Expr<T>> for HyperGraph<T::Op, Option<T::Var>> {
 
         let free: Vec<T::Var> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
-        let graph = HyperGraph::new(free.iter().cloned().map(Some).collect(), 1);
+        let graph = HyperGraph::new(free.iter().cloned().map(Name::Variable).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);
 
         let mut env = Environment::new(&free_vars, graph);
