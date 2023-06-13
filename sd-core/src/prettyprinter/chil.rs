@@ -3,7 +3,7 @@ use pretty::RcDoc;
 use super::PrettyPrint;
 use crate::language::chil::{
     Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType, Type,
-    Value, Variable,
+    Value, VarDef, Variable,
 };
 
 const INDENTATION: isize = 2;
@@ -21,7 +21,7 @@ impl PrettyPrint for Bind {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("def")
             .append(RcDoc::space())
-            .append(format_var_with_ty(&self.var, &self.ty))
+            .append(self.def.to_doc())
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())
@@ -46,15 +46,18 @@ impl PrettyPrint for Variable {
     }
 }
 
-fn format_var_with_ty<'a>(var: &'a Variable, ty: &'a Option<Type>) -> RcDoc<'a, ()> {
-    match ty {
-        None => var.to_doc(),
-        Some(ty) => var
-            .to_doc()
-            .append(RcDoc::space())
-            .append(RcDoc::text(":"))
-            .append(RcDoc::space())
-            .append(ty.to_doc()),
+impl PrettyPrint for VarDef {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        match &self.r#type {
+            None => self.var.to_doc(),
+            Some(ty) => self
+                .var
+                .to_doc()
+                .append(RcDoc::space())
+                .append(RcDoc::text(":"))
+                .append(RcDoc::space())
+                .append(ty.to_doc()),
+        }
     }
 }
 
@@ -152,9 +155,7 @@ impl PrettyPrint for Thunk {
             .append(RcDoc::text("{"))
             .append(RcDoc::space())
             .append(RcDoc::intersperse(
-                self.args
-                    .iter()
-                    .map(|(var, ty)| format_var_with_ty(var, ty)),
+                self.args.iter().map(PrettyPrint::to_doc),
                 RcDoc::text(",").append(RcDoc::space()),
             ))
             .append(RcDoc::space())

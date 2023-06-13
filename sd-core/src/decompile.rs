@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     graph::{Name, Op},
     hypergraph::{Graph, Node},
-    language::{Bind, Expr, Language, Thunk, Value},
+    language::{Bind, Expr, Language, Thunk, Value, VarDef},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -23,7 +23,7 @@ pub fn decompile<T>(
 ) -> Result<Expr<T>, DecompilationError>
 where
     T: Language,
-    T::Ty: Default,
+    T::Type: Default,
 {
     let mut binds = Vec::default();
 
@@ -71,11 +71,13 @@ where
                         .collect(),
                 };
 
-                if let Name::Variable(var) = output.weight().clone() {
+                if let Name::Variable(var) = output.weight() {
                     binds.push(Bind {
-                        var,
+                        def: VarDef {
+                            var: var.clone(),
+                            r#type: T::Type::default(),
+                        },
                         value,
-                        ty: T::Ty::default(),
                     });
                 } else {
                     node_to_syntax.insert(node, Either::Left(value));
@@ -91,7 +93,10 @@ where
                     args: thunk
                         .bound_graph_inputs()
                         .map(|port| match port.weight() {
-                            Name::Variable(var) => Ok((var.clone(), T::Ty::default())),
+                            Name::Variable(var) => Ok(VarDef {
+                                var: var.clone(),
+                                r#type: T::Type::default(),
+                            }),
                             _ => Err(DecompilationError::Corrupt),
                         })
                         .collect::<Result<Vec<_>, _>>()?,

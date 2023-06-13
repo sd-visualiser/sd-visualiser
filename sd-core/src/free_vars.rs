@@ -24,14 +24,14 @@ impl<T: Language> FreeVars<T> {
     pub(crate) fn expr(&mut self, expr: &Expr<T>) {
         let mut vars: HashSet<T::Var> = HashSet::new();
 
-        for bc in &expr.binds {
-            self.value(&mut vars, &bc.value);
+        for bind in &expr.binds {
+            self.value(&mut vars, &bind.value);
         }
 
         self.value(&mut vars, &expr.value);
 
-        for bc in &expr.binds {
-            vars.remove(&bc.var);
+        for bind in &expr.binds {
+            vars.remove(&bind.def.var);
         }
 
         self.0.insert(expr, vars);
@@ -56,7 +56,7 @@ impl<T: Language> FreeVars<T> {
 
     pub(crate) fn thunk(&mut self, vars: &mut HashSet<T::Var>, thunk: &Thunk<T>) {
         self.expr(&thunk.body);
-        let arg_set: HashSet<T::Var> = thunk.args.iter().map(|(var, _)| var).cloned().collect();
+        let arg_set: HashSet<T::Var> = thunk.args.iter().map(|arg| arg.var.clone()).collect();
         vars.extend(self[&thunk.body].difference(&arg_set).cloned());
     }
 }

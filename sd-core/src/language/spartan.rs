@@ -17,8 +17,8 @@ pub struct Spartan;
 impl super::Language for Spartan {
     type Op = Op;
     type Var = Variable;
-    type Ty = Type;
     type Addr = Addr;
+    type Type = Type;
 
     type Rule = Rule;
 
@@ -40,6 +40,7 @@ pub type Expr = super::Expr<Spartan>;
 pub type Bind = super::Bind<Spartan>;
 pub type Value = super::Value<Spartan>;
 pub type Thunk = super::Thunk<Spartan>;
+pub type VarDef = super::VarDef<Spartan>;
 
 #[derive(Parser)]
 #[grammar = "language/spartan.pest"]

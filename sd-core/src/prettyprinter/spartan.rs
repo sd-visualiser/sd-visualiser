@@ -1,7 +1,7 @@
 use pretty::RcDoc;
 
 use super::PrettyPrint;
-use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
+use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, VarDef, Variable};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -13,7 +13,7 @@ impl PrettyPrint for Bind {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("bind")
             .append(RcDoc::space())
-            .append(self.var.to_doc())
+            .append(self.def.to_doc())
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())
@@ -21,6 +21,12 @@ impl PrettyPrint for Bind {
             .append(RcDoc::space())
             .append(RcDoc::text("in"))
             .append(RcDoc::line())
+    }
+}
+
+impl PrettyPrint for VarDef {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        self.var.to_doc()
     }
 }
 
@@ -97,20 +103,17 @@ impl PrettyPrint for Op {
 
 impl PrettyPrint for Thunk {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::intersperse(
-            self.args.iter().map(|(var, _)| var.to_doc()),
-            RcDoc::space(),
-        )
-        .append(RcDoc::space())
-        .append(RcDoc::text("."))
-        .append(if self.body.binds.is_empty() {
-            RcDoc::space().append(self.body.to_doc())
-        } else {
-            RcDoc::line()
-                .append(self.body.to_doc())
-                .nest(4)
-                .append(RcDoc::line())
-        })
+        RcDoc::intersperse(self.args.iter().map(PrettyPrint::to_doc), RcDoc::space())
+            .append(RcDoc::space())
+            .append(RcDoc::text("."))
+            .append(if self.body.binds.is_empty() {
+                RcDoc::space().append(self.body.to_doc())
+            } else {
+                RcDoc::line()
+                    .append(self.body.to_doc())
+                    .nest(4)
+                    .append(RcDoc::line())
+            })
     }
 }
 

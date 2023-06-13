@@ -15,8 +15,8 @@ pub struct Chil;
 impl super::Language for Chil {
     type Op = Op;
     type Var = Variable;
-    type Ty = Option<Type>;
     type Addr = Addr;
+    type Type = Option<Type>;
 
     type Rule = Rule;
 
@@ -38,6 +38,7 @@ pub type Expr = super::Expr<Chil>;
 pub type Bind = super::Bind<Chil>;
 pub type Value = super::Value<Chil>;
 pub type Thunk = super::Thunk<Chil>;
+pub type VarDef = super::VarDef<Chil>;
 
 #[derive(Parser)]
 #[grammar = "language/chil.pest"]
@@ -173,8 +174,7 @@ impl From<Expr> for spartan::Expr {
 impl From<Bind> for spartan::Bind {
     fn from(bind: Bind) -> Self {
         Self {
-            var: bind.var.into(),
-            ty: spartan::Type,
+            def: bind.def.into(),
             value: bind.value.into(),
         }
     }
@@ -184,11 +184,7 @@ impl From<Thunk> for spartan::Thunk {
     fn from(thunk: Thunk) -> Self {
         Self {
             addr: spartan::Addr,
-            args: thunk
-                .args
-                .into_iter()
-                .map(|(var, _)| (var.into(), spartan::Type))
-                .collect(),
+            args: thunk.args.into_iter().map(Into::into).collect(),
             body: thunk.body.into(),
         }
     }
@@ -203,6 +199,15 @@ impl From<Value> for spartan::Value {
                 vs: vs.into_iter().map(Into::into).collect(),
                 ds: ds.into_iter().map(Into::into).collect(),
             },
+        }
+    }
+}
+
+impl From<VarDef> for spartan::VarDef {
+    fn from(def: VarDef) -> Self {
+        Self {
+            var: def.var.into(),
+            r#type: spartan::Type,
         }
     }
 }

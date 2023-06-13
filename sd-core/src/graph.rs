@@ -183,8 +183,8 @@ where
     ) -> Result<(), ConvertError<T>> {
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
-        for (var, _) in &thunk.args {
-            free.remove(var);
+        for arg in &thunk.args {
+            free.remove(&arg.var);
         }
         let thunk_node = self.fragment.add_thunk(
             free.iter().cloned().map(Name::Variable),
@@ -192,7 +192,7 @@ where
                 .args
                 .iter()
                 .cloned()
-                .map(|(var, _)| Name::Variable(var)),
+                .map(|def| Name::Variable(def.var)),
             [Name::Thunk(thunk.addr.clone())],
         );
         debug!("new thunk node {:?}", thunk_node);
@@ -213,13 +213,13 @@ where
                         .then_some(())
                         .ok_or(ConvertError::Shadowed(var))?;
                 }
-                for ((var, _), outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
+                for (def, outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
                     thunk_env
                         .outputs
-                        .insert(var.clone(), outport)
+                        .insert(def.var.clone(), outport)
                         .is_none()
                         .then_some(())
-                        .ok_or(ConvertError::Shadowed(var.clone()))?;
+                        .ok_or(ConvertError::Shadowed(def.var.clone()))?;
                 }
                 thunk_env.process_expr(&thunk.body)
             })?;
@@ -251,7 +251,7 @@ where
         self.process_value(&expr.value, ProcessInput::InPort(graph_output))?;
 
         for bind in expr.binds.iter().rev() {
-            self.process_value(&bind.value, ProcessInput::Variable(bind.var.clone()))?;
+            self.process_value(&bind.value, ProcessInput::Variable(bind.def.var.clone()))?;
         }
         debug!("processed binds: {:?}", self.outputs);
 
