@@ -122,8 +122,8 @@ impl<V, E> Shape<(V, Option<E>)> {
         }
     }
 
-    pub(crate) fn to_egui_shape<S>(
-        &self,
+    pub(crate) fn into_egui_shape<S>(
+        self,
         ui: &egui::Ui,
         transform: &Transform,
         expanded: &mut Expanded<Thunk<V, Option<E>>>,
@@ -139,11 +139,11 @@ impl<V, E> Shape<(V, Option<E>)> {
 
         match self {
             Shape::Line { start, end, .. } => {
-                egui::Shape::line_segment([*start, *end], default_stroke)
+                egui::Shape::line_segment([start, end], default_stroke)
             }
             Shape::CubicBezier { points, .. } => {
                 let bezier = CubicBezierShape::from_points_stroke(
-                    *points,
+                    points,
                     false,
                     Color32::TRANSPARENT,
                     default_stroke,
@@ -153,20 +153,20 @@ impl<V, E> Shape<(V, Option<E>)> {
             Shape::Rectangle { rect, addr } => {
                 let thunk_response = ui.interact(
                     rect.intersect(transform.bounds),
-                    Id::new(addr),
+                    Id::new(&addr),
                     Sense::click(),
                 );
                 if thunk_response.clicked() {
-                    expanded[addr] = !expanded[addr];
+                    expanded[&addr] = !expanded[&addr];
                 }
                 let mut stroke = ui.style().interact(&thunk_response).fg_stroke;
-                if expanded[addr] {
+                if expanded[&addr] {
                     stroke.color = stroke.color.gamma_multiply(0.35);
                 }
                 egui::Shape::Rect(RectShape {
-                    rect: *rect,
+                    rect,
                     rounding: Rounding::none(),
-                    fill: if expanded[addr] {
+                    fill: if expanded[&addr] {
                         Color32::default()
                     } else {
                         ui.style().interact(&thunk_response).bg_fill
@@ -175,21 +175,21 @@ impl<V, E> Shape<(V, Option<E>)> {
                 })
             }
             Shape::CircleFilled { center, radius } => {
-                egui::Shape::circle_filled(*center, *radius, default_color)
+                egui::Shape::circle_filled(center, radius, default_color)
             }
             Shape::Circle { center, addr } => {
-                let selected = selections.contains(addr);
-                let op_rect = Rect::from_center_size(*center, BOX_SIZE * transform.scale);
+                let selected = selections.contains(&addr);
+                let op_rect = Rect::from_center_size(center, BOX_SIZE * transform.scale);
                 let op_response = ui.interact(
                     op_rect.intersect(transform.bounds),
-                    Id::new(addr),
+                    Id::new(&addr),
                     Sense::click(),
                 );
-                if op_response.clicked() && !selections.remove(addr) {
+                if op_response.clicked() && !selections.remove(&addr) {
                     selections.insert(addr.clone());
                 }
                 egui::Shape::Circle(CircleShape {
-                    center: *center,
+                    center,
                     radius: RADIUS_OPERATION * transform.scale,
                     fill: ui
                         .style()
@@ -206,7 +206,7 @@ impl<V, E> Shape<(V, Option<E>)> {
                     ui.fonts(|fonts| {
                         egui::Shape::text(
                             fonts,
-                            *center,
+                            center,
                             Align2::CENTER_CENTER,
                             text,
                             egui::FontId::monospace(TEXT_SIZE * transform.scale),

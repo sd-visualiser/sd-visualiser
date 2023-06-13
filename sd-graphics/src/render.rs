@@ -53,7 +53,7 @@ where
             let mut s = shape.clone();
             s.apply_transform(&transform);
             s.collect_hovers(response, &transform, &mut hover_points);
-            s.to_egui_shape(ui, &transform, expanded, selections)
+            s.into_egui_shape(ui, &transform, expanded, selections)
         })
         .collect();
 
