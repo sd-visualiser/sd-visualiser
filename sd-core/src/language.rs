@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Display},
-    hash::Hash,
-};
+use std::{fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 use from_pest::{ConversionError, FromPest, Void};
@@ -14,11 +11,21 @@ pub(crate) fn span_into_str(span: pest::Span) -> &str {
     span.as_str()
 }
 
+pub trait ToVar<V> {
+    fn to_var(&self) -> &V;
+}
+
+impl<V> ToVar<V> for V {
+    fn to_var(&self) -> &V {
+        self
+    }
+}
+
 pub trait Language {
-    type Op: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
-    type Var: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
-    type Addr: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
-    type Type: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
+    type Op: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
+    type Var: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
+    type Addr: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
+    type VarDef: Clone + Eq + PartialEq + Hash + Debug + Send + Sync + ToVar<Self::Var>;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;
@@ -49,7 +56,7 @@ pub struct Expr<T: Language> {
     Debug(bound = "")
 )]
 pub struct Bind<T: Language> {
-    pub def: VarDef<T>,
+    pub def: T::VarDef,
     pub value: Value<T>,
 }
 
@@ -80,21 +87,8 @@ pub enum Value<T: Language> {
 )]
 pub struct Thunk<T: Language> {
     pub addr: T::Addr,
-    pub args: Vec<VarDef<T>>,
+    pub args: Vec<T::VarDef>,
     pub body: Expr<T>,
-}
-
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
-pub struct VarDef<T: Language> {
-    pub var: T::Var,
-    pub r#type: T::Type,
 }
 
 // Conversions between languages
@@ -105,7 +99,7 @@ impl<T: Language> Expr<T> {
         U::Op: From<T::Op>,
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
-        U::Type: From<T::Type>,
+        U::VarDef: From<T::VarDef>,
     {
         Expr {
             binds: self.binds.into_iter().map(Bind::into).collect(),
@@ -120,7 +114,7 @@ impl<T: Language> Bind<T> {
         U::Op: From<T::Op>,
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
-        U::Type: From<T::Type>,
+        U::VarDef: From<T::VarDef>,
     {
         Bind {
             def: self.def.into(),
@@ -135,7 +129,7 @@ impl<T: Language> Value<T> {
         U::Op: From<T::Op>,
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
-        U::Type: From<T::Type>,
+        U::VarDef: From<T::VarDef>,
     {
         match self {
             Self::Variable(var) => Value::Variable(var.into()),
@@ -154,25 +148,12 @@ impl<T: Language> Thunk<T> {
         U::Op: From<T::Op>,
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
-        U::Type: From<T::Type>,
+        U::VarDef: From<T::VarDef>,
     {
         Thunk {
             addr: self.addr.into(),
-            args: self.args.into_iter().map(VarDef::into).collect(),
+            args: self.args.into_iter().map(Into::into).collect(),
             body: self.body.into(),
-        }
-    }
-}
-
-impl<T: Language> VarDef<T> {
-    pub fn into<U: Language>(self) -> VarDef<U>
-    where
-        U::Var: From<T::Var>,
-        U::Type: From<T::Type>,
-    {
-        VarDef {
-            var: self.var.into(),
-            r#type: self.r#type.into(),
         }
     }
 }
@@ -185,7 +166,7 @@ where
     T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Type: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
+    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
 {
     type Rule = T::Rule;
     type FatalError = Void;
@@ -219,7 +200,7 @@ where
     T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Type: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
+    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
 {
     type Rule = T::Rule;
     type FatalError = Void;
@@ -253,7 +234,7 @@ where
     T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Type: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
+    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
 {
     type Rule = T::Rule;
     type FatalError = Void;
@@ -302,7 +283,7 @@ where
     T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
     T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Type: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
+    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
 {
     type Rule = T::Rule;
     type FatalError = Void;
@@ -328,28 +309,6 @@ where
         }
         *pest = clone;
         Ok(thunk)
-    }
-}
-
-impl<'pest, T> FromPest<'pest> for VarDef<T>
-where
-    T: Language,
-    T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Type: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-{
-    type Rule = T::Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        let mut clone = pest.clone();
-        let def = VarDef {
-            var: FromPest::from_pest(&mut clone)?,
-            r#type: FromPest::from_pest(&mut clone)?,
-        };
-        *pest = clone;
-        Ok(def)
     }
 }
 

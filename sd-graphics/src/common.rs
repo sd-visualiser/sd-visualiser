@@ -1,10 +1,12 @@
+use std::fmt::Display;
+
 use derivative::Derivative;
 use egui::{emath::RectTransform, epaint::CubicBezierShape, vec2, Pos2, Rect, Vec2};
 use pretty::RcDoc;
 use sd_core::{
     graph::{Name, Op},
     hypergraph::{Node, OutPort},
-    language::{Language, VarDef},
+    language::Language,
     prettyprinter::PrettyPrint,
 };
 
@@ -41,7 +43,7 @@ impl Transform {
 pub enum DummyValue<T: Language> {
     Thunk(T::Addr),
     FreeVar(T::Var),
-    BoundVar(VarDef<T>),
+    BoundVar(T::VarDef),
     Operation(T::Op, Vec<DummyValue<T>>),
 }
 
@@ -64,7 +66,13 @@ impl<T: Language> DummyValue<T> {
     }
 }
 
-impl<T: Language> PrettyPrint for DummyValue<T> {
+impl<T: Language> PrettyPrint for DummyValue<T>
+where
+    T::Op: PrettyPrint,
+    T::Var: PrettyPrint,
+    T::Addr: Display,
+    T::VarDef: PrettyPrint,
+{
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Thunk(addr) => {
@@ -74,27 +82,16 @@ impl<T: Language> PrettyPrint for DummyValue<T> {
                 } else {
                     RcDoc::text("thunk")
                         .append(RcDoc::space())
-                        .append(RcDoc::as_string(addr))
+                        .append(RcDoc::text(addr))
                 }
             }
-            Self::FreeVar(var) => RcDoc::as_string(var),
-            Self::BoundVar(def) => {
-                let ty = format!("{:?}", def.r#type); // TODO: use Display
-                if ty.is_empty() {
-                    RcDoc::as_string(&def.var)
-                } else {
-                    RcDoc::as_string(&def.var)
-                        .append(RcDoc::space())
-                        .append(RcDoc::text(":"))
-                        .append(RcDoc::space())
-                        .append(RcDoc::as_string(ty))
-                }
-            }
+            Self::FreeVar(var) => var.to_doc(),
+            Self::BoundVar(def) => def.to_doc(),
             Self::Operation(op, vs) => {
                 if vs.is_empty() {
-                    RcDoc::as_string(op)
+                    op.to_doc()
                 } else {
-                    RcDoc::as_string(op)
+                    op.to_doc()
                         .append(RcDoc::text("("))
                         .append(RcDoc::intersperse(
                             vs.iter().map(PrettyPrint::to_doc),

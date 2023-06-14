@@ -3,7 +3,7 @@ use pretty::RcDoc;
 use super::PrettyPrint;
 use crate::language::chil::{
     Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType, Type,
-    Value, VarDef, Variable,
+    Value, Variable, VariableDef,
 };
 
 const INDENTATION: isize = 2;
@@ -46,7 +46,7 @@ impl PrettyPrint for Variable {
     }
 }
 
-impl PrettyPrint for VarDef {
+impl PrettyPrint for VariableDef {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match &self.r#type {
             None => self.var.to_doc(),

@@ -12,7 +12,7 @@ use tracing::{debug, Level};
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{spartan::Spartan, Expr, Language, Thunk, Value, VarDef},
+    language::{spartan::Spartan, Expr, Language, Thunk, ToVar, Value},
 };
 
 #[derive(Derivative)]
@@ -25,7 +25,10 @@ use crate::{
 )]
 pub struct Op<T: Language = Spartan>(pub T::Op);
 
-impl<T: Language> Display for Op<T> {
+impl<T: Language> Display for Op<T>
+where
+    T::Op: Display,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -43,7 +46,7 @@ pub enum Name<T: Language = Spartan> {
     Op,
     Thunk(T::Addr),
     FreeVar(T::Var),
-    BoundVar(VarDef<T>),
+    BoundVar(T::VarDef),
 }
 
 impl<T: Language> Name<T> {
@@ -51,7 +54,7 @@ impl<T: Language> Name<T> {
         match self {
             Name::Op | Name::Thunk(_) => None,
             Name::FreeVar(var) => Some(var),
-            Name::BoundVar(def) => Some(&def.var),
+            Name::BoundVar(def) => Some(def.to_var()),
         }
     }
 }
@@ -60,7 +63,10 @@ pub type SyntaxHyperGraph<T = Spartan> = HyperGraph<Op<T>, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
-pub enum ConvertError<T: Language> {
+pub enum ConvertError<T: Language>
+where
+    T::Var: Display,
+{
     #[error("Error constructing hypergraph")]
     HyperGraphError(#[from] HyperGraphError<Op<T>, Name<T>>),
     #[error("Couldn't find location of variable `{0}`")]
@@ -83,13 +89,14 @@ struct Environment<'env, F, T: Language> {
 }
 
 enum ProcessInput<T: Language> {
-    Variable(VarDef<T>),
+    Variable(T::VarDef),
     InPort(InPort<Op<T>, Name<T>, false>),
 }
 
 impl<'env, T, F> Environment<'env, F, T>
 where
     T: Language + 'static,
+    T::Var: Display,
     F: Fragment<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
 {
     fn new(free_vars: &'env FreeVars<T>, fragment: F) -> Self {
@@ -120,7 +127,7 @@ where
     ) -> Result<(), ConvertError<T>> {
         match (value, input) {
             (Value::Variable(var), ProcessInput::Variable(input)) => {
-                Err(ConvertError::Aliased(input.var, var.clone()))
+                Err(ConvertError::Aliased(input.to_var().clone(), var.clone()))
             }
             (Value::Variable(var), ProcessInput::InPort(in_port)) => {
                 self.inputs.push((in_port, var.clone()));
@@ -156,11 +163,12 @@ where
 
                 match input {
                     ProcessInput::Variable(input) => {
+                        let var = input.to_var();
                         self.outputs
-                            .insert(input.var.clone(), out_port)
+                            .insert(var.clone(), out_port)
                             .is_none()
                             .then_some(())
-                            .ok_or(ConvertError::Shadowed(input.var))?;
+                            .ok_or(ConvertError::Shadowed(var.clone()))?;
                     }
                     ProcessInput::InPort(in_port) => self.fragment.link(out_port, in_port)?,
                 }
@@ -185,7 +193,7 @@ where
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
         for arg in &thunk.args {
-            free.remove(&arg.var);
+            free.remove(arg.to_var());
         }
         let thunk_node = self.fragment.add_thunk(
             free.iter().cloned().map(Name::FreeVar),
@@ -211,12 +219,13 @@ where
                         .ok_or(ConvertError::Shadowed(var))?;
                 }
                 for (def, outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
+                    let var = def.to_var();
                     thunk_env
                         .outputs
-                        .insert(def.var.clone(), outport)
+                        .insert(var.clone(), outport)
                         .is_none()
                         .then_some(())
-                        .ok_or(ConvertError::Shadowed(def.var.clone()))?;
+                        .ok_or(ConvertError::Shadowed(var.clone()))?;
                 }
                 thunk_env.process_expr(&thunk.body)
             })?;
@@ -262,7 +271,11 @@ where
     }
 }
 
-impl<T: Language + 'static> TryFrom<&Expr<T>> for SyntaxHyperGraph<T> {
+impl<T> TryFrom<&Expr<T>> for SyntaxHyperGraph<T>
+where
+    T: Language + 'static,
+    T::Var: Display,
+{
     type Error = ConvertError<T>;
 
     #[tracing::instrument(level=Level::DEBUG, ret, err)]

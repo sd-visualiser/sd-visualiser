@@ -26,7 +26,7 @@ tuple_ty = { "(" ~ tys? ~ ")" }
 function_ty = { tuple_ty ~ "->" ~ ty }
 
 variable = { addr | identifier ~ "(" ~ "id" ~ ":" ~ addr ~ ")" }
-variable_def = _{ variable ~ (":" ~ ty)? }
+variable_def = { variable ~ (":" ~ ty)? }
 
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }

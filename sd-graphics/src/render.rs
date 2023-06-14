@@ -30,6 +30,10 @@ pub fn render<T, S>(
 ) -> Vec<egui::Shape>
 where
     T: Language,
+    T::Op: PrettyPrint,
+    T::Var: PrettyPrint,
+    T::Addr: Display,
+    T::VarDef: PrettyPrint,
     S: BuildHasher,
 {
     let bounds = *to_screen.to();

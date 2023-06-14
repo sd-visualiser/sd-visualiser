@@ -1,7 +1,7 @@
 use pretty::RcDoc;
 
 use super::PrettyPrint;
-use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, VarDef, Variable};
+use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -21,12 +21,6 @@ impl PrettyPrint for Bind {
             .append(RcDoc::space())
             .append(RcDoc::text("in"))
             .append(RcDoc::line())
-    }
-}
-
-impl PrettyPrint for VarDef {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        self.var.to_doc()
     }
 }
 

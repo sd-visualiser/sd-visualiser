@@ -18,13 +18,9 @@ pub enum DecompilationError {
     MultipleOutputs,
 }
 
-pub fn decompile<T>(
+pub fn decompile<T: Language>(
     graph: &impl Graph<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
-) -> Result<Expr<T>, DecompilationError>
-where
-    T: Language,
-    T::Type: Default,
-{
+) -> Result<Expr<T>, DecompilationError> {
     let mut binds = Vec::default();
 
     // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).

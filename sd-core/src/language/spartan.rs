@@ -18,7 +18,7 @@ impl super::Language for Spartan {
     type Op = Op;
     type Var = Variable;
     type Addr = Addr;
-    type Type = Type;
+    type VarDef = Variable;
 
     type Rule = Rule;
 
@@ -40,7 +40,6 @@ pub type Expr = super::Expr<Spartan>;
 pub type Bind = super::Bind<Spartan>;
 pub type Value = super::Value<Spartan>;
 pub type Thunk = super::Thunk<Spartan>;
-pub type VarDef = super::VarDef<Spartan>;
 
 #[derive(Parser)]
 #[grammar = "language/spartan.pest"]
@@ -173,18 +172,6 @@ impl Display for Variable {
 impl From<&str> for Variable {
     fn from(value: &str) -> Self {
         Variable(value.to_owned())
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, Default)]
-pub struct Type;
-
-impl<'pest> FromPest<'pest> for Type {
-    type Rule = Rule;
-    type FatalError = Void;
-
-    fn from_pest(_: &mut Pairs<'pest, Rule>) -> Result<Self, ConversionError<Void>> {
-        Ok(Type)
     }
 }
 
