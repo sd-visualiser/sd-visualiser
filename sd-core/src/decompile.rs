@@ -103,15 +103,18 @@ pub fn decompile<T: Language>(
 
     let values = graph
         .graph_outputs()
-        .map(|port| match port.link().weight().to_var() {
-            Some(var) => Ok(Value::Variable(var.clone())),
-            None => match port.node() {
-                None => Err(DecompilationError::Corrupt),
-                Some(node) => node_to_syntax
-                    .get(&node)
-                    .and_then(|x| x.as_ref().left().cloned())
-                    .ok_or(DecompilationError::Corrupt),
-            },
+        .map(|port| {
+            let port = port.link();
+            match port.weight().to_var() {
+                Some(var) => Ok(Value::Variable(var.clone())),
+                None => match port.node() {
+                    None => Err(DecompilationError::Corrupt),
+                    Some(node) => node_to_syntax
+                        .get(&node)
+                        .and_then(|x| x.as_ref().left().cloned())
+                        .ok_or(DecompilationError::Corrupt),
+                },
+            }
         })
         .collect::<Result<Vec<_>, _>>()?;
 
