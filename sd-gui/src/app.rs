@@ -186,19 +186,23 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            let row_height_sans_spacing = ui.text_style_height(&egui::TextStyle::Monospace);
+            let row_height_sans_spacing = ui.text_style_height(&egui::TextStyle::Body);
             #[allow(clippy::cast_sign_loss)]
-            let total_rows = usize::max(
-                self.code.len(),
-                // probably exists a better way to do this
-                ui.available_height() as usize / row_height_sans_spacing as usize,
-            );
+            // probably exists a better way to do this
+            let pad_rows = ui.available_height() as usize / row_height_sans_spacing as usize;
+            let total_rows = usize::max(self.code.len(), pad_rows);
             ui.columns(2, |columns| {
                 egui::ScrollArea::both().id_source("code").show_rows(
                     &mut columns[0],
                     row_height_sans_spacing,
                     total_rows,
-                    |ui, row_range| self.code_edit_ui(ui, row_range),
+                    |ui, row_range| {
+                        self.code_edit_ui(
+                            ui,
+                            row_range.start.saturating_sub(pad_rows / 2)
+                                ..row_range.end.saturating_add(pad_rows / 2),
+                        );
+                    },
                 );
                 egui::ScrollArea::both()
                     .id_source("graph")
