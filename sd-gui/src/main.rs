@@ -34,7 +34,10 @@ fn main() -> anyhow::Result<()> {
         println!("sd visualiser: 0.1.0");
         anyhow::Result::Ok(())
     } else {
-        let native_options = eframe::NativeOptions::default();
+        let native_options = eframe::NativeOptions {
+            maximized: true,
+            ..Default::default()
+        };
 
         let file = if let Some(path) = args.chil {
             let code = std::fs::read_to_string(path)?;
