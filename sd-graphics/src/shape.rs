@@ -9,14 +9,12 @@ use indexmap::IndexSet;
 use sd_core::{
     common::Addr,
     graph::{Name, Op},
-    hypergraph::OutPort,
+    hypergraph::{Operation, OutPort, Thunk},
     language::Language,
 };
 
 use crate::{
-    common::{
-        ContainsPoint, DummyValue, Transform, BOX_SIZE, RADIUS_OPERATION, TEXT_SIZE, TOLERANCE,
-    },
+    common::{ContainsPoint, DummyValue, Transform, TEXT_SIZE, TOLERANCE},
     expanded::Expanded,
 };
 
@@ -35,6 +33,8 @@ pub enum Shape<T: Addr> {
     Rectangle {
         rect: Rect,
         addr: T::Thunk,
+        fill: Option<Color32>,
+        stroke: Option<Stroke>,
     },
     CircleFilled {
         center: Pos2,
@@ -43,7 +43,10 @@ pub enum Shape<T: Addr> {
     },
     Circle {
         center: Pos2,
+        radius: f32,
         addr: T::Operation,
+        fill: Option<Color32>,
+        stroke: Option<Stroke>,
     },
     Text {
         text: String,
@@ -74,11 +77,11 @@ impl<T: Addr> Shape<T> {
                 rect.min = transform.apply(rect.min);
                 rect.max = transform.apply(rect.max);
             }
-            Shape::CircleFilled { center, radius, .. } => {
+            Shape::CircleFilled { center, radius, .. } | Shape::Circle { center, radius, .. } => {
                 *center = transform.apply(*center);
                 *radius *= transform.scale;
             }
-            Shape::Circle { center, .. } | Shape::Text { center, .. } => {
+            Shape::Text { center, .. } => {
                 *center = transform.apply(*center);
             }
         }
@@ -86,38 +89,97 @@ impl<T: Addr> Shape<T> {
 }
 
 impl<T: Language> Shape<(Op<T>, Name<T>)> {
-    pub(crate) fn collect_hovers(
-        &self,
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn collect_hovers<S>(
+        &mut self,
+        ui: &egui::Ui,
         response: &Response,
         transform: &Transform,
         hover_points: &mut IndexSet<DummyValue<T>>,
         highlight_ports: &mut HashSet<OutPort<Op<T>, Name<T>>>,
-    ) {
-        macro_rules! check_hover {
-            ($path:expr, $port:expr) => {
-                if let Some(hover_pos) = response.ctx.input(|i| i.pointer.hover_pos()) {
-                    if response.rect.contains(hover_pos) {
-                        if $path.contains_point(hover_pos, TOLERANCE * transform.scale) {
-                            hover_points.insert(DummyValue::from_port($port));
-                            highlight_ports.insert($port.clone());
-                        }
-                    }
-                }
-            };
-        }
+        expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
+        selections: &mut HashSet<Operation<Op<T>, Name<T>>, S>,
+        operation_hovered: &mut bool,
+    ) where
+        S: BuildHasher,
+    {
+        let bounding_box = self.bounding_box();
+        let hover_pos = response
+            .ctx
+            .input(|i| i.pointer.hover_pos())
+            .filter(|x| response.rect.contains(*x));
 
         match self {
             Shape::Line { start, end, addr } => {
-                check_hover!([*start, *end], addr);
+                if let Some(hover_pos) = hover_pos {
+                    if [*start, *end].contains_point(hover_pos, TOLERANCE * transform.scale) {
+                        hover_points.insert(DummyValue::from_port(addr));
+                        highlight_ports.insert(addr.clone());
+                    }
+                }
             }
             Shape::CubicBezier { points, addr } => {
-                let bezier = CubicBezierShape::from_points_stroke(
-                    *points,
-                    false,
-                    Color32::TRANSPARENT,
-                    Stroke::default(),
+                if let Some(hover_pos) = hover_pos {
+                    let bezier = CubicBezierShape::from_points_stroke(
+                        *points,
+                        false,
+                        Color32::TRANSPARENT,
+                        Stroke::default(),
+                    );
+                    if bezier.contains_point(hover_pos, TOLERANCE * transform.scale) {
+                        hover_points.insert(DummyValue::from_port(addr));
+                        highlight_ports.insert(addr.clone());
+                    }
+                }
+            }
+            Shape::Rectangle {
+                addr, fill, stroke, ..
+            } => {
+                let addr: &_ = addr;
+                let thunk_response = ui.interact(
+                    bounding_box.intersect(transform.bounds),
+                    Id::new(addr),
+                    Sense::click(),
                 );
-                check_hover!(bezier, addr);
+                if thunk_response.clicked() {
+                    expanded[addr] = !expanded[addr];
+                }
+                let mut new_stroke = ui.style().interact(&thunk_response).fg_stroke;
+                if expanded[addr] {
+                    new_stroke.color = new_stroke.color.gamma_multiply(0.35);
+                }
+                *stroke = Some(new_stroke);
+                if !expanded[addr] {
+                    *fill = Some(ui.style().interact(&thunk_response).bg_fill);
+                }
+            }
+            Shape::Circle {
+                addr, fill, stroke, ..
+            } => {
+                let selected = selections.contains(addr);
+                let op_response = ui.interact(
+                    bounding_box.intersect(transform.bounds),
+                    Id::new(&addr),
+                    Sense::click().union(Sense::hover()),
+                );
+                if op_response.clicked() && !selections.remove(addr) {
+                    selections.insert(addr.clone());
+                }
+                *fill = Some(
+                    ui.style()
+                        .interact_selectable(&op_response, selected)
+                        .bg_fill,
+                );
+                *stroke = Some(
+                    ui.style()
+                        .interact_selectable(&op_response, selected)
+                        .fg_stroke,
+                );
+                if op_response.hovered() {
+                    *operation_hovered = true;
+                    highlight_ports
+                        .extend(addr.inputs().map(|port| port.link()).chain(addr.outputs()));
+                }
             }
             _ => {}
         }
@@ -125,18 +187,12 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
 }
 
 impl<T: Addr> Shape<T> {
-    #[allow(clippy::too_many_lines)]
-    pub(crate) fn into_egui_shape<S>(
+    pub(crate) fn into_egui_shape(
         self,
         ui: &egui::Ui,
         transform: &Transform,
-        expanded: &mut Expanded<T::Thunk>,
-        selections: &mut HashSet<T::Operation, S>,
         highlight_ports: &HashSet<T::OutPort>,
-    ) -> egui::Shape
-    where
-        S: BuildHasher,
-    {
+    ) -> egui::Shape {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
 
         match self {
@@ -162,30 +218,14 @@ impl<T: Addr> Shape<T> {
                 );
                 egui::Shape::CubicBezier(bezier)
             }
-            Shape::Rectangle { rect, addr } => {
-                let thunk_response = ui.interact(
-                    rect.intersect(transform.bounds),
-                    Id::new(&addr),
-                    Sense::click(),
-                );
-                if thunk_response.clicked() {
-                    expanded[&addr] = !expanded[&addr];
-                }
-                let mut stroke = ui.style().interact(&thunk_response).fg_stroke;
-                if expanded[&addr] {
-                    stroke.color = stroke.color.gamma_multiply(0.35);
-                }
-                egui::Shape::Rect(RectShape {
-                    rect,
-                    rounding: Rounding::none(),
-                    fill: if expanded[&addr] {
-                        Color32::default()
-                    } else {
-                        ui.style().interact(&thunk_response).bg_fill
-                    },
-                    stroke,
-                })
-            }
+            Shape::Rectangle {
+                rect, fill, stroke, ..
+            } => egui::Shape::Rect(RectShape {
+                rect,
+                rounding: Rounding::none(),
+                fill: fill.unwrap_or(Color32::default()),
+                stroke: stroke.unwrap_or(default_stroke),
+            }),
             Shape::CircleFilled {
                 center,
                 radius,
@@ -198,30 +238,18 @@ impl<T: Addr> Shape<T> {
                 };
                 egui::Shape::circle_filled(center, radius, stroke.color)
             }
-            Shape::Circle { center, addr } => {
-                let selected = selections.contains(&addr);
-                let op_rect = Rect::from_center_size(center, BOX_SIZE * transform.scale);
-                let op_response = ui.interact(
-                    op_rect.intersect(transform.bounds),
-                    Id::new(&addr),
-                    Sense::click(),
-                );
-                if op_response.clicked() && !selections.remove(&addr) {
-                    selections.insert(addr.clone());
-                }
-                egui::Shape::Circle(CircleShape {
-                    center,
-                    radius: RADIUS_OPERATION * transform.scale,
-                    fill: ui
-                        .style()
-                        .interact_selectable(&op_response, selected)
-                        .bg_fill,
-                    stroke: ui
-                        .style()
-                        .interact_selectable(&op_response, selected)
-                        .fg_stroke,
-                })
-            }
+            Shape::Circle {
+                center,
+                radius,
+                fill,
+                stroke,
+                ..
+            } => egui::Shape::Circle(CircleShape {
+                center,
+                radius,
+                fill: fill.unwrap_or(Color32::default()),
+                stroke: stroke.unwrap_or(default_stroke),
+            }),
             Shape::Text { text, center } => {
                 if transform.scale > 10.0 {
                     ui.fonts(|fonts| {
@@ -246,11 +274,8 @@ impl<T: Addr> Shape<T> {
             Shape::Line { start, end, .. } => Rect::from_two_pos(*start, *end),
             Shape::CubicBezier { points, .. } => Rect::from_points(points),
             Shape::Rectangle { rect, .. } => *rect,
-            Shape::CircleFilled { center, radius, .. } => {
-                Rect::from_center_size(*center, Vec2::new(*radius, *radius))
-            }
-            Shape::Circle { center, .. } => {
-                Rect::from_center_size(*center, Vec2::new(RADIUS_OPERATION, RADIUS_OPERATION))
+            Shape::CircleFilled { center, radius, .. } | Shape::Circle { center, radius, .. } => {
+                Rect::from_center_size(*center, Vec2::splat(*radius * 2.0))
             }
             Shape::Text { center, .. } => {
                 Rect::from_center_size(*center, Vec2::new(f32::INFINITY, 1.0))

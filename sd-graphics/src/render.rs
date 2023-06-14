@@ -12,7 +12,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{Transform, BOX_SIZE, RADIUS_ARG, RADIUS_COPY},
+    common::{Transform, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     expanded::Expanded,
     layout::Layout,
     shape::Shape,
@@ -43,6 +43,7 @@ where
 
     let mut hover_points = IndexSet::default();
     let mut highlight_ports = HashSet::default();
+    let mut operation_hovered = false;
 
     let shapes_vec: Vec<_> = shapes
         .iter()
@@ -51,10 +52,14 @@ where
             let mut s = shape.clone();
             s.apply_transform(&transform);
             s.collect_hovers(
+                ui,
                 response,
                 &transform,
                 &mut hover_points,
                 &mut highlight_ports,
+                expanded,
+                selections,
+                &mut operation_hovered,
             );
             s
         })
@@ -62,14 +67,16 @@ where
 
     let final_shapes: Vec<egui::Shape> = shapes_vec
         .into_iter()
-        .map(|shape| shape.into_egui_shape(ui, &transform, expanded, selections, &highlight_ports))
+        .map(|shape| shape.into_egui_shape(ui, &transform, &highlight_ports))
         .collect();
 
-    // Show hover tooltips
-    for e in hover_points {
-        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
-            ui.label(e.to_pretty())
-        });
+    // Show hover tooltips if not hovering on operation
+    if !operation_hovered {
+        for e in hover_points {
+            show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
+                ui.label(e.to_pretty())
+            });
+        }
     }
 
     final_shapes
@@ -155,6 +162,8 @@ pub fn generate_shapes<V, E>(
                     shapes.push(Shape::Rectangle {
                         rect: thunk_rect,
                         addr: addr.clone(),
+                        fill: None,
+                        stroke: None,
                     });
                     for (port, &x) in addr
                         .bound_graph_inputs()
@@ -254,6 +263,9 @@ pub fn generate_shapes<V, E>(
                             shapes.push(Shape::Circle {
                                 center,
                                 addr: addr.clone(),
+                                radius: RADIUS_OPERATION,
+                                fill: None,
+                                stroke: None,
                             });
                             shapes.push(Shape::Text {
                                 text: addr.weight().to_string(),
@@ -265,6 +277,8 @@ pub fn generate_shapes<V, E>(
                             shapes.push(Shape::Rectangle {
                                 rect: thunk_rect,
                                 addr: addr.clone(),
+                                fill: None,
+                                stroke: None,
                             });
                         }
                         _ => (),
