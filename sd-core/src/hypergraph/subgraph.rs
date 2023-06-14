@@ -31,7 +31,7 @@ impl Free for spartan::Variable {
     }
 
     fn generate_free(number: usize) -> Self {
-        Self(format!("<fresh{number}>"))
+        Self(format!("?{number}"))
     }
 }
 
