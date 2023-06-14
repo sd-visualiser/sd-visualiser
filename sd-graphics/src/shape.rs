@@ -145,9 +145,6 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                     Id::new(addr),
                     Sense::click(),
                 );
-                if thunk_response.clicked() {
-                    expanded[addr] = !expanded[addr];
-                }
                 let mut new_stroke = ui.style().interact(&thunk_response).fg_stroke;
                 if expanded[addr] {
                     new_stroke.color = new_stroke.color.gamma_multiply(0.35);
@@ -167,6 +164,9 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                             );
                         });
                     }
+                }
+                if thunk_response.clicked() {
+                    expanded[addr] = !expanded[addr];
                 }
             }
             Shape::Circle {
