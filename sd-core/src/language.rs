@@ -97,6 +97,88 @@ pub struct VarDef<T: Language> {
     pub r#type: T::Type,
 }
 
+// Conversions between languages
+
+impl<T: Language> Expr<T> {
+    pub fn into<U: Language>(self) -> Expr<U>
+    where
+        U::Op: From<T::Op>,
+        U::Var: From<T::Var>,
+        U::Addr: From<T::Addr>,
+        U::Type: From<T::Type>,
+    {
+        Expr {
+            binds: self.binds.into_iter().map(Bind::into).collect(),
+            value: self.value.into(),
+        }
+    }
+}
+
+impl<T: Language> Bind<T> {
+    pub fn into<U: Language>(self) -> Bind<U>
+    where
+        U::Op: From<T::Op>,
+        U::Var: From<T::Var>,
+        U::Addr: From<T::Addr>,
+        U::Type: From<T::Type>,
+    {
+        Bind {
+            def: self.def.into(),
+            value: self.value.into(),
+        }
+    }
+}
+
+impl<T: Language> Value<T> {
+    pub fn into<U: Language>(self) -> Value<U>
+    where
+        U::Op: From<T::Op>,
+        U::Var: From<T::Var>,
+        U::Addr: From<T::Addr>,
+        U::Type: From<T::Type>,
+    {
+        match self {
+            Self::Variable(var) => Value::Variable(var.into()),
+            Self::Op { op, vs, ds } => Value::Op {
+                op: op.into(),
+                vs: vs.into_iter().map(Value::into).collect(),
+                ds: ds.into_iter().map(Thunk::into).collect(),
+            },
+        }
+    }
+}
+
+impl<T: Language> Thunk<T> {
+    pub fn into<U: Language>(self) -> Thunk<U>
+    where
+        U::Op: From<T::Op>,
+        U::Var: From<T::Var>,
+        U::Addr: From<T::Addr>,
+        U::Type: From<T::Type>,
+    {
+        Thunk {
+            addr: self.addr.into(),
+            args: self.args.into_iter().map(VarDef::into).collect(),
+            body: self.body.into(),
+        }
+    }
+}
+
+impl<T: Language> VarDef<T> {
+    pub fn into<U: Language>(self) -> VarDef<U>
+    where
+        U::Var: From<T::Var>,
+        U::Type: From<T::Type>,
+    {
+        VarDef {
+            var: self.var.into(),
+            r#type: self.r#type.into(),
+        }
+    }
+}
+
+// Conversions from pest parse trees
+
 impl<'pest, T> FromPest<'pest> for Expr<T>
 where
     T: Language,

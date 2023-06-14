@@ -162,56 +162,6 @@ impl<'pest> FromPest<'pest> for Identifier {
 
 // Conversion to spartan
 
-impl From<Expr> for spartan::Expr {
-    fn from(expr: Expr) -> Self {
-        Self {
-            binds: expr.binds.into_iter().map(Into::into).collect(),
-            value: expr.value.into(),
-        }
-    }
-}
-
-impl From<Bind> for spartan::Bind {
-    fn from(bind: Bind) -> Self {
-        Self {
-            def: bind.def.into(),
-            value: bind.value.into(),
-        }
-    }
-}
-
-impl From<Thunk> for spartan::Thunk {
-    fn from(thunk: Thunk) -> Self {
-        Self {
-            addr: spartan::Addr,
-            args: thunk.args.into_iter().map(Into::into).collect(),
-            body: thunk.body.into(),
-        }
-    }
-}
-
-impl From<Value> for spartan::Value {
-    fn from(value: Value) -> Self {
-        match value {
-            Value::Variable(var) => Self::Variable(var.into()),
-            Value::Op { op, vs, ds } => Self::Op {
-                op: op.into(),
-                vs: vs.into_iter().map(Into::into).collect(),
-                ds: ds.into_iter().map(Into::into).collect(),
-            },
-        }
-    }
-}
-
-impl From<VarDef> for spartan::VarDef {
-    fn from(def: VarDef) -> Self {
-        Self {
-            var: def.var.into(),
-            r#type: spartan::Type,
-        }
-    }
-}
-
 impl From<Op> for spartan::Op {
     fn from(op: Op) -> Self {
         let str = op.0;
@@ -266,6 +216,18 @@ impl From<Variable> for spartan::Variable {
             Variable::Addr(addr) => format!("var_{}", addr.1),
             Variable::Identifier(name, addr) => format!("{}_{}", name.0, addr.1),
         })
+    }
+}
+
+impl From<Addr> for spartan::Addr {
+    fn from(_addr: Addr) -> Self {
+        Self
+    }
+}
+
+impl From<Option<Type>> for spartan::Type {
+    fn from(_type: Option<Type>) -> Self {
+        Self
     }
 }
 
