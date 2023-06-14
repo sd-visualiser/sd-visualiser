@@ -139,8 +139,8 @@ where
             .zip(builder.graph_inputs())
             .collect();
 
-        for node in selection {
-            let new_node = match node {
+        for node in self.nodes().filter(|node| selection.contains(node)) {
+            let new_node = match &node {
                 Node::Operation(op) => {
                     let input_len = op.number_of_inputs();
                     let output_weights: Vec<_> = op
