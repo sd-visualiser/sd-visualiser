@@ -390,13 +390,13 @@ pub trait Graph<const BUILT: bool = true> {
     type EdgeWeight;
     fn bound_graph_inputs(
         &self,
-    ) -> Box<dyn Iterator<Item = OutPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
+    ) -> Box<dyn DoubleEndedIterator<Item = OutPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
     fn unbound_graph_inputs(
         &self,
-    ) -> Box<dyn Iterator<Item = OutPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
+    ) -> Box<dyn DoubleEndedIterator<Item = OutPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
     fn graph_inputs<'a>(
         &'a self,
-    ) -> Box<dyn Iterator<Item = OutPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + 'a>
+    ) -> Box<dyn DoubleEndedIterator<Item = OutPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + 'a>
     where
         Self::EdgeWeight: 'a,
         Self::NodeWeight: 'a,
@@ -405,7 +405,7 @@ pub trait Graph<const BUILT: bool = true> {
     }
     fn graph_outputs(
         &self,
-    ) -> Box<dyn Iterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
+    ) -> Box<dyn DoubleEndedIterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
     fn nodes(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = Node<Self::NodeWeight, Self::EdgeWeight, BUILT>> + '_>;
@@ -440,7 +440,9 @@ pub trait Graph<const BUILT: bool = true> {
 impl<V, E, const BUILT: bool> Graph<BUILT> for HyperGraph<V, E, BUILT> {
     type NodeWeight = V;
     type EdgeWeight = E;
-    fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+    fn unbound_graph_inputs(
+        &self,
+    ) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
         Box::new(
             self.0
                 .graph_inputs
@@ -450,11 +452,11 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for HyperGraph<V, E, BUILT> {
         )
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = InPort<V, E, BUILT>> + '_> {
         Box::new(
             self.0
                 .graph_outputs
@@ -477,11 +479,13 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for HyperGraph<V, E, BUILT> {
 impl<V, E, const BUILT: bool> Graph<BUILT> for Thunk<V, E, BUILT> {
     type NodeWeight = V;
     type EdgeWeight = E;
-    fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+    fn unbound_graph_inputs(
+        &self,
+    ) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
         Box::new(self.0.input_order.iter().cloned().map(OutPort))
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
         Box::new(
             self.0
                 .bound_variables
@@ -491,7 +495,7 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for Thunk<V, E, BUILT> {
         )
     }
 
-    fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = InPort<V, E, BUILT>> + '_> {
         Box::new(self.0.output_order.iter().cloned().map(InPort))
     }
 
@@ -525,10 +529,10 @@ where
     type EdgeWeight = E;
     delegate! {
         to self.0 {
-            fn graph_inputs<'a>(&'a self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + 'a> where V: 'a, E: 'a;
-            fn unbound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
-            fn bound_graph_inputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, false>> + '_>;
-            fn graph_outputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, false>> + '_>;
+            fn graph_inputs<'a>(&'a self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, false>> + 'a> where V: 'a, E: 'a;
+            fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, false>> + '_>;
+            fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, false>> + '_>;
+            fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = InPort<V, E, false>> + '_>;
             fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, false>> + '_>;
         }
     }

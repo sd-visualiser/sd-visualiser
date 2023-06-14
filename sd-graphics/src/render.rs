@@ -42,16 +42,27 @@ where
     };
 
     let mut hover_points = IndexSet::default();
+    let mut highlight_ports = HashSet::default();
 
-    let final_shapes: Vec<egui::Shape> = shapes
+    let shapes_vec: Vec<_> = shapes
         .iter()
         .filter(|shape| viewport.intersects(shape.bounding_box()))
         .map(|shape| {
             let mut s = shape.clone();
             s.apply_transform(&transform);
-            s.collect_hovers(response, &transform, &mut hover_points);
-            s.into_egui_shape(ui, &transform, expanded, selections)
+            s.collect_hovers(
+                response,
+                &transform,
+                &mut hover_points,
+                &mut highlight_ports,
+            );
+            s
         })
+        .collect();
+
+    let final_shapes: Vec<egui::Shape> = shapes_vec
+        .into_iter()
+        .map(|shape| shape.into_egui_shape(ui, &transform, expanded, selections, &highlight_ports))
         .collect();
 
     // Show hover tooltips
@@ -123,6 +134,7 @@ pub fn generate_shapes<V, E>(
                     for (&x, port) in x_ins.iter().zip(&body.ordered_inputs) {
                         let start = Pos2::new(x, y_min);
                         let end = Pos2::new(x, y_input);
+                        let port = addr.externalise_input(port).unwrap().link();
                         shapes.push(Shape::Line {
                             start,
                             end,
@@ -144,16 +156,16 @@ pub fn generate_shapes<V, E>(
                         rect: thunk_rect,
                         addr: addr.clone(),
                     });
-                    for &x in x_op
-                        .inputs()
-                        .iter()
+                    for (port, &x) in addr
+                        .bound_graph_inputs()
                         .rev()
-                        .take(addr.bound_graph_inputs().count())
+                        .zip(x_op.inputs().iter().rev())
                     {
                         let center = Pos2::new(x, y_min);
                         shapes.push(Shape::CircleFilled {
                             center,
                             radius: RADIUS_ARG,
+                            addr: port,
                         });
                     }
                     generate_shapes(shapes, y_min, x_op, body, expanded);
@@ -231,10 +243,11 @@ pub fn generate_shapes<V, E>(
                     }
 
                     match op {
-                        MonoidalOp::Copy { copies, .. } if *copies != 1 => {
+                        MonoidalOp::Copy { copies, addr, .. } if *copies != 1 => {
                             shapes.push(Shape::CircleFilled {
                                 center,
                                 radius: RADIUS_COPY,
+                                addr: addr.clone(),
                             });
                         }
                         MonoidalOp::Operation { addr } => {

@@ -9,6 +9,7 @@ use indexmap::IndexSet;
 use sd_core::{
     common::Addr,
     graph::{Name, Op},
+    hypergraph::OutPort,
     language::Language,
 };
 
@@ -38,6 +39,7 @@ pub enum Shape<T: Addr> {
     CircleFilled {
         center: Pos2,
         radius: f32,
+        addr: T::OutPort,
     },
     Circle {
         center: Pos2,
@@ -72,7 +74,7 @@ impl<T: Addr> Shape<T> {
                 rect.min = transform.apply(rect.min);
                 rect.max = transform.apply(rect.max);
             }
-            Shape::CircleFilled { center, radius } => {
+            Shape::CircleFilled { center, radius, .. } => {
                 *center = transform.apply(*center);
                 *radius *= transform.scale;
             }
@@ -89,6 +91,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         response: &Response,
         transform: &Transform,
         hover_points: &mut IndexSet<DummyValue<T>>,
+        highlight_ports: &mut HashSet<OutPort<Op<T>, Name<T>>>,
     ) {
         macro_rules! check_hover {
             ($path:expr, $port:expr) => {
@@ -96,6 +99,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                     if response.rect.contains(hover_pos) {
                         if $path.contains_point(hover_pos, TOLERANCE * transform.scale) {
                             hover_points.insert(DummyValue::from_port($port));
+                            highlight_ports.insert($port.clone());
                         }
                     }
                 }
@@ -121,29 +125,40 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
 }
 
 impl<T: Addr> Shape<T> {
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn into_egui_shape<S>(
         self,
         ui: &egui::Ui,
         transform: &Transform,
         expanded: &mut Expanded<T::Thunk>,
         selections: &mut HashSet<T::Operation, S>,
+        highlight_ports: &HashSet<T::OutPort>,
     ) -> egui::Shape
     where
         S: BuildHasher,
     {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
-        let default_color = default_stroke.color;
 
         match self {
-            Shape::Line { start, end, .. } => {
-                egui::Shape::line_segment([start, end], default_stroke)
+            Shape::Line { start, end, addr } => {
+                let stroke = if highlight_ports.contains(&addr) {
+                    ui.style().visuals.widgets.hovered.fg_stroke
+                } else {
+                    default_stroke
+                };
+                egui::Shape::line_segment([start, end], stroke)
             }
-            Shape::CubicBezier { points, .. } => {
+            Shape::CubicBezier { points, addr } => {
+                let stroke = if highlight_ports.contains(&addr) {
+                    ui.style().visuals.widgets.hovered.fg_stroke
+                } else {
+                    default_stroke
+                };
                 let bezier = CubicBezierShape::from_points_stroke(
                     points,
                     false,
                     Color32::TRANSPARENT,
-                    default_stroke,
+                    stroke,
                 );
                 egui::Shape::CubicBezier(bezier)
             }
@@ -171,8 +186,17 @@ impl<T: Addr> Shape<T> {
                     stroke,
                 })
             }
-            Shape::CircleFilled { center, radius } => {
-                egui::Shape::circle_filled(center, radius, default_color)
+            Shape::CircleFilled {
+                center,
+                radius,
+                addr,
+            } => {
+                let stroke = if highlight_ports.contains(&addr) {
+                    ui.style().visuals.widgets.hovered.fg_stroke
+                } else {
+                    default_stroke
+                };
+                egui::Shape::circle_filled(center, radius, stroke.color)
             }
             Shape::Circle { center, addr } => {
                 let selected = selections.contains(&addr);
@@ -222,7 +246,7 @@ impl<T: Addr> Shape<T> {
             Shape::Line { start, end, .. } => Rect::from_two_pos(*start, *end),
             Shape::CubicBezier { points, .. } => Rect::from_points(points),
             Shape::Rectangle { rect, .. } => *rect,
-            Shape::CircleFilled { center, radius } => {
+            Shape::CircleFilled { center, radius, .. } => {
                 Rect::from_center_size(*center, Vec2::new(*radius, *radius))
             }
             Shape::Circle { center, .. } => {
