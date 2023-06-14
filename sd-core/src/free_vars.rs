@@ -28,7 +28,9 @@ impl<T: Language> FreeVars<T> {
             self.value(&mut vars, &bind.value);
         }
 
-        self.value(&mut vars, &expr.value);
+        for value in &expr.values {
+            self.value(&mut vars, value);
+        }
 
         for bind in &expr.binds {
             vars.remove(bind.def.to_var());

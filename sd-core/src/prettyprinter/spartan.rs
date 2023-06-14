@@ -5,7 +5,10 @@ use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc)).append(self.value.to_doc())
+        RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc)).append(RcDoc::intersperse(
+            self.values.iter().map(PrettyPrint::to_doc),
+            RcDoc::text(",").append(RcDoc::space()),
+        ))
     }
 }
 

@@ -13,7 +13,10 @@ impl PrettyPrint for Expr {
         RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc))
             .append(RcDoc::text("output"))
             .append(RcDoc::space())
-            .append(self.value.to_doc())
+            .append(RcDoc::intersperse(
+                self.values.iter().map(PrettyPrint::to_doc),
+                RcDoc::text(",").append(RcDoc::space()),
+            ))
     }
 }
 

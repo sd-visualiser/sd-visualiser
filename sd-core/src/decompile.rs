@@ -101,23 +101,19 @@ pub fn decompile<T: Language>(
         }
     }
 
-    // Check the graph has a unique output.
-    let port = graph
+    let values = graph
         .graph_outputs()
-        .exactly_one()
-        .map_err(|_err| DecompilationError::MultipleOutputs)?
-        .link();
+        .map(|port| match port.link().weight().to_var() {
+            Some(var) => Ok(Value::Variable(var.clone())),
+            None => match port.node() {
+                None => Err(DecompilationError::Corrupt),
+                Some(node) => node_to_syntax
+                    .get(&node)
+                    .and_then(|x| x.as_ref().left().cloned())
+                    .ok_or(DecompilationError::Corrupt),
+            },
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
-    let value = match port.weight().to_var() {
-        Some(var) => Value::Variable(var.clone()),
-        None => match port.node() {
-            None => return Err(DecompilationError::Corrupt),
-            Some(node) => node_to_syntax
-                .get(&node)
-                .and_then(|x| x.as_ref().left().cloned())
-                .ok_or(DecompilationError::Corrupt)?,
-        },
-    };
-
-    Ok(Expr { binds, value })
+    Ok(Expr { binds, values })
 }

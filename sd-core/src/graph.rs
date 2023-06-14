@@ -77,6 +77,8 @@ where
     Shadowed(T::Var),
     #[error("Fragment did not have output")]
     NoOutputError,
+    #[error("Thunks must have exactly one output")]
+    ThunkOutputError,
 }
 
 #[derive(Derivative)]
@@ -190,6 +192,10 @@ where
         thunk: &Thunk<T>,
         inport: InPort<Op<T>, Name<T>, false>,
     ) -> Result<(), ConvertError<T>> {
+        if thunk.body.values.len() != 1 {
+            return Err(ConvertError::ThunkOutputError);
+        }
+
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
         for arg in &thunk.args {
@@ -249,12 +255,10 @@ where
     ///
     /// This function will return an error if variables are malformed.
     fn process_expr(mut self, expr: &Expr<T>) -> Result<F, ConvertError<T>> {
-        let graph_output = self
-            .fragment
-            .graph_outputs()
-            .next()
-            .ok_or(ConvertError::NoOutputError)?;
-        self.process_value(&expr.value, ProcessInput::InPort(graph_output))?;
+        let graph_outputs = self.fragment.graph_outputs().collect::<Vec<_>>();
+        for (value, port) in expr.values.iter().zip(graph_outputs) {
+            self.process_value(value, ProcessInput::InPort(port))?;
+        }
 
         for bind in expr.binds.iter().rev() {
             self.process_value(&bind.value, ProcessInput::Variable(bind.def.clone()))?;
@@ -286,7 +290,10 @@ where
 
         let free: Vec<T::Var> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
-        let graph = HyperGraph::new(free.iter().cloned().map(Name::FreeVar).collect(), 1);
+        let graph = HyperGraph::new(
+            free.iter().cloned().map(Name::FreeVar).collect(),
+            expr.values.len(),
+        );
         debug!("made initial hypergraph: {:?}", graph);
 
         let mut env = Environment::new(&free_vars, graph);

@@ -44,7 +44,7 @@ pub trait Language {
 )]
 pub struct Expr<T: Language> {
     pub binds: Vec<Bind<T>>,
-    pub value: Value<T>,
+    pub values: Vec<Value<T>>,
 }
 
 #[derive(Derivative)]
@@ -103,7 +103,7 @@ impl<T: Language> Expr<T> {
     {
         Expr {
             binds: self.binds.into_iter().map(Bind::into).collect(),
-            value: self.value.into(),
+            values: self.values.into_iter().map(Value::into).collect(),
         }
     }
 }
@@ -182,7 +182,7 @@ where
         let mut inner = pair.into_inner();
         let expr = Expr {
             binds: FromPest::from_pest(&mut inner)?,
-            value: FromPest::from_pest(&mut inner)?,
+            values: FromPest::from_pest(&mut inner)?,
         };
         if inner.clone().next().is_some() {
             return Err(ConversionError::Extraneous {

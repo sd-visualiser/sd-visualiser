@@ -2,7 +2,7 @@ program = _{ SOI ~ expr ~ EOI }
 
 keyword = { "def" | "output" | "thunk" }
 
-expr = { bind* ~ "output" ~ value }
+expr = { bind* ~ "output" ~ values? }
 bind = { "def" ~ variable_def ~ "=" ~ value }
 
 thunk = { "thunk" ~ addr ~ "=" ~ "{" ~ (variable_def ~ ("," ~ variable_def)*)? ~ "=>" ~ expr ~ "}" }
