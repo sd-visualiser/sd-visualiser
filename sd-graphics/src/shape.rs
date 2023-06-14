@@ -3,14 +3,17 @@ use std::{collections::HashSet, hash::BuildHasher};
 use derivative::Derivative;
 use egui::{
     epaint::{CircleShape, CubicBezierShape, RectShape},
-    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
+    show_tooltip_at_pointer, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke,
+    Vec2,
 };
 use indexmap::IndexSet;
 use sd_core::{
     common::Addr,
+    decompile::decompile,
     graph::{Name, Op},
     hypergraph::{Operation, OutPort, Thunk},
-    language::Language,
+    language::{Expr, Language},
+    prettyprinter::PrettyPrint,
 };
 
 use crate::{
@@ -102,6 +105,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         operation_hovered: &mut bool,
     ) where
         S: BuildHasher,
+        Expr<T>: PrettyPrint,
     {
         let bounding_box = self.bounding_box();
         let hover_pos = response
@@ -151,6 +155,18 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                 *stroke = Some(new_stroke);
                 if !expanded[addr] {
                     *fill = Some(ui.style().interact(&thunk_response).bg_fill);
+                    if thunk_response.hovered() {
+                        *operation_hovered = true;
+                        highlight_ports
+                            .extend(addr.inputs().map(|port| port.link()).chain(addr.outputs()));
+                        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
+                            ui.label(
+                                decompile(addr)
+                                    .map(|x| x.to_pretty())
+                                    .unwrap_or("<Thunk>".to_owned()),
+                            );
+                        });
+                    }
                 }
             }
             Shape::Circle {

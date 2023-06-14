@@ -6,7 +6,7 @@ use sd_core::{
     common::{InOut, InOutIter},
     graph::{Name, Op},
     hypergraph::{Graph, Operation, Thunk},
-    language::Language,
+    language::{Expr, Language},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
 };
@@ -34,6 +34,7 @@ where
     T::Var: PrettyPrint,
     T::Addr: Display,
     T::VarDef: PrettyPrint,
+    Expr<T>: PrettyPrint,
     S: BuildHasher,
 {
     let bounds = *to_screen.to();
