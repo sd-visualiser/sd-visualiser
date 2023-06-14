@@ -2,4 +2,4 @@
 source: sd-core/src/prettyprinter/spartan.rs
 expression: expr.to_pretty()
 ---
-lambda(a b d c . plus(c, b, a))
+lambda(\a b d c . plus(c, b, a))

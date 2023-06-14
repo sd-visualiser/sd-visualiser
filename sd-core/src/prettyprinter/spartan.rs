@@ -97,7 +97,11 @@ impl PrettyPrint for Op {
 
 impl PrettyPrint for Thunk {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::intersperse(self.args.iter().map(PrettyPrint::to_doc), RcDoc::space())
+        RcDoc::text("\\")
+            .append(RcDoc::intersperse(
+                self.args.iter().map(PrettyPrint::to_doc),
+                RcDoc::space(),
+            ))
             .append(RcDoc::space())
             .append(RcDoc::text("."))
             .append(if self.body.binds.is_empty() {

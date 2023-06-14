@@ -5,7 +5,7 @@ keyword = { "bind" | "in" }
 expr = { bind* ~ value }
 bind = { "bind" ~ variable ~ "=" ~ value ~ "in" }
 
-thunk = { variable* ~ "." ~ expr }
+thunk = { "\\" ~ variable* ~ "." ~ expr }
 
 value = { variable | op ~ ("(" ~ (thunks | values ~ (";" ~ thunks)?) ~ ")")? }
 thunks = _{ thunk ~ ("," ~ thunk)* }
