@@ -41,11 +41,11 @@ where
     T::Var: Free,
 {
     fn is_var(&self) -> bool {
-        matches!(self, Name::Variable(_))
+        self.to_var().is_some()
     }
 
     fn generate_free(number: usize) -> Self {
-        Self::Variable(T::Var::generate_free(number))
+        Self::FreeVar(T::Var::generate_free(number))
     }
 }
 

@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     graph::{Name, Op},
     hypergraph::{Graph, Node},
-    language::{Bind, Expr, Language, Thunk, Value, VarDef},
+    language::{Bind, Expr, Language, Thunk, Value},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -41,11 +41,11 @@ where
             Node::Operation(op) => {
                 let mut args = Vec::default();
                 for port in op.inputs().map(|port| port.link()) {
-                    match port.weight() {
-                        Name::Variable(var) => {
+                    match port.weight().to_var() {
+                        Some(var) => {
                             args.push(Either::Left(Value::Variable(var.clone())));
                         }
-                        _ => match port.node() {
+                        None => match port.node() {
                             None => return Err(DecompilationError::Corrupt),
                             Some(other_node) => {
                                 args.push(
@@ -71,16 +71,17 @@ where
                         .collect(),
                 };
 
-                if let Name::Variable(var) = output.weight() {
-                    binds.push(Bind {
-                        def: VarDef {
-                            var: var.clone(),
-                            r#type: T::Type::default(),
-                        },
-                        value,
-                    });
-                } else {
-                    node_to_syntax.insert(node, Either::Left(value));
+                match output.weight() {
+                    Name::Op => {
+                        node_to_syntax.insert(node, Either::Left(value));
+                    }
+                    Name::BoundVar(def) => {
+                        binds.push(Bind {
+                            def: def.clone(),
+                            value,
+                        });
+                    }
+                    Name::Thunk(_) | Name::FreeVar(_) => return Err(DecompilationError::Corrupt),
                 }
             }
             Node::Thunk(thunk) => {
@@ -93,10 +94,7 @@ where
                     args: thunk
                         .bound_graph_inputs()
                         .map(|port| match port.weight() {
-                            Name::Variable(var) => Ok(VarDef {
-                                var: var.clone(),
-                                r#type: T::Type::default(),
-                            }),
+                            Name::BoundVar(arg) => Ok(arg.clone()),
                             _ => Err(DecompilationError::Corrupt),
                         })
                         .collect::<Result<Vec<_>, _>>()?,
@@ -114,10 +112,9 @@ where
         .map_err(|_err| DecompilationError::MultipleOutputs)?
         .link();
 
-    let value = match port.weight() {
-        Name::Variable(var) => Value::Variable(var.clone()),
-        Name::Thunk(_) => return Err(DecompilationError::Corrupt),
-        Name::Null => match port.node() {
+    let value = match port.weight().to_var() {
+        Some(var) => Value::Variable(var.clone()),
+        None => match port.node() {
             None => return Err(DecompilationError::Corrupt),
             Some(node) => node_to_syntax
                 .get(&node)

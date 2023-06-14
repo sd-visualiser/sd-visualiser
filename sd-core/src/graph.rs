@@ -12,7 +12,7 @@ use tracing::{debug, Level};
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{spartan::Spartan, Expr, Language, Thunk, Value},
+    language::{spartan::Spartan, Expr, Language, Thunk, Value, VarDef},
 };
 
 #[derive(Derivative)]
@@ -40,17 +40,18 @@ impl<T: Language> Display for Op<T> {
     Debug(bound = "")
 )]
 pub enum Name<T: Language = Spartan> {
-    Null,
+    Op,
     Thunk(T::Addr),
-    Variable(T::Var),
+    FreeVar(T::Var),
+    BoundVar(VarDef<T>),
 }
 
-impl<T: Language> Display for Name<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T: Language> Name<T> {
+    pub fn to_var(&self) -> Option<&T::Var> {
         match self {
-            Name::Null => write!(f, ""),
-            Name::Thunk(_addr) => write!(f, ""),
-            Name::Variable(var) => write!(f, "{var}"),
+            Name::Op | Name::Thunk(_) => None,
+            Name::FreeVar(var) => Some(var),
+            Name::BoundVar(def) => Some(&def.var),
         }
     }
 }
@@ -82,7 +83,7 @@ struct Environment<'env, F, T: Language> {
 }
 
 enum ProcessInput<T: Language> {
-    Variable(T::Var),
+    Variable(VarDef<T>),
     InPort(InPort<Op<T>, Name<T>, false>),
 }
 
@@ -118,18 +119,18 @@ where
         input: ProcessInput<T>,
     ) -> Result<(), ConvertError<T>> {
         match (value, input) {
-            (Value::Variable(var), ProcessInput::Variable(var2)) => {
-                Err(ConvertError::Aliased(var2, var.clone()))
+            (Value::Variable(var), ProcessInput::Variable(input)) => {
+                Err(ConvertError::Aliased(input.var, var.clone()))
             }
             (Value::Variable(var), ProcessInput::InPort(in_port)) => {
                 self.inputs.push((in_port, var.clone()));
                 Ok(())
             }
             (Value::Op { op, vs, ds }, input) => {
-                let output_weight = if let ProcessInput::Variable(v) = &input {
-                    Name::Variable(v.clone())
+                let output_weight = if let ProcessInput::Variable(input) = &input {
+                    Name::BoundVar(input.clone())
                 } else {
-                    Name::Null
+                    Name::Op
                 };
 
                 let operation_node = self.fragment.add_operation(
@@ -154,12 +155,12 @@ where
                     .ok_or(ConvertError::NoOutputError)?;
 
                 match input {
-                    ProcessInput::Variable(v) => {
+                    ProcessInput::Variable(input) => {
                         self.outputs
-                            .insert(v.clone(), out_port)
+                            .insert(input.var.clone(), out_port)
                             .is_none()
                             .then_some(())
-                            .ok_or(ConvertError::Shadowed(v))?;
+                            .ok_or(ConvertError::Shadowed(input.var))?;
                     }
                     ProcessInput::InPort(in_port) => self.fragment.link(out_port, in_port)?,
                 }
@@ -187,12 +188,8 @@ where
             free.remove(&arg.var);
         }
         let thunk_node = self.fragment.add_thunk(
-            free.iter().cloned().map(Name::Variable),
-            thunk
-                .args
-                .iter()
-                .cloned()
-                .map(|def| Name::Variable(def.var)),
+            free.iter().cloned().map(Name::FreeVar),
+            thunk.args.iter().cloned().map(Name::BoundVar),
             [Name::Thunk(thunk.addr.clone())],
         );
         debug!("new thunk node {:?}", thunk_node);
@@ -251,7 +248,7 @@ where
         self.process_value(&expr.value, ProcessInput::InPort(graph_output))?;
 
         for bind in expr.binds.iter().rev() {
-            self.process_value(&bind.value, ProcessInput::Variable(bind.def.var.clone()))?;
+            self.process_value(&bind.value, ProcessInput::Variable(bind.def.clone()))?;
         }
         debug!("processed binds: {:?}", self.outputs);
 
@@ -276,7 +273,7 @@ impl<T: Language + 'static> TryFrom<&Expr<T>> for SyntaxHyperGraph<T> {
 
         let free: Vec<T::Var> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
-        let graph = HyperGraph::new(free.iter().cloned().map(Name::Variable).collect(), 1);
+        let graph = HyperGraph::new(free.iter().cloned().map(Name::FreeVar).collect(), 1);
         debug!("made initial hypergraph: {:?}", graph);
 
         let mut env = Environment::new(&free_vars, graph);

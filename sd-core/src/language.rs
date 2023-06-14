@@ -18,7 +18,7 @@ pub trait Language {
     type Op: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
     type Var: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
     type Addr: Clone + Eq + PartialEq + Hash + Debug + Display + Send + Sync;
-    type Type: Clone + Eq + PartialEq + Hash + Debug;
+    type Type: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;

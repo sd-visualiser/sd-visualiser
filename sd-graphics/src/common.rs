@@ -4,7 +4,7 @@ use pretty::RcDoc;
 use sd_core::{
     graph::{Name, Op},
     hypergraph::{Node, OutPort},
-    language::Language,
+    language::{Language, VarDef},
     prettyprinter::PrettyPrint,
 };
 
@@ -40,16 +40,15 @@ impl Transform {
 )]
 pub enum DummyValue<T: Language> {
     Thunk(T::Addr),
-    BoundVar(T::Var),
+    FreeVar(T::Var),
+    BoundVar(VarDef<T>),
     Operation(T::Op, Vec<DummyValue<T>>),
 }
 
 impl<T: Language> DummyValue<T> {
     pub(crate) fn from_port(out_port: &OutPort<Op<T>, Name<T>>) -> Self {
         match out_port.weight() {
-            Name::Variable(var) => Self::BoundVar(var.clone()),
-            Name::Thunk(addr) => Self::Thunk(addr.clone()),
-            Name::Null => match out_port.node() {
+            Name::Op => match out_port.node() {
                 Some(Node::Operation(op)) => Self::Operation(
                     op.weight().0.clone(),
                     op.inputs()
@@ -58,6 +57,9 @@ impl<T: Language> DummyValue<T> {
                 ),
                 _ => unreachable!(),
             },
+            Name::Thunk(addr) => Self::Thunk(addr.clone()),
+            Name::FreeVar(var) => Self::FreeVar(var.clone()),
+            Name::BoundVar(def) => Self::BoundVar(def.clone()),
         }
     }
 }
@@ -68,14 +70,26 @@ impl<T: Language> PrettyPrint for DummyValue<T> {
             Self::Thunk(addr) => {
                 let addr = addr.to_string();
                 if addr.is_empty() {
-                    RcDoc::text("<thunk>")
+                    RcDoc::text("thunk")
                 } else {
                     RcDoc::text("thunk")
                         .append(RcDoc::space())
                         .append(RcDoc::as_string(addr))
                 }
             }
-            Self::BoundVar(var) => RcDoc::as_string(var),
+            Self::FreeVar(var) => RcDoc::as_string(var),
+            Self::BoundVar(def) => {
+                let ty = format!("{:?}", def.r#type); // TODO: use Display
+                if ty.is_empty() {
+                    RcDoc::as_string(&def.var)
+                } else {
+                    RcDoc::as_string(&def.var)
+                        .append(RcDoc::space())
+                        .append(RcDoc::text(":"))
+                        .append(RcDoc::space())
+                        .append(RcDoc::as_string(ty))
+                }
+            }
             Self::Operation(op, vs) => {
                 if vs.is_empty() {
                     RcDoc::as_string(op)
