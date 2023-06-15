@@ -59,8 +59,7 @@ pub enum Shape<T: Addr> {
 
 pub struct Shapes<T: Addr> {
     pub shapes: Vec<Shape<T>>,
-    pub width: f32,
-    pub height: f32,
+    pub size: Vec2,
 }
 
 impl<T: Addr> Shape<T> {

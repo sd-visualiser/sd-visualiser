@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use eframe::{
     egui, emath,
-    epaint::{Pos2, Rect, Rounding, Shape},
+    epaint::{Rect, Rounding, Shape},
 };
 use sd_core::{
     graph::{Name, Op, SyntaxHyperGraph},
@@ -13,7 +13,7 @@ use sd_core::{
 use sd_graphics::expanded::Expanded;
 use tracing::debug;
 
-use crate::shape_generator::ShapeGenerator;
+use crate::{panzoom::Panzoom, shape_generator::ShapeGenerator};
 
 #[derive(Default)]
 pub(crate) struct GraphUi {
@@ -26,8 +26,6 @@ pub(crate) struct GraphUi {
 }
 
 impl GraphUi {
-    const ZOOM_FACTOR: f32 = 1.25;
-
     pub(crate) fn hypergraph(&self) -> &SyntaxHyperGraph {
         &self.hypergraph
     }
@@ -84,31 +82,14 @@ impl GraphUi {
 
     pub(crate) fn reset(&mut self, ctx: &egui::Context) {
         let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
-        self.panzoom = Panzoom {
-            translation: Pos2::new(shapes.width / 2.0, shapes.height / 2.0),
-            ..Panzoom::default()
-        }
+        self.panzoom.reset(shapes.size);
     }
 
     pub(crate) fn zoom_in(&mut self) {
-        self.panzoom.zoom *= Self::ZOOM_FACTOR;
+        self.panzoom.zoom_in();
     }
 
     pub(crate) fn zoom_out(&mut self) {
-        self.panzoom.zoom /= Self::ZOOM_FACTOR;
-    }
-}
-
-struct Panzoom {
-    translation: Pos2,
-    zoom: f32,
-}
-
-impl Default for Panzoom {
-    fn default() -> Self {
-        Self {
-            translation: Pos2::default(),
-            zoom: 50.0,
-        }
+        self.panzoom.zoom_out();
     }
 }

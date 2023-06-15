@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
@@ -95,6 +96,11 @@ impl Layout {
             .map(|j| self.slice_height(j))
             .sum::<f32>()
             + 1.0
+    }
+
+    #[must_use]
+    pub fn size(&self) -> Vec2 {
+        Vec2::new(self.width(), self.height())
     }
 
     #[must_use]

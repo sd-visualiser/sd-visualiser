@@ -34,8 +34,7 @@ impl<V: 'static + Send + Sync + Display, E: 'static + Send + Sync>
         debug!("Generated {} shapes...", shapes.len());
         Arc::new(Shapes {
             shapes,
-            width: layout.width(),
-            height: layout.height(),
+            size: layout.size(),
         })
     }
 }
