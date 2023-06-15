@@ -1,6 +1,6 @@
 use pretty::RcDoc;
 
-use super::PrettyPrint;
+use super::{list, paran_list, PrettyPrint};
 use crate::language::{
     chil::{
         Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType,
@@ -16,10 +16,7 @@ impl PrettyPrint for Expr {
         RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc))
             .append(RcDoc::text("output"))
             .append(RcDoc::space())
-            .append(RcDoc::intersperse(
-                self.values.iter().map(PrettyPrint::to_doc),
-                RcDoc::text(",").append(RcDoc::space()),
-            ))
+            .append(list(&self.values))
     }
 }
 
@@ -89,22 +86,14 @@ impl PrettyPrint for GenericType {
         self.base
             .to_doc()
             .append(RcDoc::text("<"))
-            .append(RcDoc::intersperse(
-                self.params.iter().map(PrettyPrint::to_doc),
-                RcDoc::text(",").append(RcDoc::space()),
-            ))
+            .append(list(&self.params))
             .append(RcDoc::text(">"))
     }
 }
 
 impl PrettyPrint for TupleType {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text("(")
-            .append(RcDoc::intersperse(
-                self.types.iter().map(PrettyPrint::to_doc),
-                RcDoc::text(",").append(RcDoc::space()),
-            ))
-            .append(RcDoc::text(")"))
+        paran_list(&self.types)
     }
 }
 
@@ -130,10 +119,7 @@ impl PrettyPrint for Value {
                     let ds = args.iter().filter_map(Arg::thunk).collect::<Vec<_>>();
                     doc = doc.append(RcDoc::text("("));
                     if !vs.is_empty() {
-                        doc = doc.append(RcDoc::intersperse(
-                            vs.iter().copied().map(PrettyPrint::to_doc),
-                            RcDoc::text(",").append(RcDoc::space()),
-                        ));
+                        doc = doc.append(list(vs.iter().copied()));
                     }
                     if !ds.is_empty() {
                         if !vs.is_empty() {
@@ -162,10 +148,7 @@ impl PrettyPrint for Thunk {
             .append(RcDoc::space())
             .append(RcDoc::text("{"))
             .append(RcDoc::space())
-            .append(RcDoc::intersperse(
-                self.args.iter().map(PrettyPrint::to_doc),
-                RcDoc::text(",").append(RcDoc::space()),
-            ))
+            .append(list(&self.args))
             .append(RcDoc::space())
             .append(RcDoc::text("=>"))
             .append(RcDoc::line())

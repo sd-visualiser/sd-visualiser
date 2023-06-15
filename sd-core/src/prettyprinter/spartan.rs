@@ -1,8 +1,8 @@
 use pretty::RcDoc;
 
-use super::PrettyPrint;
+use super::{paran_list, PrettyPrint};
 use crate::language::{
-    spartan::{Bind, Expr, Op, Thunk, Value, Variable},
+    spartan::{Bind, Expr, Op, Spartan, Thunk, Value, Variable},
     Arg,
 };
 
@@ -14,12 +14,7 @@ impl PrettyPrint for Expr {
             } else if self.values.len() == 1 {
                 self.values[0].to_doc()
             } else {
-                RcDoc::text("(")
-                    .append(RcDoc::intersperse(
-                        self.values.iter().map(PrettyPrint::to_doc),
-                        RcDoc::text(",").append(RcDoc::space()),
-                    ))
-                    .append(RcDoc::text(")"))
+                paran_list(&self.values)
             }
         })
     }
@@ -54,18 +49,18 @@ impl PrettyPrint for Value {
                 if args.is_empty() {
                     op.to_doc()
                 } else {
-                    op.to_doc()
-                        .append(RcDoc::text("("))
-                        .append(RcDoc::intersperse(
-                            args.iter().map(|arg| match arg {
-                                Arg::Value(value) => value.to_doc(),
-                                Arg::Thunk(thunk) => thunk.to_doc(),
-                            }),
-                            RcDoc::text(",").append(RcDoc::space()),
-                        ))
-                        .append(RcDoc::text(")"))
+                    op.to_doc().append(paran_list(args))
                 }
             }
+        }
+    }
+}
+
+impl PrettyPrint for Arg<Spartan> {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        match self {
+            Self::Value(value) => value.to_doc(),
+            Self::Thunk(thunk) => thunk.to_doc(),
         }
     }
 }

@@ -7,7 +7,7 @@ use sd_core::{
     graph::{Name, Op},
     hypergraph::{Node, OutPort},
     language::Language,
-    prettyprinter::PrettyPrint,
+    prettyprinter::{paran_list, PrettyPrint},
 };
 
 pub(crate) const RADIUS_ARG: f32 = 0.05;
@@ -91,13 +91,7 @@ where
                 if vs.is_empty() {
                     op.to_doc()
                 } else {
-                    op.to_doc()
-                        .append(RcDoc::text("("))
-                        .append(RcDoc::intersperse(
-                            vs.iter().map(PrettyPrint::to_doc),
-                            RcDoc::text(",").append(RcDoc::space()),
-                        ))
-                        .append(RcDoc::text(")"))
+                    op.to_doc().append(paran_list(vs))
                 }
             }
         }

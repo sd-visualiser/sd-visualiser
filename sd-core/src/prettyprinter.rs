@@ -12,3 +12,16 @@ pub trait PrettyPrint {
             .to_string()
     }
 }
+
+/// Comma-separated list.
+pub fn list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) -> RcDoc<'a, ()> {
+    RcDoc::intersperse(
+        ts.into_iter().map(PrettyPrint::to_doc),
+        RcDoc::text(",").append(RcDoc::space()),
+    )
+}
+
+/// Comma-separated list with parentheses around it.
+pub fn paran_list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) -> RcDoc<'a, ()> {
+    RcDoc::text("(").append(list(ts)).append(RcDoc::text(")"))
+}
