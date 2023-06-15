@@ -80,30 +80,28 @@ impl App {
     fn selection_ui(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
             for selection in &mut self.selections {
-                ui.toggle_value(&mut selection.displayed, &selection.name);
+                let name = selection.name().to_owned();
+                ui.toggle_value(selection.displayed(), name);
             }
         });
     }
 
     fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
         let parse = Parser::parse(ctx, &self.code.to_string(), self.language);
-        let expr = match parse.as_ref().as_ref().map_err(|e| anyhow!("{}", e))? {
+        match parse.as_ref().as_ref().map_err(|e| anyhow!("{}", e))? {
             ParseOutput::ChilExpr(expr) => {
                 // Prettify the code.
                 self.code.replace(&expr.to_pretty());
-                expr.clone().into()
+                debug!("Converting to hypergraph...");
+                self.graph_ui = GraphUi::new_chil(ctx, SyntaxHyperGraph::try_from(expr)?);
             }
             ParseOutput::SpartanExpr(expr) => {
                 // Prettify the code.
                 self.code.replace(&expr.to_pretty());
-                expr.clone()
+                debug!("Converting to hypergraph...");
+                self.graph_ui = GraphUi::new_spartan(ctx, SyntaxHyperGraph::try_from(expr)?);
             }
-        };
-
-        debug!("Converting to hypergraph");
-        let hypergraph = SyntaxHyperGraph::try_from(&expr)?;
-
-        self.graph_ui.compile(hypergraph, ctx);
+        }
 
         self.selections.clear();
 
@@ -164,13 +162,14 @@ impl eframe::App for App {
                 }
 
                 if ui.button("Save selection").clicked() {
-                    self.selections.push(Selection::new(
-                        &self.graph_ui.current_selection,
+                    if let Some(selection) = Selection::from_graph(
+                        &self.graph_ui,
                         format!("Selection {}", self.selections.len()),
-                        self.graph_ui.hypergraph(),
                         ui.ctx(),
-                    ));
-                    self.graph_ui.current_selection.clear();
+                    ) {
+                        self.selections.push(selection);
+                        self.graph_ui.clear_selection();
+                    }
                 }
             });
         });

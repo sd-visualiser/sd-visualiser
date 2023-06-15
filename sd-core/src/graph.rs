@@ -12,7 +12,7 @@ use tracing::{debug, Level};
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{spartan::Spartan, Expr, Language, Thunk, ToVar, Value},
+    language::{Expr, Language, Thunk, ToVar, Value},
 };
 
 #[derive(Derivative)]
@@ -23,7 +23,7 @@ use crate::{
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub struct Op<T: Language = Spartan>(pub T::Op);
+pub struct Op<T: Language>(pub T::Op);
 
 impl<T: Language> Display for Op<T>
 where
@@ -42,7 +42,7 @@ where
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub enum Name<T: Language = Spartan> {
+pub enum Name<T: Language> {
     Op,
     Thunk(T::Addr),
     FreeVar(T::Var),
@@ -59,7 +59,7 @@ impl<T: Language> Name<T> {
     }
 }
 
-pub type SyntaxHyperGraph<T = Spartan> = HyperGraph<Op<T>, Name<T>>;
+pub type SyntaxHyperGraph<T> = HyperGraph<Op<T>, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
@@ -319,7 +319,11 @@ mod tests {
     use anyhow::Result;
     use dir_test::{dir_test, Fixture};
 
-    use crate::{free_vars::FreeVars, graph::SyntaxHyperGraph, language::spartan::Expr};
+    use crate::{
+        free_vars::FreeVars,
+        graph::SyntaxHyperGraph,
+        language::spartan::{Expr, Spartan},
+    };
 
     #[allow(clippy::needless_pass_by_value)]
     #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*", loader: crate::language::tests::parse, postfix: "free_vars")]
@@ -341,7 +345,7 @@ mod tests {
     )]
     fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Expr)>) -> Result<()> {
         let (lang, name, expr) = fixture.content();
-        let graph: SyntaxHyperGraph = expr.try_into()?;
+        let graph: SyntaxHyperGraph<Spartan> = expr.try_into()?;
 
         // insta::with_settings!({sort_maps => true}, {
         //     insta::assert_ron_snapshot!(name, graph);
