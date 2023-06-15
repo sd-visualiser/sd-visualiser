@@ -89,7 +89,11 @@ pub fn generate_shapes<V, E>(
     V: Display,
 {
     // Source
-    for (&x, addr) in layout.inputs().iter().zip(&graph.ordered_inputs) {
+    for (&x, addr) in layout
+        .inputs()
+        .iter()
+        .zip(graph.free_inputs.iter().chain(graph.bound_inputs.iter()))
+    {
         let start = Pos2::new(x, y_offset);
         let end = Pos2::new(x, y_offset + 0.5);
         shapes.push(Shape::Line {
@@ -134,10 +138,9 @@ pub fn generate_shapes<V, E>(
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
-                    for (&x, port) in x_ins.iter().zip(&body.ordered_inputs) {
+                    for (&x, port) in x_ins.iter().zip(&body.free_inputs) {
                         let start = Pos2::new(x, y_min);
                         let end = Pos2::new(x, y_input);
-                        let port = addr.externalise_input(port).unwrap().link();
                         shapes.push(Shape::Line {
                             start,
                             end,

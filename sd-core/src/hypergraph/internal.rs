@@ -1,14 +1,13 @@
 use std::{
     fmt::Debug,
-    sync::{Arc, RwLock, Weak},
+    sync::{Arc, OnceLock, RwLock, Weak},
 };
 
-use bimap::BiMap;
 use by_address::ByThinAddress;
 use derivative::Derivative;
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 
-use super::{weakbyaddress::WeakByAddress, Thunk};
+use super::weakbyaddress::WeakByAddress;
 
 #[derive(Derivative, Debug)]
 #[derivative(Clone(bound = ""))]
@@ -28,9 +27,9 @@ where
     V: Debug,
     E: Debug,
 {
-    pub(super) fn new_boundary() -> Self {
+    pub(super) fn new(node: Option<WeakNodeInternal<V, E>>) -> Self {
         Self {
-            node: None,
+            node,
             link: RwLock::new(Weak::default()),
         }
     }
@@ -48,9 +47,9 @@ where
     V: Debug,
     E: Debug,
 {
-    pub(super) fn new_boundary(weight: E) -> Self {
+    pub(super) fn new(node: Option<WeakNodeInternal<V, E>>, weight: E) -> Self {
         Self {
-            node: None,
+            node,
             links: RwLock::new(IndexSet::default()),
             weight,
         }
@@ -77,6 +76,7 @@ pub(super) struct OperationInternal<V, E> {
     pub(super) weight: V,
     pub(super) inputs: Vec<Arc<InPortInternal<V, E>>>,
     pub(super) outputs: Vec<Arc<OutPortInternal<V, E>>>,
+    pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
 }
 
 impl<V, E> OperationInternal<V, E>
@@ -88,6 +88,7 @@ where
         input_len: usize,
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
+        backlink: Option<Weak<ThunkInternal<V, E>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let inputs = (0..input_len)
@@ -112,23 +113,22 @@ where
                 weight,
                 inputs,
                 outputs,
+                backlink,
             }
         })
     }
 }
 
-type InOutMap<V, E> =
-    BiMap<ByThinAddress<Arc<InPortInternal<V, E>>>, ByThinAddress<Arc<OutPortInternal<V, E>>>>;
-
 #[derive(Debug)]
 pub(super) struct ThunkInternal<V, E> {
-    #[allow(clippy::type_complexity)]
     pub(super) nodes: RwLock<Vec<NodeInternal<V, E>>>,
-    pub(super) free_variable_inputs: InOutMap<V, E>,
-    pub(super) input_order: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
-    pub(super) bound_variables: Vec<Arc<OutPortInternal<V, E>>>,
-    pub(super) outputs: InOutMap<V, E>,
-    pub(super) output_order: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
+    #[allow(clippy::type_complexity)]
+    pub(super) free_variable_edges: OnceLock<Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
+    pub(super) bound_variables: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
+    #[allow(clippy::type_complexity)]
+    pub(super) outputs:
+        IndexMap<ByThinAddress<Arc<InPortInternal<V, E>>>, Arc<OutPortInternal<V, E>>>,
+    pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
 }
 
 impl<V, E> ThunkInternal<V, E>
@@ -137,93 +137,36 @@ where
     E: Debug + Send + Sync,
 {
     pub(super) fn new(
-        free_variables: impl IntoIterator<Item = E>,
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
+        backlink: Option<Weak<ThunkInternal<V, E>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
-            let input_order: Vec<_> = free_variables
-                .into_iter()
-                .map(|fv| ByThinAddress(Arc::new(OutPortInternal::new_boundary(fv))))
-                .collect();
-
-            let free_variable_inputs = input_order
-                .iter()
-                .map(|_| {
-                    ByThinAddress(Arc::new(InPortInternal {
-                        node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        link: RwLock::new(Weak::new()),
-                    }))
-                })
-                .zip(input_order.iter().cloned())
-                .collect();
-
             let bound_variables = bound_variables
                 .into_iter()
-                .map(|bv| Arc::new(OutPortInternal::new_boundary(bv)))
+                .map(|bv| ByThinAddress(Arc::new(OutPortInternal::new(None, bv))))
                 .collect();
 
-            let (output_order, outputs): (Vec<_>, BiMap<_, _>) = output_weights
+            let outputs = output_weights
                 .into_iter()
                 .map(|weight| {
-                    let inner_output = ByThinAddress(Arc::new(InPortInternal::new_boundary()));
-                    let outer_output = ByThinAddress(Arc::new(OutPortInternal {
-                        node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        links: RwLock::new(IndexSet::default()),
+                    let inner_output = ByThinAddress(Arc::new(InPortInternal::new(Some(
+                        WeakNodeInternal::Thunk(weak.clone()),
+                    ))));
+                    let outer_output = Arc::new(OutPortInternal::new(
+                        Some(WeakNodeInternal::Thunk(weak.clone())),
                         weight,
-                    }));
-                    (inner_output.clone(), (inner_output, outer_output))
+                    ));
+                    (inner_output, outer_output)
                 })
-                .unzip();
+                .collect();
 
             ThunkInternal {
                 nodes: RwLock::new(Vec::default()),
-                free_variable_inputs,
-                input_order,
+                free_variable_edges: OnceLock::new(),
                 bound_variables,
                 outputs,
-                output_order,
-            }
-        })
-    }
-
-    pub(super) fn from_existing<const BUILT: bool>(thunk: &Thunk<V, E, BUILT>) -> Arc<Self>
-    where
-        E: Clone,
-    {
-        Arc::new_cyclic(|weak: &Weak<Self>| {
-            let internal = &thunk.0 .0;
-            let free_variable_inputs = thunk
-                .inputs()
-                .map(|_| {
-                    ByThinAddress(Arc::new(InPortInternal {
-                        node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        link: RwLock::new(Weak::new()),
-                    }))
-                })
-                .zip(internal.input_order.iter().cloned())
-                .collect();
-
-            let outputs = internal
-                .output_order
-                .iter()
-                .cloned()
-                .zip(thunk.outputs().map(|out_port| {
-                    ByThinAddress(Arc::new(OutPortInternal {
-                        node: Some(WeakNodeInternal::Thunk(weak.clone())),
-                        links: RwLock::new(IndexSet::default()),
-                        weight: out_port.weight().clone(),
-                    }))
-                }))
-                .collect();
-
-            ThunkInternal {
-                nodes: RwLock::new(internal.nodes.read().expect("Could not unlock").clone()),
-                free_variable_inputs,
-                input_order: internal.input_order.clone(),
-                bound_variables: internal.bound_variables.clone(),
-                outputs,
-                output_order: internal.output_order.clone(),
+                backlink,
             }
         })
     }

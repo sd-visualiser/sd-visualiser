@@ -155,8 +155,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                     *fill = Some(ui.style().interact(&thunk_response).bg_fill);
                     if thunk_response.hovered() {
                         *operation_hovered = true;
-                        highlight_ports
-                            .extend(addr.inputs().map(|port| port.link()).chain(addr.outputs()));
+                        highlight_ports.extend(addr.inputs().chain(addr.outputs()));
                         show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
                             ui.label(
                                 decompile(addr)
@@ -194,8 +193,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                 );
                 if op_response.hovered() {
                     *operation_hovered = true;
-                    highlight_ports
-                        .extend(addr.inputs().map(|port| port.link()).chain(addr.outputs()));
+                    highlight_ports.extend(addr.inputs().chain(addr.outputs()));
                 }
             }
             _ => {}

@@ -48,8 +48,8 @@ impl Addr for Syntax {
 #[must_use]
 pub fn int() -> MonoidalGraph<Syntax> {
     MonoidalGraph {
-        unordered_inputs: vec![],
-        ordered_inputs: vec![],
+        free_inputs: vec![],
+        bound_inputs: vec![],
         slices: vec![Slice {
             ops: vec![MonoidalOp::Operation {
                 addr: SyntaxOp {
@@ -65,8 +65,8 @@ pub fn int() -> MonoidalGraph<Syntax> {
 #[must_use]
 pub fn copy() -> MonoidalGraph<Syntax> {
     MonoidalGraph {
-        unordered_inputs: vec![],
-        ordered_inputs: vec![()],
+        free_inputs: vec![],
+        bound_inputs: vec![()],
         slices: vec![
             Slice {
                 ops: vec![MonoidalOp::Copy {
@@ -94,8 +94,8 @@ pub fn copy() -> MonoidalGraph<Syntax> {
 #[must_use]
 pub fn thunk() -> MonoidalGraph<Syntax> {
     let plus = MonoidalGraph {
-        unordered_inputs: vec![],
-        ordered_inputs: vec![(), ()],
+        free_inputs: vec![],
+        bound_inputs: vec![(), ()],
         slices: vec![Slice {
             ops: vec![MonoidalOp::Operation {
                 addr: SyntaxOp {
@@ -108,8 +108,8 @@ pub fn thunk() -> MonoidalGraph<Syntax> {
     };
 
     MonoidalGraph {
-        unordered_inputs: vec![],
-        ordered_inputs: vec![(), (), ()],
+        free_inputs: vec![],
+        bound_inputs: vec![(), (), ()],
         slices: vec![Slice {
             ops: vec![
                 MonoidalOp::Thunk {

@@ -11,7 +11,7 @@ use crate::{
     code_ui::code_ui,
     graph_ui::GraphUi,
     parser::{ParseError, ParseOutput, Parser, UiLanguage},
-    selection::Selection,
+    // selection::Selection,
     squiggly_line::show_parse_error,
 };
 
@@ -20,7 +20,7 @@ pub struct App {
     code: Code,
     language: UiLanguage,
     graph_ui: GraphUi,
-    selections: Vec<Selection>,
+    // selections: Vec<Selection>,
     toasts: Toasts,
 }
 
@@ -77,14 +77,14 @@ impl App {
         }
     }
 
-    fn selection_ui(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            for selection in &mut self.selections {
-                let name = selection.name().to_owned();
-                ui.toggle_value(selection.displayed(), name);
-            }
-        });
-    }
+    // fn selection_ui(&mut self, ui: &mut egui::Ui) {
+    //     ui.vertical(|ui| {
+    //         for selection in &mut self.selections {
+    //             let name = selection.name().to_owned();
+    //             ui.toggle_value(selection.displayed(), name);
+    //         }
+    //     });
+    // }
 
     fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
         let parse = Parser::parse(ctx, &self.code.to_string(), self.language);
@@ -103,7 +103,7 @@ impl App {
             }
         }
 
-        self.selections.clear();
+        // self.selections.clear();
 
         Ok(())
     }
@@ -161,28 +161,28 @@ impl eframe::App for App {
                     }
                 }
 
-                if ui.button("Save selection").clicked() {
-                    if let Some(selection) = Selection::from_graph(
-                        &self.graph_ui,
-                        format!("Selection {}", self.selections.len()),
-                        ui.ctx(),
-                    ) {
-                        self.selections.push(selection);
-                        self.graph_ui.clear_selection();
-                    }
-                }
+                // if ui.button("Save selection").clicked() {
+                //     if let Some(selection) = Selection::from_graph(
+                //         &self.graph_ui,
+                //         format!("Selection {}", self.selections.len()),
+                //         ui.ctx(),
+                //     ) {
+                //         self.selections.push(selection);
+                //         self.graph_ui.clear_selection();
+                //     }
+                // }
             });
         });
 
-        for selection in &mut self.selections {
-            selection.ui(ctx);
-        }
+        // for selection in &mut self.selections {
+        //     selection.ui(ctx);
+        // }
 
-        egui::SidePanel::right("selection_panel").show(ctx, |ui| {
-            egui::ScrollArea::vertical()
-                .id_source("selections")
-                .show(ui, |ui| self.selection_ui(ui));
-        });
+        // egui::SidePanel::right("selection_panel").show(ctx, |ui| {
+        //     egui::ScrollArea::vertical()
+        //         .id_source("selections")
+        //         .show(ui, |ui| self.selection_ui(ui));
+        // });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             let row_height_sans_spacing = ui.text_style_height(&egui::TextStyle::Body);

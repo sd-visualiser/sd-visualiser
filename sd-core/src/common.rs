@@ -94,15 +94,15 @@ impl<O: InOutIter> InOutIter for Slice<O> {
     Default(bound = "")
 )]
 pub struct MonoidalTerm<T: Addr, O> {
-    pub unordered_inputs: Vec<T::OutPort>,
-    pub ordered_inputs: Vec<T::OutPort>, // We need to make sure these don't get reordered
+    pub free_inputs: Vec<T::OutPort>,
+    pub bound_inputs: Vec<T::OutPort>, // We need to make sure these don't get reordered
     pub slices: Vec<Slice<O>>,
     pub outputs: Vec<T::InPort>,
 }
 
 impl<T: Addr, O: InOut + Debug> MonoidalTerm<T, O> {
     pub(crate) fn check_in_out_count(&self) {
-        let mut input_count = self.unordered_inputs.len() + self.ordered_inputs.len();
+        let mut input_count = self.free_inputs.len() + self.bound_inputs.len();
         for slice in &self.slices {
             assert!(
                 input_count == slice.number_of_inputs(),
@@ -210,7 +210,7 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
         );
 
         let perm_map: HashMap<Link<T::V, T::E>, PermutationOutput> = generate_permutation(
-            self.unordered_inputs
+            self.free_inputs
                 .iter()
                 .cloned()
                 .map(|x| (x, Direction::Forward)),
@@ -219,7 +219,7 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
         .into_iter()
         .collect();
 
-        self.unordered_inputs.sort_by_key(|out_port| {
+        self.free_inputs.sort_by_key(|out_port| {
             perm_map
                 .get(&(out_port.clone(), Direction::Forward))
                 .copied()
@@ -257,14 +257,14 @@ impl<T: Addr, O> MonoidalTerm<T, Slice<O>> {
     #[must_use]
     pub fn flatten_graph(self) -> MonoidalTerm<T, O> {
         let MonoidalTerm {
-            unordered_inputs,
-            ordered_inputs,
+            free_inputs: unordered_inputs,
+            bound_inputs: ordered_inputs,
             slices,
             outputs,
         } = self;
         MonoidalTerm {
-            unordered_inputs,
-            ordered_inputs,
+            free_inputs: unordered_inputs,
+            bound_inputs: ordered_inputs,
             slices: slices.into_iter().map(Slice::flatten_slice).collect(),
             outputs,
         }

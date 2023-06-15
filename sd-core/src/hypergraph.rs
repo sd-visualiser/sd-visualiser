@@ -1,9 +1,15 @@
-use std::{cmp::min, collections::HashMap, fmt::Debug, sync::Arc};
+use std::{
+    cmp::min,
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    sync::{Arc, Weak},
+};
 
 use by_address::ByThinAddress;
 use delegate::delegate;
 use derivative::Derivative;
 use indexmap::IndexSet;
+use itertools::Itertools;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
@@ -23,7 +29,7 @@ use self::{
 };
 
 pub mod reachability;
-pub mod subgraph;
+// pub mod subgraph;
 
 #[derive(Debug, Error, Clone)]
 pub enum HyperGraphError<V, E>
@@ -33,6 +39,8 @@ where
 {
     #[error("Output port already linked to specified input: {0:#?}")]
     OutputLinkError(OutPort<V, E, false>),
+    #[error("Tried to link {0:#?} to {1:#?} which does not live in the same thunk")]
+    ThunkLinkError(OutPort<V, E, false>, InPort<V, E, false>),
     #[error("Building hypergraph failed: {0:#?}")]
     BuildError(HyperGraphBuildError<V, E>),
 }
@@ -184,11 +192,11 @@ where
     pub fn new(input_weights: Vec<E>, number_of_outputs: usize) -> Self {
         let graph_inputs = input_weights
             .into_iter()
-            .map(|weight| Arc::new(OutPortInternal::new_boundary(weight)))
+            .map(|weight| Arc::new(OutPortInternal::new(None, weight)))
             .collect();
 
         let graph_outputs = (0..number_of_outputs)
-            .map(|_| Arc::new(InPortInternal::new_boundary()))
+            .map(|_| Arc::new(InPortInternal::new(None)))
             .collect();
 
         HyperGraph(HyperGraphInternal {
@@ -196,17 +204,6 @@ where
             graph_inputs,
             graph_outputs,
         })
-    }
-
-    // Clone an entire thunk into the hypergraph
-    pub fn clone_thunk(&mut self, thunk: &Thunk<V, E, true>) -> Thunk<V, E, false>
-    where
-        V: Clone + Send + Sync,
-        E: Clone + Send + Sync,
-    {
-        let internal = ThunkInternal::from_existing(thunk);
-        self.0.nodes.push(NodeInternal::Thunk(internal.clone()));
-        Thunk(ByThinAddress(internal))
     }
 
     #[allow(clippy::too_many_lines)]
@@ -249,6 +246,47 @@ where
             .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(inport.clone()))
         }
 
+        fn build_thunk_inputs<V, E>(thunk: Thunk<V, E, false>) -> Thunk<V, E>
+        where
+            V: Debug,
+            E: Debug,
+        {
+            let built_nodes: HashSet<Node<V, E>> = thunk
+                .nodes()
+                .map(|node| match node {
+                    Node::Operation(op) => Node::Operation(Operation(op.0)),
+                    Node::Thunk(t) => Node::Thunk(build_thunk_inputs(t)),
+                })
+                .collect();
+
+            let mut inputs: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>> = vec![];
+
+            let thunk = Thunk(thunk.0);
+
+            for edge in built_nodes
+                .iter()
+                .flat_map(Node::inputs)
+                .chain(thunk.graph_outputs().map(|in_port| in_port.link()))
+            {
+                match edge.node() {
+                    Some(node) => {
+                        if !built_nodes.contains(&node) {
+                            inputs.push(edge.0);
+                        }
+                    }
+                    None => {
+                        if !thunk.bound_graph_inputs().contains(&edge) {
+                            inputs.push(edge.0);
+                        }
+                    }
+                }
+            }
+
+            thunk.0.free_variable_edges.set(inputs).unwrap();
+
+            thunk
+        }
+
         fn strongconnect<V, E>(
             stack: &mut IndexSet<Node<V, E>>,
             visited: &mut HashMap<Node<V, E>, usize>,
@@ -261,7 +299,7 @@ where
             let index = stack.insert_full(node.clone()).0;
             visited.insert(node.clone(), index);
 
-            for n in node.successors() {
+            for n in node.flat_successors() {
                 if !visited.contains_key(&n) {
                     strongconnect(stack, visited, output, &n);
                     let y = visited[&n];
@@ -347,23 +385,40 @@ where
             check_outport_initialized(&inport).map_err(HyperGraphError::BuildError)?;
         }
         for node in self.nodes() {
-            node.fold(&mut (), |no_state, n| {
-                for inport in n.inputs() {
-                    check_outport_initialized(&inport).map_err(HyperGraphError::BuildError)?;
+            node.fold(|n| {
+                match &n {
+                    Node::Operation(op) => {
+                        for inport in op.inputs() {
+                            check_outport_initialized(&inport)
+                                .map_err(HyperGraphError::BuildError)?;
+                        }
+                    }
+                    Node::Thunk(thunk) => {
+                        for in_port in thunk.graph_outputs() {
+                            check_outport_initialized(&in_port)
+                                .map_err(HyperGraphError::BuildError)?;
+                        }
+                    }
                 }
+
                 for outport in n.outputs() {
                     check_inports_initialized(&outport).map_err(HyperGraphError::BuildError)?;
                 }
 
-                Ok(no_state)
+                Ok(())
             })?;
         }
 
+        for thunk in self.thunks() {
+            build_thunk_inputs(thunk);
+        }
+
         let mut new = HyperGraph(self.0);
+
         topsort_node_internals(&mut new.0.nodes);
 
         for node in new.nodes() {
-            node.fold(&mut (), |no_state, n| {
+            node.fold(|n| {
                 match n {
                     Node::Operation(_) => { /* do nothing */ }
                     Node::Thunk(thunk) => {
@@ -375,7 +430,7 @@ where
                         topsort_node_internals(&mut nodes);
                     }
                 }
-                Ok(no_state)
+                Ok(())
             })?;
         }
 
@@ -482,21 +537,23 @@ impl<V, E, const BUILT: bool> Graph<BUILT> for Thunk<V, E, BUILT> {
     fn unbound_graph_inputs(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
-        Box::new(self.0.input_order.iter().cloned().map(OutPort))
-    }
-
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
         Box::new(
             self.0
-                .bound_variables
-                .iter()
-                .cloned()
-                .map(|o| OutPort(ByThinAddress(o))),
+                .free_variable_edges
+                .get()
+                .expect("Could not lock")
+                .clone()
+                .into_iter()
+                .map(OutPort),
         )
     }
 
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_> {
+        Box::new(self.0.bound_variables.iter().cloned().map(|o| OutPort(o)))
+    }
+
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = InPort<V, E, BUILT>> + '_> {
-        Box::new(self.0.output_order.iter().cloned().map(InPort))
+        Box::new(self.0.outputs.keys().cloned().map(InPort))
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E, BUILT>> + '_> {
@@ -550,16 +607,28 @@ impl<V, E, const BUILT: bool> InOut for Operation<V, E, BUILT> {
     }
 }
 
-impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
+impl<V, E> Operation<V, E, false> {
     #[must_use]
-    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = InPort<V, E, BUILT>> + '_ {
+    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = InPort<V, E, false>> + '_ {
         self.0
             .inputs
             .iter()
             .cloned()
             .map(|i| InPort(ByThinAddress(i)))
     }
+}
 
+impl<V, E> Operation<V, E> {
+    #[must_use]
+    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
+        self.0
+            .inputs
+            .iter()
+            .map(|i| InPort(ByThinAddress(i.clone())).link())
+    }
+}
+
+impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
     #[must_use]
     pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E, BUILT>> + '_ {
         self.0
@@ -573,12 +642,25 @@ impl<V, E, const BUILT: bool> Operation<V, E, BUILT> {
     pub fn weight(&self) -> &V {
         &self.0.weight
     }
+
+    #[must_use]
+    pub fn backlink(&self) -> Option<Thunk<V, E, BUILT>> {
+        self.0
+            .backlink
+            .as_ref()
+            .and_then(Weak::upgrade)
+            .map(|thunk_internal| Thunk(ByThinAddress(thunk_internal)))
+    }
 }
 
 impl<V, E, const BUILT: bool> InOut for Thunk<V, E, BUILT> {
     #[must_use]
     fn number_of_inputs(&self) -> usize {
-        self.0.free_variable_inputs.len()
+        self.0
+            .free_variable_edges
+            .get()
+            .expect("Failed to unlock")
+            .len()
     }
 
     #[must_use]
@@ -587,40 +669,42 @@ impl<V, E, const BUILT: bool> InOut for Thunk<V, E, BUILT> {
     }
 }
 
-impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
-    pub fn inputs(&self) -> impl Iterator<Item = InPort<V, E, BUILT>> + '_ {
-        self.0.input_order.iter().map(|out_port| {
-            InPort(
-                self.0
-                    .free_variable_inputs
-                    .get_by_right(out_port)
-                    .unwrap()
-                    .clone(),
-            )
-        })
+impl<V, E> Thunk<V, E> {
+    #[must_use]
+    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
+        self.0
+            .free_variable_edges
+            .get()
+            .expect("Failed to unlock")
+            .clone()
+            .into_iter()
+            .map(|out_port| OutPort(out_port))
     }
+}
 
+impl<V, E, const BUILT: bool> Thunk<V, E, BUILT> {
     pub fn outputs(&self) -> impl Iterator<Item = OutPort<V, E, BUILT>> + '_ {
         self.0
-            .output_order
-            .iter()
-            .map(|in_port| OutPort(self.0.outputs.get_by_left(in_port).unwrap().clone()))
-    }
-
-    #[must_use]
-    pub fn externalise_input(&self, port: &OutPort<V, E, BUILT>) -> Option<InPort<V, E, BUILT>> {
-        self.0
-            .free_variable_inputs
-            .get_by_right(&port.0)
-            .map(|in_port| InPort(in_port.clone()))
+            .outputs
+            .values()
+            .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
     }
 
     #[must_use]
     pub fn externalise_output(&self, port: &InPort<V, E, BUILT>) -> Option<OutPort<V, E, BUILT>> {
         self.0
             .outputs
-            .get_by_left(&port.0)
-            .map(|out_port| OutPort(out_port.clone()))
+            .get(&port.0)
+            .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
+    }
+
+    #[must_use]
+    pub fn backlink(&self) -> Option<Thunk<V, E, BUILT>> {
+        self.0
+            .backlink
+            .as_ref()
+            .and_then(Weak::upgrade)
+            .map(|thunk_internal| Thunk(ByThinAddress(thunk_internal)))
     }
 }
 
@@ -644,14 +728,6 @@ impl<V, E, const BUILT: bool> InOut for Node<V, E, BUILT> {
 
 impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
     #[must_use]
-    pub fn inputs(&self) -> Box<dyn Iterator<Item = InPort<V, E, BUILT>> + '_> {
-        match self {
-            Node::Operation(op) => Box::new(op.inputs()),
-            Node::Thunk(thunk) => Box::new(thunk.inputs()),
-        }
-    }
-
-    #[must_use]
     pub fn outputs(&self) -> Box<dyn Iterator<Item = OutPort<V, E, BUILT>> + '_> {
         match self {
             Node::Operation(op) => Box::new(op.outputs()),
@@ -659,20 +735,26 @@ impl<V, E, const BUILT: bool> Node<V, E, BUILT> {
         }
     }
 
-    fn fold<T, ERR>(
+    #[must_use]
+    pub fn backlink(&self) -> Option<Thunk<V, E, BUILT>> {
+        match self {
+            Node::Operation(op) => op.backlink(),
+            Node::Thunk(thunk) => thunk.backlink(),
+        }
+    }
+
+    fn fold<ERR>(
         self,
-        init: &mut T,
-        combine: impl Fn(&mut T, Self) -> std::result::Result<&mut T, ERR>,
-    ) -> std::result::Result<&mut T, ERR> {
+        on_node: impl Fn(Self) -> std::result::Result<(), ERR>,
+    ) -> std::result::Result<(), ERR> {
         let mut frontier = vec![self];
-        let mut acc = init;
         while let Some(cur) = frontier.pop() {
             match &cur {
                 Node::Operation(_) => { /* no children */ }
                 Node::Thunk(thunk) => frontier.extend(thunk.nodes()),
             }
-            acc = combine(acc, cur)?;
+            on_node(cur)?;
         }
-        Ok(acc)
+        Ok(())
     }
 }

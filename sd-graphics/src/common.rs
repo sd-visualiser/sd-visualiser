@@ -40,7 +40,7 @@ impl<T: Language> DummyValue<T> {
                 Some(Node::Operation(op)) => Self::Operation(
                     op.weight().0.clone(),
                     op.inputs()
-                        .map(|in_port| Self::from_port(&in_port.link()))
+                        .map(|out_port| Self::from_port(&out_port))
                         .collect(),
                 ),
                 _ => unreachable!(),

@@ -18,7 +18,6 @@ pub trait Fragment: Graph<false> {
 
     fn add_thunk(
         &mut self,
-        free_variables: impl IntoIterator<Item = Self::EdgeWeight>,
         bound_variables: impl IntoIterator<Item = Self::EdgeWeight>,
         output_weights: impl IntoIterator<Item = Self::EdgeWeight>,
     ) -> Thunk<Self::NodeWeight, Self::EdgeWeight, false>;
@@ -34,6 +33,7 @@ pub trait Fragment: Graph<false> {
         Self::EdgeWeight: Debug,
     {
         let mut out = in_port.0.link.try_write().expect("Lock unexpectedly taken");
+
         if let Some(existing) = out.upgrade() {
             return Err(HyperGraphError::OutputLinkError(OutPort(ByThinAddress(
                 existing,
@@ -73,18 +73,17 @@ where
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
     ) -> Operation<V, E, false> {
-        let op = OperationInternal::new(input_len, output_weights, weight);
+        let op = OperationInternal::new(input_len, output_weights, weight, None);
         self.0.nodes.push(NodeInternal::Operation(op.clone()));
         Operation(ByThinAddress(op))
     }
 
     fn add_thunk(
         &mut self,
-        free_variables: impl IntoIterator<Item = E>,
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
     ) -> Thunk<V, E, false> {
-        let thunk = ThunkInternal::new(free_variables, bound_variables, output_weights);
+        let thunk = ThunkInternal::new(bound_variables, output_weights, None);
         self.0.nodes.push(NodeInternal::Thunk(thunk.clone()));
         Thunk(ByThinAddress(thunk))
     }
@@ -101,7 +100,12 @@ where
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
     ) -> Operation<V, E, false> {
-        let op = OperationInternal::new(input_len, output_weights, weight);
+        let op = OperationInternal::new(
+            input_len,
+            output_weights,
+            weight,
+            Some(Arc::downgrade(&self.0 .0 .0)),
+        );
         self.0
              .0
             .nodes
@@ -113,11 +117,14 @@ where
 
     fn add_thunk(
         &mut self,
-        free_variables: impl IntoIterator<Item = E>,
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
     ) -> Thunk<V, E, false> {
-        let thunk = ThunkInternal::new(free_variables, bound_variables, output_weights);
+        let thunk = ThunkInternal::new(
+            bound_variables,
+            output_weights,
+            Some(Arc::downgrade(&self.0 .0 .0)),
+        );
         self.0
              .0
             .nodes

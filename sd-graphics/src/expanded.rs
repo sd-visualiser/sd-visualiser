@@ -1,4 +1,5 @@
 use std::{
+    fmt::Debug,
     hash::{Hash, Hasher},
     ops::{Index, IndexMut},
 };
@@ -47,7 +48,11 @@ impl<T: Hash> Hash for Expanded<T> {
 
 impl<V, E> Expanded<Thunk<V, E>> {
     #[must_use]
-    pub fn from_graph(graph: &HyperGraph<V, E>) -> Self {
+    pub fn from_graph(graph: &HyperGraph<V, E>) -> Self
+    where
+        V: Debug,
+        E: Debug,
+    {
         fn helper<V, E>(set: &mut IndexMap<Thunk<V, E>, bool>, thunk: Thunk<V, E>) {
             for t in thunk.thunks() {
                 helper(set, t);

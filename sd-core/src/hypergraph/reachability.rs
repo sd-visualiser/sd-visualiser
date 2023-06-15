@@ -2,18 +2,42 @@ use std::collections::{HashSet, VecDeque};
 
 use itertools::Itertools;
 
-use super::Node;
+use super::{Node, OutPort};
 
 impl<V, E> Node<V, E> {
+    #[must_use]
+    pub fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = OutPort<V, E>> + '_> {
+        match self {
+            Node::Operation(op) => Box::new(op.inputs()),
+            Node::Thunk(thunk) => Box::new(thunk.inputs()),
+        }
+    }
+
     pub fn successors(&self) -> impl Iterator<Item = Self> + '_ {
         self.outputs()
             .flat_map(|outport| outport.links().filter_map(|inport| inport.node()))
             .unique()
     }
 
+    // Returns successors at the same thunk depth
+    pub fn flat_successors(&self) -> impl Iterator<Item = Self> + '_ {
+        let backlink = self.backlink();
+        self.successors()
+            .filter_map(move |node| {
+                let mut last = node;
+                let mut next = last.backlink();
+                while next != backlink {
+                    last = Node::Thunk(next?);
+                    next = last.backlink();
+                }
+                Some(last)
+            })
+            .unique()
+    }
+
     pub fn predecessors(&self) -> impl Iterator<Item = Self> + '_ {
         self.inputs()
-            .filter_map(|inport| inport.link().node())
+            .filter_map(|out_port| out_port.node())
             .unique()
     }
 

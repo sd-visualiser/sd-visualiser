@@ -2,13 +2,13 @@ use std::fmt::Debug;
 
 use derivative::Derivative;
 use itertools::Itertools;
+use tracing::debug;
 
 use crate::{
     common::{
         advance_by, generate_permutation, Addr, Direction, InOut, InOutIter, Link, MonoidalTerm,
         PermutationOutput, Slice,
     },
-    hypergraph::OutPort,
     monoidal_wired::{MonoidalWiredGraph, WiredOp},
 };
 
@@ -256,19 +256,14 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
             MonoidalOp::Copy { addr, .. } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Forward)))
             }
-            MonoidalOp::Operation { addr, .. } => Box::new(
-                addr.inputs()
-                    .map(|in_port| (in_port.link(), Direction::Forward)),
-            ),
-            MonoidalOp::Thunk { addr, body, .. } => Box::new(
-                body.unordered_inputs
+            MonoidalOp::Operation { addr, .. } => {
+                Box::new(addr.inputs().map(|out_port| (out_port, Direction::Forward)))
+            }
+            MonoidalOp::Thunk { body, .. } => Box::new(Box::new(
+                body.free_inputs
                     .iter()
-                    .chain(body.ordered_inputs.iter())
-                    .filter_map(|port| {
-                        addr.externalise_input(port)
-                            .map(|x| (x.link(), Direction::Forward))
-                    }),
-            ),
+                    .map(|out_port| (out_port.clone(), Direction::Forward)),
+            )),
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
@@ -359,15 +354,11 @@ impl<V, E> Extend<Slice<MonoidalOp<(V, E)>>> for MonoidalGraphBuilder<V, E> {
 
 impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
     fn from(graph: &MonoidalWiredGraph<V, E>) -> Self {
-        let inputs: Vec<OutPort<V, E>> = graph
-            .unordered_inputs
+        debug!("Input graph {:#?}", graph);
+        let graph_inputs: Vec<Link<V, E>> = graph
+            .free_inputs
             .iter()
-            .chain(graph.ordered_inputs.iter())
-            .cloned()
-            .collect();
-
-        let graph_inputs: Vec<Link<V, E>> = inputs
-            .iter()
+            .chain(graph.bound_inputs.iter())
             .map(|out_port| (out_port.clone(), Direction::Forward))
             .collect();
 
@@ -416,11 +407,13 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
         ));
 
         let mut graph = MonoidalGraph {
-            unordered_inputs: vec![],
-            ordered_inputs: inputs,
+            free_inputs: graph.free_inputs.clone(),
+            bound_inputs: graph.bound_inputs.clone(),
             slices: builder.slices,
             outputs: graph.outputs.clone(),
         };
+
+        debug!("Monoidal Term: {:#?}", graph);
 
         graph.check_in_out_count();
 

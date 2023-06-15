@@ -36,7 +36,7 @@ pub fn decompile<T: Language>(
         match &node {
             Node::Operation(op) => {
                 let mut args = Vec::default();
-                for port in op.inputs().map(|port| port.link()) {
+                for port in op.inputs() {
                     match port.weight().to_var() {
                         Some(var) => {
                             args.push(Arg::Value(Value::Variable(var.clone())));

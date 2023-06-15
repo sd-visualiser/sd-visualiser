@@ -208,7 +208,10 @@ fn layout_internal<T: Addr>(
         }
     };
 
-    let inputs = problem.add_variables(variable().min(0.0), graph.ordered_inputs.len());
+    let inputs = problem.add_variables(
+        variable().min(0.0),
+        graph.free_inputs.len() + graph.bound_inputs.len(),
+    );
     add_constraints_wires(problem, &inputs);
     wires.push(inputs);
     for slice in &graph.slices {

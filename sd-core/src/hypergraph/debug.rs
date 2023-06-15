@@ -25,7 +25,7 @@ impl<V: Debug, E, const BUILT: bool> Debug for Operation<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Operation")
             .field("weight", self.weight())
-            .field("inputs", &self.inputs().collect::<Vec<_>>())
+            // .field("inputs", &self.inputs().collect::<Vec<_>>())
             .field("outputs", &self.outputs().collect::<Vec<_>>())
             .finish()
     }
@@ -34,13 +34,12 @@ impl<V: Debug, E, const BUILT: bool> Debug for Operation<V, E, BUILT> {
 impl<V: Debug, E: Debug, const BUILT: bool> Debug for Thunk<V, E, BUILT> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
-            .field(
-                "free_vars",
-                &self
-                    .unbound_graph_inputs()
-                    .map(|out_port| (self.externalise_input(&out_port), out_port))
-                    .collect::<Vec<_>>(),
-            )
+            // .field(
+            //     "free_vars",
+            //     &self
+            //         .unbound_graph_inputs()
+            //         .collect::<Vec<_>>(),
+            // )
             .field(
                 "bound_inputs",
                 &self.bound_graph_inputs().collect::<Vec<_>>(),

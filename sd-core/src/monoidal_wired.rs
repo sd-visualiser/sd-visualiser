@@ -59,16 +59,14 @@ impl<V, E> InOutIter for WiredOp<V, E> {
             WiredOp::Copy { addr, .. } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Forward)))
             }
-            WiredOp::Operation { addr } => Box::new(
-                addr.inputs()
-                    .map(|in_port| (in_port.link(), Direction::Forward)),
+            WiredOp::Operation { addr } => Box::new(Box::new(
+                addr.inputs().map(|out_port| (out_port, Direction::Forward)),
+            )),
+            WiredOp::Thunk { body, .. } => Box::new(
+                body.free_inputs
+                    .iter()
+                    .map(|out_port| (out_port.clone(), Direction::Forward)),
             ),
-            WiredOp::Thunk { addr, body } => {
-                Box::new(body.unordered_inputs.iter().filter_map(|port| {
-                    addr.externalise_input(port)
-                        .map(|x| (x.link(), Direction::Forward))
-                }))
-            }
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
@@ -199,7 +197,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             .map(|out_port| self.input_layer(&out_port))
             .chain(
                 node.inputs()
-                    .filter_map(|x| self.backlinks.get(&x.link()).map(|x| x.originating_layer)),
+                    .filter_map(|x| self.backlinks.get(&x).map(|x| x.originating_layer)),
             )
             .max()
             .unwrap_or_default();
@@ -248,14 +246,12 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             }
         });
 
-        node.inputs()
-            .map(|in_port| InPort::link(&in_port))
-            .for_each(|out_port| {
-                self.open_ports
-                    .entry(out_port)
-                    .or_default()
-                    .push(node_layer + 1);
-            });
+        node.inputs().for_each(|out_port| {
+            self.open_ports
+                .entry(out_port)
+                .or_default()
+                .push(node_layer + 1);
+        });
 
         self.add_op(Slice { ops }, node_layer);
     }
@@ -332,8 +328,8 @@ where
         builder.slices.reverse();
 
         let mut graph = MonoidalTerm::<(V, E), Slice<WiredOp<V, E>>> {
-            unordered_inputs: graph.unbound_graph_inputs().collect(),
-            ordered_inputs: graph.bound_graph_inputs().collect(),
+            free_inputs: graph.unbound_graph_inputs().collect(),
+            bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,
             outputs,
         };
