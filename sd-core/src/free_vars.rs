@@ -5,7 +5,7 @@ use std::{
 
 use derivative::Derivative;
 
-use crate::language::{Expr, Language, Thunk, ToVar, Value};
+use crate::language::{Arg, Expr, Language, Thunk, ToVar, Value};
 
 #[derive(Derivative)]
 #[derivative(Debug(bound = ""), Default(bound = ""))]
@@ -39,18 +39,17 @@ impl<T: Language> FreeVars<T> {
         self.0.insert(expr, vars);
     }
 
-    pub(crate) fn value(&mut self, vars: &mut HashSet<T::Var>, val: &Value<T>) {
-        match val {
+    pub(crate) fn value(&mut self, vars: &mut HashSet<T::Var>, value: &Value<T>) {
+        match value {
             Value::Variable(v) => {
                 vars.insert(v.clone());
             }
-            Value::Op { vs, ds, .. } => {
-                for v in vs {
-                    self.value(vars, v);
-                }
-
-                for d in ds {
-                    self.thunk(vars, d);
+            Value::Op { args, .. } => {
+                for arg in args {
+                    match arg {
+                        Arg::Value(v) => self.value(vars, v),
+                        Arg::Thunk(d) => self.thunk(vars, d),
+                    }
                 }
             }
         }

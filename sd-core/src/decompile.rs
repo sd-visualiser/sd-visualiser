@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
-use itertools::{Either, Itertools};
+use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
     graph::{Name, Op},
     hypergraph::{Graph, Node},
-    language::{Bind, Expr, Language, Thunk, Value},
+    language::{Arg, Bind, Expr, Language, Thunk, Value},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -24,7 +24,7 @@ pub fn decompile<T: Language>(
     let mut binds = Vec::default();
 
     // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).
-    let mut node_to_syntax = HashMap::<Node<_, _>, Either<Value<T>, Thunk<T>>>::default();
+    let mut node_to_syntax = HashMap::<Node<_, _>, Arg<T>>::default();
 
     for node in graph.nodes().rev() {
         // Check the node has a unique output.
@@ -39,7 +39,7 @@ pub fn decompile<T: Language>(
                 for port in op.inputs().map(|port| port.link()) {
                     match port.weight().to_var() {
                         Some(var) => {
-                            args.push(Either::Left(Value::Variable(var.clone())));
+                            args.push(Arg::Value(Value::Variable(var.clone())));
                         }
                         None => match port.node() {
                             None => return Err(DecompilationError::Corrupt),
@@ -57,19 +57,12 @@ pub fn decompile<T: Language>(
 
                 let value = Value::Op {
                     op: op.weight().0.clone(),
-                    vs: args
-                        .iter()
-                        .filter_map(|x| x.as_ref().left().cloned())
-                        .collect(),
-                    ds: args
-                        .iter()
-                        .filter_map(|x| x.as_ref().right().cloned())
-                        .collect(),
+                    args,
                 };
 
                 match output.weight() {
                     Name::Op => {
-                        node_to_syntax.insert(node, Either::Left(value));
+                        node_to_syntax.insert(node, Arg::Value(value));
                     }
                     Name::BoundVar(def) => {
                         binds.push(Bind {
@@ -85,7 +78,7 @@ pub fn decompile<T: Language>(
                     Name::Thunk(addr) => addr.clone(),
                     _ => return Err(DecompilationError::Corrupt),
                 };
-                let x = Either::Right(Thunk {
+                let thunk = Thunk {
                     addr,
                     args: thunk
                         .bound_graph_inputs()
@@ -95,8 +88,8 @@ pub fn decompile<T: Language>(
                         })
                         .collect::<Result<Vec<_>, _>>()?,
                     body: decompile(thunk)?,
-                });
-                node_to_syntax.insert(node, x);
+                };
+                node_to_syntax.insert(node, Arg::Thunk(thunk));
             }
         }
     }
@@ -111,7 +104,7 @@ pub fn decompile<T: Language>(
                     None => Err(DecompilationError::Corrupt),
                     Some(node) => node_to_syntax
                         .get(&node)
-                        .and_then(|x| x.as_ref().left().cloned())
+                        .and_then(|arg| arg.value().cloned())
                         .ok_or(DecompilationError::Corrupt),
                 },
             }

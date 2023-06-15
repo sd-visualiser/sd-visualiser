@@ -1,9 +1,12 @@
 use pretty::RcDoc;
 
 use super::PrettyPrint;
-use crate::language::chil::{
-    Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType, Type,
-    Value, Variable, VariableDef,
+use crate::language::{
+    chil::{
+        Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType,
+        Type, Value, Variable, VariableDef,
+    },
+    Arg,
 };
 
 const INDENTATION: isize = 2;
@@ -120,13 +123,15 @@ impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Variable(var) => var.to_doc(),
-            Self::Op { op, vs, ds } => {
+            Self::Op { op, args } => {
                 let mut doc = op.to_doc();
-                if !vs.is_empty() || !ds.is_empty() {
+                if !args.is_empty() {
+                    let vs = args.iter().filter_map(Arg::value).collect::<Vec<_>>();
+                    let ds = args.iter().filter_map(Arg::thunk).collect::<Vec<_>>();
                     doc = doc.append(RcDoc::text("("));
                     if !vs.is_empty() {
                         doc = doc.append(RcDoc::intersperse(
-                            vs.iter().map(PrettyPrint::to_doc),
+                            vs.iter().copied().map(PrettyPrint::to_doc),
                             RcDoc::text(",").append(RcDoc::space()),
                         ));
                     }
@@ -136,7 +141,7 @@ impl PrettyPrint for Value {
                         }
                         doc = doc
                             .append(RcDoc::line())
-                            .append(RcDoc::concat(ds.iter().map(PrettyPrint::to_doc)))
+                            .append(RcDoc::concat(ds.into_iter().map(PrettyPrint::to_doc)))
                             .nest(INDENTATION);
                     }
                     doc = doc.append(RcDoc::text(")"));

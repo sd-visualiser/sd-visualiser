@@ -2,4 +2,4 @@
 source: sd-core/src/prettyprinter/spartan.rs
 expression: expr.to_pretty()
 ---
-lambda(\x . lambda(a; \y . not(b)))
+lambda(\x . lambda(a, \y . not(b)))

@@ -12,7 +12,7 @@ use tracing::{debug, Level};
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{Expr, Language, Thunk, ToVar, Value},
+    language::{Arg, Expr, Language, Thunk, ToVar, Value},
 };
 
 #[derive(Derivative)]
@@ -135,27 +135,25 @@ where
                 self.inputs.push((in_port, var.clone()));
                 Ok(())
             }
-            (Value::Op { op, vs, ds }, input) => {
+            (Value::Op { op, args }, input) => {
                 let output_weight = if let ProcessInput::Variable(input) = &input {
                     Name::BoundVar(input.clone())
                 } else {
                     Name::Op
                 };
 
-                let operation_node = self.fragment.add_operation(
-                    vs.len() + ds.len(),
-                    [output_weight],
-                    Op(op.clone()),
-                );
-                for (value, inport) in vs
-                    .iter()
-                    .rev()
-                    .zip(operation_node.inputs().rev().skip(ds.len()))
-                {
-                    self.process_value(value, ProcessInput::InPort(inport))?;
-                }
-                for (thunk, inport) in ds.iter().rev().zip(operation_node.inputs().rev()) {
-                    self.process_thunk(thunk, inport)?;
+                let operation_node =
+                    self.fragment
+                        .add_operation(args.len(), [output_weight], Op(op.clone()));
+                for (arg, inport) in args.iter().rev().zip(operation_node.inputs().rev()) {
+                    match arg {
+                        Arg::Value(value) => {
+                            self.process_value(value, ProcessInput::InPort(inport))?;
+                        }
+                        Arg::Thunk(thunk) => {
+                            self.process_thunk(thunk, inport)?;
+                        }
+                    }
                 }
 
                 let out_port = operation_node

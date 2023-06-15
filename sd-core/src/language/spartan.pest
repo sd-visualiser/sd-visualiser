@@ -7,8 +7,9 @@ bind = { "bind" ~ variable ~ "=" ~ value ~ "in" }
 
 thunk = { "\\" ~ variable* ~ "." ~ expr }
 
-value = { variable | op ~ ("(" ~ (thunks | values ~ (";" ~ thunks)?) ~ ")")? }
-thunks = _{ thunk ~ ("," ~ thunk)* }
+value = { variable | op ~ ("(" ~ args ~ ")")? }
+arg = _{ value | thunk }
+args = _{ arg ~ ("," ~ args)* }
 values = _{ value ~ ("," ~ value)* }
 
 op = { "plus" | "minus" | "times" | "div" | "rem" | "and" | "or" | "not" | "if" | "eq" | "neq" | "lt" | "leq" | "gt" | "geq" | "app" | "lambda" | "atom" | "deref" | "assign" | "true" | "false" | number }

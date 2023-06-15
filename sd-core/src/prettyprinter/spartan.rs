@@ -1,7 +1,10 @@
 use pretty::RcDoc;
 
 use super::PrettyPrint;
-use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
+use crate::language::{
+    spartan::{Bind, Expr, Op, Thunk, Value, Variable},
+    Arg,
+};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -37,28 +40,21 @@ impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Variable(var) => var.to_doc(),
-            Self::Op { op, vs, ds } => {
-                let mut doc = op.to_doc();
-                if !vs.is_empty() || !ds.is_empty() {
-                    doc = doc.append(RcDoc::text("("));
-                    if !vs.is_empty() {
-                        doc = doc.append(RcDoc::intersperse(
-                            vs.iter().map(PrettyPrint::to_doc),
+            Self::Op { op, args } => {
+                if args.is_empty() {
+                    op.to_doc()
+                } else {
+                    op.to_doc()
+                        .append(RcDoc::text("("))
+                        .append(RcDoc::intersperse(
+                            args.iter().map(|arg| match arg {
+                                Arg::Value(value) => value.to_doc(),
+                                Arg::Thunk(thunk) => thunk.to_doc(),
+                            }),
                             RcDoc::text(",").append(RcDoc::space()),
-                        ));
-                    }
-                    if !ds.is_empty() {
-                        if !vs.is_empty() {
-                            doc = doc.append(RcDoc::text(";")).append(RcDoc::space());
-                        }
-                        doc = doc.append(RcDoc::intersperse(
-                            ds.iter().map(PrettyPrint::to_doc),
-                            RcDoc::text(",").append(RcDoc::space()),
-                        ));
-                    }
-                    doc = doc.append(RcDoc::text(")"));
+                        ))
+                        .append(RcDoc::text(")"))
                 }
-                doc
             }
         }
     }
