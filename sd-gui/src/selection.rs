@@ -9,7 +9,7 @@ use sd_core::{
     prettyprinter::PrettyPrint,
 };
 
-use crate::{code_ui::code_ui, graph_ui::GraphUi, parser::Language};
+use crate::{code_ui::code_ui, graph_ui::GraphUi, parser::UiLanguage};
 
 pub(crate) struct Selection {
     pub(crate) name: String,
@@ -48,7 +48,11 @@ impl Selection {
             .open(&mut self.displayed)
             .show(ctx, |ui| {
                 ui.columns(2, |columns| {
-                    code_ui(&mut columns[0], &mut self.code.as_str(), Language::Spartan);
+                    code_ui(
+                        &mut columns[0],
+                        &mut self.code.as_str(),
+                        UiLanguage::Spartan,
+                    );
                     self.graph_ui.ui(&mut columns[1]);
                 });
             });

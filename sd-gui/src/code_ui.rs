@@ -5,10 +5,14 @@ use eframe::{
 
 use crate::{
     highlighter::{highlight, CodeTheme},
-    parser::Language,
+    parser::UiLanguage,
 };
 
-pub fn code_ui(ui: &mut egui::Ui, code: &mut dyn TextBuffer, language: Language) -> TextEditOutput {
+pub fn code_ui(
+    ui: &mut egui::Ui,
+    code: &mut dyn TextBuffer,
+    language: UiLanguage,
+) -> TextEditOutput {
     let theme = CodeTheme::from_style(ui.style());
 
     let mut layouter = |ui: &egui::Ui, source: &str, _wrap_width: f32| {

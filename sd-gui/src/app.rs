@@ -10,7 +10,7 @@ use crate::{
     code::Code,
     code_ui::code_ui,
     graph_ui::GraphUi,
-    parser::{Language, ParseError, ParseOutput, Parser},
+    parser::{ParseError, ParseOutput, Parser, UiLanguage},
     selection::Selection,
     squiggly_line::show_parse_error,
 };
@@ -18,7 +18,7 @@ use crate::{
 #[derive(Default)]
 pub struct App {
     code: Code,
-    language: Language,
+    language: UiLanguage,
     graph_ui: GraphUi,
     selections: Vec<Selection>,
     toasts: Toasts,
@@ -57,7 +57,7 @@ impl App {
         App::default()
     }
 
-    pub fn set_file(&mut self, code: String, language: Language) {
+    pub fn set_file(&mut self, code: String, language: UiLanguage) {
         self.code = Code::from(code);
         self.language = language;
         // Could be worth triggering a compile here
@@ -122,16 +122,16 @@ impl eframe::App for App {
                 ui.separator();
 
                 ui.menu_button("Language", |ui| {
-                    ui.radio_value(&mut self.language, Language::Chil, "Chil");
-                    ui.radio_value(&mut self.language, Language::Spartan, "Spartan");
+                    ui.radio_value(&mut self.language, UiLanguage::Chil, "Chil");
+                    ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
                 });
 
                 #[cfg(not(target_arch = "wasm32"))]
                 if ui.button("Import file").clicked() {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
-                            Some(ext) if ext == "sd" => Language::Spartan,
-                            Some(ext) if ext == "chil" => Language::Chil,
+                            Some(ext) if ext == "sd" => UiLanguage::Spartan,
+                            Some(ext) if ext == "chil" => UiLanguage::Chil,
                             Some(_) | None => self.language,
                         };
                         self.set_file(

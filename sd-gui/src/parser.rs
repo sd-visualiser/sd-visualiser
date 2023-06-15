@@ -13,13 +13,13 @@ use sd_core::language::{
 use thiserror::Error;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
-pub enum Language {
+pub enum UiLanguage {
     Chil,
     #[default]
     Spartan,
 }
 
-impl Language {
+impl UiLanguage {
     pub(crate) fn name(&self) -> &str {
         match self {
             Self::Chil => "chil",
@@ -49,19 +49,19 @@ pub enum ParseError {
 #[derive(Default)]
 pub struct Parser;
 
-impl ComputerMut<(&str, Language), Arc<Result<ParseOutput, ParseError>>> for Parser {
+impl ComputerMut<(&str, UiLanguage), Arc<Result<ParseOutput, ParseError>>> for Parser {
     fn compute(
         &mut self,
-        (source, language): (&str, Language),
+        (source, language): (&str, UiLanguage),
     ) -> Arc<Result<ParseOutput, ParseError>> {
         tracing::trace!("Parsing");
         Arc::new((|| match language {
-            Language::Chil => {
+            UiLanguage::Chil => {
                 let mut pairs = ChilParser::parse(chil::Rule::program, source)?;
                 let expr = chil::Expr::from_pest(&mut pairs)?;
                 Ok(ParseOutput::ChilExpr(expr))
             }
-            Language::Spartan => {
+            UiLanguage::Spartan => {
                 let mut pairs = SpartanParser::parse(spartan::Rule::program, source)?;
                 let expr = spartan::Expr::from_pest(&mut pairs)?;
                 Ok(ParseOutput::SpartanExpr(expr))
@@ -76,7 +76,7 @@ impl Parser {
     pub fn parse(
         ctx: &Context,
         source: &str,
-        language: Language,
+        language: UiLanguage,
     ) -> Arc<Result<ParseOutput, ParseError>> {
         ctx.memory_mut(|mem| {
             mem.caches

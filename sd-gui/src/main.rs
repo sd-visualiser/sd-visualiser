@@ -41,10 +41,10 @@ fn main() -> anyhow::Result<()> {
 
         let file = if let Some(path) = args.chil {
             let code = std::fs::read_to_string(path)?;
-            Some((code, sd_gui::Language::Chil))
+            Some((code, sd_gui::UiLanguage::Chil))
         } else if let Some(path) = args.spartan {
             let code = std::fs::read_to_string(path)?;
-            Some((code, sd_gui::Language::Spartan))
+            Some((code, sd_gui::UiLanguage::Spartan))
         } else {
             None
         };
