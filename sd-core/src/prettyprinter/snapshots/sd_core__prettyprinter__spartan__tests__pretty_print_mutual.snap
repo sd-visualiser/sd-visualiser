@@ -3,5 +3,5 @@ source: sd-core/src/prettyprinter/spartan.rs
 expression: expr.to_pretty()
 ---
 bind x = plus(y) in
-bind y = lambda(\z . x) in
+bind y = lambda(z . x) in
 y

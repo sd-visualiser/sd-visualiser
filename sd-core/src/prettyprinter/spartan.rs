@@ -8,10 +8,20 @@ use crate::language::{
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc)).append(RcDoc::intersperse(
-            self.values.iter().map(PrettyPrint::to_doc),
-            RcDoc::text(",").append(RcDoc::space()),
-        ))
+        RcDoc::concat(self.binds.iter().map(PrettyPrint::to_doc)).append({
+            if self.values.is_empty() {
+                RcDoc::text("()")
+            } else if self.values.len() == 1 {
+                self.values[0].to_doc()
+            } else {
+                RcDoc::text("(")
+                    .append(RcDoc::intersperse(
+                        self.values.iter().map(PrettyPrint::to_doc),
+                        RcDoc::text(",").append(RcDoc::space()),
+                    ))
+                    .append(RcDoc::text(")"))
+            }
+        })
     }
 }
 
@@ -91,11 +101,7 @@ impl PrettyPrint for Op {
 
 impl PrettyPrint for Thunk {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text("\\")
-            .append(RcDoc::intersperse(
-                self.args.iter().map(PrettyPrint::to_doc),
-                RcDoc::space(),
-            ))
+        RcDoc::intersperse(self.args.iter().map(PrettyPrint::to_doc), RcDoc::space())
             .append(RcDoc::space())
             .append(RcDoc::text("."))
             .append(if self.body.binds.is_empty() {
