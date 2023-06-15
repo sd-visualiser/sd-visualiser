@@ -3,7 +3,6 @@
 use std::fmt::{Display, Write};
 
 use from_pest::{ConversionError, FromPest, Void};
-use ordered_float::NotNaN;
 use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
@@ -49,7 +48,7 @@ pub struct SpartanParser;
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Op {
     Plus,
@@ -60,6 +59,7 @@ pub enum Op {
     And,
     Or,
     Not,
+    If,
     Eq,
     Neq,
     Lt,
@@ -68,15 +68,11 @@ pub enum Op {
     Geq,
     App,
     Lambda,
-    Unit,
-    Seq,
     Atom,
     Deref,
     Assign,
     Bool(bool),
-    Number(NotNaN<f64>),
-    String(String),     // string literal
-    Identifier(String), // any other identifier
+    Number(usize),
 }
 
 impl From<&str> for Op {
@@ -90,6 +86,7 @@ impl From<&str> for Op {
             "and" => Self::And,
             "or" => Self::Or,
             "not" => Self::Not,
+            "if" => Self::If,
             "eq" => Self::Eq,
             "neq" => Self::Neq,
             "lt" => Self::Lt,
@@ -98,22 +95,12 @@ impl From<&str> for Op {
             "geq" => Self::Geq,
             "app" => Self::App,
             "lambda" => Self::Lambda,
-            "unit" => Self::Unit,
-            "seq" => Self::Seq,
             "atom" => Self::Atom,
             "deref" => Self::Deref,
             "assign" => Self::Assign,
             "true" => Self::Bool(true),
             "false" => Self::Bool(false),
-            _ => {
-                if let Ok(n) = str::parse::<f64>(str) {
-                    return Self::Number(NotNaN::new(n).unwrap());
-                }
-                if str.starts_with('"') && str.ends_with('"') {
-                    return Self::String(str[1..str.len() - 1].to_string());
-                }
-                Self::Identifier(str.to_owned())
-            }
+            _ => Self::Number(str.parse().unwrap_or_default()),
         }
     }
 }
@@ -142,6 +129,7 @@ impl Display for Op {
             Self::And => f.write_char('∧'),
             Self::Or => f.write_char('∨'),
             Self::Not => f.write_char('¬'),
+            Self::If => f.write_str("if"),
             Self::Eq => f.write_char('='),
             Self::Neq => f.write_char('≠'),
             Self::Lt => f.write_char('<'),
@@ -150,15 +138,11 @@ impl Display for Op {
             Self::Geq => f.write_char('≥'),
             Self::App => f.write_char('@'),
             Self::Lambda => f.write_char('λ'),
-            Self::Unit => f.write_str("()"),
-            Self::Seq => f.write_char(';'),
             Self::Atom => f.write_char('&'),
             Self::Deref => f.write_char('!'),
             Self::Assign => f.write_str(":="),
             Self::Bool(b) => f.write_str(&b.to_string()),
             Self::Number(n) => f.write_str(&n.to_string()),
-            Self::String(_) => f.write_str("str"),
-            Self::Identifier(op) => f.write_str(op),
         }
     }
 }

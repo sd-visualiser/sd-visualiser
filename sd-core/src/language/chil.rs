@@ -1,14 +1,13 @@
 #![allow(clippy::clone_on_copy)]
 
-use std::fmt::Display;
+use std::fmt::{Display, Write};
 
 use from_pest::{ConversionError, FromPest, Void};
-use ordered_float::NotNaN;
 use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
-use super::{span_into_str, spartan};
+use super::span_into_str;
 
 pub struct Chil;
 
@@ -56,7 +55,42 @@ pub struct Op(pub String);
 
 impl Display for Op {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        match self.0.as_str() {
+            "+" | "throwing+" => f.write_char('+'),
+            "-" | "throwing-" => f.write_char('-'),
+            "*" | "throwing*" => f.write_char('*'),
+            "/" | "throwing/" => f.write_char('/'),
+            "%" | "throwing%" => f.write_char('%'),
+            "&&" | "throwing&&" => f.write_str("&&"),
+            "||" | "throwing||" => f.write_str("||"),
+            "!" | "throwing!" => f.write_char('!'),
+            "==" | "throwing==" => f.write_char('='),
+            "!=" | "throwing!=" => f.write_char('≠'),
+            "<" | "throwing<" => f.write_char('<'),
+            "<=" | "throwing<=" => f.write_char('≤'),
+            ">" | "throwing>" => f.write_char('>'),
+            ">=" | "throwing>=" => f.write_char('≥'),
+            "func" => f.write_char('λ'),
+            "seq" => f.write_char(';'),
+            "unit" => f.write_str("()"),
+            str => {
+                if str.starts_with("apply/") {
+                    return f.write_char('@');
+                }
+                if str.starts_with("tuple/") {
+                    return f.write_char('⊗');
+                }
+                if let Some(rest) = None
+                    .or_else(|| str.strip_prefix("bool/"))
+                    .or_else(|| str.strip_prefix("int64/"))
+                    .or_else(|| str.strip_prefix("float64/"))
+                    .or_else(|| str.strip_prefix("string/"))
+                {
+                    return f.write_str(rest);
+                }
+                f.write_str(str)
+            }
+        }
     }
 }
 
@@ -174,11 +208,10 @@ impl super::ToVar<Variable> for VariableDef {
 
 // Conversion to spartan
 
-impl From<Op> for spartan::Op {
+#[cfg(test)]
+impl From<Op> for super::spartan::Op {
     fn from(op: Op) -> Self {
-        let str = op.0;
-
-        match str.as_str() {
+        match op.0.as_str() {
             "+" | "throwing+" => return Self::Plus,
             "-" | "throwing-" => return Self::Minus,
             "*" | "throwing*" => return Self::Times,
@@ -194,35 +227,26 @@ impl From<Op> for spartan::Op {
             ">" | "throwing>" => return Self::Gt,
             ">=" | "throwing>=" => return Self::Geq,
             "func" => return Self::Lambda,
-            "unit" => return Self::Unit,
-            "seq" => return Self::Seq,
             "atom" => return Self::Atom,
             "deref" => return Self::Deref,
             "asg" => return Self::Assign,
             "bool/true" => return Self::Bool(true),
             "bool/false" => return Self::Bool(false),
-            _ => (),
-        }
-
-        if str.starts_with("apply/") {
-            return Self::App;
-        }
-        if let Some(rest) = str.strip_prefix("int64/").or(str.strip_prefix("float64/")) {
-            if let Ok(n) = rest.parse::<f64>() {
-                return Self::Number(NotNaN::new(n).unwrap());
+            str => {
+                if str.starts_with("apply/") {
+                    return Self::App;
+                }
+                if let Some(rest) = str.strip_prefix("int64/") {
+                    return Self::Number(rest.parse().unwrap_or_default());
+                }
+                Self::Plus // dummy placeholder
             }
         }
-        if let Some(rest) = str.strip_prefix("string/") {
-            if rest.starts_with('"') && rest.ends_with('"') {
-                return Self::String(rest.trim_matches('"').to_owned());
-            }
-        }
-
-        Self::Identifier(str)
     }
 }
 
-impl From<Variable> for spartan::Variable {
+#[cfg(test)]
+impl From<Variable> for super::spartan::Variable {
     fn from(var: Variable) -> Self {
         Self(match var {
             Variable::Addr(addr) => format!("var_{}", addr.1),
@@ -231,13 +255,15 @@ impl From<Variable> for spartan::Variable {
     }
 }
 
-impl From<Addr> for spartan::Addr {
+#[cfg(test)]
+impl From<Addr> for super::spartan::Addr {
     fn from(_addr: Addr) -> Self {
         Self
     }
 }
 
-impl From<VariableDef> for spartan::Variable {
+#[cfg(test)]
+impl From<VariableDef> for super::spartan::Variable {
     fn from(def: VariableDef) -> Self {
         def.var.into()
     }

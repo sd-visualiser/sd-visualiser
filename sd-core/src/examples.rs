@@ -1,5 +1,3 @@
-use ordered_float::NotNaN;
-
 use crate::{
     common::{Addr, InOut, Slice},
     language::spartan::Op,
@@ -55,7 +53,7 @@ pub fn int() -> MonoidalGraph<Syntax> {
         slices: vec![Slice {
             ops: vec![MonoidalOp::Operation {
                 addr: SyntaxOp {
-                    op: Op::Number(NotNaN::new(1.0).unwrap()),
+                    op: Op::Number(1),
                     inputs: 0,
                 },
             }],
