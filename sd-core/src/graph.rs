@@ -10,7 +10,6 @@ use thiserror::Error;
 use tracing::{debug, Level};
 
 use crate::{
-    free_vars::FreeVars,
     hypergraph::{
         fragment::Fragment, HyperGraph, HyperGraphBuilder, HyperGraphError, InPort, OutPort,
     },
@@ -266,13 +265,9 @@ where
 
     #[tracing::instrument(level=Level::TRACE, ret, err)]
     fn try_from(expr: &Expr<T>) -> Result<Self, Self::Error> {
-        debug!("Here");
-        let mut free_vars = FreeVars::default();
-
-        free_vars.expr(expr);
-
-        let free: Vec<T::Var> = free_vars[expr].iter().cloned().collect();
+        let free: Vec<T::Var> = expr.free_vars().iter().cloned().collect();
         debug!("free variables: {:?}", free);
+
         let graph = HyperGraphBuilder::new(
             free.iter().cloned().map(Name::FreeVar).collect(),
             expr.values.len(),
@@ -305,7 +300,6 @@ mod tests {
     use dir_test::{dir_test, Fixture};
 
     use crate::{
-        free_vars::FreeVars,
         graph::SyntaxHyperGraph,
         language::spartan::{Expr, Spartan},
     };
@@ -315,9 +309,7 @@ mod tests {
     fn free_vars(fixture: Fixture<(&str, &str, Expr)>) {
         let (lang, name, expr) = fixture.content();
 
-        let mut fv = FreeVars::default();
-        fv.expr(expr);
-        let mut variables = fv[expr].iter().cloned().collect::<Vec<_>>();
+        let mut variables = expr.free_vars().iter().cloned().collect::<Vec<_>>();
         variables.sort();
 
         insta::assert_debug_snapshot!(format!("free_vars_{name}.{lang}"), variables);

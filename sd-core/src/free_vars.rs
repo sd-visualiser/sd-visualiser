@@ -1,63 +1,49 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Index,
-};
-
-use derivative::Derivative;
+use std::collections::HashSet;
 
 use crate::language::{Arg, AsVar, Expr, Language, Thunk, Value};
 
-#[derive(Derivative)]
-#[derivative(Debug(bound = ""), Default(bound = ""))]
-pub(crate) struct FreeVars<T: Language>(HashMap<*const Expr<T>, HashSet<T::Var>>);
-
-impl<T: Language> Index<&Expr<T>> for FreeVars<T> {
-    type Output = HashSet<T::Var>;
-
-    fn index(&self, expr: &Expr<T>) -> &Self::Output {
-        let key: *const Expr<T> = expr;
-        &self.0[&key]
-    }
-}
-
-impl<T: Language> FreeVars<T> {
-    pub(crate) fn expr(&mut self, expr: &Expr<T>) {
+impl<T: Language> Expr<T> {
+    pub(crate) fn free_vars(&self) -> HashSet<T::Var> {
         let mut vars: HashSet<T::Var> = HashSet::new();
 
-        for bind in &expr.binds {
-            self.value(&mut vars, &bind.value);
+        for bind in &self.binds {
+            bind.value.free_vars(&mut vars);
         }
 
-        for value in &expr.values {
-            self.value(&mut vars, value);
+        for value in &self.values {
+            value.free_vars(&mut vars);
         }
 
-        for bind in &expr.binds {
+        for bind in &self.binds {
             vars.remove(bind.def.as_var());
         }
 
-        self.0.insert(expr, vars);
+        vars
     }
+}
 
-    pub(crate) fn value(&mut self, vars: &mut HashSet<T::Var>, value: &Value<T>) {
-        match value {
+impl<T: Language> Value<T> {
+    pub(crate) fn free_vars(&self, vars: &mut HashSet<T::Var>) {
+        match self {
             Value::Variable(v) => {
                 vars.insert(v.clone());
             }
             Value::Op { args, .. } => {
                 for arg in args {
                     match arg {
-                        Arg::Value(v) => self.value(vars, v),
-                        Arg::Thunk(d) => self.thunk(vars, d),
+                        Arg::Value(v) => v.free_vars(vars),
+                        Arg::Thunk(d) => d.free_vars(vars),
                     }
                 }
             }
         }
     }
+}
 
-    pub(crate) fn thunk(&mut self, vars: &mut HashSet<T::Var>, thunk: &Thunk<T>) {
-        self.expr(&thunk.body);
-        let arg_set: HashSet<T::Var> = thunk.args.iter().map(AsVar::as_var).cloned().collect();
-        vars.extend(self[&thunk.body].difference(&arg_set).cloned());
+impl<T: Language> Thunk<T> {
+    pub(crate) fn free_vars(&self, vars: &mut HashSet<T::Var>) {
+        let body_vars = self.body.free_vars();
+        let arg_set: HashSet<T::Var> = self.args.iter().map(AsVar::as_var).cloned().collect();
+        vars.extend(body_vars.difference(&arg_set).cloned());
     }
 }
