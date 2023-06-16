@@ -365,20 +365,24 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
         };
 
         for next_slice in &graph.slices {
-            builder.extend(Slice::insert_caps_cups_deletes(
-                builder.open_ports(),
-                next_slice.inputs(),
-                true,
-            ));
-
             let end_slices =
                 Slice::insert_caps_cups_deletes(next_slice.inputs(), builder.open_ports(), false);
 
-            builder.extend(Slice::permutation_to_swaps(
-                builder.open_ports(),
+            let next_inputs = || {
                 end_slices
                     .get(0)
-                    .map_or(next_slice.inputs(), InOutIter::inputs),
+                    .map_or(next_slice.inputs(), InOutIter::inputs)
+            };
+
+            builder.extend(Slice::insert_caps_cups_deletes(
+                builder.open_ports(),
+                next_inputs(),
+                true,
+            ));
+
+            builder.extend(Slice::permutation_to_swaps(
+                builder.open_ports(),
+                next_inputs(),
             ));
 
             builder.extend(end_slices);

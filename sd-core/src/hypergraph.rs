@@ -294,7 +294,8 @@ where
         {
             let built_nodes: HashSet<Node<V, E>> = thunk.nodes().collect();
 
-            let mut inputs: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>> = vec![];
+            let mut inputs: IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>> =
+                IndexSet::default();
 
             let thunk = Thunk(thunk.0);
 
@@ -306,12 +307,12 @@ where
                 match edge.node() {
                     Some(node) => {
                         if !built_nodes.contains(&node) {
-                            inputs.push(edge.0);
+                            inputs.insert(edge.0);
                         }
                     }
                     None => {
                         if !thunk.bound_graph_inputs().contains(&edge) {
-                            inputs.push(edge.0);
+                            inputs.insert(edge.0);
                         }
                     }
                 }

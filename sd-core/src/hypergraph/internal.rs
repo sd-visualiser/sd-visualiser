@@ -115,7 +115,7 @@ impl<V, E> OperationInternal<V, E> {
 pub(super) struct ThunkInternal<V, E> {
     pub(super) nodes: RwLock<Vec<NodeInternal<V, E>>>,
     #[allow(clippy::type_complexity)]
-    pub(super) free_variable_edges: OnceLock<Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
+    pub(super) free_variable_edges: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
     pub(super) bound_variables: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
     #[allow(clippy::type_complexity)]
     pub(super) outputs:
