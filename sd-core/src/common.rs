@@ -8,18 +8,16 @@ use derivative::Derivative;
 use num::rational::Ratio;
 use tracing::debug;
 
-use crate::hypergraph::{InPort, Operation, OutPort, Thunk};
+use crate::hypergraph::{Edge, Operation, Thunk};
 
 pub trait Addr {
-    type InPort: Clone + Eq + PartialEq + Hash;
-    type OutPort: Clone + Eq + PartialEq + Hash;
+    type Edge: Clone + Eq + PartialEq + Hash;
     type Thunk: Clone + Eq + PartialEq + Hash + InOut;
     type Operation: Clone + Eq + PartialEq + Hash + InOut;
 }
 
 impl<V, E> Addr for (V, E) {
-    type InPort = InPort<V, E>;
-    type OutPort = OutPort<V, E>;
+    type Edge = Edge<V, E>;
     type Thunk = Thunk<V, E>;
     type Operation = Operation<V, E>;
 }
@@ -40,7 +38,7 @@ impl Direction {
     }
 }
 
-pub type Link<V, E> = (OutPort<V, E>, Direction);
+pub type Link<V, E> = (Edge<V, E>, Direction);
 
 /// Specifies an operation which has inputs and outputs.
 pub trait InOut {
@@ -90,14 +88,14 @@ impl<O: InOutIter> InOutIter for Slice<O> {
     Eq(bound = "O: Eq"),
     PartialEq(bound = "O: PartialEq"),
     Hash(bound = "O: Hash"),
-    Debug(bound = "T::InPort: Debug, T::OutPort: Debug, O: Debug"),
+    Debug(bound = "T::Edge: Debug, O: Debug"),
     Default(bound = "")
 )]
 pub struct MonoidalTerm<T: Addr, O> {
-    pub free_inputs: Vec<T::OutPort>,
-    pub bound_inputs: Vec<T::OutPort>, // We need to make sure these don't get reordered
+    pub free_inputs: Vec<T::Edge>,
+    pub bound_inputs: Vec<T::Edge>, // We need to make sure these don't get reordered
     pub slices: Vec<Slice<O>>,
-    pub outputs: Vec<T::InPort>,
+    pub outputs: Vec<T::Edge>,
 }
 
 impl<T: Addr, O: InOut + Debug> MonoidalTerm<T, O> {
@@ -204,7 +202,7 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
             Box::new(
                 self.outputs
                     .iter()
-                    .map(|in_port| (in_port.link(), Direction::Forward)),
+                    .map(|out_port| (out_port.clone(), Direction::Forward)),
             ) as Box<dyn Iterator<Item = Link<T::V, T::E>>>,
             fold_slice::<T>,
         );

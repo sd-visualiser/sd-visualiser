@@ -6,7 +6,7 @@ use tracing::debug;
 
 use crate::{
     common::{Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
-    hypergraph::{Graph, InPort, Node, Operation, OutPort, Thunk},
+    hypergraph::{Edge, Graph, Node, Operation, Thunk},
 };
 
 pub type MonoidalWiredGraph<V, E> = MonoidalTerm<(V, E), WiredOp<V, E>>;
@@ -15,7 +15,7 @@ pub type MonoidalWiredGraph<V, E> = MonoidalTerm<(V, E), WiredOp<V, E>>;
 #[derivative(PartialEq(bound = ""))]
 pub enum WiredOp<V, E> {
     Copy {
-        addr: OutPort<V, E>,
+        addr: Edge<V, E>,
         copies: usize,
     },
     Operation {
@@ -26,7 +26,7 @@ pub enum WiredOp<V, E> {
         body: MonoidalWiredGraph<V, E>,
     },
     Backlink {
-        addr: OutPort<V, E>,
+        addr: Edge<V, E>,
     },
 }
 
@@ -82,11 +82,9 @@ impl<V, E> InOutIter for WiredOp<V, E> {
                 addr.outputs()
                     .map(|out_port| (out_port, Direction::Forward)),
             ),
-            WiredOp::Thunk { addr, body } => Box::new(
-                body.outputs
-                    .iter()
-                    .map(|port| (addr.externalise_output(port).unwrap(), Direction::Forward)),
-            ),
+            WiredOp::Thunk { addr, .. } => {
+                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
+            }
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
@@ -115,8 +113,8 @@ struct BacklinkData {
 #[derivative(Default(bound = ""))]
 struct MonoidalWiredGraphBuilder<V, E> {
     slices: Vec<Slice<Slice<WiredOp<V, E>>>>,
-    open_ports: HashMap<OutPort<V, E>, Vec<usize>>,
-    backlinks: HashMap<OutPort<V, E>, BacklinkData>,
+    open_ports: HashMap<Edge<V, E>, Vec<usize>>,
+    backlinks: HashMap<Edge<V, E>, BacklinkData>,
 }
 
 impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
@@ -128,7 +126,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         self.slices[layer].ops.push(op);
     }
 
-    fn input_layer(&self, out_port: &OutPort<V, E>) -> usize {
+    fn input_layer(&self, out_port: &Edge<V, E>) -> usize {
         let layers = self.open_ports.get(out_port);
         let max = layers
             .and_then(|x| x.iter().max())
@@ -142,7 +140,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         }
     }
 
-    fn prepare_input(&mut self, out_port: &OutPort<V, E>, layer: usize) {
+    fn prepare_input(&mut self, out_port: &Edge<V, E>, layer: usize) {
         let mut layers = self.open_ports.remove(out_port).unwrap_or_default();
         layers.sort_by_key(|x| Reverse(*x));
         if let Some(mut current_layer) = layers.pop() {
@@ -170,7 +168,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         }
     }
 
-    fn insert_backlink_on_layer(&mut self, out_port: OutPort<V, E>, layer: usize, is_cap: bool) {
+    fn insert_backlink_on_layer(&mut self, out_port: Edge<V, E>, layer: usize, is_cap: bool) {
         let ops = &mut self.slices[layer]
             .ops
             .iter_mut()
@@ -263,14 +261,10 @@ where
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::default();
-        let outputs: Vec<InPort<V, E>> = graph.graph_outputs().collect();
+        let outputs: Vec<Edge<V, E>> = graph.graph_outputs().collect();
 
-        for in_port in &outputs {
-            builder
-                .open_ports
-                .entry(in_port.link())
-                .or_default()
-                .push(0);
+        for edge in &outputs {
+            builder.open_ports.entry(edge.clone()).or_default().push(0);
         }
 
         for node in graph.nodes() {

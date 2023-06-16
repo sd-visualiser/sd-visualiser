@@ -38,8 +38,7 @@ impl InOut for SyntaxThunk {
 pub struct Syntax;
 
 impl Addr for Syntax {
-    type InPort = ();
-    type OutPort = ();
+    type Edge = ();
     type Thunk = SyntaxThunk;
     type Operation = SyntaxOp;
 }

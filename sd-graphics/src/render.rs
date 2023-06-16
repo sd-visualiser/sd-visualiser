@@ -297,7 +297,7 @@ pub fn generate_shapes<V, E>(
         shapes.push(Shape::Line {
             start,
             end,
-            addr: port.link(),
+            addr: port.clone(),
         });
     }
 }

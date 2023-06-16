@@ -12,7 +12,7 @@ use sd_core::{
     common::Addr,
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{Operation, OutPort, Thunk},
+    hypergraph::{Edge, Operation, Thunk},
     language::{Expr, Language},
     prettyprinter::PrettyPrint,
 };
@@ -23,16 +23,16 @@ use crate::{
 };
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = "T::OutPort: Clone, T::Thunk: Clone, T::Operation: Clone"))]
+#[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
 pub enum Shape<T: Addr> {
     Line {
         start: Pos2,
         end: Pos2,
-        addr: T::OutPort,
+        addr: T::Edge,
     },
     CubicBezier {
         points: [Pos2; 4],
-        addr: T::OutPort,
+        addr: T::Edge,
     },
     Rectangle {
         rect: Rect,
@@ -43,7 +43,7 @@ pub enum Shape<T: Addr> {
     CircleFilled {
         center: Pos2,
         radius: f32,
-        addr: T::OutPort,
+        addr: T::Edge,
     },
     Circle {
         center: Pos2,
@@ -97,7 +97,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         response: &Response,
         transform: &RectTransform,
         hover_points: &mut IndexSet<DummyValue<T>>,
-        highlight_ports: &mut HashSet<OutPort<Op<T>, Name<T>>>,
+        highlight_ports: &mut HashSet<Edge<Op<T>, Name<T>>>,
         expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
         selections: &mut HashSet<Operation<Op<T>, Name<T>>, S>,
         operation_hovered: &mut bool,
@@ -206,7 +206,7 @@ impl<T: Addr> Shape<T> {
         self,
         ui: &egui::Ui,
         transform: &RectTransform,
-        highlight_ports: &HashSet<T::OutPort>,
+        highlight_ports: &HashSet<T::Edge>,
     ) -> egui::Shape {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
 

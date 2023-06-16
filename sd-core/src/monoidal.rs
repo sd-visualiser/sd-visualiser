@@ -16,19 +16,18 @@ impl<T: Addr> Slice<MonoidalOp<T>>
 where
     T::Operation: Debug,
     T::Thunk: Debug,
-    T::InPort: Debug,
-    T::OutPort: Debug,
+    T::Edge: Debug,
 {
     pub fn insert_caps_cups_deletes(
-        start_ports: impl Iterator<Item = (T::OutPort, Direction)>,
-        end_ports: impl Iterator<Item = (T::OutPort, Direction)>,
+        start_ports: impl Iterator<Item = (T::Edge, Direction)>,
+        end_ports: impl Iterator<Item = (T::Edge, Direction)>,
         downwards: bool,
     ) -> Vec<Self>
     where
-        T::OutPort: Debug,
+        T::Edge: Debug,
     {
         #[allow(clippy::type_complexity)]
-        let mut permutation: Vec<Option<((T::OutPort, Direction), PermutationOutput)>> =
+        let mut permutation: Vec<Option<((T::Edge, Direction), PermutationOutput)>> =
             generate_permutation(start_ports, end_ports)
                 .into_iter()
                 .map(Option::Some)
@@ -113,8 +112,8 @@ where
     }
 
     pub fn permutation_to_swaps(
-        start_ports: impl Iterator<Item = (T::OutPort, Direction)>,
-        end_ports: impl Iterator<Item = (T::OutPort, Direction)>,
+        start_ports: impl Iterator<Item = (T::Edge, Direction)>,
+        end_ports: impl Iterator<Item = (T::Edge, Direction)>,
     ) -> Vec<Self> {
         let permutation = generate_permutation(start_ports, end_ports)
             .into_iter()
@@ -125,7 +124,7 @@ where
         let mut slice_ops = Vec::new();
 
         let mut chunk_start = 0;
-        let mut current_chunk_addr: Vec<(T::OutPort, Direction)> = vec![];
+        let mut current_chunk_addr: Vec<(T::Edge, Direction)> = vec![];
         let mut current_chunk_out_to_in: Vec<usize> = vec![];
 
         for (link, destination) in permutation {
@@ -169,11 +168,11 @@ pub type MonoidalGraph<T> = MonoidalTerm<T, MonoidalOp<T>>;
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::InPort: Debug, T::OutPort: Debug, T::Thunk: Debug, T::Operation: Debug")
+    Debug(bound = "T::Edge: Debug, T::Thunk: Debug, T::Operation: Debug")
 )]
 pub enum MonoidalOp<T: Addr> {
     Copy {
-        addr: T::OutPort,
+        addr: T::Edge,
         copies: usize,
     },
     Operation {
@@ -184,24 +183,24 @@ pub enum MonoidalOp<T: Addr> {
         body: MonoidalGraph<T>,
     },
     Swap {
-        addrs: Vec<(T::OutPort, Direction)>,
+        addrs: Vec<(T::Edge, Direction)>,
         out_to_in: Vec<usize>,
     },
     Backlink {
-        addr: T::OutPort,
+        addr: T::Edge,
     },
     Cup {
-        addr: (T::OutPort, Direction),
-        intermediate: Vec<(T::OutPort, Direction)>,
+        addr: (T::Edge, Direction),
+        intermediate: Vec<(T::Edge, Direction)>,
     },
     Cap {
-        addr: (T::OutPort, Direction),
-        intermediate: Vec<(T::OutPort, Direction)>,
+        addr: (T::Edge, Direction),
+        intermediate: Vec<(T::Edge, Direction)>,
     },
 }
 
 impl<T: Addr> MonoidalOp<T> {
-    fn id_from_link(link: (T::OutPort, Direction)) -> Self {
+    fn id_from_link(link: (T::Edge, Direction)) -> Self {
         if link.1 == Direction::Backward {
             MonoidalOp::Backlink { addr: link.0 }
         } else {
@@ -289,11 +288,9 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
             MonoidalOp::Operation { addr, .. } => {
                 Box::new(addr.outputs().map(|x| (x, Direction::Forward)))
             }
-            MonoidalOp::Thunk { addr, body, .. } => Box::new(
-                body.outputs
-                    .iter()
-                    .map(|port| (addr.externalise_output(port).unwrap(), Direction::Forward)),
-            ),
+            MonoidalOp::Thunk { addr, .. } => Box::new(Box::new(
+                addr.outputs().map(|edge| (edge, Direction::Forward)),
+            )),
             MonoidalOp::Swap { addrs, out_to_in } => {
                 Box::new(out_to_in.iter().map(|idx| addrs[*idx].clone()))
             }
@@ -394,7 +391,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             graph
                 .outputs
                 .iter()
-                .map(|in_port| (in_port.link(), Direction::Forward)),
+                .map(|edge| (edge.clone(), Direction::Forward)),
             true,
         ));
 
@@ -403,7 +400,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             graph
                 .outputs
                 .iter()
-                .map(|in_port| (in_port.link(), Direction::Forward)),
+                .map(|edge| (edge.clone(), Direction::Forward)),
         ));
 
         let mut graph = MonoidalGraph {
@@ -429,8 +426,7 @@ impl<T: Addr> MonoidalGraph<T>
 where
     T::Operation: Debug,
     T::Thunk: Debug,
-    T::InPort: Debug,
-    T::OutPort: Debug,
+    T::Edge: Debug,
 {
     fn squash_layers(&mut self) {
         self.slices = std::mem::take(&mut self.slices)
@@ -453,8 +449,7 @@ impl<T: Addr> Slice<MonoidalOp<T>>
 where
     T::Operation: Debug,
     T::Thunk: Debug,
-    T::InPort: Debug,
-    T::OutPort: Debug,
+    T::Edge: Debug,
 {
     fn check_mergeablity(&self, other: &Self) -> bool {
         let mut first_iter = self.ops.iter();

@@ -4,29 +4,36 @@ use by_address::ByThinAddress;
 use tracing::Level;
 
 use super::{
-    weakbyaddress::WeakByAddress, Graph, HyperGraph, HyperGraphError, InPort, NodeInternal,
-    Operation, OperationInternal, OutPort, Result, Thunk, ThunkCursor, ThunkInternal,
+    weakbyaddress::WeakByAddress, HyperGraphBuilder, HyperGraphError, InPort, NodeInternal,
+    OperationBuilder, OperationInternal, OutPort, Result, ThunkBuilder, ThunkCursor, ThunkInternal,
 };
 
-pub trait Fragment: Graph<false> {
+pub trait Fragment {
+    type NodeWeight;
+    type EdgeWeight;
+
     fn add_operation(
         &mut self,
         input_len: usize,
         output_weights: impl IntoIterator<Item = Self::EdgeWeight>,
         weight: Self::NodeWeight,
-    ) -> Operation<Self::NodeWeight, Self::EdgeWeight, false>;
+    ) -> OperationBuilder<Self::NodeWeight, Self::EdgeWeight>;
 
     fn add_thunk(
         &mut self,
         bound_variables: impl IntoIterator<Item = Self::EdgeWeight>,
         output_weights: impl IntoIterator<Item = Self::EdgeWeight>,
-    ) -> Thunk<Self::NodeWeight, Self::EdgeWeight, false>;
+    ) -> ThunkBuilder<Self::NodeWeight, Self::EdgeWeight>;
+
+    fn graph_outputs(
+        &self,
+    ) -> Box<dyn DoubleEndedIterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight>> + '_>;
 
     #[tracing::instrument(level=Level::DEBUG, skip(self), err, ret)]
     fn link(
         &mut self,
-        out_port: OutPort<Self::NodeWeight, Self::EdgeWeight, false>,
-        in_port: InPort<Self::NodeWeight, Self::EdgeWeight, false>,
+        out_port: OutPort<Self::NodeWeight, Self::EdgeWeight>,
+        in_port: InPort<Self::NodeWeight, Self::EdgeWeight>,
     ) -> Result<(), Self::NodeWeight, Self::EdgeWeight>
     where
         Self::NodeWeight: Debug,
@@ -51,7 +58,7 @@ pub trait Fragment: Graph<false> {
 
     fn in_thunk<T>(
         &mut self,
-        thunk: Thunk<Self::NodeWeight, Self::EdgeWeight, false>,
+        thunk: ThunkBuilder<Self::NodeWeight, Self::EdgeWeight>,
         f: impl FnOnce(ThunkCursor<Self::NodeWeight, Self::EdgeWeight>) -> T,
     ) -> T
     where
@@ -62,44 +69,53 @@ pub trait Fragment: Graph<false> {
     }
 }
 
-impl<V, E> Fragment for HyperGraph<V, E, false>
-where
-    V: Debug + Send + Sync,
-    E: Debug + Send + Sync,
-{
+impl<V, E> Fragment for HyperGraphBuilder<V, E> {
+    type NodeWeight = V;
+    type EdgeWeight = E;
+
     fn add_operation(
         &mut self,
         input_len: usize,
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
-    ) -> Operation<V, E, false> {
+    ) -> OperationBuilder<V, E> {
         let op = OperationInternal::new(input_len, output_weights, weight, None);
         self.0.nodes.push(NodeInternal::Operation(op.clone()));
-        Operation(ByThinAddress(op))
+        OperationBuilder(ByThinAddress(op))
     }
 
     fn add_thunk(
         &mut self,
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
-    ) -> Thunk<V, E, false> {
+    ) -> ThunkBuilder<V, E> {
         let thunk = ThunkInternal::new(bound_variables, output_weights, None);
         self.0.nodes.push(NodeInternal::Thunk(thunk.clone()));
-        Thunk(ByThinAddress(thunk))
+        ThunkBuilder(ByThinAddress(thunk))
+    }
+
+    fn graph_outputs(
+        &self,
+    ) -> Box<dyn DoubleEndedIterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight>> + '_> {
+        Box::new(
+            self.0
+                .graph_outputs
+                .iter()
+                .map(|in_port| InPort(ByThinAddress(in_port.clone()))),
+        )
     }
 }
 
-impl<V, E> Fragment for ThunkCursor<V, E>
-where
-    V: Debug + Send + Sync + 'static,
-    E: Debug + Send + Sync + 'static,
-{
+impl<V, E> Fragment for ThunkCursor<V, E> {
+    type NodeWeight = V;
+    type EdgeWeight = E;
+
     fn add_operation(
         &mut self,
         input_len: usize,
         output_weights: impl IntoIterator<Item = E>,
         weight: V,
-    ) -> Operation<V, E, false> {
+    ) -> OperationBuilder<V, E> {
         let op = OperationInternal::new(
             input_len,
             output_weights,
@@ -112,14 +128,14 @@ where
             .try_write()
             .expect("Lock unexpectedly taken")
             .push(NodeInternal::Operation(op.clone()));
-        Operation(ByThinAddress(op))
+        OperationBuilder(ByThinAddress(op))
     }
 
     fn add_thunk(
         &mut self,
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
-    ) -> Thunk<V, E, false> {
+    ) -> ThunkBuilder<V, E> {
         let thunk = ThunkInternal::new(
             bound_variables,
             output_weights,
@@ -131,6 +147,18 @@ where
             .try_write()
             .expect("Lock unexpectedly taken")
             .push(NodeInternal::Thunk(thunk.clone()));
-        Thunk(ByThinAddress(thunk))
+        ThunkBuilder(ByThinAddress(thunk))
+    }
+
+    fn graph_outputs(
+        &self,
+    ) -> Box<dyn DoubleEndedIterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight>> + '_> {
+        Box::new(
+            self.0
+                 .0
+                .outputs
+                .keys()
+                .map(|in_port| InPort(in_port.clone())),
+        )
     }
 }

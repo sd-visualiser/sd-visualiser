@@ -5,7 +5,7 @@ use egui::{epaint::CubicBezierShape, vec2, Pos2, Vec2};
 use pretty::RcDoc;
 use sd_core::{
     graph::{Name, Op},
-    hypergraph::{Node, OutPort},
+    hypergraph::{Edge, Node},
     language::Language,
     prettyprinter::{paran_list, PrettyPrint},
 };
@@ -34,7 +34,7 @@ pub enum DummyValue<T: Language> {
 }
 
 impl<T: Language> DummyValue<T> {
-    pub(crate) fn from_port(out_port: &OutPort<Op<T>, Name<T>>) -> Self {
+    pub(crate) fn from_port(out_port: &Edge<Op<T>, Name<T>>) -> Self {
         match out_port.weight() {
             Name::Op => match out_port.node() {
                 Some(Node::Operation(op)) => Self::Operation(

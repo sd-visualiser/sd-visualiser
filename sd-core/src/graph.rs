@@ -11,7 +11,9 @@ use tracing::{debug, Level};
 
 use crate::{
     free_vars::FreeVars,
-    hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
+    hypergraph::{
+        fragment::Fragment, HyperGraph, HyperGraphBuilder, HyperGraphError, InPort, OutPort,
+    },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
 };
 
@@ -85,13 +87,13 @@ where
 #[derivative(Debug(bound = "F: Debug"))]
 struct Environment<F, T: Language> {
     fragment: F,
-    inputs: Vec<(InPort<Op<T>, Name<T>, false>, T::Var)>,
-    outputs: HashMap<T::Var, OutPort<Op<T>, Name<T>, false>>,
+    inputs: Vec<(InPort<Op<T>, Name<T>>, T::Var)>,
+    outputs: HashMap<T::Var, OutPort<Op<T>, Name<T>>>,
 }
 
 enum ProcessInput<T: Language> {
     Variable(T::VarDef),
-    InPort(InPort<Op<T>, Name<T>, false>),
+    InPort(InPort<Op<T>, Name<T>>),
 }
 
 impl<T, F> Environment<F, T>
@@ -182,7 +184,7 @@ where
     fn process_thunk(
         &mut self,
         thunk: &Thunk<T>,
-        inport: InPort<Op<T>, Name<T>, false>,
+        inport: InPort<Op<T>, Name<T>>,
     ) -> Result<(), ConvertError<T>> {
         if thunk.body.values.len() != 1 {
             return Err(ConvertError::ThunkOutputError);
@@ -191,13 +193,12 @@ where
             thunk.args.iter().cloned().map(Name::BoundVar),
             [Name::Thunk(thunk.addr.clone())],
         );
-        debug!("new thunk node {:?}", thunk_node);
 
         self.fragment
             .in_thunk(thunk_node.clone(), |inner_fragment| {
                 let mut thunk_env = Environment::new(inner_fragment);
 
-                for (def, outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
+                for (def, outport) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
                     let var = def.as_var();
                     thunk_env
                         .outputs
@@ -272,7 +273,7 @@ where
 
         let free: Vec<T::Var> = free_vars[expr].iter().cloned().collect();
         debug!("free variables: {:?}", free);
-        let graph = HyperGraph::new(
+        let graph = HyperGraphBuilder::new(
             free.iter().cloned().map(Name::FreeVar).collect(),
             expr.values.len(),
         );

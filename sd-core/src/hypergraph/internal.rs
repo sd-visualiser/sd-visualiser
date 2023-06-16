@@ -22,16 +22,16 @@ pub(super) struct InPortInternal<V, E> {
     pub(super) link: RwLock<Weak<OutPortInternal<V, E>>>,
 }
 
-impl<V, E> InPortInternal<V, E>
-where
-    V: Debug,
-    E: Debug,
-{
+impl<V, E> InPortInternal<V, E> {
     pub(super) fn new(node: Option<WeakNodeInternal<V, E>>) -> Self {
         Self {
             node,
             link: RwLock::new(Weak::default()),
         }
+    }
+
+    pub(super) fn link(&self) -> Arc<OutPortInternal<V, E>> {
+        self.link.read().unwrap().upgrade().unwrap()
     }
 }
 
@@ -42,11 +42,7 @@ pub(super) struct OutPortInternal<V, E> {
     pub(super) weight: E,
 }
 
-impl<V, E> OutPortInternal<V, E>
-where
-    V: Debug,
-    E: Debug,
-{
+impl<V, E> OutPortInternal<V, E> {
     pub(super) fn new(node: Option<WeakNodeInternal<V, E>>, weight: E) -> Self {
         Self {
             node,
@@ -79,11 +75,7 @@ pub(super) struct OperationInternal<V, E> {
     pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
 }
 
-impl<V, E> OperationInternal<V, E>
-where
-    V: Debug + Send + Sync,
-    E: Debug + Send + Sync,
-{
+impl<V, E> OperationInternal<V, E> {
     pub(super) fn new(
         input_len: usize,
         output_weights: impl IntoIterator<Item = E>,
@@ -131,11 +123,7 @@ pub(super) struct ThunkInternal<V, E> {
     pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
 }
 
-impl<V, E> ThunkInternal<V, E>
-where
-    V: Debug + Send + Sync,
-    E: Debug + Send + Sync,
-{
+impl<V, E> ThunkInternal<V, E> {
     pub(super) fn new(
         bound_variables: impl IntoIterator<Item = E>,
         output_weights: impl IntoIterator<Item = E>,
