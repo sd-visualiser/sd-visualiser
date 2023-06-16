@@ -34,14 +34,12 @@ pub enum DummyValue<T: Language> {
 }
 
 impl<T: Language> DummyValue<T> {
-    pub(crate) fn from_port(out_port: &Edge<Op<T>, Name<T>>) -> Self {
-        match out_port.weight() {
-            Name::Op => match out_port.node() {
+    pub(crate) fn from_edge(edge: &Edge<Op<T>, Name<T>>) -> Self {
+        match edge.weight() {
+            Name::Op => match edge.node() {
                 Some(Node::Operation(op)) => Self::Operation(
                     op.weight().0.clone(),
-                    op.inputs()
-                        .map(|out_port| Self::from_port(&out_port))
-                        .collect(),
+                    op.inputs().map(|edge| Self::from_edge(&edge)).collect(),
                 ),
                 _ => unreachable!(),
             },

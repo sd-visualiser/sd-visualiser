@@ -7,7 +7,7 @@ use super::{Edge, Graph, InPort, Operation, OutPort, Thunk};
 impl<V, E> Debug for InPort<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut x = f.debug_struct("InPort");
-        if let Some(outport) = self
+        if let Some(out_port) = self
             .0
              .0
             .link
@@ -15,7 +15,7 @@ impl<V, E> Debug for InPort<V, E> {
             .expect("lock unexpectedly taken")
             .upgrade()
         {
-            x.field("output", &OutPort::<V, E>(ByThinAddress(outport)));
+            x.field("output", &OutPort::<V, E>(ByThinAddress(out_port)));
         }
         x.finish()
     }

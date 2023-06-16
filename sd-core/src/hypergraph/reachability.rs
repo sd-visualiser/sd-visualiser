@@ -7,7 +7,7 @@ use super::Node;
 impl<V, E> Node<V, E> {
     pub fn successors(&self) -> impl Iterator<Item = Self> + '_ {
         self.outputs()
-            .flat_map(|outport| outport.targets().flatten())
+            .flat_map(|edge| edge.targets().flatten())
             .unique()
     }
 
@@ -28,9 +28,7 @@ impl<V, E> Node<V, E> {
     }
 
     pub fn predecessors(&self) -> impl Iterator<Item = Self> + '_ {
-        self.inputs()
-            .filter_map(|out_port| out_port.node())
-            .unique()
+        self.inputs().filter_map(|edge| edge.node()).unique()
     }
 
     #[inline]

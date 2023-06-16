@@ -202,7 +202,7 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
             Box::new(
                 self.outputs
                     .iter()
-                    .map(|out_port| (out_port.clone(), Direction::Forward)),
+                    .map(|edge| (edge.clone(), Direction::Forward)),
             ) as Box<dyn Iterator<Item = Link<T::V, T::E>>>,
             fold_slice::<T>,
         );
@@ -211,15 +211,15 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
             self.free_inputs
                 .iter()
                 .cloned()
-                .map(|x| (x, Direction::Forward)),
+                .map(|edge| (edge, Direction::Forward)),
             ports_below,
         )
         .into_iter()
         .collect();
 
-        self.free_inputs.sort_by_key(|out_port| {
+        self.free_inputs.sort_by_key(|edge| {
             perm_map
-                .get(&(out_port.clone(), Direction::Forward))
+                .get(&(edge.clone(), Direction::Forward))
                 .copied()
                 .and_then(Into::into)
                 .unwrap_or(usize::MAX)
@@ -241,7 +241,7 @@ impl<T: InOutIter> Slice<T> {
         self.ops.sort_by_cached_key(|op| -> Ratio<usize> {
             match op
                 .outputs()
-                .filter_map(|out_port| perm_map.get(&out_port).copied().and_then(Into::into))
+                .filter_map(|link| perm_map.get(&link).copied().and_then(Into::into))
                 .fold((0, 0), |(a, b), c: usize| (a + c, b + 1))
             {
                 (_, 0) => usize::MAX.into(),

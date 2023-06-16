@@ -256,12 +256,12 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
                 Box::new(std::iter::once((addr.clone(), Direction::Forward)))
             }
             MonoidalOp::Operation { addr, .. } => {
-                Box::new(addr.inputs().map(|out_port| (out_port, Direction::Forward)))
+                Box::new(addr.inputs().map(|edge| (edge, Direction::Forward)))
             }
             MonoidalOp::Thunk { body, .. } => Box::new(Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|out_port| (out_port.clone(), Direction::Forward)),
+                    .map(|edge| (edge.clone(), Direction::Forward)),
             )),
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
@@ -356,7 +356,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             .free_inputs
             .iter()
             .chain(graph.bound_inputs.iter())
-            .map(|out_port| (out_port.clone(), Direction::Forward))
+            .map(|edge| (edge.clone(), Direction::Forward))
             .collect();
 
         let mut builder = MonoidalGraphBuilder {

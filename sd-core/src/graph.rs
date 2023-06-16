@@ -113,7 +113,7 @@ where
     /// Insert value into a hypergraph and update the environment.
     ///
     /// If an `InPort` is passed in it should be linked.
-    /// If a `Variable` is passed in it should be assigned to the outport the value generates.
+    /// If a `Variable` is passed in it should be assigned to the `out_port` the value generates.
     ///
     /// # Errors
     ///
@@ -141,13 +141,13 @@ where
                 let operation_node =
                     self.fragment
                         .add_operation(args.len(), [output_weight], Op(op.clone()));
-                for (arg, inport) in args.iter().rev().zip(operation_node.inputs().rev()) {
+                for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
                     match arg {
                         Arg::Value(value) => {
-                            self.process_value(value, ProcessInput::InPort(inport))?;
+                            self.process_value(value, ProcessInput::InPort(in_port))?;
                         }
                         Arg::Thunk(thunk) => {
-                            self.process_thunk(thunk, inport)?;
+                            self.process_thunk(thunk, in_port)?;
                         }
                     }
                 }
@@ -176,7 +176,7 @@ where
 
     /// Insert thunk into a hypergraph and update the environment.
     ///
-    /// The caller expects the inport that is passed in to be linked.
+    /// The caller expects the `in_port` that is passed in to be linked.
     ///
     /// # Errors
     ///
@@ -184,7 +184,7 @@ where
     fn process_thunk(
         &mut self,
         thunk: &Thunk<T>,
-        inport: InPort<Op<T>, Name<T>>,
+        in_port: InPort<Op<T>, Name<T>>,
     ) -> Result<(), ConvertError<T>> {
         if thunk.body.values.len() != 1 {
             return Err(ConvertError::ThunkOutputError);
@@ -198,11 +198,11 @@ where
             .in_thunk(thunk_node.clone(), |inner_fragment| {
                 let mut thunk_env = Environment::new(inner_fragment);
 
-                for (def, outport) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
+                for (def, out_port) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
                     let var = def.as_var();
                     thunk_env
                         .outputs
-                        .insert(var.clone(), outport)
+                        .insert(var.clone(), out_port)
                         .is_none()
                         .then_some(())
                         .ok_or(ConvertError::Shadowed(var.clone()))?;
@@ -212,11 +212,11 @@ where
                 Ok::<_, ConvertError<T>>(thunk_env.fragment)
             })?;
 
-        let outport = thunk_node
+        let out_port = thunk_node
             .outputs()
             .next()
             .ok_or(ConvertError::NoOutputError)?;
-        self.fragment.link(outport, inport)?;
+        self.fragment.link(out_port, in_port)?;
 
         Ok(())
     }
@@ -282,9 +282,9 @@ where
         let mut env = Environment::new(graph);
         debug!("determined environment: {:?}", env);
 
-        for (var, outport) in free.iter().zip(env.fragment.graph_inputs()) {
+        for (var, out_port) in free.iter().zip(env.fragment.graph_inputs()) {
             env.outputs
-                .insert(var.clone(), outport)
+                .insert(var.clone(), out_port)
                 .is_none()
                 .then_some(())
                 .ok_or(ConvertError::Shadowed(var.clone()))?;

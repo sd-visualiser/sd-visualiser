@@ -118,7 +118,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
             Shape::Line { start, end, addr } => {
                 if let Some(hover_pos) = hover_pos {
                     if [*start, *end].contains_point(hover_pos, tolerance) {
-                        hover_points.insert(DummyValue::from_port(addr));
+                        hover_points.insert(DummyValue::from_edge(addr));
                         highlight_ports.insert(addr.clone());
                     }
                 }
@@ -132,7 +132,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                         Stroke::default(),
                     );
                     if bezier.contains_point(hover_pos, tolerance) {
-                        hover_points.insert(DummyValue::from_port(addr));
+                        hover_points.insert(DummyValue::from_edge(addr));
                         highlight_ports.insert(addr.clone());
                     }
                 }

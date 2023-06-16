@@ -176,7 +176,9 @@ impl<V, E> Edge<V, E> {
             .expect("Lock unexpectedly taken")
             .iter()
             .map(|WeakByAddress(in_port)| {
-                let in_port = in_port.upgrade().expect("got dangling reference to inport");
+                let in_port = in_port
+                    .upgrade()
+                    .expect("got dangling reference to in_port");
                 in_port.node.as_ref().map(WeakNodeInternal::unwrap_node)
             })
             .collect::<Vec<_>>()
@@ -248,41 +250,41 @@ where
     #[allow(clippy::too_many_lines)]
     pub fn build(mut self) -> Result<HyperGraph<V, E>, V, E> {
         // check validity of hypergraph:
-        // all inports linked to exactly one outport
-        fn check_inports_initialized<V, E>(
-            outport: &OutPort<V, E>,
+        // all in_ports linked to exactly one out_port
+        fn check_in_ports_initialized<V, E>(
+            out_port: &OutPort<V, E>,
         ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
         where
             V: Debug,
             E: Debug,
         {
-            outport
+            out_port
                 .0
                 .links
                 .try_read()
-                .expect("failed to lock outport inputs {outport.0.inputs:#?}")
+                .expect("failed to lock out_port inputs {out_port.0.inputs:#?}")
                 .iter()
-                .all(|weak_inport| weak_inport.strong_count() > 0)
+                .all(|weak_in_port| weak_in_port.strong_count() > 0)
                 .then_some(())
-                .ok_or_else(|| HyperGraphBuildError::UninitializedOutPort(outport.clone()))
+                .ok_or_else(|| HyperGraphBuildError::UninitializedOutPort(out_port.clone()))
         }
 
-        fn check_outport_initialized<V, E>(
-            inport: &InPort<V, E>,
+        fn check_out_port_initialized<V, E>(
+            in_port: &InPort<V, E>,
         ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
         where
             V: Debug,
             E: Debug,
         {
-            (inport
+            (in_port
                 .0
                 .link
                 .try_read()
-                .expect("failed to lock inport output {inport.0.output:#?}")
+                .expect("failed to lock in_port output {in_port.0.output:#?}")
                 .strong_count()
                 > 0)
             .then_some(())
-            .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(inport.clone()))
+            .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(in_port.clone()))
         }
 
         fn build_thunk_inputs<V, E>(thunk: Thunk<V, E>)
@@ -402,36 +404,36 @@ where
                 .collect();
         }
 
-        for outport in self.graph_inputs() {
+        for out_port in self.graph_inputs() {
             // check associated with hypergraph
-            assert!(&outport.0.node.is_none());
+            assert!(&out_port.0.node.is_none());
             // check inputs initialised
-            check_inports_initialized(&outport).map_err(HyperGraphError::BuildError)?;
+            check_in_ports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
         }
 
-        for inport in self.graph_outputs() {
+        for in_port in self.graph_outputs() {
             // check associated with hypergraph
-            assert!(&inport.0.node.is_none());
+            assert!(&in_port.0.node.is_none());
             // check output initialised
-            check_outport_initialized(&inport).map_err(HyperGraphError::BuildError)?;
+            check_out_port_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
         }
 
         self.fold(
             |op| {
                 for in_port in op.inputs() {
-                    check_outport_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
+                    check_out_port_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
                 }
                 for out_port in op.outputs() {
-                    check_inports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
+                    check_in_ports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
                 }
                 Ok(())
             },
             |thunk| {
                 for in_port in ThunkCursor(thunk.clone()).graph_outputs() {
-                    check_outport_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
+                    check_out_port_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
                 }
                 for out_port in thunk.outputs() {
-                    check_inports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
+                    check_in_ports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
                 }
                 Ok(())
             },
@@ -706,14 +708,6 @@ impl<V, E> Thunk<V, E> {
             .values()
             .map(|out_port| Edge(ByThinAddress(out_port.clone())))
     }
-
-    // #[must_use]
-    // pub fn externalise_output(&self, port: &InPort<V, E, BUILT>) -> Option<OutPort<V, E, BUILT>> {
-    //     self.0
-    //         .outputs
-    //         .get(&port.0)
-    //         .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
-    // }
 
     #[must_use]
     pub fn backlink(&self) -> Option<Thunk<V, E>> {

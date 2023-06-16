@@ -60,12 +60,12 @@ impl<V, E> InOutIter for WiredOp<V, E> {
                 Box::new(std::iter::once((addr.clone(), Direction::Forward)))
             }
             WiredOp::Operation { addr } => Box::new(Box::new(
-                addr.inputs().map(|out_port| (out_port, Direction::Forward)),
+                addr.inputs().map(|edge| (edge, Direction::Forward)),
             )),
             WiredOp::Thunk { body, .. } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|out_port| (out_port.clone(), Direction::Forward)),
+                    .map(|edge| (edge.clone(), Direction::Forward)),
             ),
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
@@ -78,10 +78,9 @@ impl<V, E> InOutIter for WiredOp<V, E> {
             WiredOp::Copy { addr, copies } => {
                 Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
             }
-            WiredOp::Operation { addr } => Box::new(
-                addr.outputs()
-                    .map(|out_port| (out_port, Direction::Forward)),
-            ),
+            WiredOp::Operation { addr } => {
+                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
+            }
             WiredOp::Thunk { addr, .. } => {
                 Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
@@ -113,7 +112,7 @@ struct BacklinkData {
 #[derivative(Default(bound = ""))]
 struct MonoidalWiredGraphBuilder<V, E> {
     slices: Vec<Slice<Slice<WiredOp<V, E>>>>,
-    open_ports: HashMap<Edge<V, E>, Vec<usize>>,
+    open_edges: HashMap<Edge<V, E>, Vec<usize>>,
     backlinks: HashMap<Edge<V, E>, BacklinkData>,
 }
 
@@ -126,22 +125,22 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         self.slices[layer].ops.push(op);
     }
 
-    fn input_layer(&self, out_port: &Edge<V, E>) -> usize {
-        let layers = self.open_ports.get(out_port);
+    fn input_layer(&self, edge: &Edge<V, E>) -> usize {
+        let layers = self.open_edges.get(edge);
         let max = layers
             .and_then(|x| x.iter().max())
             .copied()
             .unwrap_or_default();
 
-        if out_port.number_of_links() > 1 {
+        if edge.number_of_links() > 1 {
             max + 1
         } else {
             max
         }
     }
 
-    fn prepare_input(&mut self, out_port: &Edge<V, E>, layer: usize) {
-        let mut layers = self.open_ports.remove(out_port).unwrap_or_default();
+    fn prepare_input(&mut self, edge: &Edge<V, E>, layer: usize) {
+        let mut layers = self.open_edges.remove(edge).unwrap_or_default();
         layers.sort_by_key(|x| Reverse(*x));
         if let Some(mut current_layer) = layers.pop() {
             while current_layer < layer {
@@ -157,7 +156,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
                 self.add_op(
                     Slice {
                         ops: vec![WiredOp::Copy {
-                            addr: out_port.clone(),
+                            addr: edge.clone(),
                             copies,
                         }],
                     },
@@ -168,21 +167,21 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         }
     }
 
-    fn insert_backlink_on_layer(&mut self, out_port: Edge<V, E>, layer: usize, is_cap: bool) {
+    fn insert_backlink_on_layer(&mut self, edge: Edge<V, E>, layer: usize, is_cap: bool) {
         let ops = &mut self.slices[layer]
             .ops
             .iter_mut()
             .find(|x| {
                 if is_cap {
-                    x.inputs().map(|x| x.0).contains(&out_port)
+                    x.inputs().map(|x| x.0).contains(&edge)
                 } else {
-                    x.outputs().map(|x| x.0).contains(&out_port)
+                    x.outputs().map(|x| x.0).contains(&edge)
                 }
             })
             .unwrap()
             .ops;
 
-        let to_add = WiredOp::Backlink { addr: out_port };
+        let to_add = WiredOp::Backlink { addr: edge };
 
         if !ops.iter().contains(&to_add) {
             ops.push(to_add);
@@ -192,7 +191,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
     fn insert_operation(&mut self, node: &Node<V, E>) {
         let node_layer = node
             .outputs()
-            .map(|out_port| self.input_layer(&out_port))
+            .map(|edge| self.input_layer(&edge))
             .chain(
                 node.inputs()
                     .filter_map(|x| self.backlinks.get(&x).map(|x| x.originating_layer)),
@@ -202,36 +201,30 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
 
         let mut ops = vec![node.clone().into()];
 
-        node.outputs().for_each(|out_port| {
-            let open_ports = self
-                .open_ports
-                .get(&out_port)
-                .map(Vec::len)
-                .unwrap_or_default();
+        node.outputs().for_each(|edge| {
+            let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
-            if open_ports < out_port.number_of_links() {
-                if open_ports == 0 {
+            if open_edges < edge.number_of_links() {
+                if open_edges == 0 {
                     // Only backlink
-                    ops.push(WiredOp::Backlink {
-                        addr: out_port.clone(),
-                    });
+                    ops.push(WiredOp::Backlink { addr: edge.clone() });
                     self.backlinks.insert(
-                        out_port,
+                        edge,
                         BacklinkData {
                             available_layer: node_layer + 1,
                             originating_layer: node_layer,
                         },
                     );
                 } else {
-                    // Backlink and other ports
-                    self.open_ports
-                        .entry(out_port.clone())
+                    // Backlink and other edges
+                    self.open_edges
+                        .entry(edge.clone())
                         .or_default()
                         .push(node_layer - 1);
-                    self.prepare_input(&out_port, node_layer);
-                    self.insert_backlink_on_layer(out_port.clone(), node_layer - 1, false);
+                    self.prepare_input(&edge, node_layer);
+                    self.insert_backlink_on_layer(edge.clone(), node_layer - 1, false);
                     self.backlinks.insert(
-                        out_port,
+                        edge,
                         BacklinkData {
                             available_layer: node_layer,
                             originating_layer: node_layer,
@@ -240,13 +233,13 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
                 }
             } else {
                 // No backlink
-                self.prepare_input(&out_port, node_layer);
+                self.prepare_input(&edge, node_layer);
             }
         });
 
-        node.inputs().for_each(|out_port| {
-            self.open_ports
-                .entry(out_port)
+        node.inputs().for_each(|edge| {
+            self.open_edges
+                .entry(edge)
                 .or_default()
                 .push(node_layer + 1);
         });
@@ -264,7 +257,7 @@ where
         let outputs: Vec<Edge<V, E>> = graph.graph_outputs().collect();
 
         for edge in &outputs {
-            builder.open_ports.entry(edge.clone()).or_default().push(0);
+            builder.open_edges.entry(edge.clone()).or_default().push(0);
         }
 
         for node in graph.nodes() {
@@ -273,33 +266,31 @@ where
             builder.insert_operation(&node);
         }
 
-        let remaining_ports: Vec<_> = builder.open_ports.keys().cloned().collect();
+        let remaining_edges: Vec<_> = builder.open_edges.keys().cloned().collect();
 
-        let (backlinked_ports, other_ports): (Vec<_>, Vec<_>) = remaining_ports
+        let (backlinked_edges, other_edges): (Vec<_>, Vec<_>) = remaining_edges
             .into_iter()
             .partition(|x| builder.backlinks.get(x).map(|y| (x, y)).is_some());
 
-        for out_port in backlinked_ports {
-            let backlink = builder.backlinks.remove(&out_port).unwrap();
-            let open_ports = &builder.open_ports[&out_port];
+        for edge in backlinked_edges {
+            let backlink = builder.backlinks.remove(&edge).unwrap();
+            let open_edges = &builder.open_edges[&edge];
 
-            let layer = if open_ports.len() == 1 {
-                let layer = open_ports[0] - 1;
-                builder.insert_backlink_on_layer(out_port.clone(), layer, true);
+            let layer = if open_edges.len() == 1 {
+                let layer = open_edges[0] - 1;
+                builder.insert_backlink_on_layer(edge.clone(), layer, true);
                 layer
             } else {
-                let layer = *open_ports.iter().max().unwrap();
-                builder.prepare_input(&out_port, layer + 1);
-                builder.insert_backlink_on_layer(out_port.clone(), layer, true);
+                let layer = *open_edges.iter().max().unwrap();
+                builder.prepare_input(&edge, layer + 1);
+                builder.insert_backlink_on_layer(edge.clone(), layer, true);
                 layer
             };
 
             for x in backlink.available_layer..layer {
                 builder.add_op(
                     Slice {
-                        ops: vec![WiredOp::Backlink {
-                            addr: out_port.clone(),
-                        }],
+                        ops: vec![WiredOp::Backlink { addr: edge.clone() }],
                     },
                     x,
                 );
@@ -308,15 +299,15 @@ where
 
         let final_height = std::cmp::max(
             builder.slices.len(),
-            other_ports
+            other_edges
                 .iter()
-                .map(|out_port| builder.input_layer(out_port))
+                .map(|edge| builder.input_layer(edge))
                 .max()
                 .unwrap_or_default(),
         );
 
-        for out_port in other_ports {
-            builder.prepare_input(&out_port, final_height);
+        for edge in other_edges {
+            builder.prepare_input(&edge, final_height);
         }
 
         builder.slices.reverse();
