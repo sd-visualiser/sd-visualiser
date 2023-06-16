@@ -66,7 +66,6 @@ impl GraphUi {
         }
     }
 
-    #[allow(dead_code)]
     pub(crate) fn clear_selection(&mut self) {
         match self {
             GraphUi::Empty => {}
@@ -77,8 +76,7 @@ impl GraphUi {
 }
 
 pub(crate) struct GraphUiInternal<T: Language> {
-    #[allow(dead_code)]
-    hypergraph: SyntaxHyperGraph<T>,
+    pub(crate) hypergraph: SyntaxHyperGraph<T>,
     monoidal_graph: MonoidalGraph<(Op<T>, Name<T>)>,
     expanded: Expanded<Thunk<Op<T>, Name<T>>>,
     pub(crate) current_selection: HashSet<Operation<Op<T>, Name<T>>>,

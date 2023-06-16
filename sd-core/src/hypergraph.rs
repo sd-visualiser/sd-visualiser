@@ -30,7 +30,7 @@ use self::{
 };
 
 pub mod reachability;
-// pub mod subgraph;
+pub mod subgraph;
 
 #[derive(Debug, Error, Clone)]
 pub enum HyperGraphError<V, E>

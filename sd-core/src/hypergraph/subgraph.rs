@@ -3,7 +3,10 @@ use std::{
     fmt::Debug,
 };
 
-use super::{fragment::Fragment, Graph, HyperGraph, InPort, Node, Operation, OutPort};
+use super::{
+    fragment::Fragment, Edge, Graph, HyperGraph, HyperGraphBuilder, InPort, Node, Operation,
+    OutPort,
+};
 use crate::{
     common::InOut,
     graph::Name,
@@ -95,80 +98,75 @@ where
 
     #[must_use]
     pub fn generate_subgraph(&self, selection: &HashSet<Node<V, E>>) -> HyperGraph<V, E> {
-        todo!()
-        // let global_inputs: HashSet<OutPort<V, E>> = selection
-        //     .iter()
-        //     .flat_map(|node| node.inputs().map(|in_port| in_port.link()))
-        //     .filter(|out_port| {
-        //         out_port
-        //             .node()
-        //             .filter(|node| selection.contains(node))
-        //             .is_none()
-        //     })
-        //     .collect();
+        let global_inputs: HashSet<Edge<V, E>> = selection
+            .iter()
+            .flat_map(Node::inputs)
+            .filter(|edge| {
+                edge.node()
+                    .filter(|node| selection.contains(node))
+                    .is_none()
+            })
+            .collect();
 
-        // let global_outputs: HashSet<InPort<V, E>> = selection
-        //     .iter()
-        //     .flat_map(Node::outputs)
-        //     .flat_map(|out_port| out_port.links())
-        //     .filter(|in_port| {
-        //         in_port
-        //             .node()
-        //             .filter(|node| selection.contains(node))
-        //             .is_none()
-        //     })
-        //     .collect();
+        let global_outputs: HashSet<Edge<V, E>> = selection
+            .iter()
+            .flat_map(Node::outputs)
+            .filter(|edge| {
+                edge.targets()
+                    .any(|node| node.map_or(true, |node| !selection.contains(&node)))
+            })
+            .collect();
 
-        // let mut input_weights: Vec<E> =
-        //     global_inputs.iter().map(OutPort::weight).cloned().collect();
+        let mut input_weights: Vec<E> = global_inputs.iter().map(Edge::weight).cloned().collect();
 
-        // let mut count = 0;
+        let mut count = 0;
 
-        // for name in &mut input_weights {
-        //     if !name.is_var() {
-        //         *name = E::generate_free(count);
-        //         count += 1;
-        //     }
-        // }
+        for name in &mut input_weights {
+            if !name.is_var() {
+                *name = E::generate_free(count);
+                count += 1;
+            }
+        }
 
-        // let mut builder = HyperGraph::new(input_weights, global_outputs.len());
+        let mut builder = HyperGraphBuilder::new(input_weights, global_outputs.len());
 
-        // // Mapping from in_ports of the subgraph to in_ports of the original graph
-        // let mut in_port_map: HashMap<InPort<V, E, false>, InPort<V, E>> =
-        //     builder.graph_outputs().zip(global_outputs).collect();
+        // Mapping from in_ports of the subgraph to edges of the original graph
+        let mut in_port_map: HashMap<InPort<V, E>, Edge<V, E>> =
+            builder.graph_outputs().zip(global_outputs).collect();
 
-        // // Mapping from out_ports of the original graph to out_ports of the subgraph
-        // let mut out_port_map: HashMap<OutPort<V, E>, OutPort<V, E, false>> = global_inputs
-        //     .into_iter()
-        //     .zip(builder.graph_inputs())
-        //     .collect();
+        // Mapping from edges of the original graph to out_ports of the subgraph
+        let mut out_port_map: HashMap<Edge<V, E>, OutPort<V, E>> = global_inputs
+            .into_iter()
+            .zip(builder.graph_inputs())
+            .collect();
 
-        // for node in self.nodes().filter(|node| selection.contains(node)) {
-        //     let new_node = match &node {
-        //         Node::Operation(op) => {
-        //             let input_len = op.number_of_inputs();
-        //             let output_weights: Vec<_> = op
-        //                 .outputs()
-        //                 .map(|out_port| out_port.weight().clone())
-        //                 .collect();
-        //             let weight: V = op.weight().clone();
+        for node in selection {
+            match &node {
+                Node::Operation(op) => {
+                    let input_len = op.number_of_inputs();
+                    let output_weights: Vec<_> = op
+                        .outputs()
+                        .map(|out_port| out_port.weight().clone())
+                        .collect();
+                    let weight: V = op.weight().clone();
 
-        //             Node::Operation(builder.add_operation(input_len, output_weights, weight))
-        //         }
-        //         Node::Thunk(thunk) => Node::Thunk(builder.clone_thunk(thunk)),
-        //     };
+                    let op = builder.add_operation(input_len, output_weights, weight);
 
-        //     in_port_map.extend(new_node.inputs().zip(node.inputs()));
+                    in_port_map.extend(op.inputs().zip(node.inputs()));
 
-        //     out_port_map.extend(node.outputs().zip(new_node.outputs()));
-        // }
+                    out_port_map.extend(node.outputs().zip(op.outputs()));
+                }
+                Node::Thunk(thunk) => {
+                    thunk.clone_thunk(&mut builder, &mut in_port_map, &mut out_port_map);
+                }
+            };
+        }
 
-        // // Link up ports
+        // Link up ports
+        for (in_port, edge) in in_port_map {
+            builder.link(out_port_map[&edge].clone(), in_port).unwrap();
+        }
 
-        // for (x, y) in in_port_map {
-        //     builder.link(out_port_map[&y.link()].clone(), x).unwrap();
-        // }
-
-        // builder.build().unwrap()
+        builder.build().unwrap()
     }
 }

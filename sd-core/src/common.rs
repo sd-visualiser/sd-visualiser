@@ -188,12 +188,18 @@ where
     out
 }
 
-impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
+impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T>
+where
+    T::E: Debug,
+{
     pub fn minimise_swaps(&mut self) {
         fn fold_slice<'a, T: InOutIter>(
             ports_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
             slice: &'a mut Slice<T>,
-        ) -> Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a> {
+        ) -> Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>
+        where
+            T::E: Debug,
+        {
             slice.minimise_swaps(ports_below);
             slice.inputs()
         }
@@ -227,7 +233,10 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T> {
     }
 }
 
-impl<T: InOutIter> Slice<T> {
+impl<T: InOutIter> Slice<T>
+where
+    T::E: Debug,
+{
     pub fn minimise_swaps(&mut self, ports_below: impl Iterator<Item = Link<T::V, T::E>>) {
         let outputs = self.outputs();
 

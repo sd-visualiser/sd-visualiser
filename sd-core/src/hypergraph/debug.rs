@@ -17,11 +17,11 @@ impl<V, E> Debug for InPort<V, E> {
         {
             x.field("output", &OutPort::<V, E>(ByThinAddress(out_port)));
         }
-        x.finish()
+        x.field("ptr", &Arc::as_ptr(&self.0)).finish()
     }
 }
 
-impl<V: Debug, E> Debug for Operation<V, E> {
+impl<V: Debug, E: Debug> Debug for Operation<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Operation")
             .field("weight", self.weight())
@@ -59,8 +59,11 @@ impl<V, E> Debug for OutPort<V, E> {
     }
 }
 
-impl<V, E> Debug for Edge<V, E> {
+impl<V, E: Debug> Debug for Edge<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("Edge").field(&Arc::as_ptr(&self.0)).finish()
+        f.debug_struct("Edge")
+            .field("weight", self.weight())
+            .field("ptr", &Arc::as_ptr(&self.0))
+            .finish()
     }
 }
