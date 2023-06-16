@@ -37,14 +37,14 @@ impl Selection {
 
     pub fn from_graph(graph_ui: &GraphUi, name: String, ctx: &egui::Context) -> Self {
         match graph_ui {
-            GraphUi::Chil(graph_ui) => Self::Chil(SelectionInternal::new(
-                &graph_ui.current_selection,
+            GraphUi::Chil(graph_ui, selection) => Self::Chil(SelectionInternal::new(
+                selection,
                 name,
                 &graph_ui.hypergraph,
                 ctx,
             )),
-            GraphUi::Spartan(graph_ui) => Self::Spartan(SelectionInternal::new(
-                &graph_ui.current_selection,
+            GraphUi::Spartan(graph_ui, selection) => Self::Spartan(SelectionInternal::new(
+                selection,
                 name,
                 &graph_ui.hypergraph,
                 ctx,
@@ -114,7 +114,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
                         &mut self.code.as_str(),
                         UiLanguage::Spartan,
                     );
-                    self.graph_ui.ui(&mut columns[1]);
+                    self.graph_ui.ui(&mut columns[1], None);
                 });
             });
     }

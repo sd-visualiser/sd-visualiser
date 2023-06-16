@@ -18,12 +18,13 @@ use crate::{
     shape::Shape,
 };
 
+#[allow(clippy::type_complexity)]
 pub fn render<T, S>(
     ui: &egui::Ui,
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
     expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
-    selections: &mut HashSet<Operation<Op<T>, Name<T>>, S>,
+    mut selection: Option<&mut HashSet<Operation<Op<T>, Name<T>>, S>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
@@ -54,7 +55,7 @@ where
                 &mut hover_points,
                 &mut highlight_ports,
                 expanded,
-                selections,
+                &mut selection,
                 &mut operation_hovered,
             );
             s

@@ -91,6 +91,7 @@ impl<T: Addr> Shape<T> {
 
 impl<T: Language> Shape<(Op<T>, Name<T>)> {
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::type_complexity)]
     pub(crate) fn collect_hovers<S>(
         &mut self,
         ui: &egui::Ui,
@@ -99,7 +100,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         hover_points: &mut IndexSet<DummyValue<T>>,
         highlight_ports: &mut HashSet<Edge<Op<T>, Name<T>>>,
         expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
-        selections: &mut HashSet<Operation<Op<T>, Name<T>>, S>,
+        selection: &mut Option<&mut HashSet<Operation<Op<T>, Name<T>>, S>>,
         operation_hovered: &mut bool,
     ) where
         S: BuildHasher,
@@ -172,14 +173,16 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
             Shape::Circle {
                 addr, fill, stroke, ..
             } => {
-                let selected = selections.contains(addr);
+                let selected = selection.as_ref().map_or(false, |s| s.contains(addr));
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new(&addr),
                     Sense::click().union(Sense::hover()),
                 );
-                if op_response.clicked() && !selections.remove(addr) {
-                    selections.insert(addr.clone());
+                if let Some(s) = selection.as_mut() {
+                    if op_response.clicked() && !s.remove(addr) {
+                        s.insert(addr.clone());
+                    }
                 }
                 *fill = Some(
                     ui.style()

@@ -21,30 +21,48 @@ use tracing::debug;
 use crate::{panzoom::Panzoom, shape_generator::ShapeGenerator};
 
 pub(crate) enum GraphUi {
-    Chil(GraphUiInternal<Chil>),
-    Spartan(GraphUiInternal<Spartan>),
+    Chil(
+        GraphUiInternal<Chil>,
+        HashSet<Operation<Op<Chil>, Name<Chil>>>,
+    ),
+    Spartan(
+        GraphUiInternal<Spartan>,
+        HashSet<Operation<Op<Spartan>, Name<Spartan>>>,
+    ),
 }
 
 impl GraphUi {
     pub(crate) fn new_chil(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Chil>) -> Self {
-        Self::Chil(GraphUiInternal::from_graph(hypergraph, ctx))
+        Self::Chil(GraphUiInternal::from_graph(hypergraph, ctx), HashSet::new())
     }
 
     pub(crate) fn new_spartan(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
-        Self::Spartan(GraphUiInternal::from_graph(hypergraph, ctx))
+        Self::Spartan(GraphUiInternal::from_graph(hypergraph, ctx), HashSet::new())
     }
 
     delegate! {
         to match self {
-            GraphUi::Chil(graph_ui) => graph_ui,
-            GraphUi::Spartan(graph_ui) => graph_ui,
+            GraphUi::Chil(graph_ui, _) => graph_ui,
+            GraphUi::Spartan(graph_ui, _) => graph_ui,
         } {
-            pub(crate) fn ui(&mut self, ui: &mut egui::Ui);
             pub(crate) fn reset(&mut self, ctx: &egui::Context);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
-            pub(crate) fn clear_selection(&mut self);
             pub(crate) fn export_svg(&mut self, ctx: &egui::Context) -> String;
+        }
+    }
+
+    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
+        match self {
+            GraphUi::Chil(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
+            GraphUi::Spartan(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
+        }
+    }
+
+    pub(crate) fn clear_selection(&mut self) {
+        match self {
+            GraphUi::Chil(_, selection) => selection.clear(),
+            GraphUi::Spartan(_, selection) => selection.clear(),
         }
     }
 }
@@ -53,13 +71,15 @@ pub(crate) struct GraphUiInternal<T: Language> {
     pub(crate) hypergraph: SyntaxHyperGraph<T>,
     monoidal_graph: MonoidalGraph<(Op<T>, Name<T>)>,
     expanded: Expanded<Thunk<Op<T>, Name<T>>>,
-    pub(crate) current_selection: HashSet<Operation<Op<T>, Name<T>>>,
     panzoom: Panzoom,
 }
 
 impl<T: 'static + Language> GraphUiInternal<T> {
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui)
-    where
+    pub(crate) fn ui(
+        &mut self,
+        ui: &mut egui::Ui,
+        current_selection: Option<&mut HashSet<Operation<Op<T>, Name<T>>>>,
+    ) where
         T::Op: Display,
         T::Op: PrettyPrint,
         T::Var: PrettyPrint,
@@ -97,7 +117,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             &shapes.shapes,
             &response,
             &mut self.expanded,
-            &mut self.current_selection,
+            current_selection,
             to_screen,
         ));
     }
@@ -120,7 +140,6 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             hypergraph,
             monoidal_graph,
             expanded,
-            current_selection: HashSet::new(),
             panzoom: Panzoom::default(),
         };
         this.reset(ctx);
@@ -140,10 +159,6 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
         }
-    }
-
-    pub(crate) fn clear_selection(&mut self) {
-        self.current_selection.clear();
     }
 
     pub(crate) fn export_svg(&self, ctx: &egui::Context) -> String
