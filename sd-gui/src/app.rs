@@ -16,7 +16,7 @@ use crate::{
 pub struct App {
     code: String,
     language: UiLanguage,
-    graph_ui: GraphUi,
+    graph_ui: Option<GraphUi>,
     selections: Vec<Selection>,
     toasts: Toasts,
 }
@@ -86,13 +86,13 @@ impl App {
                 // Prettify the code.
                 self.code = expr.to_pretty();
                 debug!("Converting to hypergraph...");
-                self.graph_ui = GraphUi::new_chil(ctx, SyntaxHyperGraph::try_from(expr)?);
+                self.graph_ui = Some(GraphUi::new_chil(ctx, SyntaxHyperGraph::try_from(expr)?));
             }
             ParseOutput::SpartanExpr(expr) => {
                 // Prettify the code.
                 self.code = expr.to_pretty();
                 debug!("Converting to hypergraph...");
-                self.graph_ui = GraphUi::new_spartan(ctx, SyntaxHyperGraph::try_from(expr)?);
+                self.graph_ui = Some(GraphUi::new_spartan(ctx, SyntaxHyperGraph::try_from(expr)?));
             }
         }
 
@@ -103,6 +103,7 @@ impl App {
 }
 
 impl eframe::App for App {
+    #[allow(clippy::too_many_lines)]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
             egui::trace!(ui);
@@ -136,13 +137,19 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Reset").clicked() {
-                    self.graph_ui.reset(ui.ctx());
+                    if let Some(graph_ui) = &mut self.graph_ui {
+                        graph_ui.reset(ui.ctx());
+                    }
                 }
                 if ui.button("Zoom In").clicked() {
-                    self.graph_ui.zoom_in();
+                    if let Some(graph_ui) = &mut self.graph_ui {
+                        graph_ui.zoom_in();
+                    }
                 }
                 if ui.button("Zoom Out").clicked() {
-                    self.graph_ui.zoom_out();
+                    if let Some(graph_ui) = &mut self.graph_ui {
+                        graph_ui.zoom_out();
+                    }
                 }
 
                 ui.separator();
@@ -155,22 +162,24 @@ impl eframe::App for App {
                 }
 
                 if ui.button("Save selection").clicked() {
-                    if let Some(selection) = Selection::from_graph(
-                        &self.graph_ui,
-                        format!("Selection {}", self.selections.len()),
-                        ui.ctx(),
-                    ) {
-                        self.selections.push(selection);
-                        self.graph_ui.clear_selection();
+                    if let Some(graph_ui) = &mut self.graph_ui {
+                        self.selections.push(Selection::from_graph(
+                            graph_ui,
+                            format!("Selection {}", self.selections.len()),
+                            ui.ctx(),
+                        ));
+                        graph_ui.clear_selection();
                     }
                 }
 
                 ui.separator();
 
                 if ui.button("Export SVG").clicked() {
-                    let svg = self.graph_ui.export_svg(ui.ctx());
-                    if let Some(path) = rfd::FileDialog::new().save_file() {
-                        let _ = std::fs::write(path, svg);
+                    if let Some(graph_ui) = &mut self.graph_ui {
+                        let svg = graph_ui.export_svg(ui.ctx());
+                        if let Some(path) = rfd::FileDialog::new().save_file() {
+                            let _ = std::fs::write(path, svg);
+                        }
                     }
                 }
             });
@@ -193,7 +202,11 @@ impl eframe::App for App {
                     .show(&mut columns[0], |ui| self.code_edit_ui(ui));
                 egui::ScrollArea::both()
                     .id_source("graph")
-                    .show(&mut columns[1], |ui| self.graph_ui.ui(ui));
+                    .show(&mut columns[1], |ui| {
+                        if let Some(graph_ui) = &mut self.graph_ui {
+                            graph_ui.ui(ui);
+                        }
+                    });
             });
         });
 

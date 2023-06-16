@@ -1,5 +1,8 @@
+#![allow(clippy::inline_always)]
+
 use std::{collections::HashSet, fmt::Display};
 
+use delegate::delegate;
 use eframe::{
     egui, emath,
     epaint::{Rect, Rounding, Shape},
@@ -17,10 +20,7 @@ use tracing::debug;
 
 use crate::{panzoom::Panzoom, shape_generator::ShapeGenerator};
 
-#[derive(Default)]
 pub(crate) enum GraphUi {
-    #[default]
-    Empty,
     Chil(GraphUiInternal<Chil>),
     Spartan(GraphUiInternal<Spartan>),
 }
@@ -34,51 +34,17 @@ impl GraphUi {
         Self::Spartan(GraphUiInternal::from_graph(hypergraph, ctx))
     }
 
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
-        match self {
-            GraphUi::Empty => {}
-            GraphUi::Chil(graph_ui) => graph_ui.ui(ui),
-            GraphUi::Spartan(graph_ui) => graph_ui.ui(ui),
-        }
-    }
-
-    pub(crate) fn reset(&mut self, ctx: &egui::Context) {
-        match self {
-            GraphUi::Empty => {}
-            GraphUi::Chil(graph_ui) => graph_ui.reset(ctx),
-            GraphUi::Spartan(graph_ui) => graph_ui.reset(ctx),
-        }
-    }
-
-    pub(crate) fn zoom_in(&mut self) {
-        match self {
-            GraphUi::Empty => {}
-            GraphUi::Chil(graph_ui) => graph_ui.panzoom.zoom_in(),
-            GraphUi::Spartan(graph_ui) => graph_ui.panzoom.zoom_in(),
-        }
-    }
-
-    pub(crate) fn zoom_out(&mut self) {
-        match self {
-            GraphUi::Empty => {}
-            GraphUi::Chil(graph_ui) => graph_ui.panzoom.zoom_out(),
-            GraphUi::Spartan(graph_ui) => graph_ui.panzoom.zoom_out(),
-        }
-    }
-
-    pub(crate) fn clear_selection(&mut self) {
-        match self {
-            GraphUi::Empty => {}
-            GraphUi::Chil(graph_ui) => graph_ui.current_selection.clear(),
-            GraphUi::Spartan(graph_ui) => graph_ui.current_selection.clear(),
-        }
-    }
-
-    pub(crate) fn export_svg(&mut self, ctx: &egui::Context) -> String {
-        match self {
-            GraphUi::Empty => String::default(),
-            GraphUi::Chil(graph_ui) => graph_ui.export_svg(ctx),
-            GraphUi::Spartan(graph_ui) => graph_ui.export_svg(ctx),
+    delegate! {
+        to match self {
+            GraphUi::Chil(graph_ui) => graph_ui,
+            GraphUi::Spartan(graph_ui) => graph_ui,
+        } {
+            pub(crate) fn ui(&mut self, ui: &mut egui::Ui);
+            pub(crate) fn reset(&mut self, ctx: &egui::Context);
+            pub(crate) fn zoom_in(&mut self);
+            pub(crate) fn zoom_out(&mut self);
+            pub(crate) fn clear_selection(&mut self);
+            pub(crate) fn export_svg(&mut self, ctx: &egui::Context) -> String;
         }
     }
 }
@@ -162,6 +128,17 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     {
         let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
         self.panzoom.reset(shapes.size);
+    }
+
+    delegate! {
+        to self.panzoom {
+            pub(crate) fn zoom_in(&mut self);
+            pub(crate) fn zoom_out(&mut self);
+        }
+    }
+
+    pub(crate) fn clear_selection(&mut self) {
+        self.current_selection.clear();
     }
 
     pub(crate) fn export_svg(&self, ctx: &egui::Context) -> String

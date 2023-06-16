@@ -2647,6 +2647,7 @@ dependencies = [
  "cargo-husky",
  "clap",
  "console_error_panic_hook",
+ "delegate",
  "eframe",
  "egui-notify",
  "from-pest",

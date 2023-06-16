@@ -1,5 +1,8 @@
+#![allow(clippy::inline_always)]
+
 use std::{collections::HashSet, fmt::Display};
 
+use delegate::delegate;
 use eframe::egui;
 use sd_core::{
     decompile::decompile,
@@ -21,49 +24,38 @@ pub(crate) enum Selection {
 }
 
 impl Selection {
-    pub(crate) fn ui(&mut self, ctx: &egui::Context) {
-        match self {
-            Self::Chil(selection) => selection.ui(ctx),
-            Self::Spartan(selection) => selection.ui(ctx),
+    delegate! {
+        to match self {
+            Self::Chil(selection) => selection,
+            Self::Spartan(selection) => selection,
+        } {
+            pub(crate) fn ui(&mut self, ctx: &egui::Context);
+            pub(crate) fn name(&self) -> &str;
+            pub(crate) fn displayed(&mut self) -> &mut bool;
         }
     }
 
-    pub(crate) fn name(&self) -> &str {
-        match self {
-            Self::Chil(selection) => &selection.name,
-            Self::Spartan(selection) => &selection.name,
-        }
-    }
-
-    pub(crate) fn displayed(&mut self) -> &mut bool {
-        match self {
-            Self::Chil(selection) => &mut selection.displayed,
-            Self::Spartan(selection) => &mut selection.displayed,
-        }
-    }
-
-    pub fn from_graph(graph_ui: &GraphUi, name: String, ctx: &egui::Context) -> Option<Self> {
+    pub fn from_graph(graph_ui: &GraphUi, name: String, ctx: &egui::Context) -> Self {
         match graph_ui {
-            GraphUi::Empty => None,
-            GraphUi::Chil(graph_ui) => Some(Self::Chil(SelectionInternal::new(
+            GraphUi::Chil(graph_ui) => Self::Chil(SelectionInternal::new(
                 &graph_ui.current_selection,
                 name,
                 &graph_ui.hypergraph,
                 ctx,
-            ))),
-            GraphUi::Spartan(graph_ui) => Some(Self::Spartan(SelectionInternal::new(
+            )),
+            GraphUi::Spartan(graph_ui) => Self::Spartan(SelectionInternal::new(
                 &graph_ui.current_selection,
                 name,
                 &graph_ui.hypergraph,
                 ctx,
-            ))),
+            )),
         }
     }
 }
 
 pub(crate) struct SelectionInternal<T: Language> {
-    pub(crate) name: String,
-    pub(crate) displayed: bool,
+    name: String,
+    displayed: bool,
     code: String,
     graph_ui: GraphUiInternal<T>,
 }
@@ -94,6 +86,14 @@ impl<T: 'static + Language> SelectionInternal<T> {
             displayed: true,
             graph_ui,
         }
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub(crate) fn displayed(&mut self) -> &mut bool {
+        &mut self.displayed
     }
 
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
