@@ -73,6 +73,14 @@ impl GraphUi {
             GraphUi::Spartan(graph_ui) => graph_ui.current_selection.clear(),
         }
     }
+
+    pub(crate) fn export_svg(&mut self, ctx: &egui::Context) -> String {
+        match self {
+            GraphUi::Empty => String::default(),
+            GraphUi::Chil(graph_ui) => graph_ui.export_svg(ctx),
+            GraphUi::Spartan(graph_ui) => graph_ui.export_svg(ctx),
+        }
+    }
 }
 
 pub(crate) struct GraphUiInternal<T: Language> {
@@ -154,5 +162,13 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     {
         let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
         self.panzoom.reset(shapes.size);
+    }
+
+    pub(crate) fn export_svg(&self, ctx: &egui::Context) -> String
+    where
+        T::Op: Display,
+    {
+        let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
+        shapes.as_ref().to_svg().to_string()
     }
 }

@@ -171,6 +171,15 @@ impl eframe::App for App {
                         self.graph_ui.clear_selection();
                     }
                 }
+
+                ui.separator();
+
+                if ui.button("Export SVG").clicked() {
+                    let svg = self.graph_ui.export_svg(ui.ctx());
+                    if let Some(path) = rfd::FileDialog::new().save_file() {
+                        let _ = std::fs::write(path, svg);
+                    }
+                }
             });
         });
 
