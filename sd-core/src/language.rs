@@ -11,12 +11,12 @@ pub(crate) fn span_into_str(span: pest::Span) -> &str {
     span.as_str()
 }
 
-pub trait ToVar<V> {
-    fn to_var(&self) -> &V;
+pub trait AsVar<V> {
+    fn as_var(&self) -> &V;
 }
 
-impl<V> ToVar<V> for V {
-    fn to_var(&self) -> &V {
+impl<V> AsVar<V> for V {
+    fn as_var(&self) -> &V {
         self
     }
 }
@@ -25,7 +25,7 @@ pub trait Language {
     type Op: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
     type Var: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
     type Addr: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
-    type VarDef: Clone + Eq + PartialEq + Hash + Debug + Send + Sync + ToVar<Self::Var>;
+    type VarDef: Clone + Eq + PartialEq + Hash + Debug + Send + Sync + AsVar<Self::Var>;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;

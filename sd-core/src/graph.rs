@@ -12,7 +12,7 @@ use tracing::{debug, Level};
 use crate::{
     free_vars::FreeVars,
     hypergraph::{fragment::Fragment, Graph, HyperGraph, HyperGraphError, InPort, OutPort},
-    language::{Arg, Expr, Language, Thunk, ToVar, Value},
+    language::{Arg, AsVar, Expr, Language, Thunk, Value},
 };
 
 #[derive(Derivative)]
@@ -54,7 +54,7 @@ impl<T: Language> Name<T> {
         match self {
             Name::Op | Name::Thunk(_) => None,
             Name::FreeVar(var) => Some(var),
-            Name::BoundVar(def) => Some(def.to_var()),
+            Name::BoundVar(def) => Some(def.as_var()),
         }
     }
 }
@@ -129,7 +129,7 @@ where
     ) -> Result<(), ConvertError<T>> {
         match (value, input) {
             (Value::Variable(var), ProcessInput::Variable(input)) => {
-                Err(ConvertError::Aliased(input.to_var().clone(), var.clone()))
+                Err(ConvertError::Aliased(input.as_var().clone(), var.clone()))
             }
             (Value::Variable(var), ProcessInput::InPort(in_port)) => {
                 self.inputs.push((in_port, var.clone()));
@@ -163,7 +163,7 @@ where
 
                 match input {
                     ProcessInput::Variable(input) => {
-                        let var = input.to_var();
+                        let var = input.as_var();
                         self.outputs
                             .insert(var.clone(), out_port)
                             .is_none()
@@ -197,7 +197,7 @@ where
         let mut free: HashSet<_> = self.free_vars[&thunk.body].iter().cloned().collect();
 
         for arg in &thunk.args {
-            free.remove(arg.to_var());
+            free.remove(arg.as_var());
         }
         let thunk_node = self.fragment.add_thunk(
             free.iter().cloned().map(Name::FreeVar),
@@ -223,7 +223,7 @@ where
                         .ok_or(ConvertError::Shadowed(var))?;
                 }
                 for (def, outport) in thunk.args.iter().zip(thunk_node.bound_graph_inputs()) {
-                    let var = def.to_var();
+                    let var = def.as_var();
                     thunk_env
                         .outputs
                         .insert(var.clone(), outport)

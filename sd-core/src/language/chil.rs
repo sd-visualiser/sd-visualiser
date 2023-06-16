@@ -7,7 +7,7 @@ use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
-use super::span_into_str;
+use super::{span_into_str, AsVar};
 
 pub struct Chil;
 
@@ -101,10 +101,81 @@ impl<'pest> FromPest<'pest> for Op {
     fn from_pest(
         pest: &mut Pairs<'pest, Self::Rule>,
     ) -> Result<Self, ConversionError<Self::FatalError>> {
-        match pest.next().map(|pair| pair.as_str()) {
-            Some(str) => Ok(Self(str.to_owned())),
-            _ => Err(ConversionError::NoMatch),
+        let mut clone = pest.clone();
+        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
+        if pair.as_rule() != Rule::op {
+            return Err(ConversionError::NoMatch);
         }
+        *pest = clone;
+        Ok(Self(pair.as_str().to_owned()))
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::variable))]
+pub struct Variable {
+    pub name: Option<Identifier>,
+    pub addr: Addr,
+}
+
+impl Display for Variable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.name {
+            None => write!(f, "{}", self.addr),
+            Some(name) => write!(f, "{}(id: {})", name, self.addr),
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::addr))]
+pub struct Addr(
+    #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
+    #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
+);
+
+impl Display for Addr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}{}", self.0, self.1)
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Identifier(pub String);
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl<'pest> FromPest<'pest> for Identifier {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(
+        pest: &mut Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, ConversionError<Self::FatalError>> {
+        let mut clone = pest.clone();
+        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
+        if pair.as_rule() != Rule::identifier {
+            return Err(ConversionError::NoMatch);
+        }
+        *pest = clone;
+        Ok(Self(pair.as_str().to_owned()))
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::variable_def))]
+pub struct VariableDef {
+    pub var: Variable,
+    pub r#type: Option<Type>,
+}
+
+impl AsVar<Variable> for VariableDef {
+    fn as_var(&self) -> &Variable {
+        &self.var
     }
 }
 
@@ -139,71 +210,6 @@ pub struct TupleType {
 pub struct FunctionType {
     pub domain: TupleType,
     pub codomain: Box<Type>,
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::variable))]
-pub enum Variable {
-    Addr(Addr),
-    Identifier(Identifier, Addr),
-}
-
-impl Display for Variable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Variable::Addr(addr) => write!(f, "{addr}"),
-            Variable::Identifier(id, addr) => write!(f, "{id}(id: {addr})"),
-        }
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::addr))]
-pub struct Addr(
-    #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
-    #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
-);
-
-impl Display for Addr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}{}", self.0, self.1)
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct Identifier(pub String);
-
-impl Display for Identifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
-    }
-}
-
-impl<'pest> FromPest<'pest> for Identifier {
-    type Rule = Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        match pest.next().map(|pair| pair.as_str()) {
-            Some(str) => Ok(Identifier(str.to_owned())),
-            _ => Err(ConversionError::NoMatch),
-        }
-    }
-}
-
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::variable_def))]
-pub struct VariableDef {
-    pub var: Variable,
-    pub r#type: Option<Type>,
-}
-
-impl super::ToVar<Variable> for VariableDef {
-    fn to_var(&self) -> &Variable {
-        &self.var
-    }
 }
 
 // Conversion to spartan
@@ -248,10 +254,7 @@ impl From<Op> for super::spartan::Op {
 #[cfg(test)]
 impl From<Variable> for super::spartan::Variable {
     fn from(var: Variable) -> Self {
-        Self(match var {
-            Variable::Addr(addr) => format!("var_{}", addr.1),
-            Variable::Identifier(name, addr) => format!("{}_{}", name.0, addr.1),
-        })
+        Self(format!("var_{}", var.addr.1))
     }
 }
 

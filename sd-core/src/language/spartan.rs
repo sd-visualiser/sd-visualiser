@@ -1,6 +1,9 @@
 #![allow(clippy::clone_on_copy)]
 
-use std::fmt::{Display, Write};
+use std::{
+    fmt::{Display, Write},
+    str::FromStr,
+};
 
 use from_pest::{ConversionError, FromPest, Void};
 use pest::iterators::Pairs;
@@ -44,10 +47,6 @@ pub type Thunk = super::Thunk<Spartan>;
 #[grammar = "language/spartan.pest"]
 pub struct SpartanParser;
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
-#[pest_ast(rule(Rule::variable))]
-pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
-
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Op {
@@ -73,49 +72,6 @@ pub enum Op {
     Assign,
     Bool(bool),
     Number(usize),
-}
-
-impl From<&str> for Op {
-    fn from(str: &str) -> Self {
-        match str {
-            "plus" => Self::Plus,
-            "minus" => Self::Minus,
-            "times" => Self::Times,
-            "div" => Self::Div,
-            "rem" => Self::Rem,
-            "and" => Self::And,
-            "or" => Self::Or,
-            "not" => Self::Not,
-            "if" => Self::If,
-            "eq" => Self::Eq,
-            "neq" => Self::Neq,
-            "lt" => Self::Lt,
-            "leq" => Self::Leq,
-            "gt" => Self::Gt,
-            "geq" => Self::Geq,
-            "app" => Self::App,
-            "lambda" => Self::Lambda,
-            "atom" => Self::Atom,
-            "deref" => Self::Deref,
-            "assign" => Self::Assign,
-            "true" => Self::Bool(true),
-            "false" => Self::Bool(false),
-            _ => Self::Number(str.parse().unwrap_or_default()),
-        }
-    }
-}
-
-impl<'pest> FromPest<'pest> for Op {
-    type Rule = Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        pest.next()
-            .map(|pair| pair.as_str().into())
-            .ok_or(ConversionError::NoMatch)
-    }
 }
 
 impl Display for Op {
@@ -147,15 +103,66 @@ impl Display for Op {
     }
 }
 
-impl Display for Variable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
+impl FromStr for Op {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "plus" => Ok(Self::Plus),
+            "minus" => Ok(Self::Minus),
+            "times" => Ok(Self::Times),
+            "div" => Ok(Self::Div),
+            "rem" => Ok(Self::Rem),
+            "and" => Ok(Self::And),
+            "or" => Ok(Self::Or),
+            "not" => Ok(Self::Not),
+            "if" => Ok(Self::If),
+            "eq" => Ok(Self::Eq),
+            "neq" => Ok(Self::Neq),
+            "lt" => Ok(Self::Lt),
+            "leq" => Ok(Self::Leq),
+            "gt" => Ok(Self::Gt),
+            "geq" => Ok(Self::Geq),
+            "app" => Ok(Self::App),
+            "lambda" => Ok(Self::Lambda),
+            "atom" => Ok(Self::Atom),
+            "deref" => Ok(Self::Deref),
+            "assign" => Ok(Self::Assign),
+            "true" => Ok(Self::Bool(true)),
+            "false" => Ok(Self::Bool(false)),
+            _ => s.parse().map(Self::Number).map_err(|_err| ()),
+        }
     }
 }
 
-impl From<&str> for Variable {
-    fn from(value: &str) -> Self {
-        Variable(value.to_owned())
+impl<'pest> FromPest<'pest> for Op {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(
+        pest: &mut Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, ConversionError<Self::FatalError>> {
+        let mut clone = pest.clone();
+        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
+        if pair.as_rule() != Rule::op {
+            return Err(ConversionError::NoMatch);
+        }
+        let op = pair
+            .as_str()
+            .parse()
+            .map_err(|()| ConversionError::NoMatch)?;
+        *pest = clone;
+        Ok(op)
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
+#[pest_ast(rule(Rule::variable))]
+pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+
+impl Display for Variable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
     }
 }
 

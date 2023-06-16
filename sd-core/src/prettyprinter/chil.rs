@@ -35,15 +35,15 @@ impl PrettyPrint for Bind {
 
 impl PrettyPrint for Variable {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        match self {
-            Self::Addr(addr) => addr.to_doc(),
-            Self::Identifier(name, addr) => name
+        match &self.name {
+            None => self.addr.to_doc(),
+            Some(name) => name
                 .to_doc()
                 .append(RcDoc::text("("))
                 .append(RcDoc::text("id"))
                 .append(RcDoc::text(":"))
                 .append(RcDoc::space())
-                .append(addr.to_doc())
+                .append(self.addr.to_doc())
                 .append(RcDoc::text(")")),
         }
     }

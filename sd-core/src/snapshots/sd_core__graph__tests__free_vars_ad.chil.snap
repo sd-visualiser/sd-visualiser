@@ -4,27 +4,27 @@ expression: variables
 ---
 [
     Variable(
-        "ADEnvironment_422",
+        "var_134",
     ),
     Variable(
-        "TangentAdd_580",
+        "var_138",
     ),
     Variable(
-        "TangentZero_592",
+        "var_140",
     ),
     Variable(
-        "concat_140",
-    ),
-    Variable(
-        "empty_134",
-    ),
-    Variable(
-        "println_142",
-    ),
-    Variable(
-        "toString_138",
+        "var_142",
     ),
     Variable(
         "var_198",
+    ),
+    Variable(
+        "var_422",
+    ),
+    Variable(
+        "var_580",
+    ),
+    Variable(
+        "var_592",
     ),
 ]

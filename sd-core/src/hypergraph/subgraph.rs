@@ -21,7 +21,10 @@ impl Free for chil::Variable {
     }
 
     fn generate_free(number: usize) -> Self {
-        Self::Addr(chil::Addr('?', number))
+        Self {
+            name: None,
+            addr: chil::Addr('?', number),
+        }
     }
 }
 
