@@ -119,7 +119,7 @@ impl eframe::App for App {
                 });
 
                 #[cfg(not(target_arch = "wasm32"))]
-                if ui.button("Import file").clicked() {
+                if ui.button("Import file").clicked() || ui.input(|i| i.key_pressed(egui::Key::O)) {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
                             Some(ext) if ext == "sd" => UiLanguage::Spartan,
@@ -136,17 +136,20 @@ impl eframe::App for App {
 
                 ui.separator();
 
-                if ui.button("Reset").clicked() {
+                if ui.button("Reset").clicked() || ui.input(|i| i.key_pressed(egui::Key::Num0)) {
                     if let Some(graph_ui) = &mut self.graph_ui {
                         graph_ui.reset(ui.ctx());
                     }
                 }
-                if ui.button("Zoom In").clicked() {
+                if ui.button("Zoom In").clicked()
+                    || ui.input(|i| i.key_pressed(egui::Key::PlusEquals))
+                {
                     if let Some(graph_ui) = &mut self.graph_ui {
                         graph_ui.zoom_in();
                     }
                 }
-                if ui.button("Zoom Out").clicked() {
+                if ui.button("Zoom Out").clicked() || ui.input(|i| i.key_pressed(egui::Key::Minus))
+                {
                     if let Some(graph_ui) = &mut self.graph_ui {
                         graph_ui.zoom_out();
                     }
