@@ -68,7 +68,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         Expr<T>: PrettyPrint,
     {
         let (response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
+            ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
         let to_screen = emath::RectTransform::from_to(
             Rect::from_center_size(
                 self.panzoom.translation,
@@ -76,7 +76,12 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             ),
             response.rect,
         );
-        self.panzoom.translation -= response.drag_delta() / self.panzoom.zoom;
+        if response.hover_pos().is_some() {
+            ui.input(|i| {
+                self.panzoom.zoom_by(i.zoom_delta());
+                self.panzoom.translation -= i.scroll_delta / self.panzoom.zoom;
+            });
+        }
 
         let shapes =
             ShapeGenerator::generate_shapes(ui.ctx(), &self.monoidal_graph, &self.expanded);

@@ -200,13 +200,9 @@ impl eframe::App for App {
                 egui::ScrollArea::both()
                     .id_source("code")
                     .show(&mut columns[0], |ui| self.code_edit_ui(ui));
-                egui::ScrollArea::both()
-                    .id_source("graph")
-                    .show(&mut columns[1], |ui| {
-                        if let Some(graph_ui) = &mut self.graph_ui {
-                            graph_ui.ui(ui);
-                        }
-                    });
+                if let Some(graph_ui) = &mut self.graph_ui {
+                    graph_ui.ui(&mut columns[1]);
+                }
             });
         });
 

@@ -22,11 +22,15 @@ impl Panzoom {
         self.zoom = 50.0;
     }
 
+    pub fn zoom_by(&mut self, zoom_delta: f32) {
+        self.zoom *= zoom_delta;
+    }
+
     pub fn zoom_in(&mut self) {
-        self.zoom *= ZOOM_FACTOR;
+        self.zoom_by(ZOOM_FACTOR);
     }
 
     pub fn zoom_out(&mut self) {
-        self.zoom /= ZOOM_FACTOR;
+        self.zoom_by(ZOOM_FACTOR.recip());
     }
 }
