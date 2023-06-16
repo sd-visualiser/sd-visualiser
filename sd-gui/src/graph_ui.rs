@@ -117,7 +117,6 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             ui,
             &shapes.shapes,
             &response,
-            self.panzoom.zoom,
             &mut self.expanded,
             &mut self.current_selection,
             to_screen,

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use derivative::Derivative;
-use egui::{emath::RectTransform, epaint::CubicBezierShape, vec2, Pos2, Rect, Vec2};
+use egui::{epaint::CubicBezierShape, vec2, Pos2, Vec2};
 use pretty::RcDoc;
 use sd_core::{
     graph::{Name, Op},
@@ -16,20 +16,6 @@ pub(crate) const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
 pub(crate) const TOLERANCE: f32 = 0.1;
 pub(crate) const TEXT_SIZE: f32 = 0.28;
 pub(crate) const RADIUS_OPERATION: f32 = 0.2;
-
-// Specifies how to transform a layout position to a screen position.
-pub(crate) struct Transform {
-    pub scale: f32,
-    pub bounds: Rect,
-    pub to_screen: RectTransform,
-}
-
-impl Transform {
-    pub(crate) fn apply(&self, pos: Pos2) -> Pos2 {
-        // Scale by a constant and translate to the centre of the bounding box.
-        self.to_screen.transform_pos(pos)
-    }
-}
 
 /// A dummy value is like a `spartan::Value` but with anonymous thunks and (possibly) free variables.
 #[derive(Derivative)]

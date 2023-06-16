@@ -2,6 +2,7 @@ use std::{collections::HashSet, hash::BuildHasher};
 
 use derivative::Derivative;
 use egui::{
+    emath::RectTransform,
     epaint::{CircleShape, CubicBezierShape, RectShape},
     show_tooltip_at_pointer, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke,
     Vec2,
@@ -17,7 +18,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{ContainsPoint, DummyValue, Transform, TEXT_SIZE, TOLERANCE},
+    common::{ContainsPoint, DummyValue, TEXT_SIZE, TOLERANCE},
     expanded::Expanded,
 };
 
@@ -63,28 +64,26 @@ pub struct Shapes<T: Addr> {
 }
 
 impl<T: Addr> Shape<T> {
-    pub(crate) fn apply_transform(&mut self, transform: &Transform) {
+    pub(crate) fn apply_transform(&mut self, transform: &RectTransform) {
         match self {
             Shape::Line { start, end, .. } => {
-                *start = transform.apply(*start);
-                *end = transform.apply(*end);
+                *start = transform.transform_pos(*start);
+                *end = transform.transform_pos(*end);
             }
             Shape::CubicBezier { points, .. } => {
-                points[0] = transform.apply(points[0]);
-                points[1] = transform.apply(points[1]);
-                points[2] = transform.apply(points[2]);
-                points[3] = transform.apply(points[3]);
+                for point in points {
+                    *point = transform.transform_pos(*point);
+                }
             }
             Shape::Rectangle { rect, .. } => {
-                rect.min = transform.apply(rect.min);
-                rect.max = transform.apply(rect.max);
+                *rect = transform.transform_rect(*rect);
             }
             Shape::CircleFilled { center, radius, .. } | Shape::Circle { center, radius, .. } => {
-                *center = transform.apply(*center);
-                *radius *= transform.scale;
+                *center = transform.transform_pos(*center);
+                *radius *= transform.scale().min_elem(); // NOTE(calintat): should this be length?
             }
             Shape::Text { center, .. } => {
-                *center = transform.apply(*center);
+                *center = transform.transform_pos(*center);
             }
         }
     }
@@ -96,7 +95,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         &mut self,
         ui: &egui::Ui,
         response: &Response,
-        transform: &Transform,
+        transform: &RectTransform,
         hover_points: &mut IndexSet<DummyValue<T>>,
         highlight_ports: &mut HashSet<OutPort<Op<T>, Name<T>>>,
         expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
@@ -106,6 +105,9 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         S: BuildHasher,
         Expr<T>: PrettyPrint,
     {
+        let bounds = *transform.to();
+        let tolerance = TOLERANCE * transform.scale().min_elem();
+
         let bounding_box = self.bounding_box();
         let hover_pos = response
             .ctx
@@ -115,7 +117,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         match self {
             Shape::Line { start, end, addr } => {
                 if let Some(hover_pos) = hover_pos {
-                    if [*start, *end].contains_point(hover_pos, TOLERANCE * transform.scale) {
+                    if [*start, *end].contains_point(hover_pos, tolerance) {
                         hover_points.insert(DummyValue::from_port(addr));
                         highlight_ports.insert(addr.clone());
                     }
@@ -129,7 +131,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                         Color32::TRANSPARENT,
                         Stroke::default(),
                     );
-                    if bezier.contains_point(hover_pos, TOLERANCE * transform.scale) {
+                    if bezier.contains_point(hover_pos, tolerance) {
                         hover_points.insert(DummyValue::from_port(addr));
                         highlight_ports.insert(addr.clone());
                     }
@@ -140,7 +142,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
             } => {
                 let addr: &_ = addr;
                 let thunk_response = ui.interact(
-                    bounding_box.intersect(transform.bounds),
+                    bounding_box.intersect(bounds),
                     Id::new(addr),
                     Sense::click(),
                 );
@@ -173,7 +175,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
             } => {
                 let selected = selections.contains(addr);
                 let op_response = ui.interact(
-                    bounding_box.intersect(transform.bounds),
+                    bounding_box.intersect(bounds),
                     Id::new(&addr),
                     Sense::click().union(Sense::hover()),
                 );
@@ -205,7 +207,7 @@ impl<T: Addr> Shape<T> {
     pub(crate) fn into_egui_shape(
         self,
         ui: &egui::Ui,
-        transform: &Transform,
+        transform: &RectTransform,
         highlight_ports: &HashSet<T::OutPort>,
     ) -> egui::Shape {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
@@ -266,14 +268,15 @@ impl<T: Addr> Shape<T> {
                 stroke: stroke.unwrap_or(default_stroke),
             }),
             Shape::Text { text, center } => {
-                if transform.scale > 10.0 {
+                let size = TEXT_SIZE * transform.scale().min_elem();
+                if size > 5.0 {
                     ui.fonts(|fonts| {
                         egui::Shape::text(
                             fonts,
                             center,
                             Align2::CENTER_CENTER,
                             text,
-                            egui::FontId::monospace(TEXT_SIZE * transform.scale),
+                            egui::FontId::monospace(size),
                             ui.visuals().strong_text_color(),
                         )
                     })

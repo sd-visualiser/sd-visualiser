@@ -12,18 +12,16 @@ use sd_core::{
 };
 
 use crate::{
-    common::{Transform, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     expanded::Expanded,
     layout::Layout,
     shape::Shape,
 };
 
-#[allow(clippy::too_many_arguments)]
 pub fn render<T, S>(
     ui: &egui::Ui,
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
-    scale: f32,
     expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
     selections: &mut HashSet<Operation<Op<T>, Name<T>>, S>,
     to_screen: RectTransform,
@@ -37,14 +35,7 @@ where
     Expr<T>: PrettyPrint,
     S: BuildHasher,
 {
-    let bounds = *to_screen.to();
     let viewport = *to_screen.from();
-
-    let transform = Transform {
-        scale,
-        bounds,
-        to_screen,
-    };
 
     let mut hover_points = IndexSet::default();
     let mut highlight_ports = HashSet::default();
@@ -55,11 +46,11 @@ where
         .filter(|shape| viewport.intersects(shape.bounding_box()))
         .map(|shape| {
             let mut s = shape.clone();
-            s.apply_transform(&transform);
+            s.apply_transform(&to_screen);
             s.collect_hovers(
                 ui,
                 response,
-                &transform,
+                &to_screen,
                 &mut hover_points,
                 &mut highlight_ports,
                 expanded,
@@ -72,7 +63,7 @@ where
 
     let final_shapes: Vec<egui::Shape> = shapes_vec
         .into_iter()
-        .map(|shape| shape.into_egui_shape(ui, &transform, &highlight_ports))
+        .map(|shape| shape.into_egui_shape(ui, &to_screen, &highlight_ports))
         .collect();
 
     // Show hover tooltips if not hovering on operation
