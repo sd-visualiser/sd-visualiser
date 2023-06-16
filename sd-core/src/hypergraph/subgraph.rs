@@ -3,6 +3,8 @@ use std::{
     fmt::Debug,
 };
 
+use indexmap::IndexSet;
+
 use super::{
     fragment::Fragment, Edge, Graph, HyperGraph, HyperGraphBuilder, InPort, Node, Operation,
     OutPort,
@@ -58,8 +60,8 @@ where
 fn normalise_graph<G: Graph>(
     graph_view: &G,
     selection: &HashSet<Operation<G::NodeWeight, G::EdgeWeight>>,
-) -> HashSet<Node<G::NodeWeight, G::EdgeWeight>> {
-    let selected_nodes: HashSet<Node<G::NodeWeight, G::EdgeWeight>> = graph_view
+) -> IndexSet<Node<G::NodeWeight, G::EdgeWeight>> {
+    let selected_nodes: IndexSet<Node<G::NodeWeight, G::EdgeWeight>> = graph_view
         .nodes()
         .filter(|node| match node {
             Node::Operation(op) => selection.contains(op),
@@ -92,12 +94,15 @@ where
     E: Debug + Send + Sync + Clone + Free,
 {
     #[must_use]
-    pub fn normalise_selection(&self, selection: &HashSet<Operation<V, E>>) -> HashSet<Node<V, E>> {
+    pub fn normalise_selection(
+        &self,
+        selection: &HashSet<Operation<V, E>>,
+    ) -> IndexSet<Node<V, E>> {
         normalise_graph(self, selection)
     }
 
     #[must_use]
-    pub fn generate_subgraph(&self, selection: &HashSet<Node<V, E>>) -> HyperGraph<V, E> {
+    pub fn generate_subgraph(&self, selection: &IndexSet<Node<V, E>>) -> HyperGraph<V, E> {
         let global_inputs: HashSet<Edge<V, E>> = selection
             .iter()
             .flat_map(Node::inputs)
