@@ -1,14 +1,16 @@
+use std::sync::{Arc, Mutex};
+
 use anyhow::anyhow;
 use derivative::Derivative;
 use eframe::egui::{self, FontDefinitions};
 use egui_notify::Toasts;
-use sd_core::{graph::SyntaxHyperGraph, prettyprinter::PrettyPrint};
-use tracing::debug;
+use poll_promise::Promise;
+use sd_core::graph::SyntaxHyperGraph;
 
 use crate::{
     code_ui::code_ui,
     graph_ui::GraphUi,
-    parser::{ParseError, ParseOutput, Parser, UiLanguage},
+    parser::{parse, ParseError, ParseOutput, UiLanguage},
     selection::Selection,
     squiggly_line::show_parse_error,
 };
@@ -19,8 +21,10 @@ pub struct App {
     #[derivative(Default(value = "true"))]
     editor: bool,
     code: String,
+    #[allow(clippy::type_complexity)]
+    last_parse: Option<Arc<Mutex<Promise<Result<ParseOutput, ParseError>>>>>,
     language: UiLanguage,
-    graph_ui: Option<GraphUi>,
+    graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
     toasts: Toasts,
 }
@@ -67,10 +71,20 @@ impl App {
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
         let text_edit_out = code_ui(ui, &mut self.code, self.language);
 
-        match Parser::parse(ui.ctx(), &self.code, self.language).as_ref() {
-            Err(ParseError::Chil(err)) => show_parse_error(ui, err, &text_edit_out),
-            Err(ParseError::Spartan(err)) => show_parse_error(ui, err, &text_edit_out),
-            _ => (),
+        if text_edit_out.response.changed() {
+            tracing::trace!("code changed changed");
+            self.trigger_parse(ui.ctx());
+        }
+        if let Some(last_parse) = self
+            .last_parse
+            .as_ref()
+            .and_then(|p| p.try_lock().ok()?.ready()?.as_ref().err().cloned())
+        {
+            match last_parse {
+                ParseError::Chil(err) => show_parse_error(ui, &err, &text_edit_out),
+                ParseError::Spartan(err) => show_parse_error(ui, &err, &text_edit_out),
+                ParseError::Conversion(_) => (),
+            }
         }
     }
 
@@ -83,26 +97,49 @@ impl App {
         });
     }
 
-    fn compile(&mut self, ctx: &egui::Context) -> anyhow::Result<()> {
-        let parse = Parser::parse(ctx, &self.code, self.language);
-        match parse.as_ref().as_ref().map_err(|e| anyhow!("{}", e))? {
-            ParseOutput::ChilExpr(expr) => {
-                // Prettify the code.
-                self.code = expr.to_pretty();
-                debug!("Converting to hypergraph...");
-                self.graph_ui = Some(GraphUi::new_chil(ctx, SyntaxHyperGraph::try_from(expr)?));
-            }
-            ParseOutput::SpartanExpr(expr) => {
-                // Prettify the code.
-                self.code = expr.to_pretty();
-                debug!("Converting to hypergraph...");
-                self.graph_ui = Some(GraphUi::new_spartan(ctx, SyntaxHyperGraph::try_from(expr)?));
-            }
+    fn trigger_parse(&mut self, ctx: &egui::Context) {
+        let code = self.code.clone();
+        let language = self.language;
+        let ctx = ctx.clone();
+        self.last_parse
+            .replace(Arc::new(Mutex::new(Promise::spawn_thread(
+                "parse",
+                move || {
+                    let parse = parse(&code, language);
+                    ctx.request_repaint();
+                    parse
+                },
+            ))));
+    }
+
+    fn trigger_compile(&mut self, ctx: &egui::Context) {
+        self.trigger_parse(ctx);
+        {
+            let parse = self.last_parse.as_ref().unwrap().clone();
+            let ctx = ctx.clone();
+            self.graph_ui
+                .replace(Promise::spawn_thread("compile", move || {
+                    let promise = parse.lock().unwrap();
+                    let parse_output = promise
+                        .block_until_ready()
+                        .as_ref()
+                        .map_err(|e| anyhow!("{}", e))?;
+                    let compile = Ok(match parse_output {
+                        ParseOutput::ChilExpr(expr) => {
+                            tracing::debug!("Converting chil to hypergraph...");
+                            GraphUi::new_chil(&ctx, SyntaxHyperGraph::try_from(expr)?)
+                        }
+                        ParseOutput::SpartanExpr(expr) => {
+                            tracing::debug!("Converting spartan to hypergraph...");
+                            GraphUi::new_spartan(&ctx, SyntaxHyperGraph::try_from(expr)?)
+                        }
+                    });
+                    ctx.request_repaint();
+                    compile
+                }));
         }
 
         self.selections.clear();
-
-        Ok(())
     }
 }
 
@@ -146,20 +183,20 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Reset").clicked() || ui.input(|i| i.key_pressed(egui::Key::Num0)) {
-                    if let Some(graph_ui) = &mut self.graph_ui {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.reset(ui.ctx());
                     }
                 }
                 if ui.button("Zoom In").clicked()
                     || ui.input(|i| i.key_pressed(egui::Key::PlusEquals))
                 {
-                    if let Some(graph_ui) = &mut self.graph_ui {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_in();
                     }
                 }
                 if ui.button("Zoom Out").clicked() || ui.input(|i| i.key_pressed(egui::Key::Minus))
                 {
-                    if let Some(graph_ui) = &mut self.graph_ui {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_out();
                     }
                 }
@@ -167,14 +204,15 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Compile").clicked() {
-                    if let Err(err) = self.compile(ui.ctx()) {
-                        self.toasts.error(err.to_string());
-                        debug!("{}", err);
-                    }
+                    self.trigger_compile(ui.ctx());
+                }
+                if let Some(err) = rejected(&self.graph_ui) {
+                    self.toasts.error(err.to_string());
+                    tracing::debug!("{}", err);
                 }
 
                 if ui.button("Save selection").clicked() {
-                    if let Some(graph_ui) = &mut self.graph_ui {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         self.selections.push(Selection::from_graph(
                             graph_ui,
                             format!("Selection {}", self.selections.len()),
@@ -187,7 +225,7 @@ impl eframe::App for App {
                 ui.separator();
 
                 if ui.button("Export SVG").clicked() {
-                    if let Some(graph_ui) = &mut self.graph_ui {
+                    if let Some(graph_ui) = finished(&self.graph_ui) {
                         let svg = graph_ui.export_svg(ui.ctx());
                         if let Some(path) = rfd::FileDialog::new().save_file() {
                             let _ = std::fs::write(path, svg);
@@ -213,15 +251,46 @@ impl eframe::App for App {
                     egui::ScrollArea::both()
                         .id_source("code")
                         .show(&mut columns[0], |ui| self.code_edit_ui(ui));
-                    if let Some(graph_ui) = &mut self.graph_ui {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                        tracing::trace!("drawing graph ui");
                         graph_ui.ui(&mut columns[1]);
                     }
                 });
-            } else if let Some(graph_ui) = &mut self.graph_ui {
+            } else if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                 graph_ui.ui(ui);
             }
         });
 
         self.toasts.show(ctx);
     }
+}
+
+#[allow(clippy::inline_always)]
+#[inline(always)]
+fn finished<T, E>(promise: &Option<Promise<Result<T, E>>>) -> Option<&T>
+where
+    T: Send,
+    E: Send,
+{
+    promise.as_ref().and_then(|p| p.ready()?.as_ref().ok())
+}
+
+#[allow(clippy::inline_always)]
+#[inline(always)]
+fn finished_mut<T, E>(promise: &mut Option<Promise<Result<T, E>>>) -> Option<&mut T>
+where
+    T: Send,
+    E: Send,
+{
+    promise.as_mut().and_then(|p| p.ready_mut()?.as_mut().ok())
+}
+
+#[allow(clippy::inline_always)]
+#[inline(always)]
+fn rejected<T, E>(promise: &Option<Promise<Result<T, E>>>) -> Option<&E>
+where
+    T: Send,
+    E: Send,
+{
+    promise.as_ref().and_then(|p| p.ready()?.as_ref().err())
 }
