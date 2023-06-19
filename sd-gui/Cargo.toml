@@ -10,6 +10,7 @@ repository = "https://github.com/calintat/sd-visualiser"
 anyhow = "1.0.70"
 clap = { version = "4.3.3", features = ["derive"] }
 delegate = "0.9.0"
+derivative = "2.2.0"
 eframe = "0.21.3"
 egui-notify = "0.6.0"
 from-pest = "0.3.1"

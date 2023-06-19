@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use derivative::Derivative;
 use eframe::egui::{self, FontDefinitions};
 use egui_notify::Toasts;
 use sd_core::{graph::SyntaxHyperGraph, prettyprinter::PrettyPrint};
@@ -12,8 +13,11 @@ use crate::{
     squiggly_line::show_parse_error,
 };
 
-#[derive(Default)]
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct App {
+    #[derivative(Default(value = "true"))]
+    editor: bool,
     code: String,
     language: UiLanguage,
     graph_ui: Option<GraphUi>,
@@ -109,6 +113,11 @@ impl eframe::App for App {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
                 ui.visuals_mut().button_frame = false;
+
+                if ui.selectable_label(self.editor, "Editor").clicked() {
+                    self.editor = !self.editor;
+                };
+
                 egui::widgets::global_dark_light_mode_buttons(ui);
 
                 ui.separator();
@@ -199,14 +208,18 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.columns(2, |columns| {
-                egui::ScrollArea::both()
-                    .id_source("code")
-                    .show(&mut columns[0], |ui| self.code_edit_ui(ui));
-                if let Some(graph_ui) = &mut self.graph_ui {
-                    graph_ui.ui(&mut columns[1]);
-                }
-            });
+            if self.editor {
+                ui.columns(2, |columns| {
+                    egui::ScrollArea::both()
+                        .id_source("code")
+                        .show(&mut columns[0], |ui| self.code_edit_ui(ui));
+                    if let Some(graph_ui) = &mut self.graph_ui {
+                        graph_ui.ui(&mut columns[1]);
+                    }
+                });
+            } else if let Some(graph_ui) = &mut self.graph_ui {
+                graph_ui.ui(ui);
+            }
         });
 
         self.toasts.show(ctx);

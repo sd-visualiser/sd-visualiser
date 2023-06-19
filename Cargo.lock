@@ -2648,6 +2648,7 @@ dependencies = [
  "clap",
  "console_error_panic_hook",
  "delegate",
+ "derivative",
  "eframe",
  "egui-notify",
  "from-pest",
