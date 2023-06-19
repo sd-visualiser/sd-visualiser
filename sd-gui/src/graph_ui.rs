@@ -96,9 +96,10 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             ),
             response.rect,
         );
-        if response.hover_pos().is_some() {
+        if let Some(hover_pos) = response.hover_pos() {
+            let anchor = to_screen.inverse().transform_pos(hover_pos);
             ui.input(|i| {
-                self.panzoom.zoom_by(i.zoom_delta());
+                self.panzoom.zoom(i.zoom_delta(), anchor);
                 self.panzoom.translation -= i.scroll_delta / self.panzoom.zoom;
             });
         }
