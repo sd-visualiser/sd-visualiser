@@ -1,14 +1,15 @@
-use std::{collections::HashMap, fmt::Debug, sync::Arc};
+use std::{fmt::Debug, sync::Arc};
 
 use by_address::ByThinAddress;
 use tracing::Level;
 
-use super::{
-    weakbyaddress::WeakByAddress, Edge, Graph, HyperGraphBuilder, HyperGraphError, InPort,
-    NodeInternal, OperationBuilder, OperationInternal, OutPort, Result, Thunk, ThunkBuilder,
-    ThunkCursor, ThunkInternal,
+use crate::hypergraph::{
+    builder::{
+        HyperGraphBuilder, HyperGraphError, InPort, OperationBuilder, OutPort, Result, ThunkBuilder,
+    },
+    weakbyaddress::WeakByAddress,
+    NodeInternal, OperationInternal, ThunkInternal,
 };
-use crate::common::InOut;
 
 pub trait Fragment {
     type NodeWeight;
@@ -104,6 +105,8 @@ impl<V, E> Fragment for HyperGraphBuilder<V, E> {
     }
 }
 
+pub struct ThunkCursor<V, E>(ThunkBuilder<V, E>);
+
 impl<V, E> Fragment for ThunkCursor<V, E> {
     type NodeWeight = V;
     type EdgeWeight = E;
@@ -151,58 +154,6 @@ impl<V, E> Fragment for ThunkCursor<V, E> {
     fn graph_outputs(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = InPort<Self::NodeWeight, Self::EdgeWeight>> + '_> {
-        Box::new(
-            self.0
-                 .0
-                .outputs
-                .keys()
-                .map(|in_port| InPort(in_port.clone())),
-        )
-    }
-}
-
-impl<V: Clone, E: Clone> Thunk<V, E> {
-    /// Clone a thunk into the fragment, maintaining a map from `in_ports` and `out_ports`
-    /// in the generated graph to edges in the original thunk.
-    pub(super) fn clone_thunk<F: Fragment<NodeWeight = V, EdgeWeight = E>>(
-        &self,
-        fragment: &mut F,
-        in_port_map: &mut HashMap<InPort<V, E>, Edge<V, E>>,
-        out_port_map: &mut HashMap<Edge<V, E>, OutPort<V, E>>,
-    ) {
-        let bound_variables = self.bound_graph_inputs().map(|edge| edge.weight().clone());
-
-        let output_weights = self.outputs().map(|edge| edge.weight().clone());
-
-        let thunk = fragment.add_thunk(bound_variables, output_weights);
-
-        out_port_map.extend(self.bound_graph_inputs().zip(thunk.bound_inputs()));
-        out_port_map.extend(self.outputs().zip(thunk.outputs()));
-
-        fragment.in_thunk(thunk, |mut inner_fragment| {
-            in_port_map.extend(inner_fragment.graph_outputs().zip(self.graph_outputs()));
-
-            for node in self.nodes() {
-                match &node {
-                    super::Node::Operation(op) => {
-                        let input_len = op.number_of_inputs();
-                        let output_weights: Vec<_> = op
-                            .outputs()
-                            .map(|out_port| out_port.weight().clone())
-                            .collect();
-                        let weight: V = op.weight().clone();
-
-                        let op = inner_fragment.add_operation(input_len, output_weights, weight);
-
-                        in_port_map.extend(op.inputs().zip(node.inputs()));
-
-                        out_port_map.extend(node.outputs().zip(op.outputs()));
-                    }
-                    super::Node::Thunk(thunk) => {
-                        thunk.clone_thunk(&mut inner_fragment, in_port_map, out_port_map);
-                    }
-                }
-            }
-        });
+        Box::new(self.0.graph_outputs())
     }
 }

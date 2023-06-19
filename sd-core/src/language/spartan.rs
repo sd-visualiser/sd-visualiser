@@ -193,6 +193,7 @@ pub(crate) mod tests {
     use pest::Parser;
 
     use super::{Expr, Rule, SpartanParser};
+    use crate::language::chil::ChilParser;
 
     pub fn parse_sd(raw_path: &str) -> (&str, Expr) {
         let path = Path::new(raw_path);

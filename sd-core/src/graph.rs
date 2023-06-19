@@ -11,7 +11,8 @@ use tracing::{debug, Level};
 
 use crate::{
     hypergraph::{
-        fragment::Fragment, HyperGraph, HyperGraphBuilder, HyperGraphError, InPort, OutPort,
+        builder::{fragment::Fragment, HyperGraphBuilder, HyperGraphError, InPort, OutPort},
+        HyperGraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
 };

@@ -6,8 +6,8 @@ use std::{
 use indexmap::IndexSet;
 
 use super::{
-    fragment::Fragment, Edge, Graph, HyperGraph, HyperGraphBuilder, InPort, Node, Operation,
-    OutPort,
+    builder::{fragment::Fragment, HyperGraphBuilder, InPort, OutPort},
+    Edge, Graph, HyperGraph, Node, Operation,
 };
 use crate::{
     common::InOut,
