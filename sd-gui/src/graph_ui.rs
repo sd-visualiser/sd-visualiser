@@ -48,7 +48,7 @@ impl GraphUi {
             pub(crate) fn reset(&mut self, ctx: &egui::Context);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
-            pub(crate) fn export_svg(&mut self, ctx: &egui::Context) -> String;
+            pub(crate) fn export_svg(&self, ctx: &egui::Context) -> String;
         }
     }
 
