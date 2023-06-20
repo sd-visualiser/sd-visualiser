@@ -74,11 +74,17 @@ impl Display for Op {
             "seq" => f.write_char(';'),
             "unit" => f.write_str("()"),
             str => {
+                if str == "asg" || str.starts_with("asg/") {
+                    return f.write_char('≔');
+                }
                 if str.starts_with("apply/") {
                     return f.write_char('@');
                 }
                 if str.starts_with("tuple/") {
                     return f.write_char('⊗');
+                }
+                if str.starts_with("typeCast/") {
+                    return f.write_str("typeCast");
                 }
                 if let Some(rest) = None
                     .or_else(|| str.strip_prefix("bool/"))
