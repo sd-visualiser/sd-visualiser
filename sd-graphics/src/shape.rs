@@ -4,21 +4,13 @@ use derivative::Derivative;
 use egui::{
     emath::RectTransform,
     epaint::{CircleShape, CubicBezierShape, RectShape},
-    show_tooltip_at_pointer, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke,
-    Vec2,
+    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
-use sd_core::{
-    common::Addr,
-    decompile::decompile,
-    graph::{Name, Op},
-    hypergraph::{Edge, Operation, Thunk},
-    language::{Expr, Language},
-    prettyprinter::PrettyPrint,
-};
+use sd_core::common::Addr;
 
 use crate::{
-    common::{ContainsPoint, DummyValue, TEXT_SIZE, TOLERANCE},
+    common::{ContainsPoint, TEXT_SIZE, TOLERANCE},
     expanded::Expanded,
 };
 
@@ -87,24 +79,20 @@ impl<T: Addr> Shape<T> {
             }
         }
     }
-}
 
-impl<T: Language> Shape<(Op<T>, Name<T>)> {
     #[allow(clippy::too_many_arguments)]
-    #[allow(clippy::type_complexity)]
-    pub(crate) fn collect_hovers<S>(
+    pub(crate) fn collect_highlights<S>(
         &mut self,
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
-        hover_points: &mut IndexSet<DummyValue<T>>,
-        highlight_ports: &mut HashSet<Edge<Op<T>, Name<T>>>,
-        expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
-        selection: &mut Option<&mut HashSet<Operation<Op<T>, Name<T>>, S>>,
-        operation_hovered: &mut bool,
+        highlight_op: &mut Option<T::Operation>,
+        highlight_thunk: &mut Option<T::Thunk>,
+        highlight_edges: &mut IndexSet<T::Edge>,
+        expanded: &mut Expanded<T::Thunk>,
+        selection: &mut Option<&mut HashSet<T::Operation, S>>,
     ) where
         S: BuildHasher,
-        Expr<T>: PrettyPrint,
     {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
@@ -114,8 +102,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
             Shape::Line { start, end, addr } => {
                 if let Some(hover_pos) = response.hover_pos() {
                     if [*start, *end].contains_point(hover_pos, tolerance) {
-                        hover_points.insert(DummyValue::from_edge(addr));
-                        highlight_ports.insert(addr.clone());
+                        highlight_edges.insert(addr.clone());
                     }
                 }
             }
@@ -128,8 +115,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                         Stroke::default(),
                     );
                     if bezier.contains_point(hover_pos, tolerance) {
-                        hover_points.insert(DummyValue::from_edge(addr));
-                        highlight_ports.insert(addr.clone());
+                        highlight_edges.insert(addr.clone());
                     }
                 }
             }
@@ -150,15 +136,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                 if !expanded[addr] {
                     *fill = Some(ui.style().interact(&thunk_response).bg_fill);
                     if thunk_response.hovered() {
-                        *operation_hovered = true;
-                        highlight_ports.extend(addr.inputs().chain(addr.outputs()));
-                        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
-                            ui.label(
-                                decompile(addr)
-                                    .map(|x| x.to_pretty())
-                                    .unwrap_or("<Thunk>".to_owned()),
-                            );
-                        });
+                        *highlight_thunk = Some(addr.clone());
                     }
                 }
                 if thunk_response.clicked() {
@@ -190,27 +168,24 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                         .fg_stroke,
                 );
                 if op_response.hovered() {
-                    *operation_hovered = true;
-                    highlight_ports.extend(addr.inputs().chain(addr.outputs()));
+                    *highlight_op = Some(addr.clone());
                 }
             }
             _ => {}
         }
     }
-}
 
-impl<T: Addr> Shape<T> {
     pub(crate) fn into_egui_shape(
         self,
         ui: &egui::Ui,
         transform: &RectTransform,
-        highlight_ports: &HashSet<T::Edge>,
+        highlight_edges: &IndexSet<T::Edge>,
     ) -> egui::Shape {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
 
         match self {
             Shape::Line { start, end, addr } => {
-                let stroke = if highlight_ports.contains(&addr) {
+                let stroke = if highlight_edges.contains(&addr) {
                     ui.style().visuals.widgets.hovered.fg_stroke
                 } else {
                     default_stroke
@@ -218,7 +193,7 @@ impl<T: Addr> Shape<T> {
                 egui::Shape::line_segment([start, end], stroke)
             }
             Shape::CubicBezier { points, addr } => {
-                let stroke = if highlight_ports.contains(&addr) {
+                let stroke = if highlight_edges.contains(&addr) {
                     ui.style().visuals.widgets.hovered.fg_stroke
                 } else {
                     default_stroke
@@ -244,7 +219,7 @@ impl<T: Addr> Shape<T> {
                 radius,
                 addr,
             } => {
-                let stroke = if highlight_ports.contains(&addr) {
+                let stroke = if highlight_edges.contains(&addr) {
                     ui.style().visuals.widgets.hovered.fg_stroke
                 } else {
                     default_stroke

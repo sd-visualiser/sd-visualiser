@@ -15,6 +15,7 @@ use crate::{
         HyperGraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
+    prettyprinter::PrettyPrint,
 };
 
 #[derive(Derivative)]
@@ -33,6 +34,15 @@ where
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.0)
+    }
+}
+
+impl<T: Language> PrettyPrint for Op<T>
+where
+    T::Op: PrettyPrint,
+{
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
+        self.0.to_doc()
     }
 }
 

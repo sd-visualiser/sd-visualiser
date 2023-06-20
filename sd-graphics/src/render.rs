@@ -4,6 +4,7 @@ use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter},
+    decompile::decompile,
     graph::{Name, Op},
     hypergraph::{Graph, Operation, Thunk},
     language::{Expr, Language},
@@ -12,7 +13,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     expanded::Expanded,
     layout::Layout,
     shape::Shape,
@@ -38,9 +39,9 @@ where
 {
     let viewport = *to_screen.from();
 
-    let mut hover_points = IndexSet::default();
-    let mut highlight_ports = HashSet::default();
-    let mut operation_hovered = false;
+    let mut highlight_op = None;
+    let mut highlight_thunk = None;
+    let mut highlight_edges = IndexSet::default();
 
     let shapes_vec: Vec<_> = shapes
         .iter()
@@ -48,35 +49,45 @@ where
         .map(|shape| {
             let mut s = shape.clone();
             s.apply_transform(&to_screen);
-            s.collect_hovers(
+            s.collect_highlights(
                 ui,
                 response,
                 &to_screen,
-                &mut hover_points,
-                &mut highlight_ports,
+                &mut highlight_op,
+                &mut highlight_thunk,
+                &mut highlight_edges,
                 expanded,
                 &mut selection,
-                &mut operation_hovered,
             );
             s
         })
         .collect();
 
-    let final_shapes: Vec<egui::Shape> = shapes_vec
-        .into_iter()
-        .map(|shape| shape.into_egui_shape(ui, &to_screen, &highlight_ports))
-        .collect();
-
-    // Show hover tooltips if not hovering on operation
-    if !operation_hovered {
-        for e in hover_points {
-            show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
-                ui.label(e.to_pretty())
-            });
-        }
+    // Show hover tooltips.
+    let labels = if let Some(op) = highlight_op {
+        highlight_edges.extend(op.inputs().chain(op.outputs()));
+        vec![op.weight().to_pretty()]
+    } else if let Some(thunk) = highlight_thunk {
+        highlight_edges.extend(thunk.inputs().chain(thunk.outputs()));
+        vec![decompile(&thunk)
+            .map(|body| body.to_pretty())
+            .unwrap_or("thunk".to_owned())]
+    } else {
+        highlight_edges
+            .iter()
+            .map(|edge| EdgeLabel::from_edge(edge).to_pretty())
+            .collect()
+    };
+    for label in labels {
+        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
+            ui.label(label)
+        });
     }
 
-    final_shapes
+    shapes_vec
+        .into_iter()
+        .map(|shape| shape.into_egui_shape(ui, &to_screen, &highlight_edges))
+        .collect()
 }
 
 #[allow(clippy::too_many_lines)]

@@ -17,7 +17,7 @@ pub(crate) const TOLERANCE: f32 = 0.1;
 pub(crate) const TEXT_SIZE: f32 = 0.28;
 pub(crate) const RADIUS_OPERATION: f32 = 0.2;
 
-/// A dummy value is like a `spartan::Value` but with anonymous thunks and (possibly) free variables.
+/// Edge label is like `Name` but records the arguments to operations.
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
@@ -26,14 +26,14 @@ pub(crate) const RADIUS_OPERATION: f32 = 0.2;
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub enum DummyValue<T: Language> {
+pub enum EdgeLabel<T: Language> {
     Thunk(T::Addr),
     FreeVar(T::Var),
     BoundVar(T::VarDef),
-    Operation(T::Op, Vec<DummyValue<T>>),
+    Operation(T::Op, Vec<EdgeLabel<T>>),
 }
 
-impl<T: Language> DummyValue<T> {
+impl<T: Language> EdgeLabel<T> {
     pub(crate) fn from_edge(edge: &Edge<Op<T>, Name<T>>) -> Self {
         match edge.weight() {
             Name::Op => match edge.node() {
@@ -50,7 +50,7 @@ impl<T: Language> DummyValue<T> {
     }
 }
 
-impl<T: Language> PrettyPrint for DummyValue<T>
+impl<T: Language> PrettyPrint for EdgeLabel<T>
 where
     T::Op: PrettyPrint,
     T::Var: PrettyPrint,
