@@ -10,11 +10,11 @@ use sd_core::{
     language::{Expr, Language},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
+    weak_map::WeakMap,
 };
 
 use crate::{
     common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
-    expanded::Expanded,
     layout::Layout,
     shape::Shape,
 };
@@ -24,7 +24,7 @@ pub fn render<T, S>(
     ui: &egui::Ui,
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
-    expanded: &mut Expanded<Thunk<Op<T>, Name<T>>>,
+    expanded: &mut WeakMap<Thunk<Op<T>, Name<T>>, bool>,
     mut selection: Option<&mut HashSet<Operation<Op<T>, Name<T>>, S>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
@@ -96,7 +96,7 @@ pub fn generate_shapes<V, E>(
     mut y_offset: f32,
     layout: &Layout,
     graph: &MonoidalGraph<(V, E)>,
-    expanded: &Expanded<Thunk<V, E>>,
+    expanded: &WeakMap<Thunk<V, E>, bool>,
 ) where
     V: Display,
 {

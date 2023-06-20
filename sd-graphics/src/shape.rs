@@ -7,12 +7,9 @@ use egui::{
     Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
-use sd_core::common::Addr;
+use sd_core::{common::Addr, weak_map::WeakMap};
 
-use crate::{
-    common::{ContainsPoint, TEXT_SIZE, TOLERANCE},
-    expanded::Expanded,
-};
+use crate::common::{ContainsPoint, TEXT_SIZE, TOLERANCE};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
@@ -89,7 +86,7 @@ impl<T: Addr> Shape<T> {
         highlight_op: &mut Option<T::Operation>,
         highlight_thunk: &mut Option<T::Thunk>,
         highlight_edges: &mut IndexSet<T::Edge>,
-        expanded: &mut Expanded<T::Thunk>,
+        expanded: &mut WeakMap<T::Thunk, bool>,
         selection: &mut Option<&mut HashSet<T::Operation, S>>,
     ) where
         S: BuildHasher,

@@ -5,8 +5,9 @@ use std::{
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
+use indexmap::IndexMap;
 
-use crate::common::InOut;
+use crate::{common::InOut, weak_map::WeakMap};
 
 pub mod builder;
 mod internal;
@@ -422,5 +423,25 @@ impl<V, E> InOut for Node<V, E> {
             Node::Operation(op) => op.number_of_outputs(),
             Node::Thunk(thunk) => thunk.number_of_outputs(),
         }
+    }
+}
+
+impl<V, E> HyperGraph<V, E> {
+    #[must_use]
+    pub fn create_expanded(&self) -> WeakMap<Thunk<V, E>, bool> {
+        fn helper<V, E>(set: &mut IndexMap<Thunk<V, E>, bool>, thunk: Thunk<V, E>) {
+            for t in thunk.thunks() {
+                helper(set, t);
+            }
+            set.insert(thunk, true);
+        }
+
+        let mut set = IndexMap::new();
+
+        for thunk in self.thunks() {
+            helper(&mut set, thunk);
+        }
+
+        WeakMap(set)
     }
 }

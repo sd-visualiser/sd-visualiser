@@ -14,8 +14,8 @@ use sd_core::{
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
     prettyprinter::PrettyPrint,
+    weak_map::WeakMap,
 };
-use sd_graphics::expanded::Expanded;
 use tracing::debug;
 
 use crate::{panzoom::Panzoom, shape_generator::ShapeGenerator};
@@ -70,7 +70,7 @@ impl GraphUi {
 pub(crate) struct GraphUiInternal<T: Language> {
     pub(crate) hypergraph: SyntaxHyperGraph<T>,
     monoidal_graph: MonoidalGraph<(Op<T>, Name<T>)>,
-    expanded: Expanded<Thunk<Op<T>, Name<T>>>,
+    expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
     panzoom: Panzoom,
 }
 
@@ -127,7 +127,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     where
         T::Op: Display,
     {
-        let expanded = Expanded::from_graph(&hypergraph);
+        let expanded = hypergraph.create_expanded();
 
         debug!("Converting to monoidal term");
         let monoidal_term = MonoidalWiredGraph::from(&hypergraph);

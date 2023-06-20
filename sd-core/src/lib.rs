@@ -8,3 +8,4 @@ pub mod language;
 pub mod monoidal;
 pub mod monoidal_wired;
 pub mod prettyprinter;
+pub mod weak_map;

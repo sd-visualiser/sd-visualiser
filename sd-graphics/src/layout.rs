@@ -6,12 +6,13 @@ use itertools::Itertools;
 use sd_core::{
     common::{Addr, InOut},
     monoidal::{MonoidalGraph, MonoidalOp},
+    weak_map::WeakMap,
 };
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{expanded::Expanded, lp::LpProblem};
+use crate::lp::LpProblem;
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
@@ -174,7 +175,7 @@ impl Layout {
 #[allow(clippy::too_many_lines)]
 fn layout_internal<T: Addr>(
     graph: &MonoidalGraph<T>,
-    expanded: &Expanded<T::Thunk>,
+    expanded: &WeakMap<T::Thunk, bool>,
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable> {
     // STEP 1. Generate variables for each layer.
@@ -346,7 +347,7 @@ fn layout_internal<T: Addr>(
 
 pub fn layout<T: Addr>(
     graph: &MonoidalGraph<T>,
-    expanded: &Expanded<T::Thunk>,
+    expanded: &WeakMap<T::Thunk, bool>,
 ) -> Result<Layout, LayoutError> {
     let mut problem = LpProblem::default();
 
@@ -359,22 +360,21 @@ pub fn layout<T: Addr>(
 
 #[cfg(test)]
 mod tests {
-    use sd_core::examples;
+    use sd_core::{examples, weak_map::WeakMap};
 
     use super::layout;
-    use crate::expanded::Expanded;
 
     #[test]
     fn int() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::int(), &Expanded::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::int(), &WeakMap::default()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn copy() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::copy(), &Expanded::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::copy(), &WeakMap::default()).expect("Layout failed"));
         });
     }
 }

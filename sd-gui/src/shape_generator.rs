@@ -4,8 +4,8 @@ use eframe::egui::{
     util::cache::{ComputerMut, FrameCache},
     Context,
 };
-use sd_core::{hypergraph::Thunk, monoidal::MonoidalGraph};
-use sd_graphics::{expanded::Expanded, layout::layout, render::generate_shapes, shape::Shapes};
+use sd_core::{hypergraph::Thunk, monoidal::MonoidalGraph, weak_map::WeakMap};
+use sd_graphics::{layout::layout, render::generate_shapes, shape::Shapes};
 use tracing::debug;
 
 pub struct ShapeGenerator<V, E> {
@@ -19,12 +19,12 @@ impl<V, E> Default for ShapeGenerator<V, E> {
 }
 
 impl<V: 'static + Send + Sync + Display, E: 'static + Send + Sync>
-    ComputerMut<(&MonoidalGraph<(V, E)>, &Expanded<Thunk<V, E>>), Arc<Shapes<(V, E)>>>
+    ComputerMut<(&MonoidalGraph<(V, E)>, &WeakMap<Thunk<V, E>, bool>), Arc<Shapes<(V, E)>>>
     for ShapeGenerator<V, E>
 {
     fn compute(
         &mut self,
-        (graph, expanded): (&MonoidalGraph<(V, E)>, &Expanded<Thunk<V, E>>),
+        (graph, expanded): (&MonoidalGraph<(V, E)>, &WeakMap<Thunk<V, E>, bool>),
     ) -> Arc<Shapes<(V, E)>> {
         debug!("Calculating layout...");
         let layout = layout(graph, expanded).unwrap();
@@ -45,7 +45,7 @@ impl<V: 'static + Send + Sync + Display, E: 'static + Send + Sync> ShapeGenerato
     pub fn generate_shapes(
         ctx: &Context,
         graph: &MonoidalGraph<(V, E)>,
-        expanded: &Expanded<Thunk<V, E>>,
+        expanded: &WeakMap<Thunk<V, E>, bool>,
     ) -> Arc<Shapes<(V, E)>> {
         ctx.memory_mut(|mem| {
             mem.caches
