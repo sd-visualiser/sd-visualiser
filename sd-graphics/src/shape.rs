@@ -3,8 +3,8 @@ use std::{collections::HashSet, hash::BuildHasher};
 use derivative::Derivative;
 use egui::{
     emath::RectTransform,
-    epaint::{CircleShape, CubicBezierShape, RectShape},
-    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
+    epaint::{CubicBezierShape, RectShape},
+    vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
 use sd_core::{common::Addr, weak_map::WeakMap};
@@ -34,16 +34,13 @@ pub enum Shape<T: Addr> {
         radius: f32,
         addr: T::Edge,
     },
-    Circle {
+    Operation {
         center: Pos2,
         radius: f32,
         addr: T::Operation,
+        label: String,
         fill: Option<Color32>,
         stroke: Option<Stroke>,
-    },
-    Text {
-        text: String,
-        center: Pos2,
     },
 }
 
@@ -67,12 +64,10 @@ impl<T: Addr> Shape<T> {
             Shape::Rectangle { rect, .. } => {
                 *rect = transform.transform_rect(*rect);
             }
-            Shape::CircleFilled { center, radius, .. } | Shape::Circle { center, radius, .. } => {
+            Shape::CircleFilled { center, radius, .. }
+            | Shape::Operation { center, radius, .. } => {
                 *center = transform.transform_pos(*center);
                 *radius *= transform.scale().min_elem(); // NOTE(calintat): should this be length?
-            }
-            Shape::Text { center, .. } => {
-                *center = transform.transform_pos(*center);
             }
         }
     }
@@ -140,7 +135,7 @@ impl<T: Addr> Shape<T> {
                     expanded[addr] = !expanded[addr];
                 }
             }
-            Shape::Circle {
+            Shape::Operation {
                 addr, fill, stroke, ..
             } => {
                 let selected = selection.as_ref().map_or(false, |s| s.contains(addr));
@@ -168,7 +163,7 @@ impl<T: Addr> Shape<T> {
                     *highlight_op = Some(addr.clone());
                 }
             }
-            _ => {}
+            Shape::CircleFilled { .. } => {}
         }
     }
 
@@ -223,34 +218,38 @@ impl<T: Addr> Shape<T> {
                 };
                 egui::Shape::circle_filled(center, radius, stroke.color)
             }
-            Shape::Circle {
+            Shape::Operation {
                 center,
                 radius,
+                label,
                 fill,
                 stroke,
                 ..
-            } => egui::Shape::Circle(CircleShape {
-                center,
-                radius,
-                fill: fill.unwrap_or(Color32::default()),
-                stroke: stroke.unwrap_or(default_stroke),
-            }),
-            Shape::Text { text, center } => {
-                let size = TEXT_SIZE * transform.scale().min_elem();
-                if size > 5.0 {
-                    ui.fonts(|fonts| {
-                        egui::Shape::text(
-                            fonts,
-                            center,
-                            Align2::CENTER_CENTER,
-                            text,
-                            egui::FontId::monospace(size),
-                            ui.visuals().strong_text_color(),
-                        )
-                    })
-                } else {
-                    egui::Shape::Noop
+            } => {
+                let rect = egui::Shape::Rect(RectShape {
+                    rect: Rect::from_center_size(
+                        center,
+                        radius * vec2(label.chars().count() as f32 + 1.0, 2.0),
+                    ),
+                    rounding: Rounding::same(radius),
+                    fill: fill.unwrap_or(Color32::default()),
+                    stroke: stroke.unwrap_or(default_stroke),
+                });
+                let text_size: f32 = TEXT_SIZE * transform.scale().min_elem();
+                if text_size <= 5.0 {
+                    return rect;
                 }
+                let text = ui.fonts(|fonts| {
+                    egui::Shape::text(
+                        fonts,
+                        center,
+                        Align2::CENTER_CENTER,
+                        label,
+                        egui::FontId::monospace(text_size),
+                        ui.visuals().strong_text_color(),
+                    )
+                });
+                egui::Shape::Vec(vec![rect, text])
             }
         }
     }
@@ -260,12 +259,18 @@ impl<T: Addr> Shape<T> {
             Shape::Line { start, end, .. } => Rect::from_two_pos(*start, *end),
             Shape::CubicBezier { points, .. } => Rect::from_points(points),
             Shape::Rectangle { rect, .. } => *rect,
-            Shape::CircleFilled { center, radius, .. } | Shape::Circle { center, radius, .. } => {
+            Shape::CircleFilled { center, radius, .. } => {
                 Rect::from_center_size(*center, Vec2::splat(*radius * 2.0))
             }
-            Shape::Text { center, .. } => {
-                Rect::from_center_size(*center, Vec2::new(f32::INFINITY, 1.0))
-            }
+            Shape::Operation {
+                center,
+                radius,
+                label,
+                ..
+            } => Rect::from_center_size(
+                *center,
+                *radius * vec2(label.chars().count() as f32 + 1.0, 2.0),
+            ),
         }
     }
 }

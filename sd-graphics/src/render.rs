@@ -271,16 +271,13 @@ pub fn generate_shapes<V, E>(
                             });
                         }
                         MonoidalOp::Operation { addr } => {
-                            shapes.push(Shape::Circle {
+                            shapes.push(Shape::Operation {
                                 center,
                                 addr: addr.clone(),
+                                label: addr.weight().to_string(),
                                 radius: RADIUS_OPERATION,
                                 fill: None,
                                 stroke: None,
-                            });
-                            shapes.push(Shape::Text {
-                                text: addr.weight().to_string(),
-                                center,
                             });
                         }
                         MonoidalOp::Thunk { addr, .. } => {

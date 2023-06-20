@@ -1,7 +1,7 @@
 use egui::{emath::RectTransform, Pos2, Rect};
 use sd_core::common::Addr;
 use svg::{
-    node::element::{path::Data, Circle, Line, Path, Rectangle, Text},
+    node::element::{path::Data, Circle, Group, Line, Path, Rectangle, Text},
     Document, Node,
 };
 
@@ -10,15 +10,33 @@ use crate::shape::{Shape, Shapes};
 impl<T: Addr> Shape<T> {
     pub(crate) fn to_svg(&self) -> Box<dyn Node> {
         match self {
-            Self::Circle { center, radius, .. } => Box::new(
-                Circle::new()
-                    .set("cx", center.x)
-                    .set("cy", center.y)
-                    .set("r", *radius)
-                    .set("fill", "white")
-                    .set("stroke", "black")
-                    .set("stroke-width", 1),
-            ),
+            Self::Operation {
+                center,
+                radius,
+                label,
+                ..
+            } => Box::new({
+                Group::new()
+                    .add(
+                        Circle::new()
+                            .set("cx", center.x)
+                            .set("cy", center.y)
+                            .set("r", *radius)
+                            .set("fill", "white")
+                            .set("stroke", "black")
+                            .set("stroke-width", 1),
+                    )
+                    .add(
+                        Text::new()
+                            .set("x", center.x)
+                            .set("y", center.y)
+                            .set("font-size", 28)
+                            .set("font-family", "monospace")
+                            .set("text-anchor", "middle")
+                            .set("dominant-baseline", "middle")
+                            .add(svg::node::Text::new(label)),
+                    )
+            }),
             Self::CircleFilled { center, radius, .. } => Box::new(
                 Circle::new()
                     .set("cx", center.x)
@@ -61,16 +79,6 @@ impl<T: Addr> Shape<T> {
                     .set("fill", "none")
                     .set("stroke", "black")
                     .set("stroke-width", 1)
-            }),
-            Self::Text { text: str, center } => Box::new({
-                Text::new()
-                    .set("x", center.x)
-                    .set("y", center.y)
-                    .set("font-size", 28)
-                    .set("font-family", "monospace")
-                    .set("text-anchor", "middle")
-                    .set("dominant-baseline", "middle")
-                    .add(svg::node::Text::new(str))
             }),
         }
     }
