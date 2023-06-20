@@ -18,6 +18,7 @@ use crate::{
 #[derive(Derivative)]
 #[derivative(Default)]
 pub struct App {
+    compile_requested: bool,
     #[derivative(Default(value = "true"))]
     editor: bool,
     code: String,
@@ -65,7 +66,7 @@ impl App {
     pub fn set_file(&mut self, code: String, language: UiLanguage) {
         self.code = code;
         self.language = language;
-        // Could be worth triggering a compile here
+        self.compile_requested = true;
     }
 
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
@@ -144,8 +145,17 @@ impl App {
 }
 
 impl eframe::App for App {
+    fn warm_up_enabled(&self) -> bool {
+        self.compile_requested
+    }
+
     #[allow(clippy::too_many_lines)]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if self.compile_requested {
+            self.compile_requested = false;
+            self.trigger_compile(ctx);
+        }
+
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
