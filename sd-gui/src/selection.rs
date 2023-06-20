@@ -39,11 +39,11 @@ impl Selection {
         }
     }
 
-    pub fn from_graph(graph_ui: &GraphUi, name: String, ctx: &egui::Context) -> Self {
+    pub fn from_graph(graph_ui: &GraphUi, name: String) -> Self {
         match graph_ui {
-            GraphUi::Chil(_, selection) => Self::Chil(SelectionInternal::new(selection, name, ctx)),
+            GraphUi::Chil(_, selection) => Self::Chil(SelectionInternal::new(selection, name)),
             GraphUi::Spartan(_, selection) => {
-                Self::Spartan(SelectionInternal::new(selection, name, ctx))
+                Self::Spartan(SelectionInternal::new(selection, name))
             }
         }
     }
@@ -57,11 +57,7 @@ pub(crate) struct SelectionInternal<T: Language> {
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
-    pub(crate) fn new(
-        selected_nodes: &IndexSet<Operation<Op<T>, Name<T>>>,
-        name: String,
-        ctx: &egui::Context,
-    ) -> Self
+    pub(crate) fn new(selected_nodes: &IndexSet<Operation<Op<T>, Name<T>>>, name: String) -> Self
     where
         T::Op: Display,
         T::Var: Free,
@@ -73,7 +69,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         let code = decompile(&hypergraph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
 
-        let graph_ui = GraphUiInternal::from_graph(hypergraph, ctx);
+        let graph_ui = GraphUiInternal::from_graph(hypergraph);
 
         Self {
             code,

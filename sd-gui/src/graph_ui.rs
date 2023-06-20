@@ -1,6 +1,6 @@
 #![allow(clippy::inline_always)]
 
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use delegate::delegate;
 use eframe::{
@@ -10,7 +10,7 @@ use eframe::{
 use indexmap::IndexSet;
 use sd_core::{
     graph::{Name, Op, SyntaxHyperGraph},
-    hypergraph::{HyperGraph, Operation, Thunk},
+    hypergraph::{Operation, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
@@ -19,7 +19,7 @@ use sd_core::{
 };
 use tracing::debug;
 
-use crate::{panzoom::Panzoom, shape_generator::ShapeGenerator};
+use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub(crate) enum GraphUi {
     Chil(
@@ -33,18 +33,12 @@ pub(crate) enum GraphUi {
 }
 
 impl GraphUi {
-    pub(crate) fn new_chil(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Chil>) -> Self {
-        Self::Chil(
-            GraphUiInternal::from_graph(hypergraph, ctx),
-            IndexSet::new(),
-        )
+    pub(crate) fn new_chil(hypergraph: SyntaxHyperGraph<Chil>) -> Self {
+        Self::Chil(GraphUiInternal::from_graph(hypergraph), IndexSet::new())
     }
 
-    pub(crate) fn new_spartan(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
-        Self::Spartan(
-            GraphUiInternal::from_graph(hypergraph, ctx),
-            IndexSet::new(),
-        )
+    pub(crate) fn new_spartan(hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
+        Self::Spartan(GraphUiInternal::from_graph(hypergraph), IndexSet::new())
     }
 
     delegate! {
@@ -52,10 +46,11 @@ impl GraphUi {
             GraphUi::Chil(graph_ui, _) => graph_ui,
             GraphUi::Spartan(graph_ui, _) => graph_ui,
         } {
-            pub(crate) fn reset(&mut self, ctx: &egui::Context);
+            pub(crate) fn ready(&self) -> bool;
+            pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
-            pub(crate) fn export_svg(&self, ctx: &egui::Context) -> String;
+            pub(crate) fn export_svg(&self) -> String;
         }
     }
 
@@ -76,11 +71,12 @@ impl GraphUi {
 
 pub(crate) struct GraphUiInternal<T: Language> {
     #[allow(dead_code)] // Dropping this breaks the app
-    hypergraph: HyperGraph<Op<T>, Name<T>>,
-
-    monoidal_graph: MonoidalGraph<(Op<T>, Name<T>)>,
+    hypergraph: SyntaxHyperGraph<T>,
+    monoidal_graph: Arc<MonoidalGraph<(Op<T>, Name<T>)>>,
     expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
     panzoom: Panzoom,
+    ready: bool,
+    reset_requested: bool,
 }
 
 impl<T: 'static + Language> GraphUiInternal<T> {
@@ -96,43 +92,53 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
     {
-        let (response, painter) =
-            ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
-        let to_screen = emath::RectTransform::from_to(
-            Rect::from_center_size(
-                self.panzoom.translation,
-                response.rect.size() / self.panzoom.zoom,
-            ),
-            response.rect,
-        );
-        if let Some(hover_pos) = response.hover_pos() {
-            let anchor = to_screen.inverse().transform_pos(hover_pos);
-            ui.input(|i| {
-                self.panzoom.zoom(i.zoom_delta(), anchor);
-                self.panzoom.translation -= i.scroll_delta / self.panzoom.zoom;
-            });
+        let shapes = generate_shapes(&self.monoidal_graph, &self.expanded);
+        let guard = shapes.lock();
+        if let Some(shapes) = guard.ready() {
+            let (response, painter) =
+                ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
+            let to_screen = emath::RectTransform::from_to(
+                Rect::from_center_size(
+                    self.panzoom.translation,
+                    response.rect.size() / self.panzoom.zoom,
+                ),
+                response.rect,
+            );
+            if let Some(hover_pos) = response.hover_pos() {
+                let anchor = to_screen.inverse().transform_pos(hover_pos);
+                ui.input(|i| {
+                    self.panzoom.zoom(i.zoom_delta(), anchor);
+                    self.panzoom.translation -= i.scroll_delta / self.panzoom.zoom;
+                });
+            }
+
+            if self.reset_requested {
+                self.panzoom.reset(shapes.size);
+                self.reset_requested = false;
+            }
+            // Background
+            painter.add(Shape::rect_filled(
+                response.rect,
+                Rounding::none(),
+                ui.visuals().faint_bg_color,
+            ));
+
+            painter.extend(sd_graphics::render::render(
+                ui,
+                &shapes.shapes,
+                &response,
+                &mut self.expanded,
+                current_selection,
+                to_screen,
+            ));
+            self.ready = true;
+        } else {
+            ui.centered_and_justified(eframe::egui::Ui::spinner);
+            self.ready = false;
         }
-
-        let shapes =
-            ShapeGenerator::generate_shapes(ui.ctx(), &self.monoidal_graph, &self.expanded);
-        // Background
-        painter.add(Shape::rect_filled(
-            response.rect,
-            Rounding::none(),
-            ui.visuals().faint_bg_color,
-        ));
-
-        painter.extend(sd_graphics::render::render(
-            ui,
-            &shapes.shapes,
-            &response,
-            &mut self.expanded,
-            current_selection,
-            to_screen,
-        ));
     }
 
-    pub(crate) fn from_graph(hypergraph: SyntaxHyperGraph<T>, ctx: &egui::Context) -> Self
+    pub(crate) fn from_graph(hypergraph: SyntaxHyperGraph<T>) -> Self
     where
         T::Op: Display,
     {
@@ -143,7 +149,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         debug!("Got term {:#?}", monoidal_term);
 
         debug!("Inserting swaps and copies");
-        let monoidal_graph = MonoidalGraph::from(&monoidal_term);
+        let monoidal_graph = Arc::new(MonoidalGraph::from(&monoidal_term));
         debug!("Got graph {:#?}", monoidal_graph);
 
         let mut this = Self {
@@ -151,17 +157,22 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             monoidal_graph,
             expanded,
             panzoom: Panzoom::default(),
+            ready: bool::default(),
+            reset_requested: bool::default(),
         };
-        this.reset(ctx);
+        this.reset();
         this
     }
 
-    pub(crate) fn reset(&mut self, ctx: &egui::Context)
+    pub(crate) fn ready(&self) -> bool {
+        self.ready
+    }
+
+    pub(crate) fn reset(&mut self)
     where
         T::Op: Display,
     {
-        let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
-        self.panzoom.reset(shapes.size);
+        self.reset_requested = true;
     }
 
     delegate! {
@@ -171,11 +182,13 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         }
     }
 
-    pub(crate) fn export_svg(&self, ctx: &egui::Context) -> String
+    pub(crate) fn export_svg(&self) -> String
     where
         T::Op: Display,
     {
-        let shapes = ShapeGenerator::generate_shapes(ctx, &self.monoidal_graph, &self.expanded);
-        shapes.as_ref().to_svg().to_string()
+        let shapes = generate_shapes(&self.monoidal_graph, &self.expanded);
+        let guard = shapes.lock(); // this would lock the UI, but by the time we get here
+                                   // the shapes have already been computed
+        guard.block_until_ready().to_svg().to_string()
     }
 }

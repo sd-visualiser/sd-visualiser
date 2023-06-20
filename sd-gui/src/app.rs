@@ -1,8 +1,11 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use anyhow::anyhow;
 use derivative::Derivative;
-use eframe::egui::{self, FontDefinitions};
+use eframe::{
+    egui::{self, FontDefinitions},
+    epaint::mutex::Mutex,
+};
 use egui_notify::Toasts;
 use poll_promise::Promise;
 use sd_core::graph::SyntaxHyperGraph;
@@ -12,6 +15,7 @@ use crate::{
     graph_ui::GraphUi,
     parser::{parse, ParseError, ParseOutput, UiLanguage},
     selection::Selection,
+    shape_generator::clear_shape_cache,
     squiggly_line::show_parse_error,
 };
 
@@ -79,7 +83,7 @@ impl App {
         if let Some(last_parse) = self
             .last_parse
             .as_ref()
-            .and_then(|p| p.try_lock().ok()?.ready()?.as_ref().err().cloned())
+            .and_then(|p| p.lock().ready()?.as_ref().err().cloned())
         {
             match last_parse {
                 ParseError::Chil(err) => show_parse_error(ui, &err, &text_edit_out),
@@ -114,13 +118,14 @@ impl App {
     }
 
     fn trigger_compile(&mut self, ctx: &egui::Context) {
+        clear_shape_cache();
         self.trigger_parse(ctx);
         {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
             self.graph_ui
                 .replace(Promise::spawn_thread("compile", move || {
-                    let promise = parse.lock().unwrap();
+                    let promise = parse.lock();
                     let parse_output = promise
                         .block_until_ready()
                         .as_ref()
@@ -128,11 +133,11 @@ impl App {
                     let compile = Ok(match parse_output {
                         ParseOutput::ChilExpr(expr) => {
                             tracing::debug!("Converting chil to hypergraph...");
-                            GraphUi::new_chil(&ctx, SyntaxHyperGraph::try_from(expr)?)
+                            GraphUi::new_chil(SyntaxHyperGraph::try_from(expr)?)
                         }
                         ParseOutput::SpartanExpr(expr) => {
                             tracing::debug!("Converting spartan to hypergraph...");
-                            GraphUi::new_spartan(&ctx, SyntaxHyperGraph::try_from(expr)?)
+                            GraphUi::new_spartan(SyntaxHyperGraph::try_from(expr)?)
                         }
                     });
                     ctx.request_repaint();
@@ -194,7 +199,7 @@ impl eframe::App for App {
 
                 if ui.button("Reset").clicked() || ui.input(|i| i.key_pressed(egui::Key::Num0)) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
-                        graph_ui.reset(ui.ctx());
+                        graph_ui.reset();
                     }
                 }
                 if ui.button("Zoom In").clicked()
@@ -226,7 +231,6 @@ impl eframe::App for App {
                         self.selections.push(Selection::from_graph(
                             graph_ui,
                             format!("Selection {}", self.selections.len()),
-                            ui.ctx(),
                         ));
                         graph_ui.clear_selection();
                     }
@@ -234,13 +238,19 @@ impl eframe::App for App {
 
                 ui.separator();
 
-                if ui.button("Export SVG").clicked() {
-                    if let Some(graph_ui) = finished(&self.graph_ui) {
-                        let svg = graph_ui.export_svg(ui.ctx());
-                        if let Some(path) = rfd::FileDialog::new().save_file() {
-                            let _ = std::fs::write(path, svg);
+                if let Some(graph_ui) = finished(&self.graph_ui)
+                    .and_then(|graph_ui| graph_ui.ready().then_some(graph_ui))
+                {
+                    ui.add_enabled_ui(true, |ui| {
+                        if ui.button("Export SVG").clicked() {
+                            let svg = graph_ui.export_svg();
+                            if let Some(path) = rfd::FileDialog::new().save_file() {
+                                let _ = std::fs::write(path, svg);
+                            }
                         }
-                    }
+                    });
+                } else {
+                    ui.add_enabled_ui(false, |ui| ui.button("Export SVG"));
                 }
             });
         });
@@ -261,13 +271,28 @@ impl eframe::App for App {
                     egui::ScrollArea::both()
                         .id_source("code")
                         .show(&mut columns[0], |ui| self.code_edit_ui(ui));
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
-                        tracing::trace!("drawing graph ui");
-                        graph_ui.ui(&mut columns[1]);
+                    match self.graph_ui.as_mut().map(|p| p.ready_mut()?.as_mut().ok()) {
+                        Some(Some(graph_ui)) => {
+                            graph_ui.ui(&mut columns[1]);
+                        }
+                        Some(None) => {
+                            // Compilation hasn't finished yet
+                            columns[1].centered_and_justified(eframe::egui::Ui::spinner);
+                        }
+                        None => { /* No compilation triggered */ }
                     }
                 });
-            } else if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
-                graph_ui.ui(ui);
+            } else {
+                match self.graph_ui.as_mut().map(|p| p.ready_mut()?.as_mut().ok()) {
+                    Some(Some(graph_ui)) => {
+                        graph_ui.ui(ui);
+                    }
+                    Some(None) => {
+                        // Compilation hasn't finished yet
+                        ui.centered_and_justified(eframe::egui::Ui::spinner);
+                    }
+                    None => { /* No compilation triggered */ }
+                }
             }
         });
 
