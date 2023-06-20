@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::BuildHasher};
+use std::hash::BuildHasher;
 
 use derivative::Derivative;
 use egui::{
@@ -82,7 +82,7 @@ impl<T: Addr> Shape<T> {
         highlight_thunk: &mut Option<T::Thunk>,
         highlight_edges: &mut IndexSet<T::Edge>,
         expanded: &mut WeakMap<T::Thunk, bool>,
-        selection: &mut Option<&mut HashSet<T::Operation, S>>,
+        selection: &mut Option<&mut IndexSet<T::Operation, S>>,
     ) where
         S: BuildHasher,
     {

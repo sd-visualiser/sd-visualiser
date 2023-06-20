@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fmt::Display, hash::BuildHasher};
+use std::{fmt::Display, hash::BuildHasher};
 
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
@@ -25,7 +25,7 @@ pub fn render<T, S>(
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
     expanded: &mut WeakMap<Thunk<Op<T>, Name<T>>, bool>,
-    mut selection: Option<&mut HashSet<Operation<Op<T>, Name<T>>, S>>,
+    mut selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where

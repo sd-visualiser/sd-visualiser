@@ -2611,6 +2611,7 @@ dependencies = [
  "eframe",
  "egui-notify",
  "from-pest",
+ "indexmap",
  "pest",
  "poll-promise",
  "rfd",

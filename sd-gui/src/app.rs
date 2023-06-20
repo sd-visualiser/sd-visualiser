@@ -128,11 +128,11 @@ impl App {
                     let compile = Ok(match parse_output {
                         ParseOutput::ChilExpr(expr) => {
                             tracing::debug!("Converting chil to hypergraph...");
-                            GraphUi::new_chil(&ctx, SyntaxHyperGraph::try_from(expr)?)
+                            GraphUi::new_chil(&ctx, &SyntaxHyperGraph::try_from(expr)?)
                         }
                         ParseOutput::SpartanExpr(expr) => {
                             tracing::debug!("Converting spartan to hypergraph...");
-                            GraphUi::new_spartan(&ctx, SyntaxHyperGraph::try_from(expr)?)
+                            GraphUi::new_spartan(&ctx, &SyntaxHyperGraph::try_from(expr)?)
                         }
                     });
                     ctx.request_repaint();

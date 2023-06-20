@@ -1,12 +1,13 @@
 #![allow(clippy::inline_always)]
 
-use std::{collections::HashSet, fmt::Display};
+use std::fmt::Display;
 
 use delegate::delegate;
 use eframe::{
     egui, emath,
     epaint::{Rect, Rounding, Shape},
 };
+use indexmap::IndexSet;
 use sd_core::{
     graph::{Name, Op, SyntaxHyperGraph},
     hypergraph::{Operation, Thunk},
@@ -23,21 +24,27 @@ use crate::{panzoom::Panzoom, shape_generator::ShapeGenerator};
 pub(crate) enum GraphUi {
     Chil(
         GraphUiInternal<Chil>,
-        HashSet<Operation<Op<Chil>, Name<Chil>>>,
+        IndexSet<Operation<Op<Chil>, Name<Chil>>>,
     ),
     Spartan(
         GraphUiInternal<Spartan>,
-        HashSet<Operation<Op<Spartan>, Name<Spartan>>>,
+        IndexSet<Operation<Op<Spartan>, Name<Spartan>>>,
     ),
 }
 
 impl GraphUi {
-    pub(crate) fn new_chil(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Chil>) -> Self {
-        Self::Chil(GraphUiInternal::from_graph(hypergraph, ctx), HashSet::new())
+    pub(crate) fn new_chil(ctx: &egui::Context, hypergraph: &SyntaxHyperGraph<Chil>) -> Self {
+        Self::Chil(
+            GraphUiInternal::from_graph(hypergraph, ctx),
+            IndexSet::new(),
+        )
     }
 
-    pub(crate) fn new_spartan(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
-        Self::Spartan(GraphUiInternal::from_graph(hypergraph, ctx), HashSet::new())
+    pub(crate) fn new_spartan(ctx: &egui::Context, hypergraph: &SyntaxHyperGraph<Spartan>) -> Self {
+        Self::Spartan(
+            GraphUiInternal::from_graph(hypergraph, ctx),
+            IndexSet::new(),
+        )
     }
 
     delegate! {
@@ -68,7 +75,6 @@ impl GraphUi {
 }
 
 pub(crate) struct GraphUiInternal<T: Language> {
-    pub(crate) hypergraph: SyntaxHyperGraph<T>,
     monoidal_graph: MonoidalGraph<(Op<T>, Name<T>)>,
     expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
     panzoom: Panzoom,
@@ -78,7 +84,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     pub(crate) fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        current_selection: Option<&mut HashSet<Operation<Op<T>, Name<T>>>>,
+        current_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>>>,
     ) where
         T::Op: Display,
         T::Op: PrettyPrint,
@@ -123,14 +129,14 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         ));
     }
 
-    pub(crate) fn from_graph(hypergraph: SyntaxHyperGraph<T>, ctx: &egui::Context) -> Self
+    pub(crate) fn from_graph(hypergraph: &SyntaxHyperGraph<T>, ctx: &egui::Context) -> Self
     where
         T::Op: Display,
     {
         let expanded = hypergraph.create_expanded();
 
         debug!("Converting to monoidal term");
-        let monoidal_term = MonoidalWiredGraph::from(&hypergraph);
+        let monoidal_term = MonoidalWiredGraph::from(hypergraph);
         debug!("Got term {:#?}", monoidal_term);
 
         debug!("Inserting swaps and copies");
@@ -138,7 +144,6 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         debug!("Got graph {:#?}", monoidal_graph);
 
         let mut this = Self {
-            hypergraph,
             monoidal_graph,
             expanded,
             panzoom: Panzoom::default(),

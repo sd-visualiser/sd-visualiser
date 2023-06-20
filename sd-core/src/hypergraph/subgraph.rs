@@ -7,7 +7,7 @@ use indexmap::IndexSet;
 
 use super::{
     builder::{fragment::Fragment, HyperGraphBuilder, InPort, OutPort},
-    Edge, Graph, HyperGraph, Node, Operation,
+    Edge, HyperGraph, Node, Operation, Thunk,
 };
 use crate::{
     common::InOut,
@@ -57,35 +57,35 @@ where
     }
 }
 
-fn normalise_graph<G: Graph>(
-    graph_view: &G,
-    selection: &HashSet<Operation<G::NodeWeight, G::EdgeWeight>>,
-) -> IndexSet<Node<G::NodeWeight, G::EdgeWeight>> {
-    let selected_nodes: IndexSet<Node<G::NodeWeight, G::EdgeWeight>> = graph_view
-        .nodes()
-        .filter(|node| match node {
-            Node::Operation(op) => selection.contains(op),
-            Node::Thunk(thunk) => contains_selection(thunk, selection),
-        })
-        .collect();
-
-    if selected_nodes.len() == 1 {
-        if let Node::Thunk(thunk) = selected_nodes.iter().next().unwrap() {
-            return normalise_graph(thunk, selection);
-        }
+/// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
+fn find_ancestor<V, E>(
+    containing: &Option<Thunk<V, E>>,
+    mut node: Node<V, E>,
+) -> Option<Node<V, E>> {
+    while &node.backlink() != containing {
+        node = Node::Thunk(node.backlink()?);
     }
-
-    selected_nodes
+    Some(node)
 }
 
-fn contains_selection<G: Graph>(
-    graph_view: &G,
-    selection: &HashSet<Operation<G::NodeWeight, G::EdgeWeight>>,
-) -> bool {
-    graph_view.operations().any(|op| selection.contains(&op))
-        || graph_view
-            .thunks()
-            .any(|thunk| contains_selection(&thunk, selection))
+#[must_use]
+pub fn normalise_selection<V, E>(selection: &IndexSet<Operation<V, E>>) -> IndexSet<Node<V, E>> {
+    if let Some(op) = selection.first() {
+        let mut containing = op.backlink();
+        for op in selection {
+            while find_ancestor(&containing, Node::Operation(op.clone())).is_none() {
+                containing = containing.unwrap().backlink();
+            }
+        }
+
+        selection
+            .iter()
+            .cloned()
+            .map(|op| find_ancestor(&containing, Node::Operation(op)).unwrap())
+            .collect()
+    } else {
+        IndexSet::new()
+    }
 }
 
 impl<V, E> HyperGraph<V, E>
@@ -94,15 +94,7 @@ where
     E: Debug + Send + Sync + Clone + Free,
 {
     #[must_use]
-    pub fn normalise_selection(
-        &self,
-        selection: &HashSet<Operation<V, E>>,
-    ) -> IndexSet<Node<V, E>> {
-        normalise_graph(self, selection)
-    }
-
-    #[must_use]
-    pub fn generate_subgraph(&self, selection: &IndexSet<Node<V, E>>) -> HyperGraph<V, E> {
+    pub fn generate_subgraph(selection: &IndexSet<Node<V, E>>) -> Self {
         let global_inputs: HashSet<Edge<V, E>> = selection
             .iter()
             .flat_map(Node::inputs)
