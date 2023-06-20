@@ -110,14 +110,9 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
         let tolerance = TOLERANCE * transform.scale().min_elem();
 
         let bounding_box = self.bounding_box();
-        let hover_pos = response
-            .ctx
-            .input(|i| i.pointer.hover_pos())
-            .filter(|x| response.rect.contains(*x));
-
         match self {
             Shape::Line { start, end, addr } => {
-                if let Some(hover_pos) = hover_pos {
+                if let Some(hover_pos) = response.hover_pos() {
                     if [*start, *end].contains_point(hover_pos, tolerance) {
                         hover_points.insert(DummyValue::from_edge(addr));
                         highlight_ports.insert(addr.clone());
@@ -125,7 +120,7 @@ impl<T: Language> Shape<(Op<T>, Name<T>)> {
                 }
             }
             Shape::CubicBezier { points, addr } => {
-                if let Some(hover_pos) = hover_pos {
+                if let Some(hover_pos) = response.hover_pos() {
                     let bezier = CubicBezierShape::from_points_stroke(
                         *points,
                         false,
