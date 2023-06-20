@@ -21,6 +21,7 @@
     }:
     let
       nciFromPkgs = pkgs: target: extraDepsOverrides: extraOverrides: {
+        # common config across targets
         projects.sd = {
           relPath = "";
           profiles.release.runTests = target == "linux";
@@ -48,17 +49,6 @@
             {
               export = true;
               renameTo = "sd-gui-${target}";
-              runtimeLibs = with pkgs; lib.optionals (target == "linux") [
-                # graphics libraries are loaded at runtime
-                # see: https://scvalex.net/posts/63/
-                libGL
-                libxkbcommon
-                wayland
-                xorg.libX11
-                xorg.libXcursor
-                xorg.libXi
-                xorg.libXrandr
-              ];
               overrides = {
                 windows-cross-compile = {
                   CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/x86_64-w64-mingw32-gcc";
@@ -69,14 +59,7 @@
                     trunk
                     wasm-bindgen-cli
                     binaryen
-                  ] ++ lib.optionals (target == "linux") [
-                    pkg-config
-                    atk
-                    gdk-pixbuf
-                    gtk3
-                    pango
                   ]);
-                  XDG_DATA_DIRS = with pkgs; "${gtk3}/share/gsettings-schemas/${gtk3.name}";
                 };
               } // extraOverrides;
               depsOverrides = extraDepsOverrides;
@@ -99,7 +82,43 @@
                   ];
                   config = { };
                 };
-                nci = nciFromPkgs pkgs "linux" { } { };
+                nci = nciFromPkgs pkgs "linux"
+                  {
+                    gtk.overrideAttrs = oldAttrs: {
+                      nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
+                        pkg-config
+                        atk
+                        gdk-pixbuf
+                        gtk3
+                        pango
+                      ]);
+                    };
+                  }
+                  {
+                    egui-wayland = {
+                      runtimeLibs = with pkgs; [
+                        # graphics libraries are loaded at runtime
+                        # see: https://scvalex.net/posts/63/
+                        libGL
+                        libxkbcommon
+                        wayland
+                        xorg.libX11
+                        xorg.libXcursor
+                        xorg.libXi
+                        xorg.libXrandr
+                      ];
+                    };
+                    gtk.overrideAttrs = oldAttrs: {
+                      nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
+                        pkg-config
+                        atk
+                        gdk-pixbuf
+                        gtk3
+                        pango
+                      ]);
+                      XDG_DATA_DIRS = with pkgs; "${gtk3}/share/gsettings-schemas/${gtk3.name}";
+                    };
+                  };
                 devShells.default = config.nci.outputs.sd.devShell.overrideAttrs (oldAttrs: {
                   packages = (oldAttrs.packages or [ ]) ++ [ (lib.hiPrio pkgs.rust-bin.nightly.latest.rustfmt) ];
                 });
