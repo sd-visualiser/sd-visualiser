@@ -332,8 +332,8 @@ mod tests {
         #[allow(unused_must_use)]
     )]
     fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Expr)>) -> Result<()> {
-        let (lang, name, expr) = fixture.content();
-        let graph: SyntaxHyperGraph<Spartan> = expr.try_into()?;
+        let (_lang, _name, expr) = fixture.content();
+        let _graph: SyntaxHyperGraph<Spartan> = expr.try_into()?;
 
         // insta::with_settings!({sort_maps => true}, {
         //     insta::assert_ron_snapshot!(name, graph);

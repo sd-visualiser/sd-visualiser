@@ -529,11 +529,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use anyhow::Result;
-    use rstest::rstest;
+    // use anyhow::Result;
+    // use rstest::rstest;
 
-    use super::*;
-    use crate::language::spartan::Op;
+    // use super::*;
+    // use crate::language::spartan::Op;
 
     // #[rstest]
     // #[case(vec![0,1], vec![])]
