@@ -110,6 +110,32 @@ impl<T: 'static + Language> GraphUiInternal<T> {
                     self.panzoom.zoom(i.zoom_delta(), anchor);
                     self.panzoom.translation -= i.scroll_delta / self.panzoom.zoom;
                 });
+                ui.input_mut(|i| {
+                    const PAN_FACTOR: f32 = 10.0;
+                    const LEFT: egui::Vec2 = egui::vec2(-PAN_FACTOR, 0.0);
+                    const RIGHT: egui::Vec2 = egui::vec2(PAN_FACTOR, 0.0);
+                    const UP: egui::Vec2 = egui::vec2(0.0, -PAN_FACTOR);
+                    const DOWN: egui::Vec2 = egui::vec2(0.0, PAN_FACTOR);
+                    macro_rules! pan_by_key {
+                        ($key:expr, $direction:ident) => {
+                            if i.consume_shortcut(&egui::KeyboardShortcut::new(
+                                egui::Modifiers::NONE,
+                                $key,
+                            )) {
+                                self.panzoom.translation += $direction / self.panzoom.zoom;
+                            }
+                        };
+                    }
+
+                    pan_by_key!(egui::Key::ArrowLeft, LEFT);
+                    pan_by_key!(egui::Key::H, LEFT);
+                    pan_by_key!(egui::Key::ArrowRight, RIGHT);
+                    pan_by_key!(egui::Key::L, RIGHT);
+                    pan_by_key!(egui::Key::ArrowUp, UP);
+                    pan_by_key!(egui::Key::K, UP);
+                    pan_by_key!(egui::Key::ArrowDown, DOWN);
+                    pan_by_key!(egui::Key::J, DOWN);
+                });
             }
 
             if self.reset_requested {
