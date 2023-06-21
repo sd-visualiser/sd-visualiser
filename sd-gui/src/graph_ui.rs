@@ -9,14 +9,14 @@ use eframe::{
 };
 use indexmap::IndexSet;
 use sd_core::{
-    graph::{Name, Op, SyntaxHyperGraph},
-    hypergraph::{Operation, Thunk},
+    graph::{Name, Op, SyntaxHyperGraph, SyntaxSubgraph},
+    hypergraph::{subgraph::Subgraph, Operation},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
     prettyprinter::PrettyPrint,
-    weak_map::WeakMap,
 };
+use sd_graphics::common::GraphMetadata;
 use tracing::debug;
 
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
@@ -73,7 +73,7 @@ pub struct GraphUiInternal<T: Language> {
     #[allow(dead_code)] // Dropping this breaks the app
     hypergraph: SyntaxHyperGraph<T>,
     monoidal_graph: Arc<MonoidalGraph<(Op<T>, Name<T>)>>,
-    expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
+    metadata: GraphMetadata<(Op<T>, Name<T>)>,
     panzoom: Panzoom,
     ready: bool,
     reset_requested: bool,
@@ -91,7 +91,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.expanded);
+        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata.expanded);
         let guard = shapes.lock();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
@@ -152,7 +152,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
                 ui,
                 &shapes.shapes,
                 &response,
-                &mut self.expanded,
+                &mut self.metadata.expanded,
                 current_selection,
                 to_screen,
                 None,
@@ -168,7 +168,18 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     where
         T::Op: Display,
     {
-        let expanded = hypergraph.create_expanded();
+        Self::from_subgraph(Subgraph {
+            graph: hypergraph,
+            mapping: None,
+        })
+    }
+
+    pub(crate) fn from_subgraph(subgraph: SyntaxSubgraph<T>) -> Self
+    where
+        T::Op: Display,
+    {
+        let expanded = subgraph.graph.create_expanded();
+        let hypergraph = subgraph.graph;
 
         debug!("Converting to monoidal term");
         let monoidal_term = MonoidalWiredGraph::from(&hypergraph);
@@ -178,10 +189,15 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         let monoidal_graph = Arc::new(MonoidalGraph::from(&monoidal_term));
         debug!("Got graph {:#?}", monoidal_graph);
 
+        let metadata = GraphMetadata {
+            expanded,
+            mapping: subgraph.mapping,
+        };
+
         let mut this = Self {
             hypergraph,
             monoidal_graph,
-            expanded,
+            metadata,
             panzoom: Panzoom::default(),
             ready: bool::default(),
             reset_requested: bool::default(),
@@ -212,7 +228,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     where
         T::Op: Display,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.expanded);
+        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata.expanded);
         let guard = shapes.lock(); // this would lock the UI, but by the time we get here
                                    // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()

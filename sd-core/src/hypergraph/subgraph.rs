@@ -95,7 +95,7 @@ pub struct Mapping<T: Addr> {
 
 pub struct Subgraph<V, E> {
     pub graph: HyperGraph<V, E>,
-    pub mapping: Mapping<(V, E)>,
+    pub mapping: Option<Mapping<(V, E)>>,
 }
 
 impl<V, E> Subgraph<V, E>
@@ -181,14 +181,14 @@ where
             builder.link(out_port_map[&edge].clone(), in_port).unwrap();
         }
 
-        let mapping = Mapping {
+        let mapping = Some(Mapping {
             edge_mapping: out_port_map
                 .into_iter()
                 .map(|(k, v)| (v.into_edge_unchecked(), k))
                 .collect::<IndexMap<_, _>>()
                 .into(),
             thunk_mapping: thunk_mapping.into(),
-        };
+        });
 
         Subgraph {
             graph: builder.build().unwrap(),

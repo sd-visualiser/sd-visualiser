@@ -97,6 +97,7 @@ impl<V, E> Debug for OutPort<V, E> {
 }
 
 impl<V, E> OutPort<V, E> {
+    #[allow(clippy::missing_const_for_fn)]
     pub(super) fn into_edge_unchecked(self) -> Edge<V, E> {
         Edge(self.0)
     }
@@ -166,6 +167,7 @@ impl<V, E> ThunkBuilder<V, E> {
             .map(|in_port| InPort(in_port.clone()))
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub(super) fn into_thunk_unchecked(self) -> Thunk<V, E> {
         Thunk(self.0)
     }

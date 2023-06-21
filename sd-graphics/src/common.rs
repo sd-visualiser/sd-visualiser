@@ -4,10 +4,12 @@ use derivative::Derivative;
 use egui::{epaint::CubicBezierShape, vec2, Pos2, Vec2};
 use pretty::RcDoc;
 use sd_core::{
+    common::Addr,
     graph::{Name, Op},
-    hypergraph::{Edge, Node},
+    hypergraph::{subgraph::Mapping, Edge, Node},
     language::Language,
     prettyprinter::{paran_list, PrettyPrint},
+    weak_map::WeakMap,
 };
 
 pub const RADIUS_ARG: f32 = 0.05;
@@ -113,4 +115,9 @@ impl ContainsPoint for CubicBezierShape {
             p.distance(point) < tolerance
         })
     }
+}
+
+pub struct GraphMetadata<T: Addr> {
+    pub expanded: WeakMap<T::Thunk, bool>,
+    pub mapping: Option<Mapping<T>>,
 }

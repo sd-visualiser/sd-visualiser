@@ -1,4 +1,4 @@
-pub(crate) mod common;
+pub mod common;
 pub mod layout;
 pub(crate) mod lp;
 pub mod render;

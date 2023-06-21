@@ -12,6 +12,7 @@ use tracing::{debug, Level};
 use crate::{
     hypergraph::{
         builder::{fragment::Fragment, HyperGraphBuilder, HyperGraphError, InPort, OutPort},
+        subgraph::Subgraph,
         HyperGraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
@@ -72,6 +73,7 @@ impl<T: Language> Name<T> {
 }
 
 pub type SyntaxHyperGraph<T> = HyperGraph<Op<T>, Name<T>>;
+pub type SyntaxSubgraph<T> = Subgraph<Op<T>, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
