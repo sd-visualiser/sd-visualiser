@@ -164,6 +164,28 @@ impl eframe::App for App {
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
+                macro_rules! button {
+                    ($label:literal) => {
+                        ui.button($label).clicked()
+                    };
+                    ($label:literal, $shortcut:expr) => {{
+                        let shortcut =
+                            egui::KeyboardShortcut::new(egui::Modifiers::NONE, $shortcut);
+                        ui.add(
+                            egui::Button::new($label).shortcut_text(ctx.format_shortcut(&shortcut)),
+                        )
+                        .clicked()
+                            || ui.input_mut(|i| i.consume_shortcut(&shortcut))
+                    }};
+                    ($label:literal, $modifiers:expr, $shortcut:expr) => {{
+                        let shortcut = egui::KeyboardShortcut::new($modifiers, $shortcut);
+                        ui.add(
+                            egui::Button::new($label).shortcut_text(ctx.format_shortcut(&shortcut)),
+                        )
+                        .clicked()
+                            || ui.input_mut(|i| i.consume_shortcut(&shortcut))
+                    }};
+                }
                 ui.visuals_mut().button_frame = false;
 
                 if ui.selectable_label(self.editor, "Editor").clicked() {
@@ -180,7 +202,7 @@ impl eframe::App for App {
                 });
 
                 #[cfg(not(target_arch = "wasm32"))]
-                if ui.button("Import file").clicked() || ui.input(|i| i.key_pressed(egui::Key::O)) {
+                if button!("Import file", egui::Modifiers::COMMAND, egui::Key::O) {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
                             Some(ext) if ext == "sd" => UiLanguage::Spartan,
@@ -197,20 +219,17 @@ impl eframe::App for App {
 
                 ui.separator();
 
-                if ui.button("Reset").clicked() || ui.input(|i| i.key_pressed(egui::Key::Num0)) {
+                if button!("Reset", egui::Key::Num0) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.reset();
                     }
                 }
-                if ui.button("Zoom In").clicked()
-                    || ui.input(|i| i.key_pressed(egui::Key::PlusEquals))
-                {
+                if button!("Zoom In", egui::Key::PlusEquals) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_in();
                     }
                 }
-                if ui.button("Zoom Out").clicked() || ui.input(|i| i.key_pressed(egui::Key::Minus))
-                {
+                if button!("Zoom Out", egui::Key::Minus) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_out();
                     }
@@ -218,7 +237,7 @@ impl eframe::App for App {
 
                 ui.separator();
 
-                if ui.button("Compile").clicked() {
+                if button!("Compile", egui::Key::F5) {
                     self.trigger_compile(ui.ctx());
                 }
                 if let Some(err) = rejected(&self.graph_ui) {
@@ -226,7 +245,7 @@ impl eframe::App for App {
                     tracing::debug!("{}", err);
                 }
 
-                if ui.button("Save selection").clicked() {
+                if button!("Save selection", egui::Modifiers::COMMAND, egui::Key::S) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         self.selections.push(Selection::from_graph(
                             graph_ui,
