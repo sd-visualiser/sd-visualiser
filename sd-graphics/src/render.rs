@@ -1,12 +1,12 @@
 use std::{fmt::Display, hash::BuildHasher};
 
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use sd_core::{
     common::{InOut, InOutIter},
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{Graph, Operation},
+    hypergraph::{Graph, Node, Operation},
     language::{Expr, Language},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
@@ -25,7 +25,7 @@ pub fn render<T, S>(
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
     metadata: &mut GraphMetadata<(Op<T>, Name<T>)>,
-    mut selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
+    mut selection: Option<&mut IndexMap<Node<Op<T>, Name<T>>, bool, S>>,
     to_screen: RectTransform,
     mut subgraph_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
 ) -> Vec<egui::Shape>

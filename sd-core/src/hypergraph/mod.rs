@@ -106,6 +106,18 @@ pub enum Node<V, E> {
     Thunk(Thunk<V, E>),
 }
 
+impl<V, E> From<Operation<V, E>> for Node<V, E> {
+    fn from(value: Operation<V, E>) -> Self {
+        Node::Operation(value)
+    }
+}
+
+impl<V, E> From<Thunk<V, E>> for Node<V, E> {
+    fn from(value: Thunk<V, E>) -> Self {
+        Node::Thunk(value)
+    }
+}
+
 impl<V, E> WeakNodeInternal<V, E> {
     pub(super) fn unwrap_node(&self) -> Node<V, E> {
         match self {
@@ -443,5 +455,28 @@ impl<V, E> HyperGraph<V, E> {
         }
 
         WeakMap(set)
+    }
+
+    #[must_use]
+    pub fn create_selected(&self) -> IndexMap<Node<V, E>, bool> {
+        fn helper<V, E>(set: &mut IndexMap<Node<V, E>, bool>, thunk: &Thunk<V, E>) {
+            for node in thunk.nodes() {
+                if let Node::Thunk(thunk) = &node {
+                    helper(set, thunk);
+                }
+                set.insert(node, false);
+            }
+        }
+
+        let mut set = IndexMap::new();
+
+        for node in self.nodes() {
+            if let Node::Thunk(thunk) = &node {
+                helper(&mut set, thunk);
+            }
+            set.insert(node, false);
+        }
+
+        set
     }
 }

@@ -7,10 +7,10 @@ use eframe::{
     egui, emath,
     epaint::{Rect, Rounding, Shape},
 };
-use indexmap::IndexSet;
 use sd_core::{
+    common::SelectionMap,
     graph::{Name, Op, SyntaxHyperGraph, SyntaxSubgraph},
-    hypergraph::{subgraph::Subgraph, Operation, Thunk},
+    hypergraph::{subgraph::Subgraph, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
@@ -23,23 +23,22 @@ use tracing::debug;
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub enum GraphUi {
-    Chil(
-        GraphUiInternal<Chil>,
-        IndexSet<Operation<Op<Chil>, Name<Chil>>>,
-    ),
+    Chil(GraphUiInternal<Chil>, SelectionMap<Op<Chil>, Name<Chil>>),
     Spartan(
         GraphUiInternal<Spartan>,
-        IndexSet<Operation<Op<Spartan>, Name<Spartan>>>,
+        SelectionMap<Op<Spartan>, Name<Spartan>>,
     ),
 }
 
 impl GraphUi {
     pub(crate) fn new_chil(hypergraph: SyntaxHyperGraph<Chil>) -> Self {
-        Self::Chil(GraphUiInternal::from_graph(hypergraph), IndexSet::new())
+        let selected = hypergraph.create_selected();
+        Self::Chil(GraphUiInternal::from_graph(hypergraph), selected)
     }
 
     pub(crate) fn new_spartan(hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
-        Self::Spartan(GraphUiInternal::from_graph(hypergraph), IndexSet::new())
+        let selected = hypergraph.create_selected();
+        Self::Spartan(GraphUiInternal::from_graph(hypergraph), selected)
     }
 
     delegate! {
@@ -64,8 +63,8 @@ impl GraphUi {
 
     pub(crate) fn clear_selection(&mut self) {
         match self {
-            GraphUi::Chil(_, selection) => selection.clear(),
-            GraphUi::Spartan(_, selection) => selection.clear(),
+            GraphUi::Chil(_, selection) => selection.values_mut().for_each(|x| *x = false),
+            GraphUi::Spartan(_, selection) => selection.values_mut().for_each(|x| *x = false),
         }
     }
 }
@@ -84,7 +83,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     pub(crate) fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        current_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>>>,
+        current_selection: Option<&mut SelectionMap<Op<T>, Name<T>>>,
     ) where
         T::Op: Display + PrettyPrint,
         T::Var: PrettyPrint,

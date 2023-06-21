@@ -1,3 +1,5 @@
+use delegate::delegate;
+
 use crate::{
     common::{Addr, InOut, Slice},
     language::spartan::Op,
@@ -35,12 +37,45 @@ impl InOut for SyntaxThunk {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub enum SyntaxNode {
+    Operation(SyntaxOp),
+    Thunk(SyntaxThunk),
+}
+
+impl InOut for SyntaxNode {
+    delegate! {
+        to match self {
+            SyntaxNode::Operation(op) => op,
+            SyntaxNode::Thunk(thunk) => thunk,
+        } {
+    #[allow(clippy::inline_always)]
+        fn number_of_inputs(&self) -> usize;
+    #[allow(clippy::inline_always)]
+        fn number_of_outputs(&self) -> usize;
+    }
+    }
+}
+
+impl From<SyntaxOp> for SyntaxNode {
+    fn from(value: SyntaxOp) -> Self {
+        SyntaxNode::Operation(value)
+    }
+}
+
+impl From<SyntaxThunk> for SyntaxNode {
+    fn from(value: SyntaxThunk) -> Self {
+        SyntaxNode::Thunk(value)
+    }
+}
+
 pub struct Syntax;
 
 impl Addr for Syntax {
     type Edge = ();
     type Thunk = SyntaxThunk;
     type Operation = SyntaxOp;
+    type Node = SyntaxNode;
 }
 
 /// Corrresponds to the program `bind x = 1 in x`.

@@ -4,13 +4,13 @@ use std::fmt::Display;
 
 use delegate::delegate;
 use eframe::egui;
-use indexmap::IndexSet;
 use sd_core::{
+    common::SelectionMap,
     decompile::decompile,
     graph::{Name, Op},
     hypergraph::{
         subgraph::{normalise_selection, Free, Subgraph},
-        Operation, Thunk,
+        Thunk,
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
@@ -65,7 +65,7 @@ pub struct SelectionInternal<T: Language> {
 
 impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn new(
-        selected_nodes: &IndexSet<Operation<Op<T>, Name<T>>>,
+        selected_nodes: &SelectionMap<Op<T>, Name<T>>,
         expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
         name: String,
     ) -> Self
@@ -75,7 +75,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         Expr<T>: PrettyPrint,
     {
         let normalised = normalise_selection(selected_nodes);
-        let subgraph = Subgraph::generate_subgraph(&normalised);
+        let subgraph = Subgraph::generate_subgraph(normalised);
 
         let code = decompile(&subgraph.graph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());

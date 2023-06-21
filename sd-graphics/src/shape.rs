@@ -6,7 +6,7 @@ use egui::{
     epaint::{CubicBezierShape, PathShape, RectShape},
     vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use sd_core::common::Addr;
 
 use crate::common::{ContainsPoint, GraphMetadata, TEXT_SIZE, TOLERANCE};
@@ -85,6 +85,7 @@ impl<T: Addr> Shape<T> {
     }
 
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn collect_highlights<S>(
         &mut self,
         ui: &egui::Ui,
@@ -94,7 +95,7 @@ impl<T: Addr> Shape<T> {
         highlight_thunk: &mut Option<T::Thunk>,
         highlight_edges: &mut IndexSet<T::Edge>,
         metadata: &mut GraphMetadata<T>,
-        selection: Option<&mut IndexSet<T::Operation, S>>,
+        selection: Option<&mut IndexMap<T::Node, bool, S>>,
         subgraph_selection: Option<&mut IndexSet<T::Operation, S>>,
     ) where
         S: BuildHasher,
@@ -151,15 +152,18 @@ impl<T: Addr> Shape<T> {
             Shape::Operation {
                 addr, fill, stroke, ..
             } => {
-                let selected = selection.as_ref().map_or(false, |s| s.contains(addr));
+                let selected = selection
+                    .as_ref()
+                    .map_or(false, |s| s[&T::Node::from(addr.clone())]);
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new(&addr),
                     Sense::click().union(Sense::hover()),
                 );
                 if let Some(s) = selection {
-                    if op_response.clicked() && !s.remove(addr) {
-                        s.insert(addr.clone());
+                    if op_response.clicked() {
+                        let x = s.get_mut(&T::Node::from(addr.clone())).unwrap();
+                        *x = !*x;
                     }
                 }
                 *fill = Some(

@@ -5,21 +5,24 @@ use std::{
 };
 
 use derivative::Derivative;
+use indexmap::IndexMap;
 use num::rational::Ratio;
 use tracing::debug;
 
-use crate::hypergraph::{Edge, Operation, Thunk};
+use crate::hypergraph::{Edge, Node, Operation, Thunk};
 
 pub trait Addr {
     type Edge: Clone + Eq + PartialEq + Hash;
     type Thunk: Clone + Eq + PartialEq + Hash + InOut;
     type Operation: Clone + Eq + PartialEq + Hash + InOut;
+    type Node: Clone + Eq + PartialEq + Hash + InOut + From<Self::Thunk> + From<Self::Operation>;
 }
 
 impl<V, E> Addr for (V, E) {
     type Edge = Edge<V, E>;
     type Thunk = Thunk<V, E>;
     type Operation = Operation<V, E>;
+    type Node = Node<V, E>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -290,3 +293,5 @@ impl<T> Slice<Slice<T>> {
         }
     }
 }
+
+pub type SelectionMap<V, E> = IndexMap<Node<V, E>, bool>;

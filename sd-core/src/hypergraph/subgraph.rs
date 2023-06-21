@@ -8,10 +8,10 @@ use indexmap::{IndexMap, IndexSet};
 
 use super::{
     builder::{fragment::Fragment, HyperGraphBuilder, InPort, OutPort},
-    Edge, HyperGraph, Node, Operation, Thunk,
+    Edge, HyperGraph, Node, Thunk,
 };
 use crate::{
-    common::{Addr, InOut},
+    common::{Addr, InOut, SelectionMap},
     graph::Name,
     language::{chil, spartan, Language},
     weak_map::WeakMap,
@@ -70,19 +70,23 @@ fn find_ancestor<V, E>(
 }
 
 #[must_use]
-pub fn normalise_selection<V, E>(selection: &IndexSet<Operation<V, E>>) -> IndexSet<Node<V, E>> {
-    if let Some(op) = selection.first() {
+pub fn normalise_selection<V, E>(selection: &SelectionMap<V, E>) -> IndexSet<Node<V, E>> {
+    let selected: Vec<_> = selection
+        .iter()
+        .filter_map(|(k, v)| v.then_some(k))
+        .cloned()
+        .collect();
+    if let Some(op) = selected.first() {
         let mut containing = op.backlink();
-        for op in selection {
-            while find_ancestor(&containing, Node::Operation(op.clone())).is_none() {
+        for node in &selected[1..] {
+            while find_ancestor(&containing, node.clone()).is_none() {
                 containing = containing.unwrap().backlink();
             }
         }
 
-        selection
-            .iter()
-            .cloned()
-            .map(|op| find_ancestor(&containing, Node::Operation(op)).unwrap())
+        selected
+            .into_iter()
+            .map(|node| find_ancestor(&containing, node).unwrap())
             .collect()
     } else {
         IndexSet::new()
@@ -113,7 +117,7 @@ where
     E: Debug + Send + Sync + Clone + Free,
 {
     #[must_use]
-    pub fn generate_subgraph(selection: &IndexSet<Node<V, E>>) -> Self {
+    pub fn generate_subgraph(selection: IndexSet<Node<V, E>>) -> Self {
         let global_inputs: HashSet<Edge<V, E>> = selection
             .iter()
             .flat_map(Node::inputs)
