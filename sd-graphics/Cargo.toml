@@ -25,4 +25,3 @@ serde = "1.0.160"
 
 [features]
 cbc = ["good_lp/coin_cbc"]
-highs = ["good_lp/coin_cbc"]
