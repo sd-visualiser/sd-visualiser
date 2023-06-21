@@ -4,8 +4,8 @@ use std::{fmt::Display, sync::Arc};
 
 use delegate::delegate;
 use eframe::{
-    egui, emath,
-    epaint::{Rect, Rounding, Shape},
+    egui,
+    epaint::{Rounding, Shape},
 };
 use sd_core::{
     common::SelectionMap,
@@ -96,44 +96,30 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
                 ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
-            let to_screen = emath::RectTransform::from_to(
-                Rect::from_center_size(
-                    self.panzoom.translation,
-                    response.rect.size() / self.panzoom.zoom,
-                ),
-                response.rect,
-            );
+            let to_screen = self.panzoom.transform(response.rect);
             if let Some(hover_pos) = response.hover_pos() {
                 let anchor = to_screen.inverse().transform_pos(hover_pos);
                 ui.input(|i| {
                     self.panzoom.zoom(i.zoom_delta(), anchor);
-                    self.panzoom.translation -= i.scroll_delta / self.panzoom.zoom;
+                    self.panzoom.pan(i.scroll_delta);
                 });
                 ui.input_mut(|i| {
-                    const PAN_FACTOR: f32 = 10.0;
-                    const LEFT: egui::Vec2 = egui::vec2(-PAN_FACTOR, 0.0);
-                    const RIGHT: egui::Vec2 = egui::vec2(PAN_FACTOR, 0.0);
-                    const UP: egui::Vec2 = egui::vec2(0.0, -PAN_FACTOR);
-                    const DOWN: egui::Vec2 = egui::vec2(0.0, PAN_FACTOR);
-                    macro_rules! pan_by_key {
-                        ($key:expr, $direction:ident) => {
-                            if i.consume_shortcut(&egui::KeyboardShortcut::new(
-                                egui::Modifiers::NONE,
-                                $key,
-                            )) {
-                                self.panzoom.translation += $direction / self.panzoom.zoom;
-                            }
-                        };
-                    }
-
-                    pan_by_key!(egui::Key::ArrowLeft, LEFT);
-                    pan_by_key!(egui::Key::H, LEFT);
-                    pan_by_key!(egui::Key::ArrowRight, RIGHT);
-                    pan_by_key!(egui::Key::L, RIGHT);
-                    pan_by_key!(egui::Key::ArrowUp, UP);
-                    pan_by_key!(egui::Key::K, UP);
-                    pan_by_key!(egui::Key::ArrowDown, DOWN);
-                    pan_by_key!(egui::Key::J, DOWN);
+                    let mut pan_by_key = |key, pan: fn(&mut Panzoom) -> ()| {
+                        if i.consume_shortcut(&egui::KeyboardShortcut::new(
+                            egui::Modifiers::NONE,
+                            key,
+                        )) {
+                            pan(&mut self.panzoom);
+                        }
+                    };
+                    pan_by_key(egui::Key::ArrowLeft, Panzoom::pan_left);
+                    pan_by_key(egui::Key::H, Panzoom::pan_left);
+                    pan_by_key(egui::Key::ArrowRight, Panzoom::pan_right);
+                    pan_by_key(egui::Key::L, Panzoom::pan_right);
+                    pan_by_key(egui::Key::ArrowUp, Panzoom::pan_up);
+                    pan_by_key(egui::Key::K, Panzoom::pan_up);
+                    pan_by_key(egui::Key::ArrowDown, Panzoom::pan_down);
+                    pan_by_key(egui::Key::J, Panzoom::pan_down);
                 });
             }
 
