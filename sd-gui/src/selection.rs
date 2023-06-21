@@ -22,7 +22,7 @@ use crate::{
     parser::UiLanguage,
 };
 
-pub(crate) enum Selection {
+pub enum Selection {
     Chil(SelectionInternal<Chil>),
     Spartan(SelectionInternal<Spartan>),
 }
@@ -49,7 +49,7 @@ impl Selection {
     }
 }
 
-pub(crate) struct SelectionInternal<T: Language> {
+pub struct SelectionInternal<T: Language> {
     name: String,
     displayed: bool,
     code: String,
@@ -89,8 +89,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
     where
-        T::Op: Display,
-        T::Op: PrettyPrint,
+        T::Op: Display + PrettyPrint,
         T::Var: PrettyPrint,
         T::Addr: Display,
         T::VarDef: PrettyPrint,

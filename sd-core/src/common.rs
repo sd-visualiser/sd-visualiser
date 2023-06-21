@@ -30,7 +30,7 @@ pub enum Direction {
 
 impl Direction {
     #[must_use]
-    pub fn flip(self) -> Self {
+    pub const fn flip(self) -> Self {
         match self {
             Direction::Forward => Direction::Backward,
             Direction::Backward => Direction::Forward,
@@ -147,12 +147,12 @@ impl From<PermutationOutput> for Option<usize> {
     }
 }
 
-pub(crate) fn generate_permutation<'a, T: 'a>(
+pub(crate) fn generate_permutation<'a, T>(
     start: impl Iterator<Item = (T, Direction)> + 'a,
     end: impl Iterator<Item = (T, Direction)> + 'a,
 ) -> Vec<((T, Direction), PermutationOutput)>
 where
-    T: PartialEq + Eq + Hash,
+    T: 'a + PartialEq + Eq + Hash,
 {
     let mut end_map: HashMap<(T, Direction), VecDeque<usize>> = HashMap::default();
     for (idx, x) in end.enumerate() {

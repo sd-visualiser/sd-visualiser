@@ -101,14 +101,14 @@ pub enum Arg<T: Language> {
 }
 
 impl<T: Language> Arg<T> {
-    pub fn value(&self) -> Option<&Value<T>> {
+    pub const fn value(&self) -> Option<&Value<T>> {
         match self {
             Self::Value(value) => Some(value),
             Self::Thunk(_) => None,
         }
     }
 
-    pub fn thunk(&self) -> Option<&Thunk<T>> {
+    pub const fn thunk(&self) -> Option<&Thunk<T>> {
         match self {
             Self::Value(_) => None,
             Self::Thunk(thunk) => Some(thunk),

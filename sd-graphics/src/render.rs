@@ -19,6 +19,7 @@ use crate::{
     shape::Shape,
 };
 
+#[allow(clippy::needless_collect)]
 #[allow(clippy::type_complexity)]
 pub fn render<T, S>(
     ui: &egui::Ui,
@@ -69,9 +70,7 @@ where
         vec![op.weight().to_pretty()]
     } else if let Some(thunk) = highlight_thunk {
         highlight_edges.extend(thunk.inputs().chain(thunk.outputs()));
-        vec![decompile(&thunk)
-            .map(|body| body.to_pretty())
-            .unwrap_or("thunk".to_owned())]
+        vec![decompile(&thunk).map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
     } else {
         highlight_edges
             .iter()

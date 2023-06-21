@@ -212,7 +212,7 @@ impl<T: Addr> MonoidalOp<T> {
     }
 
     #[must_use]
-    pub fn is_id_or_backlink(&self) -> bool {
+    pub const fn is_id_or_backlink(&self) -> bool {
         match self {
             MonoidalOp::Copy { copies, .. } => *copies == 1,
             MonoidalOp::Backlink { .. } => true,

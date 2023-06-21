@@ -21,7 +21,7 @@ use tracing::debug;
 
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
-pub(crate) enum GraphUi {
+pub enum GraphUi {
     Chil(
         GraphUiInternal<Chil>,
         IndexSet<Operation<Op<Chil>, Name<Chil>>>,
@@ -46,7 +46,7 @@ impl GraphUi {
             GraphUi::Chil(graph_ui, _) => graph_ui,
             GraphUi::Spartan(graph_ui, _) => graph_ui,
         } {
-            pub(crate) fn ready(&self) -> bool;
+            pub(crate) const fn ready(&self) -> bool;
             pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
@@ -69,7 +69,7 @@ impl GraphUi {
     }
 }
 
-pub(crate) struct GraphUiInternal<T: Language> {
+pub struct GraphUiInternal<T: Language> {
     #[allow(dead_code)] // Dropping this breaks the app
     hypergraph: SyntaxHyperGraph<T>,
     monoidal_graph: Arc<MonoidalGraph<(Op<T>, Name<T>)>>,
@@ -85,8 +85,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         ui: &mut egui::Ui,
         current_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>>>,
     ) where
-        T::Op: Display,
-        T::Op: PrettyPrint,
+        T::Op: Display + PrettyPrint,
         T::Var: PrettyPrint,
         T::Addr: Display,
         T::VarDef: PrettyPrint,
@@ -190,7 +189,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         this
     }
 
-    pub(crate) fn ready(&self) -> bool {
+    pub(crate) const fn ready(&self) -> bool {
         self.ready
     }
 

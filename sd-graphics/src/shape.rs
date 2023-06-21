@@ -203,7 +203,7 @@ impl<T: Addr> Shape<T> {
             } => egui::Shape::Rect(RectShape {
                 rect,
                 rounding: Rounding::none(),
-                fill: fill.unwrap_or(Color32::default()),
+                fill: fill.unwrap_or_default(),
                 stroke: stroke.unwrap_or(default_stroke),
             }),
             Shape::CircleFilled {
@@ -232,7 +232,7 @@ impl<T: Addr> Shape<T> {
                         radius * vec2(label.chars().count() as f32 + 1.0, 2.0),
                     ),
                     rounding: Rounding::same(radius),
-                    fill: fill.unwrap_or(Color32::default()),
+                    fill: fill.unwrap_or_default(),
                     stroke: stroke.unwrap_or(default_stroke),
                 });
                 let text_size: f32 = TEXT_SIZE * transform.scale().min_elem();

@@ -40,7 +40,7 @@ impl<V, E> Node<V, E> {
         NReachable {
             depth_limit,
             seen: HashSet::default(),
-            frontier: [(0, self.clone())].into_iter().collect(),
+            frontier: std::iter::once((0, self.clone())).collect(),
             next_nodes: Self::boxed_sucessors,
         }
     }
@@ -54,7 +54,7 @@ impl<V, E> Node<V, E> {
         NReachable {
             depth_limit,
             seen: HashSet::default(),
-            frontier: [(0, self.clone())].into_iter().collect(),
+            frontier: std::iter::once((0, self.clone())).collect(),
             next_nodes: Self::boxed_predecessors,
         }
     }

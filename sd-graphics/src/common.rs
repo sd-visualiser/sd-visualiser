@@ -10,12 +10,12 @@ use sd_core::{
     prettyprinter::{paran_list, PrettyPrint},
 };
 
-pub(crate) const RADIUS_ARG: f32 = 0.05;
-pub(crate) const RADIUS_COPY: f32 = 0.1;
-pub(crate) const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
-pub(crate) const TOLERANCE: f32 = 0.1;
-pub(crate) const TEXT_SIZE: f32 = 0.28;
-pub(crate) const RADIUS_OPERATION: f32 = 0.2;
+pub const RADIUS_ARG: f32 = 0.05;
+pub const RADIUS_COPY: f32 = 0.1;
+pub const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
+pub const TOLERANCE: f32 = 0.1;
+pub const TEXT_SIZE: f32 = 0.28;
+pub const RADIUS_OPERATION: f32 = 0.2;
 
 /// Edge label is like `Name` but records the arguments to operations.
 #[derive(Derivative)]
@@ -82,7 +82,7 @@ where
     }
 }
 
-pub(crate) trait ContainsPoint {
+pub trait ContainsPoint {
     // Check if a point lies on a line or curve (with the given tolerance).
     fn contains_point(self, point: Pos2, tolerance: f32) -> bool;
 }

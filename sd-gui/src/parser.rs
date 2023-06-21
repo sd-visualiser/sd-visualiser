@@ -14,7 +14,7 @@ pub enum UiLanguage {
 }
 
 impl UiLanguage {
-    pub(crate) fn name(&self) -> &str {
+    pub(crate) const fn name(&self) -> &str {
         match self {
             Self::Chil => "chil",
             Self::Spartan => "spartan",
@@ -40,7 +40,7 @@ pub enum ParseError {
     Conversion(#[from] ConversionError<Void>),
 }
 
-pub(crate) fn parse(source: &str, language: UiLanguage) -> Result<ParseOutput, ParseError> {
+pub fn parse(source: &str, language: UiLanguage) -> Result<ParseOutput, ParseError> {
     match language {
         UiLanguage::Chil => {
             let mut pairs = ChilParser::parse(chil::Rule::program, source).map_err(Box::new)?;

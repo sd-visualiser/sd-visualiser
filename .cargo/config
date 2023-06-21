@@ -1,16 +1,39 @@
 [build]
 rustflags = [
-    "-Wclippy::pedantic",
+    # cargo
     "-Wclippy::cargo",
+    "-Aclippy::cargo_common_metadata",
+
+    # nursery
+    "-Wclippy::nursery",
+    "-Aclippy::option_if_let_else",
+    "-Aclippy::significant_drop_tightening",
+    "-Aclippy::suboptimal_flops",
+    "-Aclippy::use_self",
+
+    # pedantic
+    "-Wclippy::pedantic",
+    "-Aclippy::cast_precision_loss",
+    "-Aclippy::missing_errors_doc",
+    "-Aclippy::missing_panics_doc",
+    "-Aclippy::module_name_repetitions",
 
     # restrictions
+    "-Wclippy::as_underscore",
     "-Wclippy::dbg_macro",
     "-Wclippy::decimal_literal_representation",
+    "-Wclippy::deref_by_slicing",
+    "-Wclippy::disallowed_script_idents",
+    "-Wclippy::empty_structs_with_brackets",
     "-Wclippy::exit",
+    "-Wclippy::format_push_string",
     "-Wclippy::get_unwrap",
-    # "-Wclippy::let_underscore_must_use",
+    "-Wclippy::if_then_some_else_none",
+    "-Wclippy::large_include_file",
     "-Wclippy::map_err_ignore",
     "-Wclippy::mem_forget",
+    "-Wclippy::multiple_inherent_impl",
+    "-Wclippy::partial_pub_fields",
     "-Wclippy::print_stderr",
     "-Wclippy::rc_buffer",
     "-Wclippy::rest_pat_in_fully_bound_structs",
@@ -24,13 +47,4 @@ rustflags = [
     "-Wclippy::unnecessary_self_imports",
     "-Wclippy::unneeded_field_pattern",
     "-Wclippy::unseparated_literal_suffix",
-
-    # exceptions
-    "-Aclippy::cargo_common_metadata",
-    "-Aclippy::cast_possible_truncation",
-    "-Aclippy::missing-errors-doc",
-    "-Aclippy::missing-panics-doc",
-    "-Aclippy::module-name-repetitions",
-    "-Aclippy::cast-precision-loss",
-    "-Aclippy::let_underscore_untyped",
 ]

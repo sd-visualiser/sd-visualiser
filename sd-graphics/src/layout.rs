@@ -35,14 +35,14 @@ pub enum Node<T> {
 }
 
 impl<T> Node<T> {
-    pub fn min(&self) -> &T {
+    pub const fn min(&self) -> &T {
         match self {
             Self::Atom(pos) | Self::Swap { pos, .. } => pos,
             Self::Thunk(layout) => &layout.min,
         }
     }
 
-    pub fn max(&self) -> &T {
+    pub const fn max(&self) -> &T {
         match self {
             Self::Atom(pos) | Self::Swap { pos, .. } => pos,
             Self::Thunk(layout) => &layout.max,
@@ -134,6 +134,7 @@ impl Layout {
             + 1.0
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     fn from_solution(layout: LayoutInternal<Variable>, solution: &impl Solution) -> Self {
         Layout {
             min: solution.value(layout.min) as f32,

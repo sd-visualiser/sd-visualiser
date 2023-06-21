@@ -34,7 +34,7 @@ where
         .clone()
 }
 
-pub(crate) fn clear_shape_cache() {
+pub fn clear_shape_cache() {
     if let Some(cache) = CACHE.get() {
         cache.lock().clear();
     }

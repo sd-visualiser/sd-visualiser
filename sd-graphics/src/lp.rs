@@ -4,7 +4,7 @@ use good_lp::{
 };
 
 #[derive(Default)]
-pub(crate) struct LpProblem {
+pub struct LpProblem {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
     objective: Expression,

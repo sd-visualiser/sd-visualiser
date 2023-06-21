@@ -248,6 +248,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
     }
 }
 
+#[allow(clippy::fallible_impl_from)]
 impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<V, E>
 where
     G: Graph<NodeWeight = V, EdgeWeight = E>,
@@ -266,10 +267,10 @@ where
             builder.insert_operation(&node);
         }
 
-        let remaining_edges: Vec<_> = builder.open_edges.keys().cloned().collect();
-
-        let (backlinked_edges, other_edges): (Vec<_>, Vec<_>) = remaining_edges
-            .into_iter()
+        let (backlinked_edges, other_edges): (Vec<_>, Vec<_>) = builder
+            .open_edges
+            .keys()
+            .cloned()
             .partition(|x| builder.backlinks.get(x).map(|y| (x, y)).is_some());
 
         for edge in backlinked_edges {
