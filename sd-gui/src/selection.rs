@@ -9,8 +9,8 @@ use sd_core::{
     decompile::decompile,
     graph::{Name, Op},
     hypergraph::{
-        subgraph::{normalise_selection, Free},
-        HyperGraph, Operation,
+        subgraph::{normalise_selection, Free, Subgraph},
+        Operation,
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
@@ -64,7 +64,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         Expr<T>: PrettyPrint,
     {
         let normalised = normalise_selection(selected_nodes);
-        let hypergraph = HyperGraph::generate_subgraph(&normalised);
+        let hypergraph = Subgraph::generate_subgraph(&normalised).graph;
 
         let code = decompile(&hypergraph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());

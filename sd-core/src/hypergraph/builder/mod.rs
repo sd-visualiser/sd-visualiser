@@ -7,7 +7,7 @@ use std::{
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 use itertools::Itertools;
 use thiserror::Error;
 
@@ -96,6 +96,12 @@ impl<V, E> Debug for OutPort<V, E> {
     }
 }
 
+impl<V, E> OutPort<V, E> {
+    pub(super) fn into_edge_unchecked(self) -> Edge<V, E> {
+        Edge(self.0)
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
@@ -158,6 +164,10 @@ impl<V, E> ThunkBuilder<V, E> {
             .outputs
             .keys()
             .map(|in_port| InPort(in_port.clone()))
+    }
+
+    pub(super) fn into_thunk_unchecked(self) -> Thunk<V, E> {
+        Thunk(self.0)
     }
 
     fn fold<Err>(
@@ -461,13 +471,16 @@ impl<V: Clone, E: Clone> Thunk<V, E> {
         &self,
         fragment: &mut F,
         in_port_map: &mut HashMap<InPort<V, E>, Edge<V, E>>,
-        out_port_map: &mut HashMap<Edge<V, E>, OutPort<V, E>>,
+        out_port_map: &mut IndexMap<Edge<V, E>, OutPort<V, E>>,
+        thunk_mapping: &mut IndexMap<Thunk<V, E>, Thunk<V, E>>,
     ) {
         let bound_variables = self.bound_graph_inputs().map(|edge| edge.weight().clone());
 
         let output_weights = self.outputs().map(|edge| edge.weight().clone());
 
         let thunk = fragment.add_thunk(bound_variables, output_weights);
+
+        thunk_mapping.insert(thunk.clone().into_thunk_unchecked(), self.clone());
 
         out_port_map.extend(self.bound_graph_inputs().zip(thunk.bound_inputs()));
         out_port_map.extend(self.outputs().zip(thunk.outputs()));
@@ -492,7 +505,12 @@ impl<V: Clone, E: Clone> Thunk<V, E> {
                         out_port_map.extend(node.outputs().zip(op.outputs()));
                     }
                     super::Node::Thunk(thunk) => {
-                        thunk.clone_thunk(&mut inner_fragment, in_port_map, out_port_map);
+                        thunk.clone_thunk(
+                            &mut inner_fragment,
+                            in_port_map,
+                            out_port_map,
+                            thunk_mapping,
+                        );
                     }
                 }
             }

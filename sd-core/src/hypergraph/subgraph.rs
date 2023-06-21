@@ -3,16 +3,17 @@ use std::{
     fmt::Debug,
 };
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
 
 use super::{
     builder::{fragment::Fragment, HyperGraphBuilder, InPort, OutPort},
     Edge, HyperGraph, Node, Operation, Thunk,
 };
 use crate::{
-    common::InOut,
+    common::{Addr, InOut},
     graph::Name,
     language::{chil, spartan, Language},
+    weak_map::WeakMap,
 };
 
 pub trait Free {
@@ -87,7 +88,17 @@ pub fn normalise_selection<V, E>(selection: &IndexSet<Operation<V, E>>) -> Index
     }
 }
 
-impl<V, E> HyperGraph<V, E>
+pub struct Mapping<T: Addr> {
+    pub edge_mapping: WeakMap<T::Edge, T::Edge>,
+    pub thunk_mapping: WeakMap<T::Thunk, T::Thunk>,
+}
+
+pub struct Subgraph<V, E> {
+    pub graph: HyperGraph<V, E>,
+    pub mapping: Mapping<(V, E)>,
+}
+
+impl<V, E> Subgraph<V, E>
 where
     V: Debug + Send + Sync + Clone,
     E: Debug + Send + Sync + Clone + Free,
@@ -131,10 +142,12 @@ where
             builder.graph_outputs().zip(global_outputs).collect();
 
         // Mapping from edges of the original graph to out_ports of the subgraph
-        let mut out_port_map: HashMap<Edge<V, E>, OutPort<V, E>> = global_inputs
+        let mut out_port_map: IndexMap<Edge<V, E>, OutPort<V, E>> = global_inputs
             .into_iter()
             .zip(builder.graph_inputs())
             .collect();
+
+        let mut thunk_mapping: IndexMap<Thunk<V, E>, Thunk<V, E>> = IndexMap::new();
 
         for node in selection {
             match &node {
@@ -153,7 +166,12 @@ where
                     out_port_map.extend(node.outputs().zip(op.outputs()));
                 }
                 Node::Thunk(thunk) => {
-                    thunk.clone_thunk(&mut builder, &mut in_port_map, &mut out_port_map);
+                    thunk.clone_thunk(
+                        &mut builder,
+                        &mut in_port_map,
+                        &mut out_port_map,
+                        &mut thunk_mapping,
+                    );
                 }
             };
         }
@@ -163,6 +181,18 @@ where
             builder.link(out_port_map[&edge].clone(), in_port).unwrap();
         }
 
-        builder.build().unwrap()
+        let mapping = Mapping {
+            edge_mapping: out_port_map
+                .into_iter()
+                .map(|(k, v)| (v.into_edge_unchecked(), k))
+                .collect::<IndexMap<_, _>>()
+                .into(),
+            thunk_mapping: thunk_mapping.into(),
+        };
+
+        Subgraph {
+            graph: builder.build().unwrap(),
+            mapping,
+        }
     }
 }

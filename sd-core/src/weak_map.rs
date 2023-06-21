@@ -11,6 +11,12 @@ use indexmap::IndexMap;
 #[derivative(Default(bound = ""))]
 pub struct WeakMap<S, T>(pub(crate) IndexMap<S, T>);
 
+impl<S, T> From<IndexMap<S, T>> for WeakMap<S, T> {
+    fn from(value: IndexMap<S, T>) -> Self {
+        WeakMap(value)
+    }
+}
+
 impl<S: PartialEq, T: PartialEq> PartialEq for WeakMap<S, T> {
     fn eq(&self, other: &Self) -> bool {
         if self.0.len() != other.0.len() {
