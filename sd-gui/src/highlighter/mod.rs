@@ -72,8 +72,8 @@ impl CodeTheme {
 
 // ----------------------------------------------------------------------------
 
-pub const CHIL_SYNTAX: &str = include_str!("highlighter/chil.sublime-syntax");
-pub const SPARTAN_SYNTAX: &str = include_str!("highlighter/spartan.sublime-syntax");
+pub const CHIL_SYNTAX: &str = include_str!("chil.sublime-syntax");
+pub const SPARTAN_SYNTAX: &str = include_str!("spartan.sublime-syntax");
 
 struct Highlighter {
     themes: ThemeSet,
