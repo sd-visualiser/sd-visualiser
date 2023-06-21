@@ -40,8 +40,7 @@ where
 {
     let viewport = *to_screen.from();
 
-    let mut highlight_op = None;
-    let mut highlight_thunk = None;
+    let mut highlight_node = None;
     let mut highlight_edges = IndexSet::default();
 
     let shapes_vec: Vec<_> = shapes
@@ -54,8 +53,7 @@ where
                 ui,
                 response,
                 &to_screen,
-                &mut highlight_op,
-                &mut highlight_thunk,
+                &mut highlight_node,
                 &mut highlight_edges,
                 metadata,
                 selection.as_deref_mut(),
@@ -66,17 +64,23 @@ where
         .collect();
 
     // Show hover tooltips.
-    let labels = if let Some(op) = highlight_op {
-        highlight_edges.extend(op.inputs().chain(op.outputs()));
-        vec![op.weight().to_pretty()]
-    } else if let Some(thunk) = highlight_thunk {
-        highlight_edges.extend(thunk.inputs().chain(thunk.outputs()));
-        vec![decompile(&thunk).map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
-    } else {
-        highlight_edges
+    let labels = match highlight_node {
+        Some(node) => {
+            highlight_edges.extend(node.inputs().chain(node.outputs()));
+            match node {
+                Node::Operation(op) => {
+                    vec![op.weight().to_pretty()]
+                }
+                Node::Thunk(thunk) => {
+                    vec![decompile(&thunk)
+                        .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
+                }
+            }
+        }
+        None => highlight_edges
             .iter()
             .map(|edge| EdgeLabel::from_edge(edge).to_pretty())
-            .collect()
+            .collect(),
     };
     for label in labels {
         show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {

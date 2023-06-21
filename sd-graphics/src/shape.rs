@@ -91,8 +91,7 @@ impl<T: Addr> Shape<T> {
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
-        highlight_op: &mut Option<T::Operation>,
-        highlight_thunk: &mut Option<T::Thunk>,
+        highlight_node: &mut Option<T::Node>,
         highlight_edges: &mut IndexSet<T::Edge>,
         metadata: &mut GraphMetadata<T>,
         selection: Option<&mut IndexMap<T::Node, bool, S>>,
@@ -142,7 +141,7 @@ impl<T: Addr> Shape<T> {
                 if !metadata[addr] {
                     *fill = Some(ui.style().interact(&thunk_response).bg_fill);
                     if thunk_response.hovered() {
-                        *highlight_thunk = Some(addr.clone());
+                        *highlight_node = Some(addr.clone().into());
                     }
                 }
                 if thunk_response.clicked() {
@@ -177,7 +176,7 @@ impl<T: Addr> Shape<T> {
                         .fg_stroke,
                 );
                 if op_response.hovered() {
-                    *highlight_op = Some(addr.clone());
+                    *highlight_node = Some(addr.clone().into());
                 }
             }
             Shape::Arrow {
