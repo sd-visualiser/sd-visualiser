@@ -3,7 +3,7 @@ use std::hash::BuildHasher;
 use derivative::Derivative;
 use egui::{
     emath::RectTransform,
-    epaint::{CubicBezierShape, RectShape},
+    epaint::{CubicBezierShape, PathShape, RectShape},
     vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
@@ -42,6 +42,14 @@ pub enum Shape<T: Addr> {
         fill: Option<Color32>,
         stroke: Option<Stroke>,
     },
+    Arrow {
+        addr: T::Edge,
+        ops_to_add: Vec<T::Operation>,
+        center: Pos2,
+        upwards: bool,
+        stroke: Option<Stroke>,
+        height: f32,
+    },
 }
 
 pub struct Shapes<T: Addr> {
@@ -69,6 +77,10 @@ impl<T: Addr> Shape<T> {
                 *center = transform.transform_pos(*center);
                 *radius *= transform.scale().min_elem(); // NOTE(calintat): should this be length?
             }
+            Shape::Arrow { center, height, .. } => {
+                *center = transform.transform_pos(*center);
+                *height *= transform.scale().min_elem();
+            }
         }
     }
 
@@ -82,7 +94,8 @@ impl<T: Addr> Shape<T> {
         highlight_thunk: &mut Option<T::Thunk>,
         highlight_edges: &mut IndexSet<T::Edge>,
         expanded: &mut WeakMap<T::Thunk, bool>,
-        selection: &mut Option<&mut IndexSet<T::Operation, S>>,
+        selection: Option<&mut IndexSet<T::Operation, S>>,
+        subgraph_selection: Option<&mut IndexSet<T::Operation, S>>,
     ) where
         S: BuildHasher,
     {
@@ -144,7 +157,7 @@ impl<T: Addr> Shape<T> {
                     Id::new(&addr),
                     Sense::click().union(Sense::hover()),
                 );
-                if let Some(s) = selection.as_mut() {
+                if let Some(s) = selection {
                     if op_response.clicked() && !s.remove(addr) {
                         s.insert(addr.clone());
                     }
@@ -163,10 +176,33 @@ impl<T: Addr> Shape<T> {
                     *highlight_op = Some(addr.clone());
                 }
             }
+            Shape::Arrow {
+                addr,
+                ops_to_add,
+                stroke,
+                ..
+            } => {
+                let arrow_response = ui.interact(
+                    bounding_box.intersect(bounds),
+                    Id::new(addr),
+                    Sense::click(),
+                );
+
+                if arrow_response.hovered() {
+                    *stroke = Some(ui.style().interact(&arrow_response).fg_stroke);
+                }
+
+                if arrow_response.clicked() {
+                    if let Some(x) = subgraph_selection {
+                        (*x).extend(std::mem::take(ops_to_add));
+                    }
+                }
+            }
             Shape::CircleFilled { .. } => {}
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub(crate) fn into_egui_shape(
         self,
         ui: &egui::Ui,
@@ -251,6 +287,36 @@ impl<T: Addr> Shape<T> {
                 });
                 egui::Shape::Vec(vec![rect, text])
             }
+            Shape::Arrow {
+                center,
+                upwards,
+                height,
+                stroke,
+                ..
+            } => {
+                let stroke = stroke.unwrap_or(default_stroke);
+
+                let fill = stroke.color;
+
+                let vertical_offset = if upwards { height } else { -height };
+
+                let left = center + Vec2::new(-height / 2.0, vertical_offset);
+                let right = center + Vec2::new(height / 2.0, vertical_offset);
+
+                // Paths should be clockwise
+                let points = if upwards {
+                    vec![left, center, right]
+                } else {
+                    vec![left, right, center]
+                };
+
+                egui::Shape::Path(PathShape {
+                    points,
+                    closed: true,
+                    fill,
+                    stroke,
+                })
+            }
         }
     }
 
@@ -271,6 +337,9 @@ impl<T: Addr> Shape<T> {
                 *center,
                 *radius * vec2(label.chars().count() as f32 + 1.0, 2.0),
             ),
+            Shape::Arrow { center, height, .. } => {
+                Rect::from_center_size(*center, Vec2::splat(*height * 5.0))
+            }
         }
     }
 }

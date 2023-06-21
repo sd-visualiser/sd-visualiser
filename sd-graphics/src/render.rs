@@ -28,6 +28,7 @@ pub fn render<T, S>(
     expanded: &mut WeakMap<Thunk<Op<T>, Name<T>>, bool>,
     mut selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
     to_screen: RectTransform,
+    mut subgraph_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
 ) -> Vec<egui::Shape>
 where
     T: Language,
@@ -58,7 +59,8 @@ where
                 &mut highlight_thunk,
                 &mut highlight_edges,
                 expanded,
-                &mut selection,
+                selection.as_deref_mut(),
+                subgraph_selection.as_deref_mut(),
             );
             s
         })

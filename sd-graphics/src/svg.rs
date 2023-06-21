@@ -80,6 +80,9 @@ impl<T: Addr> Shape<T> {
                     .set("stroke", "black")
                     .set("stroke-width", 1)
             }),
+            Self::Arrow { .. } => {
+                panic!("Arrows should not be in svgs")
+            }
         }
     }
 }

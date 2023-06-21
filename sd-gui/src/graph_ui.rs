@@ -155,6 +155,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
                 &mut self.expanded,
                 current_selection,
                 to_screen,
+                None,
             ));
             self.ready = true;
         } else {
