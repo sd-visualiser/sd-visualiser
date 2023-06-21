@@ -10,7 +10,7 @@ use eframe::{
 use indexmap::IndexSet;
 use sd_core::{
     graph::{Name, Op, SyntaxHyperGraph},
-    hypergraph::{Operation, Thunk},
+    hypergraph::{HyperGraph, Operation, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
@@ -33,14 +33,14 @@ pub(crate) enum GraphUi {
 }
 
 impl GraphUi {
-    pub(crate) fn new_chil(ctx: &egui::Context, hypergraph: &SyntaxHyperGraph<Chil>) -> Self {
+    pub(crate) fn new_chil(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Chil>) -> Self {
         Self::Chil(
             GraphUiInternal::from_graph(hypergraph, ctx),
             IndexSet::new(),
         )
     }
 
-    pub(crate) fn new_spartan(ctx: &egui::Context, hypergraph: &SyntaxHyperGraph<Spartan>) -> Self {
+    pub(crate) fn new_spartan(ctx: &egui::Context, hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
         Self::Spartan(
             GraphUiInternal::from_graph(hypergraph, ctx),
             IndexSet::new(),
@@ -75,6 +75,9 @@ impl GraphUi {
 }
 
 pub(crate) struct GraphUiInternal<T: Language> {
+    #[allow(dead_code)] // Dropping this breaks the app
+    hypergraph: HyperGraph<Op<T>, Name<T>>,
+
     monoidal_graph: MonoidalGraph<(Op<T>, Name<T>)>,
     expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
     panzoom: Panzoom,
@@ -129,14 +132,14 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         ));
     }
 
-    pub(crate) fn from_graph(hypergraph: &SyntaxHyperGraph<T>, ctx: &egui::Context) -> Self
+    pub(crate) fn from_graph(hypergraph: SyntaxHyperGraph<T>, ctx: &egui::Context) -> Self
     where
         T::Op: Display,
     {
         let expanded = hypergraph.create_expanded();
 
         debug!("Converting to monoidal term");
-        let monoidal_term = MonoidalWiredGraph::from(hypergraph);
+        let monoidal_term = MonoidalWiredGraph::from(&hypergraph);
         debug!("Got term {:#?}", monoidal_term);
 
         debug!("Inserting swaps and copies");
@@ -144,6 +147,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         debug!("Got graph {:#?}", monoidal_graph);
 
         let mut this = Self {
+            hypergraph,
             monoidal_graph,
             expanded,
             panzoom: Panzoom::default(),

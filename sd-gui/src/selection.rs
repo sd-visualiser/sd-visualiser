@@ -73,7 +73,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         let code = decompile(&hypergraph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
 
-        let graph_ui = GraphUiInternal::from_graph(&hypergraph, ctx);
+        let graph_ui = GraphUiInternal::from_graph(hypergraph, ctx);
 
         Self {
             code,

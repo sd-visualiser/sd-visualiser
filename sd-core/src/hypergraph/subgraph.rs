@@ -24,7 +24,6 @@ impl Free for chil::Variable {
     fn is_var(&self) -> bool {
         true
     }
-
     fn generate_free(number: usize) -> Self {
         Self {
             name: None,
