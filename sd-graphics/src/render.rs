@@ -6,15 +6,14 @@ use sd_core::{
     common::{InOut, InOutIter},
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{Graph, Operation, Thunk},
+    hypergraph::{Graph, Operation},
     language::{Expr, Language},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
-    weak_map::WeakMap,
 };
 
 use crate::{
-    common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{EdgeLabel, GraphMetadata, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     layout::Layout,
     shape::Shape,
 };
@@ -25,7 +24,7 @@ pub fn render<T, S>(
     ui: &egui::Ui,
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
-    expanded: &mut WeakMap<Thunk<Op<T>, Name<T>>, bool>,
+    metadata: &mut GraphMetadata<(Op<T>, Name<T>)>,
     mut selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
     to_screen: RectTransform,
     mut subgraph_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
@@ -58,7 +57,7 @@ where
                 &mut highlight_op,
                 &mut highlight_thunk,
                 &mut highlight_edges,
-                expanded,
+                metadata,
                 selection.as_deref_mut(),
                 subgraph_selection.as_deref_mut(),
             );
@@ -97,7 +96,7 @@ pub fn generate_shapes<V, E>(
     mut y_offset: f32,
     layout: &Layout,
     graph: &MonoidalGraph<(V, E)>,
-    expanded: &WeakMap<Thunk<V, E>, bool>,
+    metadata: &GraphMetadata<(V, E)>,
 ) where
     V: Display,
 {
@@ -146,7 +145,7 @@ pub fn generate_shapes<V, E>(
                         });
                     }
                 }
-                MonoidalOp::Thunk { addr, body, .. } if expanded[addr] => {
+                MonoidalOp::Thunk { addr, body, .. } if metadata[addr] => {
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
@@ -189,7 +188,7 @@ pub fn generate_shapes<V, E>(
                             addr: port,
                         });
                     }
-                    generate_shapes(shapes, y_min, x_op, body, expanded);
+                    generate_shapes(shapes, y_min, x_op, body, metadata);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();

@@ -1,4 +1,7 @@
-use std::fmt::Display;
+use std::{
+    fmt::Display,
+    ops::{Index, IndexMut},
+};
 
 use derivative::Derivative;
 use egui::{epaint::CubicBezierShape, vec2, Pos2, Vec2};
@@ -117,7 +120,37 @@ impl ContainsPoint for CubicBezierShape {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = "T::Thunk: Clone, T::Edge: Clone"),
+    Hash(bound = ""),
+    Default(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub struct GraphMetadata<T: Addr> {
     pub expanded: WeakMap<T::Thunk, bool>,
     pub mapping: Option<Mapping<T>>,
+}
+
+impl<T: Addr> Index<&T::Thunk> for GraphMetadata<T> {
+    type Output = bool;
+
+    fn index(&self, index: &T::Thunk) -> &Self::Output {
+        if let Some(map) = &self.mapping {
+            &self.expanded[&map.thunk_mapping[index]]
+        } else {
+            &self.expanded[index]
+        }
+    }
+}
+
+impl<T: Addr> IndexMut<&T::Thunk> for GraphMetadata<T> {
+    fn index_mut(&mut self, index: &T::Thunk) -> &mut Self::Output {
+        if let Some(map) = &self.mapping {
+            &mut self.expanded[&map.thunk_mapping[index]]
+        } else {
+            &mut self.expanded[index]
+        }
+    }
 }

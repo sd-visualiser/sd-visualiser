@@ -3,6 +3,7 @@ use std::{
     fmt::Debug,
 };
 
+use derivative::Derivative;
 use indexmap::{IndexMap, IndexSet};
 
 use super::{
@@ -88,6 +89,14 @@ pub fn normalise_selection<V, E>(selection: &IndexSet<Operation<V, E>>) -> Index
     }
 }
 
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = "T::Edge: Clone, T::Thunk: Clone"),
+    Hash(bound = ""),
+    Default(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
 pub struct Mapping<T: Addr> {
     pub edge_mapping: WeakMap<T::Edge, T::Edge>,
     pub thunk_mapping: WeakMap<T::Thunk, T::Thunk>,

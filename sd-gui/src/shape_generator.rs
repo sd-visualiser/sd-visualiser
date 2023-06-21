@@ -9,13 +9,13 @@ use eframe::{
 };
 use lru::LruCache;
 use poll_promise::Promise;
-use sd_core::{hypergraph::Thunk, monoidal::MonoidalGraph, weak_map::WeakMap};
-use sd_graphics::{layout::layout, render, shape::Shapes};
+use sd_core::monoidal::MonoidalGraph;
+use sd_graphics::{common::GraphMetadata, layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
 type Cache<V, E> = LruCache<
-    (Arc<MonoidalGraph<(V, E)>>, WeakMap<Thunk<V, E>, bool>),
+    (Arc<MonoidalGraph<(V, E)>>, GraphMetadata<(V, E)>),
     Arc<Mutex<Promise<Shapes<(V, E)>>>>,
 >;
 
@@ -43,7 +43,7 @@ pub fn clear_shape_cache() {
 #[allow(clippy::type_complexity)]
 pub fn generate_shapes<V, E>(
     graph: &Arc<MonoidalGraph<(V, E)>>,
-    expanded: &WeakMap<Thunk<V, E>, bool>,
+    metadata: &GraphMetadata<(V, E)>,
 ) -> Arc<Mutex<Promise<Shapes<(V, E)>>>>
 where
     V: 'static + Send + Sync + Display,
@@ -52,15 +52,15 @@ where
     let cache = shape_cache();
     let mut guard = cache.lock();
     guard
-        .get_or_insert((graph.clone(), expanded.clone()), || {
+        .get_or_insert((graph.clone(), metadata.clone()), || {
             let graph = graph.clone();
-            let expanded = expanded.clone();
+            let metadata = metadata.clone();
             Arc::new(Mutex::new(Promise::spawn_thread("shape", move || {
                 tracing::debug!("Calculating layout...");
-                let layout = layout(&graph, &expanded).unwrap();
+                let layout = layout(&graph, &metadata).unwrap();
                 tracing::debug!("Calculating shapes...");
                 let mut shapes = Vec::new();
-                render::generate_shapes(&mut shapes, 0.0, &layout, &graph, &expanded);
+                render::generate_shapes(&mut shapes, 0.0, &layout, &graph, &metadata);
                 tracing::debug!("Generated {} shapes...", shapes.len());
                 Shapes {
                     shapes,

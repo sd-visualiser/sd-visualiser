@@ -7,9 +7,9 @@ use egui::{
     vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
-use sd_core::{common::Addr, weak_map::WeakMap};
+use sd_core::common::Addr;
 
-use crate::common::{ContainsPoint, TEXT_SIZE, TOLERANCE};
+use crate::common::{ContainsPoint, GraphMetadata, TEXT_SIZE, TOLERANCE};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
@@ -93,7 +93,7 @@ impl<T: Addr> Shape<T> {
         highlight_op: &mut Option<T::Operation>,
         highlight_thunk: &mut Option<T::Thunk>,
         highlight_edges: &mut IndexSet<T::Edge>,
-        expanded: &mut WeakMap<T::Thunk, bool>,
+        metadata: &mut GraphMetadata<T>,
         selection: Option<&mut IndexSet<T::Operation, S>>,
         subgraph_selection: Option<&mut IndexSet<T::Operation, S>>,
     ) where
@@ -134,18 +134,18 @@ impl<T: Addr> Shape<T> {
                     Sense::click(),
                 );
                 let mut new_stroke = ui.style().interact(&thunk_response).fg_stroke;
-                if expanded[addr] {
+                if metadata[addr] {
                     new_stroke.color = new_stroke.color.gamma_multiply(0.35);
                 }
                 *stroke = Some(new_stroke);
-                if !expanded[addr] {
+                if !metadata[addr] {
                     *fill = Some(ui.style().interact(&thunk_response).bg_fill);
                     if thunk_response.hovered() {
                         *highlight_thunk = Some(addr.clone());
                     }
                 }
                 if thunk_response.clicked() {
-                    expanded[addr] = !expanded[addr];
+                    metadata[addr] = !metadata[addr];
                 }
             }
             Shape::Operation {

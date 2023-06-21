@@ -10,11 +10,12 @@ use eframe::{
 use indexmap::IndexSet;
 use sd_core::{
     graph::{Name, Op, SyntaxHyperGraph, SyntaxSubgraph},
-    hypergraph::{subgraph::Subgraph, Operation},
+    hypergraph::{subgraph::Subgraph, Operation, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
     prettyprinter::PrettyPrint,
+    weak_map::WeakMap,
 };
 use sd_graphics::common::GraphMetadata;
 use tracing::debug;
@@ -91,7 +92,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata.expanded);
+        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata);
         let guard = shapes.lock();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
@@ -152,7 +153,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
                 ui,
                 &shapes.shapes,
                 &response,
-                &mut self.metadata.expanded,
+                &mut self.metadata,
                 current_selection,
                 to_screen,
                 None,
@@ -168,17 +169,23 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     where
         T::Op: Display,
     {
-        Self::from_subgraph(Subgraph {
-            graph: hypergraph,
-            mapping: None,
-        })
+        let expanded = hypergraph.create_expanded();
+        Self::from_subgraph(
+            Subgraph {
+                graph: hypergraph,
+                mapping: None,
+            },
+            expanded,
+        )
     }
 
-    pub(crate) fn from_subgraph(subgraph: SyntaxSubgraph<T>) -> Self
+    pub(crate) fn from_subgraph(
+        subgraph: SyntaxSubgraph<T>,
+        expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
+    ) -> Self
     where
         T::Op: Display,
     {
-        let expanded = subgraph.graph.create_expanded();
         let hypergraph = subgraph.graph;
 
         debug!("Converting to monoidal term");
@@ -228,9 +235,13 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     where
         T::Op: Display,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata.expanded);
+        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata);
         let guard = shapes.lock(); // this would lock the UI, but by the time we get here
                                    // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()
+    }
+
+    pub(crate) const fn get_expanded(&self) -> &WeakMap<Thunk<Op<T>, Name<T>>, bool> {
+        &self.metadata.expanded
     }
 }

@@ -10,10 +10,11 @@ use sd_core::{
     graph::{Name, Op},
     hypergraph::{
         subgraph::{normalise_selection, Free, Subgraph},
-        Operation,
+        Operation, Thunk,
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
+    weak_map::WeakMap,
 };
 
 use crate::{
@@ -41,10 +42,16 @@ impl Selection {
 
     pub fn from_graph(graph_ui: &GraphUi, name: String) -> Self {
         match graph_ui {
-            GraphUi::Chil(_, selection) => Self::Chil(SelectionInternal::new(selection, name)),
-            GraphUi::Spartan(_, selection) => {
-                Self::Spartan(SelectionInternal::new(selection, name))
-            }
+            GraphUi::Chil(graph_ui, selection) => Self::Chil(SelectionInternal::new(
+                selection,
+                graph_ui.get_expanded().clone(),
+                name,
+            )),
+            GraphUi::Spartan(graph_ui, selection) => Self::Spartan(SelectionInternal::new(
+                selection,
+                graph_ui.get_expanded().clone(),
+                name,
+            )),
         }
     }
 }
@@ -57,19 +64,23 @@ pub struct SelectionInternal<T: Language> {
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
-    pub(crate) fn new(selected_nodes: &IndexSet<Operation<Op<T>, Name<T>>>, name: String) -> Self
+    pub(crate) fn new(
+        selected_nodes: &IndexSet<Operation<Op<T>, Name<T>>>,
+        expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
+        name: String,
+    ) -> Self
     where
         T::Op: Display,
         T::Var: Free,
         Expr<T>: PrettyPrint,
     {
         let normalised = normalise_selection(selected_nodes);
-        let hypergraph = Subgraph::generate_subgraph(&normalised).graph;
+        let subgraph = Subgraph::generate_subgraph(&normalised);
 
-        let code = decompile(&hypergraph)
+        let code = decompile(&subgraph.graph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
 
-        let graph_ui = GraphUiInternal::from_graph(hypergraph);
+        let graph_ui = GraphUiInternal::from_subgraph(subgraph, expanded);
 
         Self {
             code,
