@@ -15,7 +15,7 @@ mod weakbyaddress;
 
 use self::{
     internal::{
-        HyperGraphInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
+        HypergraphInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
         WeakNodeInternal,
     },
     weakbyaddress::WeakByAddress,
@@ -44,7 +44,7 @@ impl<V, E: Debug> Debug for Edge<V, E> {
 
 #[derive(Debug, Derivative)]
 #[derivative(Clone(bound = ""), Default(bound = ""))]
-pub struct HyperGraph<V, E>(HyperGraphInternal<V, E>);
+pub struct Hypergraph<V, E>(HypergraphInternal<V, E>);
 
 #[derive(Derivative)]
 #[derivative(
@@ -138,7 +138,7 @@ impl<V, E> Edge<V, E> {
     }
 
     #[must_use]
-    pub fn node(&self) -> Option<Node<V, E>> {
+    pub fn source(&self) -> Option<Node<V, E>> {
         self.0.node.as_ref().map(WeakNodeInternal::unwrap_node)
     }
 
@@ -159,7 +159,7 @@ impl<V, E> Edge<V, E> {
     }
 
     #[must_use]
-    pub fn number_of_links(&self) -> usize {
+    pub fn number_of_targets(&self) -> usize {
         self.0
             .links
             .try_read()
@@ -218,7 +218,7 @@ pub trait Graph {
     }
 }
 
-impl<V, E> Graph for HyperGraph<V, E> {
+impl<V, E> Graph for Hypergraph<V, E> {
     type NodeWeight = V;
     type EdgeWeight = E;
     fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -438,7 +438,7 @@ impl<V, E> InOut for Node<V, E> {
     }
 }
 
-impl<V, E> HyperGraph<V, E> {
+impl<V, E> Hypergraph<V, E> {
     #[must_use]
     pub fn create_expanded(&self) -> WeakMap<Thunk<V, E>, bool> {
         fn helper<V, E>(set: &mut IndexMap<Thunk<V, E>, bool>, thunk: Thunk<V, E>) {

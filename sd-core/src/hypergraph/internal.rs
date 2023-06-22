@@ -54,7 +54,7 @@ impl<V, E> OutPortInternal<V, E> {
 
 #[derive(Debug, Derivative)]
 #[derivative(Clone(bound = ""), Default(bound = ""))]
-pub(super) struct HyperGraphInternal<V, E> {
+pub(super) struct HypergraphInternal<V, E> {
     pub(super) nodes: Vec<NodeInternal<V, E>>,
     pub(super) graph_inputs: Vec<Arc<OutPortInternal<V, E>>>,
     pub(super) graph_outputs: Vec<Arc<InPortInternal<V, E>>>,

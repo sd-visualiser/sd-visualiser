@@ -8,7 +8,7 @@ use eframe::{
 };
 use egui_notify::Toasts;
 use poll_promise::Promise;
-use sd_core::{common::Direction, graph::SyntaxHyperGraph};
+use sd_core::{common::Direction, graph::SyntaxHypergraph};
 
 use crate::{
     code_ui::code_ui,
@@ -135,11 +135,11 @@ impl App {
                     let compile = Ok(match parse_output {
                         ParseOutput::ChilExpr(expr) => {
                             tracing::debug!("Converting chil to hypergraph...");
-                            GraphUi::new_chil(SyntaxHyperGraph::try_from(expr)?)
+                            GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?)
                         }
                         ParseOutput::SpartanExpr(expr) => {
                             tracing::debug!("Converting spartan to hypergraph...");
-                            GraphUi::new_spartan(SyntaxHyperGraph::try_from(expr)?)
+                            GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?)
                         }
                     });
                     ctx.request_repaint();

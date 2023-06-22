@@ -132,7 +132,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             .copied()
             .unwrap_or_default();
 
-        if edge.number_of_links() > 1 {
+        if edge.number_of_targets() > 1 {
             max + 1
         } else {
             max
@@ -204,7 +204,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         node.outputs().for_each(|edge| {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
-            if open_edges < edge.number_of_links() {
+            if open_edges < edge.number_of_targets() {
                 if open_edges == 0 {
                     // Only backlink
                     ops.push(WiredOp::Backlink { addr: edge.clone() });

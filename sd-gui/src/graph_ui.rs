@@ -9,7 +9,7 @@ use eframe::{
 };
 use sd_core::{
     common::Direction,
-    graph::{Name, Op, SyntaxHyperGraph, SyntaxSubgraph},
+    graph::{Name, Op, SyntaxHypergraph, SyntaxSubgraph},
     hypergraph::{subgraph::Subgraph, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
@@ -32,12 +32,12 @@ pub enum GraphUi {
 }
 
 impl GraphUi {
-    pub(crate) fn new_chil(hypergraph: SyntaxHyperGraph<Chil>) -> Self {
+    pub(crate) fn new_chil(hypergraph: SyntaxHypergraph<Chil>) -> Self {
         let selected = hypergraph.create_selected();
         Self::Chil(GraphUiInternal::from_graph(hypergraph), selected)
     }
 
-    pub(crate) fn new_spartan(hypergraph: SyntaxHyperGraph<Spartan>) -> Self {
+    pub(crate) fn new_spartan(hypergraph: SyntaxHypergraph<Spartan>) -> Self {
         let selected = hypergraph.create_selected();
         Self::Spartan(GraphUiInternal::from_graph(hypergraph), selected)
     }
@@ -75,7 +75,7 @@ impl GraphUi {
 
 pub struct GraphUiInternal<T: Language> {
     #[allow(dead_code)] // Dropping this breaks the app
-    hypergraph: SyntaxHyperGraph<T>,
+    hypergraph: SyntaxHypergraph<T>,
     monoidal_graph: Arc<MonoidalGraph<(Op<T>, Name<T>)>>,
     metadata: GraphMetadata<(Op<T>, Name<T>)>,
     panzoom: Panzoom,
@@ -159,7 +159,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         }
     }
 
-    pub(crate) fn from_graph(hypergraph: SyntaxHyperGraph<T>) -> Self
+    pub(crate) fn from_graph(hypergraph: SyntaxHypergraph<T>) -> Self
     where
         T::Op: Display,
     {
@@ -245,7 +245,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         &self.metadata.expanded
     }
 
-    pub(crate) const fn get_hypergraph(&self) -> &SyntaxHyperGraph<T> {
+    pub(crate) const fn get_hypergraph(&self) -> &SyntaxHypergraph<T> {
         &self.hypergraph
     }
 }

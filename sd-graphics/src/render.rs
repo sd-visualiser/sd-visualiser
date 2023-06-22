@@ -124,7 +124,7 @@ pub fn generate_shapes<V, E>(
                 .mapping
                 .as_ref()
                 .and_then(|mapping| mapping.edge_mapping.get(addr))
-                .and_then(Edge::node),
+                .and_then(Edge::source),
         ) {
             if !selection[&node] {
                 shapes.push(Shape::Arrow {
@@ -174,22 +174,22 @@ pub fn generate_shapes<V, E>(
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
-                    for (&x, port) in x_ins.iter().zip(&body.free_inputs) {
+                    for (&x, edge) in x_ins.iter().zip(&body.free_inputs) {
                         let start = Pos2::new(x, y_min);
                         let end = Pos2::new(x, y_input);
                         shapes.push(Shape::Line {
                             start,
                             end,
-                            addr: port.clone(),
+                            addr: edge.clone(),
                         });
                     }
-                    for (&x, port) in x_outs.iter().zip(addr.outputs()) {
+                    for (&x, edge) in x_outs.iter().zip(addr.outputs()) {
                         let start = Pos2::new(x, y_max);
                         let end = Pos2::new(x, y_output);
                         shapes.push(Shape::Line {
                             start,
                             end,
-                            addr: port,
+                            addr: edge,
                         });
                     }
                     let thunk_rect =
@@ -200,7 +200,7 @@ pub fn generate_shapes<V, E>(
                         fill: None,
                         stroke: None,
                     });
-                    for (port, &x) in addr
+                    for (edge, &x) in addr
                         .bound_graph_inputs()
                         .rev()
                         .zip(x_op.inputs().iter().rev())
@@ -209,7 +209,7 @@ pub fn generate_shapes<V, E>(
                         shapes.push(Shape::CircleFilled {
                             center,
                             radius: RADIUS_ARG,
-                            addr: port,
+                            addr: edge,
                         });
                     }
                     generate_shapes(shapes, y_min, x_op, body, metadata, None);
@@ -221,13 +221,13 @@ pub fn generate_shapes<V, E>(
 
                     let (x_ins_rem, x_outs_rem) = match op {
                         MonoidalOp::Cap { addr, intermediate } => {
-                            for (&x, (port, _)) in x_ins.iter().zip(intermediate) {
+                            for (&x, (edge, _)) in x_ins.iter().zip(intermediate) {
                                 let start = Pos2::new(x, y_input);
                                 let end = Pos2::new(x, y_output);
                                 shapes.push(Shape::Line {
                                     start,
                                     end,
-                                    addr: port.clone(),
+                                    addr: edge.clone(),
                                 });
                             }
                             (
@@ -239,13 +239,13 @@ pub fn generate_shapes<V, E>(
                             )
                         }
                         MonoidalOp::Cup { addr, intermediate } => {
-                            for (&x, (port, _)) in x_outs.iter().zip(intermediate) {
+                            for (&x, (edge, _)) in x_outs.iter().zip(intermediate) {
                                 let start = Pos2::new(x, y_input);
                                 let end = Pos2::new(x, y_output);
                                 shapes.push(Shape::Line {
                                     start,
                                     end,
-                                    addr: port.clone(),
+                                    addr: edge.clone(),
                                 });
                             }
                             (
@@ -260,29 +260,29 @@ pub fn generate_shapes<V, E>(
                             x_ins
                                 .iter()
                                 .copied()
-                                .zip(op.inputs().map(|(port, _)| port))
+                                .zip(op.inputs().map(|(edge, _)| edge))
                                 .collect::<Vec<_>>(),
                             x_outs
                                 .iter()
                                 .copied()
-                                .zip(op.outputs().map(|(port, _)| port))
+                                .zip(op.outputs().map(|(edge, _)| edge))
                                 .collect::<Vec<_>>(),
                         ),
                     };
 
-                    for (x, port) in x_ins_rem {
+                    for (x, edge) in x_ins_rem {
                         let input = Pos2::new(x, y_input);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_horizontal_in(input, center),
-                            addr: port,
+                            addr: edge,
                         });
                     }
 
-                    for (x, port) in x_outs_rem {
+                    for (x, edge) in x_outs_rem {
                         let output = Pos2::new(x, y_output);
                         shapes.push(Shape::CubicBezier {
                             points: horizontal_out_vertical_in(center, output),
-                            addr: port,
+                            addr: edge,
                         });
                     }
 
@@ -324,20 +324,20 @@ pub fn generate_shapes<V, E>(
     }
 
     // Target
-    for (&x, addr) in layout.outputs().iter().zip(&graph.outputs) {
+    for (&x, edge) in layout.outputs().iter().zip(&graph.outputs) {
         let start = Pos2::new(x, y_offset);
         let end = Pos2::new(x, y_offset + 0.5);
         shapes.push(Shape::Line {
             start,
             end,
-            addr: addr.clone(),
+            addr: edge.clone(),
         });
 
         if let Some((selection, edge)) = subgraph_selection.zip(
             metadata
                 .mapping
                 .as_ref()
-                .and_then(|mapping| mapping.edge_mapping.get(addr)),
+                .and_then(|mapping| mapping.edge_mapping.get(edge)),
         ) {
             let targets: Vec<_> = edge
                 .targets()
@@ -346,7 +346,7 @@ pub fn generate_shapes<V, E>(
                 .collect();
             if !targets.is_empty() {
                 shapes.push(Shape::Arrow {
-                    addr: addr.clone(),
+                    addr: edge.clone(),
                     to_add: targets,
                     center: Pos2::new(x, y_offset + 1.0),
                     upwards: false,

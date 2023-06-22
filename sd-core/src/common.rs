@@ -196,17 +196,17 @@ where
 {
     pub fn minimise_swaps(&mut self) {
         fn fold_slice<'a, T: InOutIter>(
-            ports_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
+            edges_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
             slice: &'a mut Slice<T>,
         ) -> Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>
         where
             T::E: Debug,
         {
-            slice.minimise_swaps(ports_below);
+            slice.minimise_swaps(edges_below);
             slice.inputs()
         }
 
-        let ports_below = self.slices.iter_mut().rev().fold(
+        let edges_below = self.slices.iter_mut().rev().fold(
             Box::new(
                 self.outputs
                     .iter()
@@ -220,7 +220,7 @@ where
                 .iter()
                 .cloned()
                 .map(|edge| (edge, Direction::Forward)),
-            ports_below,
+            edges_below,
         )
         .into_iter()
         .collect();
@@ -239,11 +239,11 @@ impl<T: InOutIter> Slice<T>
 where
     T::E: Debug,
 {
-    pub fn minimise_swaps(&mut self, ports_below: impl Iterator<Item = Link<T::V, T::E>>) {
+    pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<T::V, T::E>>) {
         let outputs = self.outputs();
 
         let perm_map: HashMap<Link<T::V, T::E>, PermutationOutput> =
-            generate_permutation(outputs, ports_below)
+            generate_permutation(outputs, edges_below)
                 .into_iter()
                 .collect();
 

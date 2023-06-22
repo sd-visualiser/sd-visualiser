@@ -28,7 +28,7 @@ impl<V, E> Node<V, E> {
     }
 
     pub fn predecessors(&self) -> impl Iterator<Item = Self> + '_ {
-        self.inputs().filter_map(|edge| edge.node()).unique()
+        self.inputs().filter_map(|edge| edge.source()).unique()
     }
 
     #[inline]

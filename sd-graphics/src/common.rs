@@ -41,7 +41,7 @@ pub enum EdgeLabel<T: Language> {
 impl<T: Language> EdgeLabel<T> {
     pub(crate) fn from_edge(edge: &Edge<Op<T>, Name<T>>) -> Self {
         match edge.weight() {
-            Name::Op => match edge.node() {
+            Name::Op => match edge.source() {
                 Some(Node::Operation(op)) => Self::Operation(
                     op.weight().0.clone(),
                     op.inputs().map(|edge| Self::from_edge(&edge)).collect(),

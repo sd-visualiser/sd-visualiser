@@ -11,9 +11,9 @@ use tracing::{debug, Level};
 
 use crate::{
     hypergraph::{
-        builder::{fragment::Fragment, HyperGraphBuilder, HyperGraphError, InPort, OutPort},
+        builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
         subgraph::Subgraph,
-        HyperGraph,
+        Hypergraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
     prettyprinter::PrettyPrint,
@@ -72,7 +72,7 @@ impl<T: Language> Name<T> {
     }
 }
 
-pub type SyntaxHyperGraph<T> = HyperGraph<Op<T>, Name<T>>;
+pub type SyntaxHypergraph<T> = Hypergraph<Op<T>, Name<T>>;
 pub type SyntaxSubgraph<T> = Subgraph<Op<T>, Name<T>>;
 
 #[derive(Derivative, Error)]
@@ -82,7 +82,7 @@ where
     T::Var: Display,
 {
     #[error("Error constructing hypergraph")]
-    HyperGraphError(#[from] HyperGraphError<Op<T>, Name<T>>),
+    HypergraphError(#[from] HypergraphError<Op<T>, Name<T>>),
     #[error("Couldn't find location of variable `{0}`")]
     VariableError(T::Var),
     #[error("Attempted to alias `{0}` to `{1}`")]
@@ -244,8 +244,8 @@ where
     /// This function will return an error if variables are malformed.
     fn process_expr(&mut self, expr: &Expr<T>) -> Result<(), ConvertError<T>> {
         let graph_outputs = self.fragment.graph_outputs().collect::<Vec<_>>();
-        for (value, port) in expr.values.iter().zip(graph_outputs) {
-            self.process_value(value, ProcessInput::InPort(port))?;
+        for (value, in_port) in expr.values.iter().zip(graph_outputs) {
+            self.process_value(value, ProcessInput::InPort(in_port))?;
         }
 
         for bind in expr.binds.iter().rev() {
@@ -269,7 +269,7 @@ where
     }
 }
 
-impl<T> TryFrom<&Expr<T>> for SyntaxHyperGraph<T>
+impl<T> TryFrom<&Expr<T>> for SyntaxHypergraph<T>
 where
     T: Language + 'static,
     T::Var: Display,
@@ -281,7 +281,7 @@ where
         let free: Vec<T::Var> = expr.free_vars().iter().cloned().collect();
         debug!("free variables: {:?}", free);
 
-        let graph = HyperGraphBuilder::new(
+        let graph = HypergraphBuilder::new(
             free.iter().cloned().map(Name::FreeVar).collect(),
             expr.values.len(),
         );
@@ -313,7 +313,7 @@ mod tests {
     use dir_test::{dir_test, Fixture};
 
     use crate::{
-        graph::SyntaxHyperGraph,
+        graph::SyntaxHypergraph,
         language::spartan::{Expr, Spartan},
     };
 
@@ -335,7 +335,7 @@ mod tests {
     )]
     fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Expr)>) -> Result<()> {
         let (_lang, _name, expr) = fixture.content();
-        let _graph: SyntaxHyperGraph<Spartan> = expr.try_into()?;
+        let _graph: SyntaxHypergraph<Spartan> = expr.try_into()?;
 
         // insta::with_settings!({sort_maps => true}, {
         //     insta::assert_ron_snapshot!(name, graph);

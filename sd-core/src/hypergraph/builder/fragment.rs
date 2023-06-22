@@ -5,7 +5,7 @@ use tracing::Level;
 
 use crate::hypergraph::{
     builder::{
-        HyperGraphBuilder, HyperGraphError, InPort, OperationBuilder, OutPort, Result, ThunkBuilder,
+        HypergraphBuilder, HypergraphError, InPort, OperationBuilder, OutPort, Result, ThunkBuilder,
     },
     weakbyaddress::WeakByAddress,
     NodeInternal, OperationInternal, ThunkInternal,
@@ -45,7 +45,7 @@ pub trait Fragment {
         let mut out = in_port.0.link.try_write().expect("Lock unexpectedly taken");
 
         if let Some(existing) = out.upgrade() {
-            return Err(HyperGraphError::OutputLinkError(OutPort(ByThinAddress(
+            return Err(HypergraphError::OutputLinkError(OutPort(ByThinAddress(
                 existing,
             ))));
         }
@@ -68,7 +68,7 @@ pub trait Fragment {
     }
 }
 
-impl<V, E> Fragment for HyperGraphBuilder<V, E> {
+impl<V, E> Fragment for HypergraphBuilder<V, E> {
     type NodeWeight = V;
     type EdgeWeight = E;
 

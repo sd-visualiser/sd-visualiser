@@ -36,12 +36,12 @@ pub fn decompile<T: Language>(
         match &node {
             Node::Operation(op) => {
                 let mut args = Vec::default();
-                for port in op.inputs() {
-                    match port.weight().to_var() {
+                for edge in op.inputs() {
+                    match edge.weight().to_var() {
                         Some(var) => {
                             args.push(Arg::Value(Value::Variable(var.clone())));
                         }
-                        None => match port.node() {
+                        None => match edge.source() {
                             None => return Err(DecompilationError::Corrupt),
                             Some(other_node) => {
                                 args.push(
@@ -82,7 +82,7 @@ pub fn decompile<T: Language>(
                     addr,
                     args: thunk
                         .bound_graph_inputs()
-                        .map(|port| match port.weight() {
+                        .map(|edge| match edge.weight() {
                             Name::BoundVar(arg) => Ok(arg.clone()),
                             _ => Err(DecompilationError::Corrupt),
                         })
@@ -98,7 +98,7 @@ pub fn decompile<T: Language>(
         .graph_outputs()
         .map(|edge| match edge.weight().to_var() {
             Some(var) => Ok(Value::Variable(var.clone())),
-            None => match edge.node() {
+            None => match edge.source() {
                 None => Err(DecompilationError::Corrupt),
                 Some(node) => node_to_syntax
                     .get(&node)

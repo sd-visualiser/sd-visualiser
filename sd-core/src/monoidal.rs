@@ -19,8 +19,8 @@ where
     T::Edge: Debug,
 {
     pub fn insert_caps_cups_deletes(
-        start_ports: impl Iterator<Item = (T::Edge, Direction)>,
-        end_ports: impl Iterator<Item = (T::Edge, Direction)>,
+        start_edges: impl Iterator<Item = (T::Edge, Direction)>,
+        end_edges: impl Iterator<Item = (T::Edge, Direction)>,
         downwards: bool,
     ) -> Vec<Self>
     where
@@ -28,7 +28,7 @@ where
     {
         #[allow(clippy::type_complexity)]
         let mut permutation: Vec<Option<((T::Edge, Direction), PermutationOutput)>> =
-            generate_permutation(start_ports, end_ports)
+            generate_permutation(start_edges, end_edges)
                 .into_iter()
                 .map(Option::Some)
                 .collect();
@@ -112,10 +112,10 @@ where
     }
 
     pub fn permutation_to_swaps(
-        start_ports: impl Iterator<Item = (T::Edge, Direction)>,
-        end_ports: impl Iterator<Item = (T::Edge, Direction)>,
+        start_edges: impl Iterator<Item = (T::Edge, Direction)>,
+        end_edges: impl Iterator<Item = (T::Edge, Direction)>,
     ) -> Vec<Self> {
-        let permutation = generate_permutation(start_ports, end_ports)
+        let permutation = generate_permutation(start_edges, end_edges)
             .into_iter()
             .map(|(x, y)| (x, Option::<usize>::from(y).unwrap()));
 
@@ -329,13 +329,13 @@ impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
 }
 
 struct MonoidalGraphBuilder<V, E> {
-    open_ports: Vec<Link<V, E>>,
+    open_edges: Vec<Link<V, E>>,
     pub(crate) slices: Vec<Slice<MonoidalOp<(V, E)>>>,
 }
 
 impl<V, E> MonoidalGraphBuilder<V, E> {
-    pub(crate) fn open_ports(&self) -> impl Iterator<Item = Link<V, E>> + '_ {
-        self.open_ports.iter().cloned()
+    pub(crate) fn open_edges(&self) -> impl Iterator<Item = Link<V, E>> + '_ {
+        self.open_edges.iter().cloned()
     }
 }
 
@@ -344,7 +344,7 @@ impl<V, E> Extend<Slice<MonoidalOp<(V, E)>>> for MonoidalGraphBuilder<V, E> {
         let mut peeking = iter.into_iter().peekable();
         if peeking.peek().is_some() {
             self.slices.extend(peeking);
-            self.open_ports = self.slices.last().unwrap().outputs().collect();
+            self.open_edges = self.slices.last().unwrap().outputs().collect();
         }
     }
 }
@@ -360,13 +360,13 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             .collect();
 
         let mut builder = MonoidalGraphBuilder {
-            open_ports: graph_inputs,
+            open_edges: graph_inputs,
             slices: vec![],
         };
 
         for next_slice in &graph.slices {
             let end_slices =
-                Slice::insert_caps_cups_deletes(next_slice.inputs(), builder.open_ports(), false);
+                Slice::insert_caps_cups_deletes(next_slice.inputs(), builder.open_edges(), false);
 
             let next_inputs = || {
                 end_slices
@@ -375,13 +375,13 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             };
 
             builder.extend(Slice::insert_caps_cups_deletes(
-                builder.open_ports(),
+                builder.open_edges(),
                 next_inputs(),
                 true,
             ));
 
             builder.extend(Slice::permutation_to_swaps(
-                builder.open_ports(),
+                builder.open_edges(),
                 next_inputs(),
             ));
 
@@ -391,7 +391,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
         }
 
         builder.extend(Slice::insert_caps_cups_deletes(
-            builder.open_ports(),
+            builder.open_edges(),
             graph
                 .outputs
                 .iter()
@@ -400,7 +400,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
         ));
 
         builder.extend(Slice::permutation_to_swaps(
-            builder.open_ports(),
+            builder.open_edges(),
             graph
                 .outputs
                 .iter()

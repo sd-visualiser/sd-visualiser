@@ -13,20 +13,20 @@ use thiserror::Error;
 
 use super::{
     internal::{
-        HyperGraphInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
+        HypergraphInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
         ThunkInternal,
     },
-    Edge, Graph, HyperGraph, Node, Operation, Thunk,
+    Edge, Graph, Hypergraph, Node, Operation, Thunk,
 };
 use crate::common::InOut;
 
 pub mod fragment;
 pub use self::fragment::Fragment;
 
-pub(super) type Result<T, V, E> = core::result::Result<T, HyperGraphError<V, E>>;
+pub(super) type Result<T, V, E> = core::result::Result<T, HypergraphError<V, E>>;
 
 #[derive(Debug, Error, Clone)]
-pub enum HyperGraphError<V, E>
+pub enum HypergraphError<V, E>
 where
     V: Debug,
     E: Debug,
@@ -36,11 +36,11 @@ where
     #[error("Tried to link {0:#?} to {1:#?} which does not live in the same thunk")]
     ThunkLinkError(OutPort<V, E>, InPort<V, E>),
     #[error("Building hypergraph failed: {0:#?}")]
-    BuildError(HyperGraphBuildError<V, E>),
+    BuildError(HypergraphBuildError<V, E>),
 }
 
 #[derive(Debug, Error, Clone)]
-pub enum HyperGraphBuildError<V, E>
+pub enum HypergraphBuildError<V, E>
 where
     V: Debug,
     E: Debug,
@@ -196,9 +196,9 @@ impl<V, E> ThunkBuilder<V, E> {
 
 #[derive(Debug, Derivative)]
 #[derivative(Clone(bound = ""), Default(bound = ""))]
-pub struct HyperGraphBuilder<V, E>(HyperGraphInternal<V, E>);
+pub struct HypergraphBuilder<V, E>(HypergraphInternal<V, E>);
 
-impl<V, E> HyperGraphBuilder<V, E>
+impl<V, E> HypergraphBuilder<V, E>
 where
     V: Debug,
     E: Debug,
@@ -215,7 +215,7 @@ where
             .map(|_| Arc::new(InPortInternal::new(None)))
             .collect();
 
-        HyperGraphBuilder(HyperGraphInternal {
+        HypergraphBuilder(HypergraphInternal {
             nodes: Vec::default(),
             graph_inputs,
             graph_outputs,
@@ -251,12 +251,12 @@ where
     }
 
     #[allow(clippy::too_many_lines)]
-    pub fn build(mut self) -> Result<HyperGraph<V, E>, V, E> {
+    pub fn build(mut self) -> Result<Hypergraph<V, E>, V, E> {
         // check validity of hypergraph:
         // all in_ports linked to exactly one out_port
         fn check_in_ports_initialized<V, E>(
             out_port: &OutPort<V, E>,
-        ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
+        ) -> std::result::Result<(), HypergraphBuildError<V, E>>
         where
             V: Debug,
             E: Debug,
@@ -269,12 +269,12 @@ where
                 .iter()
                 .all(|weak_in_port| weak_in_port.strong_count() > 0)
                 .then_some(())
-                .ok_or_else(|| HyperGraphBuildError::UninitializedOutPort(out_port.clone()))
+                .ok_or_else(|| HypergraphBuildError::UninitializedOutPort(out_port.clone()))
         }
 
         fn check_out_port_initialized<V, E>(
             in_port: &InPort<V, E>,
-        ) -> std::result::Result<(), HyperGraphBuildError<V, E>>
+        ) -> std::result::Result<(), HypergraphBuildError<V, E>>
         where
             V: Debug,
             E: Debug,
@@ -287,7 +287,7 @@ where
                 .strong_count()
                 > 0)
             .then_some(())
-            .ok_or_else(|| HyperGraphBuildError::UninitializedInPort(in_port.clone()))
+            .ok_or_else(|| HypergraphBuildError::UninitializedInPort(in_port.clone()))
         }
 
         fn build_thunk_inputs<V, E>(thunk: Thunk<V, E>)
@@ -307,7 +307,7 @@ where
                 .flat_map(Node::inputs)
                 .chain(thunk.graph_outputs())
             {
-                match edge.node() {
+                match edge.source() {
                     Some(node) => {
                         if !built_nodes.contains(&node) {
                             inputs.insert(edge.0);
@@ -412,32 +412,32 @@ where
             // check associated with hypergraph
             assert!(&out_port.0.node.is_none());
             // check inputs initialised
-            check_in_ports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
+            check_in_ports_initialized(&out_port).map_err(HypergraphError::BuildError)?;
         }
 
         for in_port in self.graph_outputs() {
             // check associated with hypergraph
             assert!(&in_port.0.node.is_none());
             // check output initialised
-            check_out_port_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
+            check_out_port_initialized(&in_port).map_err(HypergraphError::BuildError)?;
         }
 
         self.fold(
             |op| {
                 for in_port in op.inputs() {
-                    check_out_port_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
+                    check_out_port_initialized(&in_port).map_err(HypergraphError::BuildError)?;
                 }
                 for out_port in op.outputs() {
-                    check_in_ports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
+                    check_in_ports_initialized(&out_port).map_err(HypergraphError::BuildError)?;
                 }
                 Ok(())
             },
             |thunk| {
                 for in_port in thunk.graph_outputs() {
-                    check_out_port_initialized(&in_port).map_err(HyperGraphError::BuildError)?;
+                    check_out_port_initialized(&in_port).map_err(HypergraphError::BuildError)?;
                 }
                 for out_port in thunk.outputs() {
-                    check_in_ports_initialized(&out_port).map_err(HyperGraphError::BuildError)?;
+                    check_in_ports_initialized(&out_port).map_err(HypergraphError::BuildError)?;
                 }
                 Ok(())
             },
@@ -462,7 +462,7 @@ where
             },
         )?;
 
-        Ok(HyperGraph(self.0))
+        Ok(Hypergraph(self.0))
     }
 }
 

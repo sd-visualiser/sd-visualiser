@@ -2,7 +2,7 @@
 source: sd-core/src/graph.rs
 expression: graph
 ---
-HyperGraph(
+Hypergraph(
   nodes: {
     0: NodeInfo(
       data: Input,
@@ -27,7 +27,7 @@ HyperGraph(
     1: NodeInfo(
       data: Thunk(
         args: 2,
-        body: HyperGraph(
+        body: Hypergraph(
           nodes: {
             0: NodeInfo(
               data: Input,
@@ -126,7 +126,7 @@ HyperGraph(
     2: NodeInfo(
       data: Thunk(
         args: 3,
-        body: HyperGraph(
+        body: Hypergraph(
           nodes: {
             0: NodeInfo(
               data: Input,
@@ -252,7 +252,7 @@ HyperGraph(
     3: NodeInfo(
       data: Thunk(
         args: 4,
-        body: HyperGraph(
+        body: Hypergraph(
           nodes: {
             0: NodeInfo(
               data: Input,

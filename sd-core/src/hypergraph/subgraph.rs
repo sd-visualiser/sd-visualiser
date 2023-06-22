@@ -7,8 +7,8 @@ use derivative::Derivative;
 use indexmap::{IndexMap, IndexSet};
 
 use super::{
-    builder::{fragment::Fragment, HyperGraphBuilder, InPort, OutPort},
-    Edge, HyperGraph, Node, Thunk,
+    builder::{fragment::Fragment, HypergraphBuilder, InPort, OutPort},
+    Edge, Hypergraph, Node, Thunk,
 };
 use crate::{
     common::{Addr, InOut},
@@ -111,7 +111,7 @@ pub struct Mapping<T: Addr> {
 }
 
 pub struct Subgraph<V, E> {
-    pub graph: HyperGraph<V, E>,
+    pub graph: Hypergraph<V, E>,
     pub mapping: Option<Mapping<(V, E)>>,
 }
 
@@ -127,7 +127,7 @@ where
             .iter()
             .flat_map(Node::inputs)
             .filter(|edge| {
-                edge.node()
+                edge.source()
                     .filter(|node| contains_transitively(&normal_selection, node))
                     .is_none()
             })
@@ -156,7 +156,7 @@ where
             }
         }
 
-        let mut builder = HyperGraphBuilder::new(input_weights, global_outputs.len());
+        let mut builder = HypergraphBuilder::new(input_weights, global_outputs.len());
 
         // Mapping from in_ports of the subgraph to edges of the original graph
         let mut in_port_map: HashMap<InPort<V, E>, Edge<V, E>> =
@@ -174,10 +174,8 @@ where
             match &node {
                 Node::Operation(op) => {
                     let input_len = op.number_of_inputs();
-                    let output_weights: Vec<_> = op
-                        .outputs()
-                        .map(|out_port| out_port.weight().clone())
-                        .collect();
+                    let output_weights: Vec<_> =
+                        op.outputs().map(|edge| edge.weight().clone()).collect();
                     let weight: V = op.weight().clone();
 
                     let op = builder.add_operation(input_len, output_weights, weight);
