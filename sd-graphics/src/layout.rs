@@ -363,18 +363,19 @@ mod tests {
     use sd_core::examples;
 
     use super::layout;
+    use crate::common::GraphMetadata;
 
     #[test]
     fn int() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::int(), &Default::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::int(), &GraphMetadata::default()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn copy() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::copy(), &Default::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::copy(), &GraphMetadata::default()).expect("Layout failed"));
         });
     }
 }

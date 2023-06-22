@@ -8,7 +8,7 @@ use sd_core::{
     decompile::decompile,
     graph::{Name, Op},
     hypergraph::{
-        subgraph::{normalise_selection, Free, Subgraph},
+        subgraph::{Free, Subgraph},
         Thunk,
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
@@ -74,8 +74,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         T::Var: Free,
         Expr<T>: PrettyPrint,
     {
-        let normalised = normalise_selection(selected_nodes);
-        let subgraph = Subgraph::generate_subgraph(normalised);
+        let subgraph = Subgraph::generate_subgraph(selected_nodes.clone());
 
         let code = decompile(&subgraph.graph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());

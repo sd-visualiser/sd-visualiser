@@ -11,6 +11,12 @@ use indexmap::IndexMap;
 #[derivative(Default(bound = ""))]
 pub struct WeakMap<S, T>(pub(crate) IndexMap<S, T>);
 
+impl<S: PartialEq + Eq + Hash, T> WeakMap<S, T> {
+    pub fn get(&self, key: &S) -> Option<&T> {
+        self.0.get(key)
+    }
+}
+
 impl<S, T> From<IndexMap<S, T>> for WeakMap<S, T> {
     fn from(value: IndexMap<S, T>) -> Self {
         WeakMap(value)

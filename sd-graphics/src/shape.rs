@@ -1,5 +1,3 @@
-use std::hash::BuildHasher;
-
 use derivative::Derivative;
 use egui::{
     emath::RectTransform,
@@ -44,7 +42,7 @@ pub enum Shape<T: Addr> {
     },
     Arrow {
         addr: T::Edge,
-        ops_to_add: Vec<T::Operation>,
+        to_add: Vec<T::Node>,
         center: Pos2,
         upwards: bool,
         stroke: Option<Stroke>,
@@ -86,7 +84,7 @@ impl<T: Addr> Shape<T> {
 
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn collect_highlights<S>(
+    pub(crate) fn collect_highlights(
         &mut self,
         ui: &egui::Ui,
         response: &Response,
@@ -94,11 +92,8 @@ impl<T: Addr> Shape<T> {
         highlight_node: &mut Option<T::Node>,
         highlight_edges: &mut IndexSet<T::Edge>,
         metadata: &mut GraphMetadata<T>,
-        selection: Option<&mut SelectionMap<T, S>>,
-        subgraph_selection: Option<&mut IndexSet<T::Operation, S>>,
-    ) where
-        S: BuildHasher,
-    {
+        selection: Option<&mut SelectionMap<T>>,
+    ) {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
 
@@ -195,7 +190,7 @@ impl<T: Addr> Shape<T> {
             }
             Shape::Arrow {
                 addr,
-                ops_to_add,
+                to_add,
                 stroke,
                 ..
             } => {
@@ -210,8 +205,10 @@ impl<T: Addr> Shape<T> {
                 }
 
                 if arrow_response.clicked() {
-                    if let Some(x) = subgraph_selection {
-                        (*x).extend(std::mem::take(ops_to_add));
+                    if let Some(selection) = metadata.mapping.as_mut().map(|m| &mut m.selection) {
+                        for y in std::mem::take(to_add) {
+                            selection[&y] = true;
+                        }
                     }
                 }
             }

@@ -71,7 +71,7 @@ fn find_ancestor<V, E>(
 }
 
 #[must_use]
-pub fn normalise_selection<V, E>(selection: &SelectionMap<(V, E)>) -> IndexSet<Node<V, E>> {
+fn normalise_selection<V, E>(selection: &SelectionMap<(V, E)>) -> IndexSet<Node<V, E>> {
     let selected: Vec<_> = selection.iter().collect();
     if let Some(op) = selected.first() {
         let mut containing = op.backlink();
@@ -101,6 +101,7 @@ pub fn normalise_selection<V, E>(selection: &SelectionMap<(V, E)>) -> IndexSet<N
 pub struct Mapping<T: Addr> {
     pub edge_mapping: WeakMap<T::Edge, T::Edge>,
     pub thunk_mapping: WeakMap<T::Thunk, T::Thunk>,
+    pub selection: SelectionMap<T>,
 }
 
 pub struct Subgraph<V, E> {
@@ -114,23 +115,24 @@ where
     E: Debug + Send + Sync + Clone + Free,
 {
     #[must_use]
-    pub fn generate_subgraph(selection: IndexSet<Node<V, E>>) -> Self {
-        let global_inputs: HashSet<Edge<V, E>> = selection
+    pub fn generate_subgraph(selection: SelectionMap<(V, E)>) -> Self {
+        let normal_selection = normalise_selection(&selection);
+        let global_inputs: HashSet<Edge<V, E>> = normal_selection
             .iter()
             .flat_map(Node::inputs)
             .filter(|edge| {
                 edge.node()
-                    .filter(|node| selection.contains(node))
+                    .filter(|node| normal_selection.contains(node))
                     .is_none()
             })
             .collect();
 
-        let global_outputs: HashSet<Edge<V, E>> = selection
+        let global_outputs: HashSet<Edge<V, E>> = normal_selection
             .iter()
             .flat_map(Node::outputs)
             .filter(|edge| {
                 edge.targets()
-                    .any(|node| node.map_or(true, |node| !selection.contains(&node)))
+                    .any(|node| node.map_or(true, |node| !normal_selection.contains(&node)))
             })
             .collect();
 
@@ -159,7 +161,7 @@ where
 
         let mut thunk_mapping: IndexMap<Thunk<V, E>, Thunk<V, E>> = IndexMap::new();
 
-        for node in selection {
+        for node in normal_selection {
             match &node {
                 Node::Operation(op) => {
                     let input_len = op.number_of_inputs();
@@ -198,6 +200,7 @@ where
                 .collect::<IndexMap<_, _>>()
                 .into(),
             thunk_mapping: thunk_mapping.into(),
+            selection,
         });
 
         Subgraph {

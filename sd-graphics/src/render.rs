@@ -1,4 +1,4 @@
-use std::{fmt::Display, hash::BuildHasher};
+use std::fmt::Display;
 
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
@@ -6,7 +6,7 @@ use sd_core::{
     common::{InOut, InOutIter},
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{Graph, Node, Operation},
+    hypergraph::{Edge, Graph, Node},
     language::{Expr, Language},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
@@ -21,14 +21,13 @@ use crate::{
 
 #[allow(clippy::needless_collect)]
 #[allow(clippy::type_complexity)]
-pub fn render<T, S>(
+pub fn render<T>(
     ui: &egui::Ui,
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
     metadata: &mut GraphMetadata<(Op<T>, Name<T>)>,
-    mut selection: Option<&mut SelectionMap<(Op<T>, Name<T>), S>>,
+    mut selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
     to_screen: RectTransform,
-    mut subgraph_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
 ) -> Vec<egui::Shape>
 where
     T: Language,
@@ -37,7 +36,6 @@ where
     T::Addr: Display,
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
-    S: BuildHasher,
 {
     let viewport = *to_screen.from();
 
@@ -58,7 +56,6 @@ where
                 &mut highlight_edges,
                 metadata,
                 selection.as_deref_mut(),
-                subgraph_selection.as_deref_mut(),
             );
             s
         })
@@ -102,6 +99,7 @@ pub fn generate_shapes<V, E>(
     layout: &Layout,
     graph: &MonoidalGraph<(V, E)>,
     metadata: &GraphMetadata<(V, E)>,
+    top_level: bool,
 ) where
     V: Display,
 {
@@ -118,6 +116,29 @@ pub fn generate_shapes<V, E>(
             end,
             addr: addr.clone(),
         });
+
+        if let Some((selection, node)) = top_level
+            .then_some(metadata.mapping.as_ref().map(|m| &m.selection))
+            .flatten()
+            .zip(
+                metadata
+                    .mapping
+                    .as_ref()
+                    .and_then(|mapping| mapping.edge_mapping.get(addr))
+                    .and_then(Edge::node),
+            )
+        {
+            if !selection[&node] {
+                shapes.push(Shape::Arrow {
+                    addr: addr.clone(),
+                    to_add: vec![node],
+                    center: Pos2::new(x, y_offset - 0.5),
+                    upwards: true,
+                    stroke: None,
+                    height: 0.1,
+                });
+            }
+        }
     }
 
     y_offset += 0.5;
@@ -193,7 +214,7 @@ pub fn generate_shapes<V, E>(
                             addr: port,
                         });
                     }
-                    generate_shapes(shapes, y_min, x_op, body, metadata);
+                    generate_shapes(shapes, y_min, x_op, body, metadata, false);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
@@ -305,14 +326,41 @@ pub fn generate_shapes<V, E>(
     }
 
     // Target
-    for (&x, port) in layout.outputs().iter().zip(&graph.outputs) {
+    for (&x, addr) in layout.outputs().iter().zip(&graph.outputs) {
         let start = Pos2::new(x, y_offset);
         let end = Pos2::new(x, y_offset + 0.5);
         shapes.push(Shape::Line {
             start,
             end,
-            addr: port.clone(),
+            addr: addr.clone(),
         });
+
+        if let Some((selection, edge)) = top_level
+            .then_some(metadata.mapping.as_ref().map(|m| &m.selection))
+            .flatten()
+            .zip(
+                metadata
+                    .mapping
+                    .as_ref()
+                    .and_then(|mapping| mapping.edge_mapping.get(addr)),
+            )
+        {
+            let targets: Vec<_> = edge
+                .targets()
+                .flatten()
+                .filter(|node| !selection[node])
+                .collect();
+            if !targets.is_empty() {
+                shapes.push(Shape::Arrow {
+                    addr: addr.clone(),
+                    to_add: targets,
+                    center: Pos2::new(x, y_offset + 1.0),
+                    upwards: false,
+                    stroke: None,
+                    height: 0.1,
+                });
+            }
+        }
     }
 }
 

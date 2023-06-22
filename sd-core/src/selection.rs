@@ -1,31 +1,36 @@
-use std::{
-    collections::hash_map::RandomState,
-    hash::BuildHasher,
-    ops::{Index, IndexMut},
-};
+use std::ops::{Index, IndexMut};
 
+use derivative::Derivative;
 use indexmap::IndexMap;
 
 use crate::{
     common::{Addr, Direction},
     hypergraph::reachability::NReachable,
+    weak_map::WeakMap,
 };
 
-pub struct SelectionMap<T: Addr, S = RandomState>(IndexMap<T::Node, bool, S>);
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = "T::Edge: Clone, T::Thunk: Clone"),
+    Hash(bound = ""),
+    Default(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = "")
+)]
+pub struct SelectionMap<T: Addr>(WeakMap<T::Node, bool>);
 
-impl<T, S> From<IndexMap<T::Node, bool, S>> for SelectionMap<T, S>
+impl<T> From<IndexMap<T::Node, bool>> for SelectionMap<T>
 where
     T: Addr,
 {
-    fn from(map: IndexMap<T::Node, bool, S>) -> Self {
-        Self(map)
+    fn from(map: IndexMap<T::Node, bool>) -> Self {
+        Self(WeakMap(map))
     }
 }
 
-impl<T, S> Index<&T::Node> for SelectionMap<T, S>
+impl<T> Index<&T::Node> for SelectionMap<T>
 where
     T: Addr,
-    S: BuildHasher,
 {
     type Output = bool;
 
@@ -34,38 +39,38 @@ where
     }
 }
 
-impl<T, S> IndexMut<&T::Node> for SelectionMap<T, S>
+impl<T> IndexMut<&T::Node> for SelectionMap<T>
 where
     T: Addr,
-    S: BuildHasher,
 {
     fn index_mut(&mut self, index: &T::Node) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
 
-impl<T, S> SelectionMap<T, S>
+impl<T> SelectionMap<T>
 where
     T: Addr,
 {
     /// Unselect all nodes.
     pub fn clear_selection(&mut self) {
-        self.0.values_mut().for_each(|selected| *selected = false);
+        self.0
+             .0
+            .values_mut()
+            .for_each(|selected| *selected = false);
     }
 
     /// Iterator of selected nodes.
     pub fn iter(&self) -> impl Iterator<Item = T::Node> + Clone + '_ {
         self.0
+             .0
             .iter()
             .filter_map(|(node, selected)| selected.then_some(node))
             .cloned()
     }
 }
 
-impl<V, E, S> SelectionMap<(V, E), S>
-where
-    S: BuildHasher,
-{
+impl<V, E> SelectionMap<(V, E)> {
     /// Extend the selection using reachability.
     /// If `direction` is `None`, extend the selection in both directions.
     /// Otherwise extend the selection in the given direction up to the given depth.

@@ -60,7 +60,7 @@ where
                 let layout = layout(&graph, &metadata).unwrap();
                 tracing::debug!("Calculating shapes...");
                 let mut shapes = Vec::new();
-                render::generate_shapes(&mut shapes, 0.0, &layout, &graph, &metadata);
+                render::generate_shapes(&mut shapes, 0.0, &layout, &graph, &metadata, true);
                 tracing::debug!("Generated {} shapes...", shapes.len());
                 Shapes {
                     shapes,
