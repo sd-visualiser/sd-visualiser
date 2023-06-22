@@ -90,6 +90,13 @@ fn normalise_selection<V, E>(selection: &SelectionMap<(V, E)>) -> IndexSet<Node<
     }
 }
 
+fn contains_transitively<V, E>(selection: &IndexSet<Node<V, E>>, node: &Node<V, E>) -> bool {
+    selection.contains(node)
+        || node.backlink().map_or(false, |thunk| {
+            contains_transitively(selection, &Node::Thunk(thunk))
+        })
+}
+
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = "T::Edge: Clone, T::Thunk: Clone"),
@@ -121,7 +128,7 @@ where
             .flat_map(Node::inputs)
             .filter(|edge| {
                 edge.node()
-                    .filter(|node| normal_selection.contains(node))
+                    .filter(|node| contains_transitively(&normal_selection, node))
                     .is_none()
             })
             .collect();
@@ -130,8 +137,11 @@ where
             .iter()
             .flat_map(Node::outputs)
             .filter(|edge| {
-                edge.targets()
-                    .any(|node| node.map_or(true, |node| !normal_selection.contains(&node)))
+                edge.targets().any(|node| {
+                    node.map_or(true, |node| {
+                        !contains_transitively(&normal_selection, &node)
+                    })
+                })
             })
             .collect();
 
