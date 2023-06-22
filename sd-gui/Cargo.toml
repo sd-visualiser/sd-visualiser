@@ -17,7 +17,7 @@ from-pest = "0.3.1"
 indexmap = "1.9.3"
 lru = "0.10.0"
 pest = "2.5.7"
-poll-promise = { git = "https://github.com/EmbarkStudios/poll-promise" } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
+rfd = "0.11.4"
 sd-core = { path = "../sd-core" }
 sd-graphics = { path = "../sd-graphics" }
 syntect = { version = "5.0.0", default-features = false, features = ["default-fancy"] }
@@ -28,11 +28,12 @@ tracing = "0.1.37"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+poll-promise = { git = "https://github.com/EmbarkStudios/poll-promise" } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-rfd = "0.11.4"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.7"
+poll-promise = { git = "https://github.com/EmbarkStudios/poll-promise", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.34"
 

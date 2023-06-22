@@ -58,7 +58,7 @@ fn main() -> anyhow::Result<()> {
                 let mut app = sd_gui::App::new(cc);
 
                 if let Some((code, language)) = file {
-                    app.set_file(code, language);
+                    app.set_file(&code, Some(language));
                 }
 
                 Box::new(app)

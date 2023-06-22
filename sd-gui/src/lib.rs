@@ -12,3 +12,17 @@ pub(crate) mod subgraph_generator;
 
 pub use app::App;
 pub use parser::UiLanguage;
+
+#[cfg(not(target_arch = "wasm32"))]
+macro_rules! spawn {
+    ($name:expr, $body:block) => {
+        poll_promise::Promise::spawn_thread($name, move || $body)
+    };
+}
+#[cfg(target_arch = "wasm32")]
+macro_rules! spawn {
+    ($name:expr, $body:block) => {
+        poll_promise::Promise::spawn_local(async move { $body })
+    };
+}
+pub(crate) use spawn;

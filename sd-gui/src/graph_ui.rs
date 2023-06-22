@@ -101,7 +101,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             &self.metadata,
             subgraph_selection.as_deref(),
         );
-        let guard = shapes.lock();
+        let guard = shapes.lock().unwrap();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
                 ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
@@ -236,8 +236,8 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         T::Op: Display,
     {
         let shapes = generate_shapes(&self.monoidal_graph, &self.metadata, None);
-        let guard = shapes.lock(); // this would lock the UI, but by the time we get here
-                                   // the shapes have already been computed
+        let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here
+                                            // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()
     }
 

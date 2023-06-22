@@ -2280,6 +2280,8 @@ version = "0.2.0"
 source = "git+https://github.com/EmbarkStudios/poll-promise#b493586107b0e508860aa2e9d18049fd8cd9d13f"
 dependencies = [
  "static_assertions",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
 ]
 
 [[package]]

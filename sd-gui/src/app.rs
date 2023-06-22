@@ -1,11 +1,13 @@
-use std::sync::Arc;
+use std::{
+    sync::{
+        mpsc::{channel, Receiver, Sender},
+        Arc, Mutex,
+    },
+    task::Poll,
+};
 
 use anyhow::anyhow;
-use derivative::Derivative;
-use eframe::{
-    egui::{self, FontDefinitions},
-    epaint::mutex::Mutex,
-};
+use eframe::egui::{self, FontDefinitions, TextBuffer};
 use egui_notify::Toasts;
 use poll_promise::Promise;
 use sd_core::{common::Direction, graph::SyntaxHypergraph};
@@ -20,19 +22,43 @@ use crate::{
     subgraph_generator::clear_subgraph_cache,
 };
 
-#[derive(Derivative)]
-#[derivative(Default)]
+#[derive(Debug, Clone)]
+enum Message {
+    Compile,
+    SetLanguage(UiLanguage),
+    ParseError(ParseError),
+}
+
 pub struct App {
-    compile_requested: bool,
-    #[derivative(Default(value = "true"))]
+    // message queue
+    tx: Sender<Message>,
+    rx: Receiver<Message>,
     editor: bool,
-    code: String,
-    #[allow(clippy::type_complexity)]
-    last_parse: Option<Arc<Mutex<Promise<Result<ParseOutput, ParseError>>>>>,
+    code: Arc<Mutex<String>>,
+    last_parse: Option<Arc<Mutex<Promise<Option<ParseOutput>>>>>,
+    last_parse_error: Option<ParseError>,
     language: UiLanguage,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
     toasts: Toasts,
+}
+
+impl Default for App {
+    fn default() -> Self {
+        let (tx, rx) = channel();
+        Self {
+            tx,
+            rx,
+            editor: Default::default(),
+            code: Arc::default(),
+            last_parse: Option::default(),
+            last_parse_error: Option::default(),
+            language: UiLanguage::default(),
+            graph_ui: Option::default(),
+            selections: Vec::default(),
+            toasts: Toasts::default(),
+        }
+    }
 }
 
 impl App {
@@ -68,27 +94,29 @@ impl App {
         App::default()
     }
 
-    pub fn set_file(&mut self, code: String, language: UiLanguage) {
-        self.code = code;
-        self.language = language;
-        self.compile_requested = true;
+    pub fn set_file(&mut self, code: &str, language: Option<UiLanguage>) {
+        self.code.lock().unwrap().replace(code);
+        if let Some(language) = language {
+            self.tx
+                .send(Message::SetLanguage(language))
+                .expect("failed to send message");
+        }
+        self.tx
+            .send(Message::Compile)
+            .expect("failed to send message");
     }
 
     fn code_edit_ui(&mut self, ui: &mut egui::Ui) {
-        let text_edit_out = code_ui(ui, &mut self.code, self.language);
+        let text_edit_out = code_ui(ui, &mut *self.code.lock().unwrap(), self.language);
 
         if text_edit_out.response.changed() {
             tracing::trace!("code changed changed");
             self.trigger_parse(ui.ctx());
         }
-        if let Some(last_parse) = self
-            .last_parse
-            .as_ref()
-            .and_then(|p| p.lock().ready()?.as_ref().err().cloned())
-        {
-            match last_parse {
-                ParseError::Chil(err) => show_parse_error(ui, &err, &text_edit_out),
-                ParseError::Spartan(err) => show_parse_error(ui, &err, &text_edit_out),
+        if let Some(error) = &self.last_parse_error {
+            match error {
+                ParseError::Chil(err) => show_parse_error(ui, err, &text_edit_out),
+                ParseError::Spartan(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Conversion(_) => (),
             }
         }
@@ -104,18 +132,27 @@ impl App {
     }
 
     fn trigger_parse(&mut self, ctx: &egui::Context) {
+        let tx = self.tx.clone();
         let code = self.code.clone();
         let language = self.language;
         let ctx = ctx.clone();
+        self.last_parse_error.take();
         self.last_parse
-            .replace(Arc::new(Mutex::new(Promise::spawn_thread(
-                "parse",
-                move || {
-                    let parse = parse(&code, language);
-                    ctx.request_repaint();
-                    parse
-                },
-            ))));
+            .replace(Arc::new(Mutex::new(crate::spawn!("parse", {
+                let guard = code.lock().unwrap();
+                let parsed = parse(&guard, language);
+                match parsed {
+                    Ok(parse) => {
+                        ctx.request_repaint();
+                        Some(parse)
+                    }
+                    Err(err) => {
+                        tx.send(Message::ParseError(err))
+                            .expect("failed to send message");
+                        None
+                    }
+                }
+            }))));
     }
 
     fn trigger_compile(&mut self, ctx: &egui::Context) {
@@ -125,26 +162,25 @@ impl App {
         {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
-            self.graph_ui
-                .replace(Promise::spawn_thread("compile", move || {
-                    let promise = parse.lock();
-                    let parse_output = promise
-                        .block_until_ready()
-                        .as_ref()
-                        .map_err(|e| anyhow!("{}", e))?;
-                    let compile = Ok(match parse_output {
-                        ParseOutput::ChilExpr(expr) => {
-                            tracing::debug!("Converting chil to hypergraph...");
-                            GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?)
-                        }
-                        ParseOutput::SpartanExpr(expr) => {
-                            tracing::debug!("Converting spartan to hypergraph...");
-                            GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?)
-                        }
-                    });
-                    ctx.request_repaint();
-                    compile
-                }));
+            self.graph_ui.replace(crate::spawn!("compile", {
+                let promise = parse.lock().unwrap();
+                let parse_output = promise
+                    .block_until_ready()
+                    .as_ref()
+                    .ok_or_else(|| anyhow!("no parse"))?;
+                let compile = Ok(match parse_output {
+                    ParseOutput::ChilExpr(expr) => {
+                        tracing::debug!("Converting chil to hypergraph...");
+                        GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?)
+                    }
+                    ParseOutput::SpartanExpr(expr) => {
+                        tracing::debug!("Converting spartan to hypergraph...");
+                        GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?)
+                    }
+                });
+                ctx.request_repaint();
+                compile
+            }));
         }
 
         self.selections.clear();
@@ -153,14 +189,27 @@ impl App {
 
 impl eframe::App for App {
     fn warm_up_enabled(&self) -> bool {
-        self.compile_requested
+        matches!(self.rx.try_recv(), Ok(Message::Compile))
     }
 
     #[allow(clippy::too_many_lines)]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.compile_requested {
-            self.compile_requested = false;
-            self.trigger_compile(ctx);
+        // process messages sent asynchronously
+        let message = self.rx.try_recv().ok();
+        if let Some(message) = message.as_ref() {
+            tracing::debug!("Got asynchronous message {message:?}");
+        }
+        match message {
+            Some(Message::Compile) => self.trigger_compile(ctx),
+            Some(Message::SetLanguage(language)) => {
+                self.language = language;
+            }
+            Some(Message::ParseError(err)) => {
+                self.toasts.error(err.to_string());
+                tracing::debug!("{}", err);
+                self.last_parse_error.replace(err);
+            }
+            None => { /* no messages to process this frame */ }
         }
 
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
@@ -203,19 +252,44 @@ impl eframe::App for App {
                     ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
                 });
 
-                #[cfg(not(target_arch = "wasm32"))]
                 if button!("Import file", egui::Modifiers::COMMAND, egui::Key::O) {
+                    #[cfg(not(target_arch = "wasm32"))]
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
-                            Some(ext) if ext == "sd" => UiLanguage::Spartan,
-                            Some(ext) if ext == "chil" => UiLanguage::Chil,
-                            Some(_) | None => self.language,
+                            Some(ext) if ext == "sd" => Some(UiLanguage::Spartan),
+                            Some(ext) if ext == "chil" => Some(UiLanguage::Chil),
+                            Some(_) | None => None,
                         };
                         self.set_file(
-                            std::fs::read_to_string(path)
+                            &std::fs::read_to_string(path)
                                 .expect("file picker returned invalid path"),
                             language,
                         );
+                    }
+
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        let task = rfd::AsyncFileDialog::new().pick_file();
+                        let tx = self.tx.clone();
+                        let code = self.code.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let file = task.await.unwrap();
+                            tracing::trace!("got file name {:?}", file.file_name());
+                            let language = match file.file_name().split('.').last() {
+                                Some("chil") => Some(UiLanguage::Chil),
+                                Some("sd") => Some(UiLanguage::Spartan),
+                                Some(_) | None => None,
+                            };
+                            let contents = file.read().await;
+                            if let Ok(string) = String::from_utf8(contents) {
+                                code.lock().unwrap().replace(&string);
+                                if let Some(language) = language {
+                                    tx.send(Message::SetLanguage(language))
+                                        .expect("failed to send message");
+                                }
+                                tx.send(Message::Compile).expect("failed to send message");
+                            }
+                        });
                     }
                 }
 
@@ -241,10 +315,6 @@ impl eframe::App for App {
 
                 if button!("Compile", egui::Key::F5) {
                     self.trigger_compile(ui.ctx());
-                }
-                if let Some(err) = rejected(&self.graph_ui) {
-                    self.toasts.error(err.to_string());
-                    tracing::debug!("{}", err);
                 }
 
                 if button!("Save selection", egui::Modifiers::COMMAND, egui::Key::S) {
@@ -279,6 +349,7 @@ impl eframe::App for App {
 
                 ui.separator();
 
+                #[cfg(not(target_arch = "wasm32"))]
                 if let Some(graph_ui) = finished(&self.graph_ui)
                     .and_then(|graph_ui| graph_ui.ready().then_some(graph_ui))
                 {
@@ -307,34 +378,35 @@ impl eframe::App for App {
         });
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            if self.editor {
-                ui.columns(2, |columns| {
-                    egui::ScrollArea::both()
-                        .id_source("code")
-                        .show(&mut columns[0], |ui| self.code_edit_ui(ui));
-                    match self.graph_ui.as_mut().map(|p| p.ready_mut()?.as_mut().ok()) {
-                        Some(Some(graph_ui)) => {
-                            graph_ui.ui(&mut columns[1]);
-                        }
-                        Some(None) => {
-                            // Compilation hasn't finished yet
-                            columns[1].centered_and_justified(eframe::egui::Ui::spinner);
-                        }
-                        None => { /* No compilation triggered */ }
+            macro_rules! optional_editor {
+                ($graph:expr) => {
+                    if self.editor {
+                        ui.columns(2, |columns| {
+                            egui::ScrollArea::both()
+                                .id_source("code")
+                                .show(&mut columns[0], |ui| self.code_edit_ui(ui));
+                            $graph(&mut columns[1]);
+                        });
+                    } else {
+                        $graph(ui);
                     }
-                });
-            } else {
-                match self.graph_ui.as_mut().map(|p| p.ready_mut()?.as_mut().ok()) {
-                    Some(Some(graph_ui)) => {
+                };
+            }
+            optional_editor!(|ui| {
+                match self
+                    .graph_ui
+                    .as_mut()
+                    .map(|p| p.poll_mut().map(Result::as_mut))
+                {
+                    Some(Poll::Ready(Ok(graph_ui))) => {
                         graph_ui.ui(ui);
                     }
-                    Some(None) => {
-                        // Compilation hasn't finished yet
+                    Some(Poll::Pending) => {
                         ui.centered_and_justified(eframe::egui::Ui::spinner);
                     }
-                    None => { /* No compilation triggered */ }
+                    Some(Poll::Ready(Err(_))) | None => { /* No pending successful compilation */ }
                 }
-            }
+            });
         });
 
         self.toasts.show(ctx);
@@ -359,14 +431,4 @@ where
     E: Send,
 {
     promise.as_mut().and_then(|p| p.ready_mut()?.as_mut().ok())
-}
-
-#[allow(clippy::inline_always)]
-#[inline(always)]
-fn rejected<T, E>(promise: &Option<Promise<Result<T, E>>>) -> Option<&E>
-where
-    T: Send,
-    E: Send,
-{
-    promise.as_ref().and_then(|p| p.ready()?.as_ref().err())
 }

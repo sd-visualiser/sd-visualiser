@@ -50,10 +50,6 @@
               export = true;
               renameTo = "sd-gui-${target}";
               overrides = {
-                windows-cross-compile = {
-                  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/x86_64-w64-mingw32-gcc";
-                  CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
-                };
                 add-inputs.overrideAttrs = oldAttrs: rec {
                   nativeBuildInputs = (oldAttrs.nativeBuildInputs or [ ]) ++ (with pkgs; [
                     trunk
@@ -136,13 +132,17 @@
               {
                 nci = nciFromPkgs pkgs "windows"
                   {
-                    set-target = {
+                    windows-cross-compile = {
                       CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
+                      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/x86_64-w64-mingw32-gcc";
+                      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
                     };
                   }
                   {
-                    set-target = {
+                    windows-cross-compile = {
                       CARGO_BUILD_TARGET = "x86_64-pc-windows-gnu";
+                      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER = "${pkgs.pkgsCross.mingwW64.stdenv.cc}/bin/x86_64-w64-mingw32-gcc";
+                      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_RUSTFLAGS = "-L native=${pkgs.pkgsCross.mingwW64.windows.pthreads}/lib";
                     };
                   };
               };

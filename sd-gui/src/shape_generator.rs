@@ -1,12 +1,9 @@
 use std::{
     fmt::Display,
-    sync::{Arc, OnceLock},
+    sync::{Arc, Mutex, OnceLock},
 };
 
-use eframe::{
-    egui::{util::IdTypeMap, Id},
-    epaint::mutex::Mutex,
-};
+use eframe::egui::{util::IdTypeMap, Id};
 use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{monoidal::MonoidalGraph, selection::SelectionMap};
@@ -31,6 +28,7 @@ where
     CACHE
         .get_or_init(Mutex::default)
         .lock()
+        .unwrap()
         .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<V, E>>>>(Id::null(), || {
             tracing::trace!("initialise shape cache");
             Arc::new(Mutex::new(LruCache::unbounded()))
@@ -40,7 +38,7 @@ where
 
 pub fn clear_shape_cache() {
     if let Some(cache) = CACHE.get() {
-        cache.lock().clear();
+        cache.lock().unwrap().clear();
     }
 }
 
@@ -55,7 +53,7 @@ where
     E: 'static + Send + Sync,
 {
     let cache = shape_cache();
-    let mut guard = cache.lock();
+    let mut guard = cache.lock().unwrap();
     guard
         .get_or_insert(
             (graph.clone(), metadata.clone(), subgraph_selection.cloned()),
@@ -63,7 +61,7 @@ where
                 let graph = graph.clone();
                 let metadata = metadata.clone();
                 let subgraph_selection = subgraph_selection.cloned();
-                Arc::new(Mutex::new(Promise::spawn_thread("shape", move || {
+                Arc::new(Mutex::new(crate::spawn!("shape", {
                     tracing::debug!("Calculating layout...");
                     let layout = layout(&graph, &metadata).unwrap();
                     tracing::debug!("Calculating shapes...");
