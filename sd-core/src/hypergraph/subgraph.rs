@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-};
+use std::{collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
 use indexmap::{IndexMap, IndexSet};
@@ -123,7 +120,7 @@ where
     #[must_use]
     pub fn generate_subgraph(selection: &SelectionMap<(V, E)>) -> Self {
         let normal_selection = normalise_selection(selection);
-        let global_inputs: HashSet<Edge<V, E>> = normal_selection
+        let global_inputs: IndexSet<Edge<V, E>> = normal_selection
             .iter()
             .flat_map(Node::inputs)
             .filter(|edge| {
@@ -133,7 +130,7 @@ where
             })
             .collect();
 
-        let global_outputs: HashSet<Edge<V, E>> = normal_selection
+        let global_outputs: IndexSet<Edge<V, E>> = normal_selection
             .iter()
             .flat_map(Node::outputs)
             .filter(|edge| {

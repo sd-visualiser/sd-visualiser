@@ -1,5 +1,6 @@
 use std::collections::{HashSet, VecDeque};
 
+use indexmap::IndexSet;
 use itertools::Itertools;
 
 use super::Node;
@@ -61,14 +62,14 @@ impl<V, E> Node<V, E> {
 
     #[inline]
     #[must_use]
-    pub fn bidirectional_reachable(&self) -> HashSet<Self> {
+    pub fn bidirectional_reachable(&self) -> IndexSet<Self> {
         self.bidirectional_reachable_n(usize::MAX)
     }
 
     #[must_use]
-    pub fn bidirectional_reachable_n(&self, depth_limit: usize) -> HashSet<Self> {
-        let forward: HashSet<_> = self.forward_reachable_n(depth_limit).collect();
-        let backward: HashSet<_> = self.backward_reachable_n(depth_limit).collect();
+    pub fn bidirectional_reachable_n(&self, depth_limit: usize) -> IndexSet<Self> {
+        let forward: IndexSet<_> = self.forward_reachable_n(depth_limit).collect();
+        let backward: IndexSet<_> = self.backward_reachable_n(depth_limit).collect();
         forward.intersection(&backward).cloned().collect()
     }
 
@@ -128,7 +129,7 @@ impl<V, E> NReachable<V, E> {
     #[must_use]
     pub fn bidirectional_from(
         nodes: impl IntoIterator<Item = Node<V, E>> + Clone,
-    ) -> HashSet<Node<V, E>> {
+    ) -> IndexSet<Node<V, E>> {
         Self::bidirectional_from_n(nodes, usize::MAX)
     }
 
@@ -136,9 +137,9 @@ impl<V, E> NReachable<V, E> {
     pub fn bidirectional_from_n(
         nodes: impl IntoIterator<Item = Node<V, E>> + Clone,
         depth_limit: usize,
-    ) -> HashSet<Node<V, E>> {
-        let forward: HashSet<_> = Self::forward_from_n(nodes.clone(), depth_limit).collect();
-        let backward: HashSet<_> = Self::backward_from_n(nodes, depth_limit).collect();
+    ) -> IndexSet<Node<V, E>> {
+        let forward: IndexSet<_> = Self::forward_from_n(nodes.clone(), depth_limit).collect();
+        let backward: IndexSet<_> = Self::backward_from_n(nodes, depth_limit).collect();
         forward.intersection(&backward).cloned().collect()
     }
 

@@ -1,9 +1,4 @@
-use std::{
-    cmp::min,
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    sync::Arc,
-};
+use std::{cmp::min, collections::HashMap, fmt::Debug, sync::Arc};
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
@@ -295,7 +290,7 @@ where
             V: Debug,
             E: Debug,
         {
-            let built_nodes: HashSet<Node<V, E>> = thunk.nodes().collect();
+            let built_nodes: IndexSet<Node<V, E>> = thunk.nodes().collect();
 
             let mut inputs: IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>> =
                 IndexSet::default();
