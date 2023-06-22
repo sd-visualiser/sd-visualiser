@@ -11,6 +11,9 @@ use crate::{common::InOut, selection::SelectionMap, weak_map::WeakMap};
 
 pub mod builder;
 mod internal;
+pub mod petgraph;
+pub mod reachability;
+pub mod subgraph;
 mod weakbyaddress;
 
 use self::{
@@ -20,9 +23,6 @@ use self::{
     },
     weakbyaddress::WeakByAddress,
 };
-
-pub mod reachability;
-pub mod subgraph;
 
 #[derive(Derivative)]
 #[derivative(
