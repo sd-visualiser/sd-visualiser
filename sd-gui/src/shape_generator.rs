@@ -15,7 +15,11 @@ use sd_graphics::{common::GraphMetadata, layout::layout, render, shape::Shapes};
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
 type Cache<V, E> = LruCache<
-    (Arc<MonoidalGraph<(V, E)>>, GraphMetadata<(V, E)>),
+    (
+        Arc<MonoidalGraph<(V, E)>>,
+        GraphMetadata<(V, E)>,
+        Option<SelectionMap<(V, E)>>,
+    ),
     Arc<Mutex<Promise<Shapes<(V, E)>>>>,
 >;
 
@@ -53,29 +57,32 @@ where
     let cache = shape_cache();
     let mut guard = cache.lock();
     guard
-        .get_or_insert((graph.clone(), metadata.clone()), || {
-            let graph = graph.clone();
-            let metadata = metadata.clone();
-            let subgraph_selection = subgraph_selection.cloned();
-            Arc::new(Mutex::new(Promise::spawn_thread("shape", move || {
-                tracing::debug!("Calculating layout...");
-                let layout = layout(&graph, &metadata).unwrap();
-                tracing::debug!("Calculating shapes...");
-                let mut shapes = Vec::new();
-                render::generate_shapes(
-                    &mut shapes,
-                    0.0,
-                    &layout,
-                    &graph,
-                    &metadata,
-                    subgraph_selection.as_ref(),
-                );
-                tracing::debug!("Generated {} shapes...", shapes.len());
-                Shapes {
-                    shapes,
-                    size: layout.size(),
-                }
-            })))
-        })
+        .get_or_insert(
+            (graph.clone(), metadata.clone(), subgraph_selection.cloned()),
+            || {
+                let graph = graph.clone();
+                let metadata = metadata.clone();
+                let subgraph_selection = subgraph_selection.cloned();
+                Arc::new(Mutex::new(Promise::spawn_thread("shape", move || {
+                    tracing::debug!("Calculating layout...");
+                    let layout = layout(&graph, &metadata).unwrap();
+                    tracing::debug!("Calculating shapes...");
+                    let mut shapes = Vec::new();
+                    render::generate_shapes(
+                        &mut shapes,
+                        0.0,
+                        &layout,
+                        &graph,
+                        &metadata,
+                        subgraph_selection.as_ref(),
+                    );
+                    tracing::debug!("Generated {} shapes...", shapes.len());
+                    Shapes {
+                        shapes,
+                        size: layout.size(),
+                    }
+                })))
+            },
+        )
         .clone()
 }
