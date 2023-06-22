@@ -1,6 +1,6 @@
 ---
 source: sd-graphics/src/layout.rs
-expression: "layout(&examples::int()).expect(\"Layout failed\")"
+expression: "layout(&examples::int(), &GraphMetadata::default()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
   min: 0.0,

@@ -1,9 +1,0 @@
----
-source: sd-core/src/prettyprinter/spartan.rs
-expression: expr.to_pretty()
----
-bind b = plus(c) in
-bind c = minus(a) in
-bind a = times(b) in
-bind d = not(a) in
-d

@@ -1,6 +1,6 @@
 ---
 source: sd-graphics/src/layout.rs
-expression: "layout(&examples::copy()).expect(\"Layout failed\")"
+expression: "layout(&examples::copy(), &GraphMetadata::default()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
   min: 0.0,
