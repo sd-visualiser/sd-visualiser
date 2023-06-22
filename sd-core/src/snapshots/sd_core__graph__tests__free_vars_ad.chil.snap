@@ -1,19 +1,16 @@
 ---
 source: sd-core/src/graph.rs
-expression: variables
+expression: expr.free_vars()
 ---
-[
+{
+    Variable(
+        "var_140",
+    ),
     Variable(
         "var_134",
     ),
     Variable(
         "var_138",
-    ),
-    Variable(
-        "var_140",
-    ),
-    Variable(
-        "var_142",
     ),
     Variable(
         "var_198",
@@ -27,4 +24,7 @@ expression: variables
     Variable(
         "var_592",
     ),
-]
+    Variable(
+        "var_142",
+    ),
+}

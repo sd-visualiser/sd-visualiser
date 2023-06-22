@@ -278,7 +278,7 @@ where
 
     #[tracing::instrument(level=Level::TRACE, ret, err)]
     fn try_from(expr: &Expr<T>) -> Result<Self, Self::Error> {
-        let free: Vec<T::Var> = expr.free_vars().iter().cloned().collect();
+        let free = expr.free_vars();
         debug!("free variables: {:?}", free);
 
         let graph = HypergraphBuilder::new(
@@ -322,10 +322,7 @@ mod tests {
     fn free_vars(fixture: Fixture<(&str, &str, Expr)>) {
         let (lang, name, expr) = fixture.content();
 
-        let mut variables = expr.free_vars().iter().cloned().collect::<Vec<_>>();
-        variables.sort();
-
-        insta::assert_debug_snapshot!(format!("free_vars_{name}.{lang}"), variables);
+        insta::assert_debug_snapshot!(format!("free_vars_{name}.{lang}"), expr.free_vars());
     }
 
     #[allow(clippy::needless_pass_by_value)]
