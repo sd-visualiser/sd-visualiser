@@ -1,6 +1,9 @@
 #![allow(clippy::clone_on_copy)]
 
-use std::fmt::{Display, Write};
+use std::{
+    fmt::{Display, Write},
+    hash::{Hash, Hasher},
+};
 
 use from_pest::{ConversionError, FromPest, Void};
 use pest::iterators::Pairs;
@@ -133,12 +136,24 @@ impl Display for Variable {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
+#[derive(Clone, Eq, Debug, FromPest)]
 #[pest_ast(rule(Rule::addr))]
 pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
     #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
 );
+
+impl PartialEq for Addr {
+    fn eq(&self, other: &Self) -> bool {
+        self.1 == other.1
+    }
+}
+
+impl Hash for Addr {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.1.hash(state);
+    }
+}
 
 impl Display for Addr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
