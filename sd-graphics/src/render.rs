@@ -27,6 +27,7 @@ pub fn render<T>(
     response: &Response,
     metadata: &mut GraphMetadata<(Op<T>, Name<T>)>,
     mut selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
+    mut subgraph_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
@@ -56,6 +57,7 @@ where
                 &mut highlight_edges,
                 metadata,
                 selection.as_deref_mut(),
+                subgraph_selection.as_deref_mut(),
             );
             s
         })
@@ -99,7 +101,7 @@ pub fn generate_shapes<V, E>(
     layout: &Layout,
     graph: &MonoidalGraph<(V, E)>,
     metadata: &GraphMetadata<(V, E)>,
-    top_level: bool,
+    subgraph_selection: Option<&SelectionMap<(V, E)>>,
 ) where
     V: Display,
 {
@@ -117,17 +119,13 @@ pub fn generate_shapes<V, E>(
             addr: addr.clone(),
         });
 
-        if let Some((selection, node)) = top_level
-            .then_some(metadata.mapping.as_ref().map(|m| &m.selection))
-            .flatten()
-            .zip(
-                metadata
-                    .mapping
-                    .as_ref()
-                    .and_then(|mapping| mapping.edge_mapping.get(addr))
-                    .and_then(Edge::node),
-            )
-        {
+        if let Some((selection, node)) = subgraph_selection.zip(
+            metadata
+                .mapping
+                .as_ref()
+                .and_then(|mapping| mapping.edge_mapping.get(addr))
+                .and_then(Edge::node),
+        ) {
             if !selection[&node] {
                 shapes.push(Shape::Arrow {
                     addr: addr.clone(),
@@ -214,7 +212,7 @@ pub fn generate_shapes<V, E>(
                             addr: port,
                         });
                     }
-                    generate_shapes(shapes, y_min, x_op, body, metadata, false);
+                    generate_shapes(shapes, y_min, x_op, body, metadata, None);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
@@ -335,16 +333,12 @@ pub fn generate_shapes<V, E>(
             addr: addr.clone(),
         });
 
-        if let Some((selection, edge)) = top_level
-            .then_some(metadata.mapping.as_ref().map(|m| &m.selection))
-            .flatten()
-            .zip(
-                metadata
-                    .mapping
-                    .as_ref()
-                    .and_then(|mapping| mapping.edge_mapping.get(addr)),
-            )
-        {
+        if let Some((selection, edge)) = subgraph_selection.zip(
+            metadata
+                .mapping
+                .as_ref()
+                .and_then(|mapping| mapping.edge_mapping.get(addr)),
+        ) {
             let targets: Vec<_> = edge
                 .targets()
                 .flatten()

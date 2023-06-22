@@ -93,6 +93,7 @@ impl<T: Addr> Shape<T> {
         highlight_edges: &mut IndexSet<T::Edge>,
         metadata: &mut GraphMetadata<T>,
         selection: Option<&mut SelectionMap<T>>,
+        subgraph_selection: Option<&mut SelectionMap<T>>,
     ) {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
@@ -205,7 +206,7 @@ impl<T: Addr> Shape<T> {
                 }
 
                 if arrow_response.clicked() {
-                    if let Some(selection) = metadata.mapping.as_mut().map(|m| &mut m.selection) {
+                    if let Some(selection) = subgraph_selection {
                         for y in std::mem::take(to_add) {
                             selection[&y] = true;
                         }

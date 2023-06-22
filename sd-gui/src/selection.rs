@@ -43,12 +43,12 @@ impl Selection {
     pub fn from_graph(graph_ui: &GraphUi, name: String) -> Self {
         match graph_ui {
             GraphUi::Chil(graph_ui, selection) => Self::Chil(SelectionInternal::new(
-                selection,
+                selection.clone(),
                 graph_ui.get_expanded().clone(),
                 name,
             )),
             GraphUi::Spartan(graph_ui, selection) => Self::Spartan(SelectionInternal::new(
-                selection,
+                selection.clone(),
                 graph_ui.get_expanded().clone(),
                 name,
             )),
@@ -60,12 +60,13 @@ pub struct SelectionInternal<T: Language> {
     name: String,
     displayed: bool,
     code: String,
+    selection: SelectionMap<(Op<T>, Name<T>)>,
     graph_ui: GraphUiInternal<T>,
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn new(
-        selected_nodes: &SelectionMap<(Op<T>, Name<T>)>,
+        selection: SelectionMap<(Op<T>, Name<T>)>,
         expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
         name: String,
     ) -> Self
@@ -74,7 +75,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         T::Var: Free,
         Expr<T>: PrettyPrint,
     {
-        let subgraph = Subgraph::generate_subgraph(selected_nodes.clone());
+        let subgraph = Subgraph::generate_subgraph(&selection);
 
         let code = decompile(&subgraph.graph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
@@ -84,6 +85,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         Self {
             code,
             name,
+            selection,
             displayed: true,
             graph_ui,
         }
@@ -114,7 +116,8 @@ impl<T: 'static + Language> SelectionInternal<T> {
                         &mut self.code.as_str(),
                         UiLanguage::Spartan,
                     );
-                    self.graph_ui.ui(&mut columns[1], None);
+                    self.graph_ui
+                        .ui(&mut columns[1], None, Some(&mut self.selection));
                 });
             });
     }

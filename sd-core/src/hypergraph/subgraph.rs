@@ -101,7 +101,6 @@ fn normalise_selection<V, E>(selection: &SelectionMap<(V, E)>) -> IndexSet<Node<
 pub struct Mapping<T: Addr> {
     pub edge_mapping: WeakMap<T::Edge, T::Edge>,
     pub thunk_mapping: WeakMap<T::Thunk, T::Thunk>,
-    pub selection: SelectionMap<T>,
 }
 
 pub struct Subgraph<V, E> {
@@ -115,8 +114,8 @@ where
     E: Debug + Send + Sync + Clone + Free,
 {
     #[must_use]
-    pub fn generate_subgraph(selection: SelectionMap<(V, E)>) -> Self {
-        let normal_selection = normalise_selection(&selection);
+    pub fn generate_subgraph(selection: &SelectionMap<(V, E)>) -> Self {
+        let normal_selection = normalise_selection(selection);
         let global_inputs: HashSet<Edge<V, E>> = normal_selection
             .iter()
             .flat_map(Node::inputs)
@@ -200,7 +199,6 @@ where
                 .collect::<IndexMap<_, _>>()
                 .into(),
             thunk_mapping: thunk_mapping.into(),
-            selection,
         });
 
         Subgraph {

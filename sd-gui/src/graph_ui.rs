@@ -57,8 +57,8 @@ impl GraphUi {
 
     pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         match self {
-            GraphUi::Chil(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
-            GraphUi::Spartan(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
+            GraphUi::Chil(graph_ui, selection) => graph_ui.ui(ui, Some(selection), None),
+            GraphUi::Spartan(graph_ui, selection) => graph_ui.ui(ui, Some(selection), None),
         }
     }
 
@@ -88,6 +88,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         &mut self,
         ui: &mut egui::Ui,
         current_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
+        subgraph_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
     ) where
         T::Op: Display + PrettyPrint,
         T::Var: PrettyPrint,
@@ -95,7 +96,11 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata);
+        let shapes = generate_shapes(
+            &self.monoidal_graph,
+            &self.metadata,
+            subgraph_selection.as_deref(),
+        );
         let guard = shapes.lock();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
@@ -144,6 +149,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
                 &response,
                 &mut self.metadata,
                 current_selection,
+                subgraph_selection,
                 to_screen,
             ));
             self.ready = true;
@@ -223,7 +229,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     where
         T::Op: Display,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata);
+        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata, None);
         let guard = shapes.lock(); // this would lock the UI, but by the time we get here
                                    // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()
