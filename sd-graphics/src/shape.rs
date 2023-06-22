@@ -128,24 +128,39 @@ impl<T: Addr> Shape<T> {
                 addr, fill, stroke, ..
             } => {
                 let addr: &_ = addr;
+                let selected = selection
+                    .as_ref()
+                    .map_or(false, |s| s[&T::Node::from(addr.clone())]);
                 let thunk_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new(addr),
                     Sense::click(),
                 );
-                let mut new_stroke = ui.style().interact(&thunk_response).fg_stroke;
-                if metadata[addr] {
+                let mut new_stroke = ui
+                    .style()
+                    .interact_selectable(&thunk_response, selected)
+                    .fg_stroke;
+                if !selected && metadata[addr] {
                     new_stroke.color = new_stroke.color.gamma_multiply(0.35);
                 }
                 *stroke = Some(new_stroke);
                 if !metadata[addr] {
-                    *fill = Some(ui.style().interact(&thunk_response).bg_fill);
+                    *fill = Some(
+                        ui.style()
+                            .interact_selectable(&thunk_response, selected)
+                            .bg_fill,
+                    );
                     if thunk_response.hovered() {
                         *highlight_node = Some(addr.clone().into());
                     }
                 }
                 if thunk_response.clicked() {
                     metadata[addr] = !metadata[addr];
+                }
+                if let Some(s) = selection {
+                    if thunk_response.secondary_clicked() {
+                        s[&T::Node::from(addr.clone())] ^= true;
+                    }
                 }
             }
             Shape::Operation {
@@ -157,12 +172,11 @@ impl<T: Addr> Shape<T> {
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new(&addr),
-                    Sense::click().union(Sense::hover()),
+                    Sense::click(),
                 );
                 if let Some(s) = selection {
                     if op_response.clicked() {
-                        let x = &mut s[&T::Node::from(addr.clone())];
-                        *x = !*x;
+                        s[&T::Node::from(addr.clone())] ^= true;
                     }
                 }
                 *fill = Some(
