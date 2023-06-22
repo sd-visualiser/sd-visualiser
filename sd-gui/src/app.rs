@@ -17,6 +17,7 @@ use crate::{
     selection::Selection,
     shape_generator::clear_shape_cache,
     squiggly_line::show_parse_error,
+    subgraph_generator::clear_subgraph_cache,
 };
 
 #[derive(Derivative)]
@@ -119,6 +120,7 @@ impl App {
 
     fn trigger_compile(&mut self, ctx: &egui::Context) {
         clear_shape_cache();
+        clear_subgraph_cache();
         self.trigger_parse(ctx);
         {
             let parse = self.last_parse.as_ref().unwrap().clone();

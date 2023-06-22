@@ -1,16 +1,13 @@
 #![allow(clippy::inline_always)]
 
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use delegate::delegate;
-use eframe::egui;
+use eframe::{egui, epaint::mutex::Mutex};
 use sd_core::{
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{
-        subgraph::{Free, Subgraph},
-        Thunk,
-    },
+    hypergraph::{subgraph::Free, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,
@@ -21,6 +18,7 @@ use crate::{
     code_ui::code_ui,
     graph_ui::{GraphUi, GraphUiInternal},
     parser::UiLanguage,
+    subgraph_generator::generate_subgraph,
 };
 
 pub enum Selection {
@@ -61,7 +59,7 @@ pub struct SelectionInternal<T: Language> {
     displayed: bool,
     code: String,
     selection: SelectionMap<(Op<T>, Name<T>)>,
-    graph_ui: GraphUiInternal<T>,
+    graph_ui: Arc<Mutex<GraphUiInternal<T>>>,
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
@@ -75,12 +73,10 @@ impl<T: 'static + Language> SelectionInternal<T> {
         T::Var: Free,
         Expr<T>: PrettyPrint,
     {
-        let subgraph = Subgraph::generate_subgraph(&selection);
+        let graph_ui = generate_subgraph(&selection, expanded);
 
-        let code = decompile(&subgraph.graph)
+        let code = decompile(graph_ui.lock().get_hypergraph())
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
-
-        let graph_ui = GraphUiInternal::from_subgraph(subgraph, expanded);
 
         Self {
             code,
@@ -102,11 +98,24 @@ impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
     where
         T::Op: Display + PrettyPrint,
-        T::Var: PrettyPrint,
+        T::Var: PrettyPrint + Free,
         T::Addr: Display,
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
     {
+        let new_graph_ui =
+            generate_subgraph(&self.selection, self.graph_ui.lock().get_expanded().clone());
+
+        if Arc::as_ptr(&self.graph_ui) != Arc::as_ptr(&new_graph_ui) {
+            {
+                let mut new = new_graph_ui.lock();
+                let old = self.graph_ui.lock();
+
+                new.update_from_other_ui(&old);
+            }
+            self.graph_ui = new_graph_ui;
+        }
+
         egui::Window::new(self.name.clone())
             .open(&mut self.displayed)
             .show(ctx, |ui| {
@@ -117,6 +126,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
                         UiLanguage::Spartan,
                     );
                     self.graph_ui
+                        .lock()
                         .ui(&mut columns[1], None, Some(&mut self.selection));
                 });
             });

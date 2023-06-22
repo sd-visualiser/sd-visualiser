@@ -207,6 +207,12 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         this
     }
 
+    pub(crate) fn update_from_other_ui(&mut self, other: &Self) {
+        self.panzoom = other.panzoom;
+        self.ready = false;
+        self.reset_requested = other.reset_requested;
+    }
+
     pub(crate) const fn ready(&self) -> bool {
         self.ready
     }
@@ -237,5 +243,9 @@ impl<T: 'static + Language> GraphUiInternal<T> {
 
     pub(crate) const fn get_expanded(&self) -> &WeakMap<Thunk<Op<T>, Name<T>>, bool> {
         &self.metadata.expanded
+    }
+
+    pub(crate) const fn get_hypergraph(&self) -> &SyntaxHyperGraph<T> {
+        &self.hypergraph
     }
 }
