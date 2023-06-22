@@ -157,6 +157,7 @@ impl<'pest> FromPest<'pest> for Op {
 }
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
+#[cfg_attr(test, derive(Serialize))]
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
@@ -167,6 +168,7 @@ impl Display for Variable {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Addr;
 
 impl Display for Addr {

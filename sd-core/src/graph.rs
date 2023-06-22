@@ -6,6 +6,8 @@ use std::{
 };
 
 use derivative::Derivative;
+#[cfg(test)]
+use serde::Serialize;
 use thiserror::Error;
 use tracing::{debug, Level};
 
@@ -27,6 +29,7 @@ use crate::{
     Hash(bound = ""),
     Debug(bound = "")
 )]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Op<T: Language>(pub T::Op);
 
 impl<T: Language> Display for Op<T>
@@ -55,6 +58,7 @@ where
     Hash(bound = ""),
     Debug(bound = "")
 )]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Name<T: Language> {
     Op,
     Thunk(T::Addr),
@@ -314,6 +318,7 @@ mod tests {
 
     use crate::{
         graph::SyntaxHypergraph,
+        hypergraph::petgraph::to_pet,
         language::spartan::{Expr, Spartan},
     };
 
@@ -331,12 +336,10 @@ mod tests {
         #[allow(unused_must_use)]
     )]
     fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Expr)>) -> Result<()> {
-        let (_lang, _name, expr) = fixture.content();
-        let _graph: SyntaxHypergraph<Spartan> = expr.try_into()?;
+        let (lang, name, expr) = fixture.content();
+        let graph: SyntaxHypergraph<Spartan> = expr.try_into()?;
 
-        // insta::with_settings!({sort_maps => true}, {
-        //     insta::assert_ron_snapshot!(name, graph);
-        // });
+        insta::assert_ron_snapshot!(format!("hypergraph_{name}.{lang}"), to_pet(&graph));
 
         Ok(())
     }

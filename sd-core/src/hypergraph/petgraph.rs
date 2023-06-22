@@ -1,11 +1,14 @@
 use std::collections::HashMap;
 
 use petgraph::graph::NodeIndex;
+#[cfg(test)]
+use serde::Serialize;
 
 use super::{Edge, Graph, Node};
 
 pub type PetGraph<V, E> = petgraph::Graph<PetNode<V, E>, usize>;
 
+#[cfg_attr(test, derive(Serialize))]
 pub enum PetNode<V, E> {
     Edge(E),
     Operation(V),

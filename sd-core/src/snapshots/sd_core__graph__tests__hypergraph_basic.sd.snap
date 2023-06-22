@@ -1,0 +1,15 @@
+---
+source: sd-core/src/graph.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Operation(Op(Number(1))),
+    Edge(BoundVar(Variable("x"))),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((0, 1, 0)),
+  ],
+)
