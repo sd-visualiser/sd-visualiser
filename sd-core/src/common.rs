@@ -5,7 +5,6 @@ use std::{
 };
 
 use derivative::Derivative;
-use indexmap::IndexMap;
 use num::rational::Ratio;
 use tracing::debug;
 
@@ -293,5 +292,3 @@ impl<T> Slice<Slice<T>> {
         }
     }
 }
-
-pub type SelectionMap<V, E> = IndexMap<Node<V, E>, bool>;

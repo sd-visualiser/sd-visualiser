@@ -1,7 +1,7 @@
 use std::{fmt::Display, hash::BuildHasher};
 
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter},
     decompile::decompile,
@@ -10,6 +10,7 @@ use sd_core::{
     language::{Expr, Language},
     monoidal::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
+    selection::SelectionMap,
 };
 
 use crate::{
@@ -25,7 +26,7 @@ pub fn render<T, S>(
     shapes: &[Shape<(Op<T>, Name<T>)>],
     response: &Response,
     metadata: &mut GraphMetadata<(Op<T>, Name<T>)>,
-    mut selection: Option<&mut IndexMap<Node<Op<T>, Name<T>>, bool, S>>,
+    mut selection: Option<&mut SelectionMap<(Op<T>, Name<T>), S>>,
     to_screen: RectTransform,
     mut subgraph_selection: Option<&mut IndexSet<Operation<Op<T>, Name<T>>, S>>,
 ) -> Vec<egui::Shape>

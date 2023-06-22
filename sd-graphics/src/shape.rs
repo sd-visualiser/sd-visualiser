@@ -6,8 +6,8 @@ use egui::{
     epaint::{CubicBezierShape, PathShape, RectShape},
     vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
-use indexmap::{IndexMap, IndexSet};
-use sd_core::common::Addr;
+use indexmap::IndexSet;
+use sd_core::{common::Addr, selection::SelectionMap};
 
 use crate::common::{ContainsPoint, GraphMetadata, TEXT_SIZE, TOLERANCE};
 
@@ -94,7 +94,7 @@ impl<T: Addr> Shape<T> {
         highlight_node: &mut Option<T::Node>,
         highlight_edges: &mut IndexSet<T::Edge>,
         metadata: &mut GraphMetadata<T>,
-        selection: Option<&mut IndexMap<T::Node, bool, S>>,
+        selection: Option<&mut SelectionMap<T, S>>,
         subgraph_selection: Option<&mut IndexSet<T::Operation, S>>,
     ) where
         S: BuildHasher,
@@ -161,7 +161,7 @@ impl<T: Addr> Shape<T> {
                 );
                 if let Some(s) = selection {
                     if op_response.clicked() {
-                        let x = s.get_mut(&T::Node::from(addr.clone())).unwrap();
+                        let x = &mut s[&T::Node::from(addr.clone())];
                         *x = !*x;
                     }
                 }

@@ -8,13 +8,14 @@ use eframe::{
     epaint::{Rounding, Shape},
 };
 use sd_core::{
-    common::SelectionMap,
+    common::Direction,
     graph::{Name, Op, SyntaxHyperGraph, SyntaxSubgraph},
     hypergraph::{subgraph::Subgraph, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     monoidal::MonoidalGraph,
     monoidal_wired::MonoidalWiredGraph,
     prettyprinter::PrettyPrint,
+    selection::SelectionMap,
     weak_map::WeakMap,
 };
 use sd_graphics::common::GraphMetadata;
@@ -23,10 +24,10 @@ use tracing::debug;
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub enum GraphUi {
-    Chil(GraphUiInternal<Chil>, SelectionMap<Op<Chil>, Name<Chil>>),
+    Chil(GraphUiInternal<Chil>, SelectionMap<(Op<Chil>, Name<Chil>)>),
     Spartan(
         GraphUiInternal<Spartan>,
-        SelectionMap<Op<Spartan>, Name<Spartan>>,
+        SelectionMap<(Op<Spartan>, Name<Spartan>)>,
     ),
 }
 
@@ -61,10 +62,13 @@ impl GraphUi {
         }
     }
 
-    pub(crate) fn clear_selection(&mut self) {
-        match self {
-            GraphUi::Chil(_, selection) => selection.values_mut().for_each(|x| *x = false),
-            GraphUi::Spartan(_, selection) => selection.values_mut().for_each(|x| *x = false),
+    delegate! {
+        to match self {
+            GraphUi::Chil(_, selection) => selection,
+            GraphUi::Spartan(_, selection) => selection,
+        } {
+            pub(crate) fn clear_selection(&mut self);
+            pub(crate) fn extend_selection(&mut self, direction: Option<(Direction, usize)>);
         }
     }
 }
@@ -83,7 +87,7 @@ impl<T: 'static + Language> GraphUiInternal<T> {
     pub(crate) fn ui(
         &mut self,
         ui: &mut egui::Ui,
-        current_selection: Option<&mut SelectionMap<Op<T>, Name<T>>>,
+        current_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
     ) where
         T::Op: Display + PrettyPrint,
         T::Var: PrettyPrint,

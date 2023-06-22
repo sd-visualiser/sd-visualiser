@@ -8,7 +8,7 @@ use eframe::{
 };
 use egui_notify::Toasts;
 use poll_promise::Promise;
-use sd_core::graph::SyntaxHyperGraph;
+use sd_core::{common::Direction, graph::SyntaxHyperGraph};
 
 use crate::{
     code_ui::code_ui,
@@ -254,6 +254,26 @@ impl eframe::App for App {
                         graph_ui.clear_selection();
                     }
                 }
+                if ui.button("Clear selection").clicked() {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                        graph_ui.clear_selection();
+                    }
+                }
+                ui.menu_button("Extend selection", |ui| {
+                    for (label, direction) in [
+                        ("Bidirectional", None),
+                        ("Forward (1)", Some((Direction::Forward, 1))),
+                        ("Forward", Some((Direction::Forward, usize::MAX))),
+                        ("Backward (1)", Some((Direction::Backward, 1))),
+                        ("Backward", Some((Direction::Backward, usize::MAX))),
+                    ] {
+                        if ui.button(label).clicked() {
+                            if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                                graph_ui.extend_selection(direction);
+                            }
+                        }
+                    }
+                });
 
                 ui.separator();
 

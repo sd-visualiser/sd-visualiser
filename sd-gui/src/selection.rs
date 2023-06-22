@@ -5,7 +5,6 @@ use std::fmt::Display;
 use delegate::delegate;
 use eframe::egui;
 use sd_core::{
-    common::SelectionMap,
     decompile::decompile,
     graph::{Name, Op},
     hypergraph::{
@@ -14,6 +13,7 @@ use sd_core::{
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
+    selection::SelectionMap,
     weak_map::WeakMap,
 };
 
@@ -65,7 +65,7 @@ pub struct SelectionInternal<T: Language> {
 
 impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn new(
-        selected_nodes: &SelectionMap<Op<T>, Name<T>>,
+        selected_nodes: &SelectionMap<(Op<T>, Name<T>)>,
         expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
         name: String,
     ) -> Self

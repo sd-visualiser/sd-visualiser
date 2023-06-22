@@ -7,7 +7,7 @@ use by_address::ByThinAddress;
 use derivative::Derivative;
 use indexmap::IndexMap;
 
-use crate::{common::InOut, weak_map::WeakMap};
+use crate::{common::InOut, selection::SelectionMap, weak_map::WeakMap};
 
 pub mod builder;
 mod internal;
@@ -458,7 +458,7 @@ impl<V, E> HyperGraph<V, E> {
     }
 
     #[must_use]
-    pub fn create_selected(&self) -> IndexMap<Node<V, E>, bool> {
+    pub fn create_selected(&self) -> SelectionMap<(V, E)> {
         fn helper<V, E>(set: &mut IndexMap<Node<V, E>, bool>, thunk: &Thunk<V, E>) {
             for node in thunk.nodes() {
                 if let Node::Thunk(thunk) = &node {
@@ -477,6 +477,6 @@ impl<V, E> HyperGraph<V, E> {
             set.insert(node, false);
         }
 
-        set
+        SelectionMap::from(set)
     }
 }

@@ -11,9 +11,10 @@ use super::{
     Edge, HyperGraph, Node, Thunk,
 };
 use crate::{
-    common::{Addr, InOut, SelectionMap},
+    common::{Addr, InOut},
     graph::Name,
     language::{chil, spartan, Language},
+    selection::SelectionMap,
     weak_map::WeakMap,
 };
 
@@ -70,12 +71,8 @@ fn find_ancestor<V, E>(
 }
 
 #[must_use]
-pub fn normalise_selection<V, E>(selection: &SelectionMap<V, E>) -> IndexSet<Node<V, E>> {
-    let selected: Vec<_> = selection
-        .iter()
-        .filter_map(|(k, v)| v.then_some(k))
-        .cloned()
-        .collect();
+pub fn normalise_selection<V, E>(selection: &SelectionMap<(V, E)>) -> IndexSet<Node<V, E>> {
+    let selected: Vec<_> = selection.iter().collect();
     if let Some(op) = selected.first() {
         let mut containing = op.backlink();
         for node in &selected[1..] {
