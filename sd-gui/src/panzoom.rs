@@ -61,7 +61,7 @@ impl Panzoom {
 
     /// Zoom by a relative factor with the given anchor.
     pub fn zoom(&mut self, zoom_delta: f32, anchor: Pos2) {
-        self.translation += (anchor - self.translation) * (zoom_delta - 1.0);
+        self.translation = anchor + (self.translation - anchor) / zoom_delta;
         self.zoom *= zoom_delta;
     }
 
