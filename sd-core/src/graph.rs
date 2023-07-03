@@ -99,11 +99,16 @@ where
     ThunkOutputError,
 }
 
+/// Environments capture the local information needed to build a hypergraph from an AST
 #[derive(Derivative)]
 #[derivative(Debug(bound = "F: Debug"))]
 struct Environment<F, T: Language> {
+    /// The fragment of the hypergraph we are building in
     fragment: F,
+    /// Hanging input ports of nodes, with the variable they should be connected to
     inputs: Vec<(InPort<Op<T>, Name<T>>, T::Var)>,
+
+    /// Mapping from variables to the output port that corresponds to them
     outputs: HashMap<T::Var, OutPort<Op<T>, Name<T>>>,
 }
 
@@ -118,6 +123,7 @@ where
     T::Var: Display,
     F: Fragment<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
 {
+    /// Create a new empty environment from a given `fragment`
     fn new(fragment: F) -> Self {
         Self {
             fragment,
@@ -126,10 +132,10 @@ where
         }
     }
 
-    /// Insert value into a hypergraph and update the environment.
+    /// Insert `value` into a hypergraph and update the environment.
     ///
-    /// If an `InPort` is passed in it should be linked.
-    /// If a `Variable` is passed in it should be assigned to the `out_port` the value generates.
+    /// If an `InPort` is passed in to `input` it should be linked or assigned a variable in the environment.
+    /// If a `Variable` is passed in to `input` it should be assigned to the `out_port` the value generates.
     ///
     /// # Errors
     ///
@@ -141,6 +147,7 @@ where
     ) -> Result<(), ConvertError<T>> {
         match (value, input) {
             (Value::Variable(var), ProcessInput::Variable(input)) => {
+                // We have tried to assign a variable to another variable
                 Err(ConvertError::Aliased(input.as_var().clone(), var.clone()))
             }
             (Value::Variable(var), ProcessInput::InPort(in_port)) => {
@@ -190,7 +197,7 @@ where
         }
     }
 
-    /// Insert thunk into a hypergraph and update the environment.
+    /// Insert `thunk` into a hypergraph and update the environment.
     ///
     /// The caller expects the `in_port` that is passed in to be linked.
     ///
@@ -203,6 +210,7 @@ where
         in_port: InPort<Op<T>, Name<T>>,
     ) -> Result<(), ConvertError<T>> {
         if thunk.body.values.len() != 1 {
+            // Thunks should have 1 output
             return Err(ConvertError::ThunkOutputError);
         }
         let thunk_node = self.fragment.add_thunk(
@@ -214,6 +222,7 @@ where
             .in_thunk(thunk_node.clone(), |inner_fragment| {
                 let mut thunk_env = Environment::new(inner_fragment);
 
+                // Add bound inputs of the thunk to the environment
                 for (def, out_port) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
                     let var = def.as_var();
                     thunk_env
@@ -224,8 +233,10 @@ where
                         .ok_or(ConvertError::Shadowed(var.clone()))?;
                 }
                 thunk_env.process_expr(&thunk.body)?;
+
+                // Add any free inputs of the thunk to the outer environment
                 self.inputs.extend(thunk_env.inputs);
-                Ok::<_, ConvertError<T>>(thunk_env.fragment)
+                Ok::<_, ConvertError<T>>(())
             })?;
 
         let out_port = thunk_node
@@ -237,7 +248,7 @@ where
         Ok(())
     }
 
-    /// Insert expression into a hypergraph, consuming the environment.
+    /// Insert `expr` into a hypergraph, updating the environment.
     ///
     /// # Returns
     ///
@@ -247,6 +258,7 @@ where
     ///
     /// This function will return an error if variables are malformed.
     fn process_expr(&mut self, expr: &Expr<T>) -> Result<(), ConvertError<T>> {
+        // Add all nodes in reverse order
         let graph_outputs = self.fragment.graph_outputs().collect::<Vec<_>>();
         for (value, in_port) in expr.values.iter().zip(graph_outputs) {
             self.process_value(value, ProcessInput::InPort(in_port))?;
