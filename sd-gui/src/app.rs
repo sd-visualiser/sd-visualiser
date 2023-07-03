@@ -191,21 +191,19 @@ impl eframe::App for App {
     #[allow(clippy::too_many_lines)]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // process messages sent asynchronously
-        let message = self.rx.try_recv().ok();
-        if let Some(message) = message.as_ref() {
+        while let Ok(message) = self.rx.try_recv() {
             tracing::debug!("Got asynchronous message {message:?}");
-        }
-        match message {
-            Some(Message::Compile) => self.trigger_compile(ctx),
-            Some(Message::SetLanguage(language)) => {
-                self.language = language;
+            match message {
+                Message::Compile => self.trigger_compile(ctx),
+                Message::SetLanguage(language) => {
+                    self.language = language;
+                }
+                Message::ParseError(err) => {
+                    self.toasts.error(err.to_string());
+                    tracing::debug!("{}", err);
+                    self.last_parse_error.replace(err);
+                }
             }
-            Some(Message::ParseError(err)) => {
-                self.toasts.error(err.to_string());
-                tracing::debug!("{}", err);
-                self.last_parse_error.replace(err);
-            }
-            None => { /* no messages to process this frame */ }
         }
 
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
