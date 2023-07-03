@@ -10,17 +10,17 @@ thunk = { "thunk" ~ addr ~ "=" ~ "{" ~ (variable_def ~ ("," ~ variable_def)*)? ~
 value = { variable | op ~ ("(" ~ (thunk+ | values ~ (";" ~ thunk+)?) ~ ")")? }
 values = _{ value ~ ("," ~ value)* }
 
-op = @{ !keyword ~ ("throwing"? ~ symbol+ | ASCII_ALPHA ~ ASCII_ALPHANUMERIC* ~ ("/" ~ (bool | number | char | name | string | ty))* )}
-symbol = { "+" | "-" | "*" | "/" | "%" | "&" | "|" | "!" | "=" | "<" | ">" }
+op = @{ !keyword ~ (("throwing" | "wrapping")? ~ symbol+ | "syscall/" ~ ASCII_ALPHANUMERIC+ | ASCII_ALPHA ~ ASCII_ALPHANUMERIC* ~ ("/" ~ (bool | number | char | name | string | ty))* )}
+symbol = { "+" | "-" | "*" | "/" | "%" | "&" | "|" | "!" | "=" | "<" | ">" | "^" }
 bool = { "true" | "false" }
-number = @{ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
+number = @{ "-"? ~ ASCII_DIGIT+ ~ ("." ~ ASCII_DIGIT+)? }
 char = { "'" ~ (!"'" ~ ANY) ~ "'" }
 name = { "`" ~ (!"`" ~ ANY)* ~ "`" }
-string = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+string = { "\"" ~ ("\\\"" | !"\"" ~ ANY)* ~ "\"" }
 
 ty = !{ generic_ty | base_ty | function_ty | tuple_ty }
 tys = _{ ty ~ ("," ~ ty)* }
-base_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "$"| "_" | "-" )* }
+base_ty = @{ 'A'..'Z' ~ (ASCII_ALPHANUMERIC | "$"| "_" | "-" | "." )* }
 generic_ty = { base_ty ~ "<" ~ tys ~ ">" }
 tuple_ty = { "(" ~ tys? ~ ")" }
 function_ty = { tuple_ty ~ "->" ~ ty }
@@ -32,4 +32,4 @@ COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
 WHITESPACE = _{ " " | "\t" | "\n" }
 
 addr = @{ ("@" | "%") ~ ASCII_DIGIT+ }
-identifier = @{ ty ~ "_tangent" ~ ("Add" | "Zero") | !keyword ~ ("$" | "_")* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "$" | "_" | "-")* }
+identifier = @{ ty ~ "_tangent" ~ ("Add" | "Zero") | (!"(" ~ !" " ~ ANY)+ }
