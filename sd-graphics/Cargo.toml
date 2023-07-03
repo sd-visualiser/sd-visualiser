@@ -10,6 +10,7 @@ repository = "https://github.com/calintat/sd-visualiser"
 derivative = "2.2.0"
 egui = "0.21.0"
 good_lp = { version = "1.4.0", default_features = false, features = ["minilp"] }
+html-escape = "0.2.13"
 indexmap = "1.9.3"
 itertools = "0.10.5"
 pretty = "0.12.1"

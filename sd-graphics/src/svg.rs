@@ -15,7 +15,7 @@ impl<T: Addr> Shape<T> {
                 radius,
                 label,
                 ..
-            } => Box::new({
+            } => Box::new(
                 Group::new()
                     .add(
                         Circle::new()
@@ -34,9 +34,9 @@ impl<T: Addr> Shape<T> {
                             .set("font-family", "monospace")
                             .set("text-anchor", "middle")
                             .set("dominant-baseline", "middle")
-                            .add(svg::node::Text::new(label)),
-                    )
-            }),
+                            .add(svg::node::Text::new(html_escape::encode_text(label))),
+                    ),
+            ),
             Self::CircleFilled { center, radius, .. } => Box::new(
                 Circle::new()
                     .set("cx", center.x)
