@@ -21,15 +21,15 @@ where
     /// From iterators of starting edges and ending edges, create slices containing caps, cups, and deletes
     /// The `downwards` argument determines whether we should make cups and deletes (if it is true) or caps
     pub fn insert_caps_cups_deletes(
-        start_edges: impl Iterator<Item = (T::Edge, Direction)>,
-        end_edges: impl Iterator<Item = (T::Edge, Direction)>,
+        start_edges: impl Iterator<Item = Link<T>>,
+        end_edges: impl Iterator<Item = Link<T>>,
         downwards: bool,
     ) -> Vec<Self>
     where
         T::Edge: Debug,
     {
         #[allow(clippy::type_complexity)]
-        let mut permutation: Vec<Option<((T::Edge, Direction), PermutationOutput)>> =
+        let mut permutation: Vec<Option<(Link<T>, PermutationOutput)>> =
             generate_permutation(start_edges, end_edges)
                 .into_iter()
                 .map(Option::Some)
@@ -115,8 +115,8 @@ where
 
     /// From iterators of starting edges and ending edges, create slices containing swaps
     pub fn permutation_to_swaps(
-        start_edges: impl Iterator<Item = (T::Edge, Direction)>,
-        end_edges: impl Iterator<Item = (T::Edge, Direction)>,
+        start_edges: impl Iterator<Item = Link<T>>,
+        end_edges: impl Iterator<Item = Link<T>>,
     ) -> Vec<Self> {
         let permutation = generate_permutation(start_edges, end_edges)
             .into_iter()
@@ -127,7 +127,7 @@ where
         let mut slice_ops = Vec::new();
 
         let mut chunk_start = 0;
-        let mut current_chunk_addr: Vec<(T::Edge, Direction)> = vec![];
+        let mut current_chunk_addr: Vec<Link<T>> = vec![];
         let mut current_chunk_out_to_in: Vec<usize> = vec![];
 
         for (link, destination) in permutation {
@@ -190,25 +190,25 @@ pub enum MonoidalOp<T: Addr> {
         body: MonoidalGraph<T>,
     },
     Swap {
-        addrs: Vec<(T::Edge, Direction)>,
+        addrs: Vec<Link<T>>,
         out_to_in: Vec<usize>,
     },
     Backlink {
         addr: T::Edge,
     },
     Cup {
-        addr: (T::Edge, Direction),
-        intermediate: Vec<(T::Edge, Direction)>,
+        addr: Link<T>,
+        intermediate: Vec<Link<T>>,
     },
     Cap {
-        addr: (T::Edge, Direction),
-        intermediate: Vec<(T::Edge, Direction)>,
+        addr: Link<T>,
+        intermediate: Vec<Link<T>>,
     },
 }
 
 impl<T: Addr> MonoidalOp<T> {
     /// Create an identity (unary copy) or backlink from a `link`
-    fn id_from_link(link: (T::Edge, Direction)) -> Self {
+    fn id_from_link(link: Link<T>) -> Self {
         if link.1 == Direction::Backward {
             MonoidalOp::Backlink { addr: link.0 }
         } else {
@@ -255,32 +255,33 @@ impl<T: Addr> InOut for MonoidalOp<T> {
     }
 }
 
-impl<V, E> InOutIter for MonoidalOp<(V, E)> {
-    type V = V;
-    type E = E;
+impl<T: Addr> InOutIter for MonoidalOp<T>
+where
+    T::Operation: InOutIter<T = T>,
+    T::Thunk: InOutIter<T = T>,
+{
+    type T = T;
 
-    fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             MonoidalOp::Copy { addr, .. } => {
-                Box::new(std::iter::once((addr.clone(), Direction::Forward)))
+                Box::new(std::iter::once(Link(addr.clone(), Direction::Forward)))
             }
-            MonoidalOp::Operation { addr, .. } => {
-                Box::new(addr.inputs().map(|edge| (edge, Direction::Forward)))
-            }
-            MonoidalOp::Thunk { body, .. } => Box::new(Box::new(
+            MonoidalOp::Operation { addr, .. } => addr.input_links(),
+            MonoidalOp::Thunk { body, .. } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|edge| (edge.clone(), Direction::Forward)),
-            )),
+                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+            ),
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
-                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
             MonoidalOp::Cup { addr, intermediate } => Box::new(
                 [
                     vec![addr.clone()],
                     intermediate.clone(),
-                    vec![(addr.0.clone(), addr.1.flip())],
+                    vec![Link(addr.0.clone(), addr.1.flip())],
                 ]
                 .into_iter()
                 .flatten(),
@@ -289,29 +290,25 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
         }
     }
 
-    fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             MonoidalOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
+                Box::new(std::iter::repeat(Link(addr.clone(), Direction::Forward)).take(*copies))
             }
-            MonoidalOp::Operation { addr, .. } => {
-                Box::new(addr.outputs().map(|x| (x, Direction::Forward)))
-            }
-            MonoidalOp::Thunk { addr, .. } => Box::new(Box::new(
-                addr.outputs().map(|edge| (edge, Direction::Forward)),
-            )),
+            MonoidalOp::Operation { addr, .. } => addr.output_links(),
+            MonoidalOp::Thunk { addr, .. } => addr.output_links(),
             MonoidalOp::Swap { addrs, out_to_in } => {
                 Box::new(out_to_in.iter().map(|idx| addrs[*idx].clone()))
             }
             MonoidalOp::Backlink { addr } => {
-                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
             MonoidalOp::Cup { intermediate, .. } => Box::new(intermediate.iter().cloned()),
             MonoidalOp::Cap { addr, intermediate } => Box::new(
                 [
                     vec![addr.clone()],
                     intermediate.clone(),
-                    vec![(addr.0.clone(), addr.1.flip())],
+                    vec![Link(addr.0.clone(), addr.1.flip())],
                 ]
                 .into_iter()
                 .flatten(),
@@ -320,8 +317,13 @@ impl<V, E> InOutIter for MonoidalOp<(V, E)> {
     }
 }
 
-impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
-    fn from(op: &WiredOp<V, E>) -> Self {
+impl<T: Addr> From<&WiredOp<T>> for MonoidalOp<T>
+where
+    T::Edge: Debug,
+    T::Operation: Debug + InOutIter<T = T>,
+    T::Thunk: Debug + InOutIter<T = T>,
+{
+    fn from(op: &WiredOp<T>) -> Self {
         match op {
             WiredOp::Copy { addr, copies } => MonoidalOp::Copy {
                 addr: addr.clone(),
@@ -338,38 +340,47 @@ impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
 }
 
 /// Builder to help build monoidal graphs
-struct MonoidalGraphBuilder<V, E> {
+struct MonoidalGraphBuilder<T: Addr> {
     /// Slices that have been added
-    slices: Vec<Slice<MonoidalOp<(V, E)>>>,
+    slices: Vec<Slice<MonoidalOp<T>>>,
     /// Stores the edges at the bottom of the last slice, or the global inputs if there are no slices
-    open_edges: Vec<Link<V, E>>,
+    open_edges: Vec<Link<T>>,
 }
 
-impl<V, E> MonoidalGraphBuilder<V, E> {
+impl<T: Addr> MonoidalGraphBuilder<T> {
     /// Returns an iterator over the open edges of the builder
-    pub(crate) fn open_edges(&self) -> impl Iterator<Item = Link<V, E>> + '_ {
+    pub(crate) fn open_edges(&self) -> impl Iterator<Item = Link<T>> + '_ {
         self.open_edges.iter().cloned()
     }
 }
 
-impl<V, E> Extend<Slice<MonoidalOp<(V, E)>>> for MonoidalGraphBuilder<V, E> {
-    fn extend<T: IntoIterator<Item = Slice<MonoidalOp<(V, E)>>>>(&mut self, iter: T) {
+impl<T: Addr> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T>
+where
+    T::Operation: InOutIter<T = T>,
+    T::Thunk: InOutIter<T = T>,
+{
+    fn extend<I: IntoIterator<Item = Slice<MonoidalOp<T>>>>(&mut self, iter: I) {
         let mut peeking = iter.into_iter().peekable();
         if peeking.peek().is_some() {
             self.slices.extend(peeking);
-            self.open_edges = self.slices.last().unwrap().outputs().collect();
+            self.open_edges = self.slices.last().unwrap().output_links().collect();
         }
     }
 }
 
-impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E)> {
-    fn from(graph: &MonoidalWiredGraph<V, E>) -> Self {
+impl<T: Addr> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T>
+where
+    T::Edge: Debug,
+    T::Operation: Debug + InOutIter<T = T>,
+    T::Thunk: Debug + InOutIter<T = T>,
+{
+    fn from(graph: &MonoidalWiredGraph<T>) -> Self {
         debug!("Input graph {:#?}", graph);
-        let graph_inputs: Vec<Link<V, E>> = graph
+        let graph_inputs: Vec<Link<T>> = graph
             .free_inputs
             .iter()
             .chain(graph.bound_inputs.iter())
-            .map(|edge| (edge.clone(), Direction::Forward))
+            .map(|edge| Link(edge.clone(), Direction::Forward))
             .collect();
 
         // Initialise the open edges to the global inputs of the graph
@@ -380,14 +391,17 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
 
         for next_slice in &graph.slices {
             // Generate slices for caps
-            let end_slices =
-                Slice::insert_caps_cups_deletes(next_slice.inputs(), builder.open_edges(), false);
+            let end_slices = Slice::insert_caps_cups_deletes(
+                next_slice.input_links(),
+                builder.open_edges(),
+                false,
+            );
 
             // Closure to obtain the target links before cap generation
             let next_inputs = || {
                 end_slices
                     .get(0)
-                    .map_or(next_slice.inputs(), InOutIter::inputs)
+                    .map_or(next_slice.input_links(), InOutIter::input_links)
             };
 
             // Add cups and deletes
@@ -416,7 +430,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             graph
                 .outputs
                 .iter()
-                .map(|edge| (edge.clone(), Direction::Forward)),
+                .map(|edge| Link(edge.clone(), Direction::Forward)),
             true,
         ));
 
@@ -426,7 +440,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             graph
                 .outputs
                 .iter()
-                .map(|edge| (edge.clone(), Direction::Forward)),
+                .map(|edge| Link(edge.clone(), Direction::Forward)),
         ));
 
         let mut graph = MonoidalGraph {

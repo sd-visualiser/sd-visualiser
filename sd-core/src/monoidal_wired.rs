@@ -5,8 +5,8 @@ use itertools::Itertools;
 use tracing::debug;
 
 use crate::{
-    common::{Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
-    hypergraph::{Edge, Graph, Node, Operation, Thunk},
+    common::{Addr, Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
+    hypergraph::{Edge, Graph, Node},
 };
 
 /// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
@@ -14,28 +14,34 @@ use crate::{
 ///
 /// The outputs of one slice do not need to exactly line up with the inputs of the next slice
 /// and the operations in a monoidal wired graph can be freely permuted without breaking the graph
-pub type MonoidalWiredGraph<V, E> = MonoidalTerm<(V, E), WiredOp<V, E>>;
+pub type MonoidalWiredGraph<T> = MonoidalTerm<T, WiredOp<T>>;
 
-#[derive(Clone, Debug, Derivative, Eq)]
-#[derivative(PartialEq(bound = ""))]
-pub enum WiredOp<V, E> {
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "T::Edge: Debug, T::Thunk: Debug, T::Operation: Debug")
+)]
+pub enum WiredOp<T: Addr> {
     Copy {
-        addr: Edge<V, E>,
+        addr: T::Edge,
         copies: usize,
     },
     Operation {
-        addr: Operation<V, E>,
+        addr: T::Operation,
     },
     Thunk {
-        addr: Thunk<V, E>,
-        body: MonoidalWiredGraph<V, E>,
+        addr: T::Thunk,
+        body: MonoidalWiredGraph<T>,
     },
     Backlink {
-        addr: Edge<V, E>,
+        addr: T::Edge,
     },
 }
 
-impl<V, E> InOut for WiredOp<V, E> {
+impl<T: Addr> InOut for WiredOp<T> {
     fn number_of_inputs(&self) -> usize {
         match self {
             WiredOp::Copy { copies, .. } => *copies,
@@ -55,48 +61,45 @@ impl<V, E> InOut for WiredOp<V, E> {
     }
 }
 
-impl<V, E> InOutIter for WiredOp<V, E> {
-    type V = V;
-    type E = E;
+impl<T: Addr> InOutIter for WiredOp<T>
+where
+    T::Operation: InOutIter<T = T>,
+    T::Thunk: InOutIter<T = T>,
+{
+    type T = T;
 
-    fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             WiredOp::Copy { addr, .. } => {
-                Box::new(std::iter::once((addr.clone(), Direction::Forward)))
+                Box::new(std::iter::once(Link(addr.clone(), Direction::Forward)))
             }
-            WiredOp::Operation { addr } => Box::new(Box::new(
-                addr.inputs().map(|edge| (edge, Direction::Forward)),
-            )),
+            WiredOp::Operation { addr } => addr.input_links(),
             WiredOp::Thunk { body, .. } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|edge| (edge.clone(), Direction::Forward)),
+                    .map(|edge| Link(edge.clone(), Direction::Forward)),
             ),
             WiredOp::Backlink { addr } => {
-                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
         }
     }
 
-    fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<V, E>> + 'a> {
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             WiredOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
+                Box::new(std::iter::repeat(Link(addr.clone(), Direction::Forward)).take(*copies))
             }
-            WiredOp::Operation { addr } => {
-                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
-            }
-            WiredOp::Thunk { addr, .. } => {
-                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
-            }
+            WiredOp::Operation { addr } => addr.output_links(),
+            WiredOp::Thunk { addr, .. } => addr.output_links(),
             WiredOp::Backlink { addr } => {
-                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
         }
     }
 }
 
-impl<V: Debug, E: Debug> From<Node<V, E>> for WiredOp<V, E> {
+impl<V: Debug, E: Debug> From<Node<V, E>> for WiredOp<(V, E)> {
     fn from(value: Node<V, E>) -> Self {
         match value {
             Node::Operation(op) => WiredOp::Operation { addr: op },
@@ -120,22 +123,22 @@ struct BacklinkData {
 /// A structure to help build a monoidal wired graph
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-struct MonoidalWiredGraphBuilder<V, E> {
+struct MonoidalWiredGraphBuilder<T: Addr> {
     /// A vector of slices from the bottom up.
     /// Each operation in these slices is itself a slice of operations, allowing operations to be "bundled".
-    slices: Vec<Slice<Slice<WiredOp<V, E>>>>,
+    slices: Vec<Slice<Slice<WiredOp<T>>>>,
     /// Edges that have been connected to an output yet.
     /// Each is mapped to a list of slice indices for where inputs of the edge have been seen.
-    open_edges: HashMap<Edge<V, E>, Vec<usize>>,
+    open_edges: HashMap<T::Edge, Vec<usize>>,
     /// Edges that have been connected to an output but not all their inputs.
     /// Each is mapped to a `BacklinkData`
-    backlinks: HashMap<Edge<V, E>, BacklinkData>,
+    backlinks: HashMap<T::Edge, BacklinkData>,
 }
 
-impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
+impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
     /// Adds a slice of operations to a layer, creating this layer if it doesn't exist yet.
     /// Does not process any of the inputs or outputs
-    fn add_op(&mut self, op: Slice<WiredOp<V, E>>, layer: usize) {
+    fn add_op(&mut self, op: Slice<WiredOp<(V, E)>>, layer: usize) {
         while layer >= self.slices.len() {
             self.slices.push(Slice::default());
         }
@@ -204,9 +207,9 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             .iter_mut()
             .find(|x| {
                 if is_cap {
-                    x.inputs().map(|x| x.0).contains(&edge)
+                    x.input_links().map(|x| x.0).contains(&edge)
                 } else {
-                    x.outputs().map(|x| x.0).contains(&edge)
+                    x.output_links().map(|x| x.0).contains(&edge)
                 }
             })
             .unwrap()
@@ -286,7 +289,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
 }
 
 #[allow(clippy::fallible_impl_from)]
-impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<V, E>
+impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<(V, E)>
 where
     G: Graph<NodeWeight = V, EdgeWeight = E>,
 {
@@ -352,7 +355,7 @@ where
 
         builder.slices.reverse();
 
-        let mut graph = MonoidalTerm::<(V, E), Slice<WiredOp<V, E>>> {
+        let mut graph = MonoidalTerm::<(V, E), Slice<WiredOp<(V, E)>>> {
             free_inputs: graph.unbound_graph_inputs().collect(),
             bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,

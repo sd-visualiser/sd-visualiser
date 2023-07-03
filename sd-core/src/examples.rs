@@ -49,11 +49,11 @@ impl InOut for SyntaxNode {
             SyntaxNode::Operation(op) => op,
             SyntaxNode::Thunk(thunk) => thunk,
         } {
-    #[allow(clippy::inline_always)]
-        fn number_of_inputs(&self) -> usize;
-    #[allow(clippy::inline_always)]
-        fn number_of_outputs(&self) -> usize;
-    }
+            #[allow(clippy::inline_always)]
+            fn number_of_inputs(&self) -> usize;
+            #[allow(clippy::inline_always)]
+            fn number_of_outputs(&self) -> usize;
+        }
     }
 }
 

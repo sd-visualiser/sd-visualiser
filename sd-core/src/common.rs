@@ -40,7 +40,15 @@ impl Direction {
     }
 }
 
-pub type Link<V, E> = (Edge<V, E>, Direction);
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "T::Edge: Debug")
+)]
+pub struct Link<T: Addr>(pub T::Edge, pub Direction);
 
 /// Specifies an operation which has inputs and outputs.
 pub trait InOut {
@@ -49,10 +57,9 @@ pub trait InOut {
 }
 
 pub trait InOutIter {
-    type V;
-    type E;
-    fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::V, Self::E>> + 'a>;
-    fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::V, Self::E>> + 'a>;
+    type T: Addr;
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Derivative)]
@@ -72,15 +79,50 @@ impl<O: InOut> InOut for Slice<O> {
 }
 
 impl<O: InOutIter> InOutIter for Slice<O> {
-    type V = O::V;
-    type E = O::E;
+    type T = O::T;
 
-    fn inputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<O::V, O::E>> + 'a> {
-        Box::new(self.ops.iter().flat_map(InOutIter::inputs))
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<O::T>> + 'a> {
+        Box::new(self.ops.iter().flat_map(InOutIter::input_links))
     }
 
-    fn outputs<'a>(&'a self) -> Box<dyn Iterator<Item = Link<O::V, O::E>> + 'a> {
-        Box::new(self.ops.iter().flat_map(InOutIter::outputs))
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<O::T>> + 'a> {
+        Box::new(self.ops.iter().flat_map(InOutIter::output_links))
+    }
+}
+
+impl<V, E> InOutIter for Node<V, E> {
+    type T = (V, E);
+
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
+        Box::new(self.inputs().map(|edge| Link(edge, Direction::Forward)))
+    }
+
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
+        Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
+    }
+}
+
+impl<V, E> InOutIter for Operation<V, E> {
+    type T = (V, E);
+
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
+        Box::new(self.inputs().map(|edge| Link(edge, Direction::Forward)))
+    }
+
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
+        Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
+    }
+}
+
+impl<V, E> InOutIter for Thunk<V, E> {
+    type T = (V, E);
+
+    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
+        Box::new(self.inputs().map(|edge| Link(edge, Direction::Forward)))
+    }
+
+    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
+        Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
     }
 }
 
@@ -168,15 +210,12 @@ impl From<PermutationOutput> for Option<usize> {
 ///
 /// # Returns
 /// The items in `start` paired with a `PermutationOutput` specifying where they should be sent
-pub(crate) fn generate_permutation<'a, T>(
-    start: impl Iterator<Item = (T, Direction)> + 'a,
-    end: impl Iterator<Item = (T, Direction)> + 'a,
-) -> Vec<((T, Direction), PermutationOutput)>
-where
-    T: 'a + PartialEq + Eq + Hash,
-{
+pub(crate) fn generate_permutation<'a, T: Addr>(
+    start: impl Iterator<Item = Link<T>> + 'a,
+    end: impl Iterator<Item = Link<T>> + 'a,
+) -> Vec<(Link<T>, PermutationOutput)> {
     // Create a mapping of edges to indices they appear in the output
-    let mut end_map: HashMap<(T, Direction), VecDeque<usize>> = HashMap::default();
+    let mut end_map: HashMap<Link<T>, VecDeque<usize>> = HashMap::default();
     for (idx, x) in end.enumerate() {
         end_map.entry(x).or_default().push_back(idx);
     }
@@ -186,12 +225,12 @@ where
 
     // Pair up edges that need pairing
     for i in 0..out.len() {
-        let k @ (x, dir) = &out[i].0;
+        let k @ Link(x, dir) = &out[i].0;
         if *dir == Direction::Backward && !end_map.contains_key(k) {
             if let Some(j) = out
                 .iter()
                 .enumerate()
-                .filter(|(_, ((y, dir), _))| y == x && *dir == Direction::Forward)
+                .filter(|(_, (Link(y, dir), _))| y == x && *dir == Direction::Forward)
                 .map(|(a, _)| a)
                 .min_by_key(|a| a.abs_diff(i))
             {
@@ -213,37 +252,37 @@ where
     out
 }
 
-impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T>
+impl<O: InOutIter> MonoidalTerm<O::T, O>
 where
-    T::E: Debug,
+    <O::T as Addr>::Edge: Debug,
 {
     /// Reorder the operations on each slice of a monoidal term to attempt to reduce the amount of swapping
     pub fn minimise_swaps(&mut self) {
-        fn fold_slice<'a, T: InOutIter>(
-            edges_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
-            slice: &'a mut Slice<T>,
-        ) -> Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>
+        fn fold_slice<'a, O: InOutIter>(
+            edges_below: Box<dyn Iterator<Item = Link<O::T>> + 'a>,
+            slice: &'a mut Slice<O>,
+        ) -> Box<dyn Iterator<Item = Link<O::T>> + 'a>
         where
-            T::E: Debug,
+            <O::T as Addr>::Edge: Debug,
         {
             slice.minimise_swaps(edges_below);
-            slice.inputs()
+            slice.input_links()
         }
 
         let edges_below = self.slices.iter_mut().rev().fold(
             Box::new(
                 self.outputs
                     .iter()
-                    .map(|edge| (edge.clone(), Direction::Forward)),
-            ) as Box<dyn Iterator<Item = Link<T::V, T::E>>>,
-            fold_slice::<T>,
+                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+            ) as Box<dyn Iterator<Item = Link<O::T>>>,
+            fold_slice::<O>,
         );
 
-        let perm_map: HashMap<Link<T::V, T::E>, PermutationOutput> = generate_permutation(
+        let perm_map: HashMap<Link<O::T>, PermutationOutput> = generate_permutation(
             self.free_inputs
                 .iter()
                 .cloned()
-                .map(|edge| (edge, Direction::Forward)),
+                .map(|edge| Link(edge, Direction::Forward)),
             edges_below,
         )
         .into_iter()
@@ -251,7 +290,7 @@ where
 
         self.free_inputs.sort_by_key(|edge| {
             perm_map
-                .get(&(edge.clone(), Direction::Forward))
+                .get(&Link(edge.clone(), Direction::Forward))
                 .copied()
                 .and_then(Into::into)
                 .unwrap_or(usize::MAX)
@@ -259,15 +298,15 @@ where
     }
 }
 
-impl<T: InOutIter> Slice<T>
+impl<O: InOutIter> Slice<O>
 where
-    T::E: Debug,
+    <O::T as Addr>::Edge: Debug,
 {
     /// Reorder the operations in a slice to try to reduce the number of swapping needed to link with the edges in `edges_below`
-    pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<T::V, T::E>>) {
-        let outputs = self.outputs();
+    pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<O::T>>) {
+        let outputs = self.output_links();
 
-        let perm_map: HashMap<Link<T::V, T::E>, PermutationOutput> =
+        let perm_map: HashMap<Link<O::T>, PermutationOutput> =
             generate_permutation(outputs, edges_below)
                 .into_iter()
                 .collect();
@@ -276,7 +315,7 @@ where
 
         self.ops.sort_by_cached_key(|op| -> Ratio<usize> {
             match op
-                .outputs()
+                .output_links()
                 .filter_map(|link| perm_map.get(&link).copied().and_then(Into::into))
                 .fold((0, 0), |(a, b), c: usize| (a + c, b + 1))
             {
