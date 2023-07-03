@@ -5,12 +5,11 @@ use itertools::Itertools;
 use tracing::debug;
 
 use super::{
+    permutation::{advance_by, generate_permutation, PermutationOutput},
     wired_graph::{MonoidalWiredGraph, WiredOp},
     MonoidalTerm, Slice,
 };
-use crate::common::{
-    advance_by, generate_permutation, Addr, Direction, InOut, InOutIter, Link, PermutationOutput,
-};
+use crate::common::{Addr, Direction, InOut, InOutIter, Link};
 
 impl<T: Addr> Slice<MonoidalOp<T>>
 where

@@ -4,11 +4,13 @@ use derivative::Derivative;
 use num::rational::Ratio;
 use tracing::debug;
 
-use crate::common::{
-    generate_permutation, Addr, Direction, InOut, InOutIter, Link, PermutationOutput,
+use crate::{
+    common::{Addr, Direction, InOut, InOutIter, Link},
+    monoidal::permutation::{generate_permutation, PermutationOutput},
 };
 
 pub mod graph;
+pub mod permutation;
 pub mod wired_graph;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
