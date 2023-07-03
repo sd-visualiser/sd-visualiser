@@ -84,6 +84,7 @@ impl<O: InOutIter> InOutIter for Slice<O> {
     }
 }
 
+/// Stores the decomposition of a hypergraph into layer by layer operations of type `O`
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = "O: Clone"),
@@ -94,13 +95,18 @@ impl<O: InOutIter> InOutIter for Slice<O> {
     Default(bound = "")
 )]
 pub struct MonoidalTerm<T: Addr, O> {
+    /// Free inputs to the term
     pub free_inputs: Vec<T::Edge>,
-    pub bound_inputs: Vec<T::Edge>, // We need to make sure these don't get reordered
+    /// Bound inputs to the term which should not be reordered
+    pub bound_inputs: Vec<T::Edge>,
+    /// Layers of operations of type `O`
     pub slices: Vec<Slice<O>>,
+    /// Outputs of the term
     pub outputs: Vec<T::Edge>,
 }
 
 impl<T: Addr, O: InOut + Debug> MonoidalTerm<T, O> {
+    /// Check that each slice of a monoidal term has a consistent number of inputs and outputs
     pub(crate) fn check_in_out_count(&self) {
         let mut input_count = self.free_inputs.len() + self.bound_inputs.len();
         for slice in &self.slices {
@@ -126,16 +132,21 @@ where
     }
 }
 
+/// Consume the first `n` items of an iterator `iter`
 pub(crate) fn advance_by<I: Iterator>(iter: &mut I, n: usize) {
     if n != 0 {
         iter.nth(n - 1);
     }
 }
 
+/// Possible destinations of an edge in a "permutation layer"
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PermutationOutput {
+    /// The edge passes through the layer to the edge indexed by the given number
     Output(usize),
+    /// The edge is deleted in this layer
     Deleted,
+    /// The edge is part of a cup or cap with the edge indexed by the given number
     Paired(usize),
 }
 
@@ -149,6 +160,14 @@ impl From<PermutationOutput> for Option<usize> {
     }
 }
 
+/// Calculates the permutation between two layers
+///
+/// # Inputs
+/// `start`: An iterator identifying the items before permuting
+/// `end`: An iterator identifying the items after permuting
+///
+/// # Returns
+/// The items in `start` paired with a `PermutationOutput` specifying where they should be sent
 pub(crate) fn generate_permutation<'a, T>(
     start: impl Iterator<Item = (T, Direction)> + 'a,
     end: impl Iterator<Item = (T, Direction)> + 'a,
@@ -156,13 +175,16 @@ pub(crate) fn generate_permutation<'a, T>(
 where
     T: 'a + PartialEq + Eq + Hash,
 {
+    // Create a mapping of edges to indices they appear in the output
     let mut end_map: HashMap<(T, Direction), VecDeque<usize>> = HashMap::default();
     for (idx, x) in end.enumerate() {
         end_map.entry(x).or_default().push_back(idx);
     }
 
+    // Initialise the output by assigning each edge to be deleted
     let mut out: Vec<_> = start.map(|x| (x, PermutationOutput::Deleted)).collect();
 
+    // Pair up edges that need pairing
     for i in 0..out.len() {
         let k @ (x, dir) = &out[i].0;
         if *dir == Direction::Backward && !end_map.contains_key(k) {
@@ -179,6 +201,7 @@ where
         }
     }
 
+    // Don't delete edges that appear in the outputs
     for (k, output) in &mut out {
         if *output == PermutationOutput::Deleted {
             if let Some(u) = end_map.get_mut(k).and_then(VecDeque::pop_front) {
@@ -194,6 +217,7 @@ impl<T: InOutIter> MonoidalTerm<(T::V, T::E), T>
 where
     T::E: Debug,
 {
+    /// Reorder the operations on each slice of a monoidal term to attempt to reduce the amount of swapping
     pub fn minimise_swaps(&mut self) {
         fn fold_slice<'a, T: InOutIter>(
             edges_below: Box<dyn Iterator<Item = Link<T::V, T::E>> + 'a>,
@@ -239,6 +263,7 @@ impl<T: InOutIter> Slice<T>
 where
     T::E: Debug,
 {
+    /// Reorder the operations in a slice to try to reduce the number of swapping needed to link with the edges in `edges_below`
     pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<T::V, T::E>>) {
         let outputs = self.outputs();
 
@@ -263,6 +288,7 @@ where
 }
 
 impl<T: Addr, O> MonoidalTerm<T, Slice<O>> {
+    /// Flattens a monoidal term where each operation is itself a slice by inlining these slices
     #[must_use]
     pub fn flatten_graph(self) -> MonoidalTerm<T, O> {
         let MonoidalTerm {
@@ -281,6 +307,7 @@ impl<T: Addr, O> MonoidalTerm<T, Slice<O>> {
 }
 
 impl<T> Slice<Slice<T>> {
+    /// Flattens a slice where each operation is itself a slice by inlining the slices
     #[must_use]
     pub fn flatten_slice(self) -> Slice<T> {
         Slice {
