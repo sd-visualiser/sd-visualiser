@@ -9,6 +9,11 @@ use crate::{
     hypergraph::{Edge, Graph, Node, Operation, Thunk},
 };
 
+/// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
+/// It stores the copies of the graph, but does not store deletions, cups, or caps
+///
+/// The outputs of one slice do not need to exactly line up with the inputs of the next slice
+/// and the operations in a monoidal wired graph can be freely permuted without breaking the graph
 pub type MonoidalWiredGraph<V, E> = MonoidalTerm<(V, E), WiredOp<V, E>>;
 
 #[derive(Clone, Debug, Derivative, Eq)]
@@ -103,20 +108,33 @@ impl<V: Debug, E: Debug> From<Node<V, E>> for WiredOp<V, E> {
     }
 }
 
+/// The information we need to store about a "backlinked" edge
+/// A edge is backlinked if if it travels upwards through the graph
 struct BacklinkData {
+    /// The layer from which we must build backlink operations
     available_layer: usize,
+    /// The layer on which the edge is outputted to
     originating_layer: usize,
 }
 
+/// A structure to help build a monoidal wired graph
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 struct MonoidalWiredGraphBuilder<V, E> {
+    /// A vector of slices from the bottom up.
+    /// Each operation in these slices is itself a slice of operations, allowing operations to be "bundled".
     slices: Vec<Slice<Slice<WiredOp<V, E>>>>,
+    /// Edges that have been connected to an output yet.
+    /// Each is mapped to a list of slice indices for where inputs of the edge have been seen.
     open_edges: HashMap<Edge<V, E>, Vec<usize>>,
+    /// Edges that have been connected to an output but not all their inputs.
+    /// Each is mapped to a `BacklinkData`
     backlinks: HashMap<Edge<V, E>, BacklinkData>,
 }
 
 impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
+    /// Adds a slice of operations to a layer, creating this layer if it doesn't exist yet.
+    /// Does not process any of the inputs or outputs
     fn add_op(&mut self, op: Slice<WiredOp<V, E>>, layer: usize) {
         while layer >= self.slices.len() {
             self.slices.push(Slice::default());
@@ -125,20 +143,26 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         self.slices[layer].ops.push(op);
     }
 
-    fn input_layer(&self, edge: &Edge<V, E>) -> usize {
+    /// Determines the minimum layer from which we can output to the given `edge`
+    fn edge_layer(&self, edge: &Edge<V, E>) -> usize {
         let layers = self.open_edges.get(edge);
+
+        // Get the maximum layer that the slice is used on
         let max = layers
             .and_then(|x| x.iter().max())
             .copied()
             .unwrap_or_default();
 
         if edge.number_of_targets() > 1 {
+            // If the edge has more than one target then we will need
+            // to insert a copy before being able to output to it
             max + 1
         } else {
             max
         }
     }
 
+    /// Insert copies and identities so that `edge` is ready to output to at `layer`
     fn prepare_input(&mut self, edge: &Edge<V, E>, layer: usize) {
         let mut layers = self.open_edges.remove(edge).unwrap_or_default();
         layers.sort_by_key(|x| Reverse(*x));
@@ -167,6 +191,13 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         }
     }
 
+    /// Adds a backlink operation for `edge` onto `layer`
+    ///
+    /// `is_cap` is true if this is the backlink just before a cap operation will need to be inserted
+    ///
+    /// The added backlink is inserted into the same "compound operation" (slice) as the operation whose
+    /// input/output it will form a cap/cup with.
+    /// This ensures that caps and cups are not made arbitrarily wide by swap minimisation.
     fn insert_backlink_on_layer(&mut self, edge: Edge<V, E>, layer: usize, is_cap: bool) {
         let ops = &mut self.slices[layer]
             .ops
@@ -188,10 +219,14 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
         }
     }
 
+    /// Inserts a node of a hypergraph into the builder
+    /// This prepares all the inputs of the node and inserts relevant backlinks
     fn insert_operation(&mut self, node: &Node<V, E>) {
+        // The layer we place the node is the max of the layers that the outputs can be prepared
+        // and the layers that any backlinked inputs originate.
         let node_layer = node
             .outputs()
-            .map(|edge| self.input_layer(&edge))
+            .map(|edge| self.edge_layer(&edge))
             .chain(
                 node.inputs()
                     .filter_map(|x| self.backlinks.get(&x).map(|x| x.originating_layer)),
@@ -205,8 +240,9 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
             if open_edges < edge.number_of_targets() {
+                // We need to backlink the edge as it is not done
                 if open_edges == 0 {
-                    // Only backlink
+                    // Only backlink without copying
                     ops.push(WiredOp::Backlink { addr: edge.clone() });
                     self.backlinks.insert(
                         edge,
@@ -237,6 +273,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<V, E> {
             }
         });
 
+        // The inputs to the node are now open edges
         node.inputs().for_each(|edge| {
             self.open_edges
                 .entry(edge)
@@ -273,6 +310,7 @@ where
             .cloned()
             .partition(|x| builder.backlinks.get(x).map(|y| (x, y)).is_some());
 
+        // Connect up backlinks
         for edge in backlinked_edges {
             let backlink = builder.backlinks.remove(&edge).unwrap();
             let open_edges = &builder.open_edges[&edge];
@@ -302,11 +340,12 @@ where
             builder.slices.len(),
             other_edges
                 .iter()
-                .map(|edge| builder.input_layer(edge))
+                .map(|edge| builder.edge_layer(edge))
                 .max()
                 .unwrap_or_default(),
         );
 
+        // Connect up global inputs
         for edge in other_edges {
             builder.prepare_input(&edge, final_height);
         }
@@ -320,8 +359,10 @@ where
             outputs,
         };
 
+        // We can minimise swaps, keeping "compound terms" together
         graph.minimise_swaps();
 
+        // After this we can flatten the "compound terms"
         graph.flatten_graph()
     }
 }
