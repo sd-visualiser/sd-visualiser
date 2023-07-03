@@ -4,12 +4,12 @@ use derivative::Derivative;
 use itertools::Itertools;
 use tracing::debug;
 
-use crate::{
-    common::{
-        advance_by, generate_permutation, Addr, Direction, InOut, InOutIter, Link, MonoidalTerm,
-        PermutationOutput, Slice,
-    },
-    monoidal_wired::{MonoidalWiredGraph, WiredOp},
+use super::{
+    wired_graph::{MonoidalWiredGraph, WiredOp},
+    MonoidalTerm, Slice,
+};
+use crate::common::{
+    advance_by, generate_permutation, Addr, Direction, InOut, InOutIter, Link, PermutationOutput,
 };
 
 impl<T: Addr> Slice<MonoidalOp<T>>

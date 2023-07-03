@@ -1,9 +1,12 @@
 use delegate::delegate;
 
 use crate::{
-    common::{Addr, InOut, Slice},
+    common::{Addr, InOut},
     language::spartan::Op,
-    monoidal::{MonoidalGraph, MonoidalOp},
+    monoidal::{
+        graph::{MonoidalGraph, MonoidalOp},
+        Slice,
+    },
 };
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]

@@ -6,7 +6,7 @@ use std::{
 use eframe::egui::{util::IdTypeMap, Id};
 use lru::LruCache;
 use poll_promise::Promise;
-use sd_core::{monoidal::MonoidalGraph, selection::SelectionMap};
+use sd_core::{monoidal::graph::MonoidalGraph, selection::SelectionMap};
 use sd_graphics::{common::GraphMetadata, layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();

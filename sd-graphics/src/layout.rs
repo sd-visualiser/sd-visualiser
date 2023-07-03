@@ -5,7 +5,7 @@ use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
     common::{Addr, InOut},
-    monoidal::{MonoidalGraph, MonoidalOp},
+    monoidal::graph::{MonoidalGraph, MonoidalOp},
 };
 #[cfg(test)]
 use serde::Serialize;

@@ -8,7 +8,7 @@ use sd_core::{
     graph::{Name, Op},
     hypergraph::{Edge, Graph, Node},
     language::{Expr, Language},
-    monoidal::{MonoidalGraph, MonoidalOp},
+    monoidal::graph::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,
 };

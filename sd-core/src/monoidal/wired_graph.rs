@@ -4,8 +4,9 @@ use derivative::Derivative;
 use itertools::Itertools;
 use tracing::debug;
 
+use super::{MonoidalTerm, Slice};
 use crate::{
-    common::{Addr, Direction, InOut, InOutIter, Link, MonoidalTerm, Slice},
+    common::{Addr, Direction, InOut, InOutIter, Link},
     hypergraph::{Edge, Graph, Node},
 };
 
