@@ -188,10 +188,6 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn warm_up_enabled(&self) -> bool {
-        matches!(self.rx.try_recv(), Ok(Message::Compile))
-    }
-
     #[allow(clippy::too_many_lines)]
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // process messages sent asynchronously
