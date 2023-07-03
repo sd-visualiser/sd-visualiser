@@ -18,6 +18,8 @@ where
     T::Thunk: Debug,
     T::Edge: Debug,
 {
+    /// From iterators of starting edges and ending edges, create slices containing caps, cups, and deletes
+    /// The `downwards` argument determines whether we should make cups and deletes (if it is true) or caps
     pub fn insert_caps_cups_deletes(
         start_edges: impl Iterator<Item = (T::Edge, Direction)>,
         end_edges: impl Iterator<Item = (T::Edge, Direction)>,
@@ -111,6 +113,7 @@ where
         slices
     }
 
+    /// From iterators of starting edges and ending edges, create slices containing swaps
     pub fn permutation_to_swaps(
         start_edges: impl Iterator<Item = (T::Edge, Direction)>,
         end_edges: impl Iterator<Item = (T::Edge, Direction)>,
@@ -160,6 +163,10 @@ where
     }
 }
 
+/// A `MonoidalGraph` stores the operations of a hypergraph layer by layer
+/// It stores the copies of the graph, as well as deletions, cups, and caps
+///
+/// In a `MonoidalGraph` the outputs of one slice should exactly line up with the inputs of the next slice
 pub type MonoidalGraph<T> = MonoidalTerm<T, MonoidalOp<T>>;
 
 #[derive(Derivative)]
@@ -200,6 +207,7 @@ pub enum MonoidalOp<T: Addr> {
 }
 
 impl<T: Addr> MonoidalOp<T> {
+    /// Create an identity (unary copy) or backlink from a `link`
     fn id_from_link(link: (T::Edge, Direction)) -> Self {
         if link.1 == Direction::Backward {
             MonoidalOp::Backlink { addr: link.0 }
@@ -211,6 +219,7 @@ impl<T: Addr> MonoidalOp<T> {
         }
     }
 
+    /// Determines if `self` is an identity (unary copy) or backlink
     #[must_use]
     pub const fn is_id_or_backlink(&self) -> bool {
         match self {
@@ -328,12 +337,16 @@ impl<V: Debug, E: Debug> From<&WiredOp<V, E>> for MonoidalOp<(V, E)> {
     }
 }
 
+/// Builder to help build monoidal graphs
 struct MonoidalGraphBuilder<V, E> {
+    /// Slices that have been added
+    slices: Vec<Slice<MonoidalOp<(V, E)>>>,
+    /// Stores the edges at the bottom of the last slice, or the global inputs if there are no slices
     open_edges: Vec<Link<V, E>>,
-    pub(crate) slices: Vec<Slice<MonoidalOp<(V, E)>>>,
 }
 
 impl<V, E> MonoidalGraphBuilder<V, E> {
+    /// Returns an iterator over the open edges of the builder
     pub(crate) fn open_edges(&self) -> impl Iterator<Item = Link<V, E>> + '_ {
         self.open_edges.iter().cloned()
     }
@@ -359,37 +372,45 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             .map(|edge| (edge.clone(), Direction::Forward))
             .collect();
 
+        // Initialise the open edges to the global inputs of the graph
         let mut builder = MonoidalGraphBuilder {
             open_edges: graph_inputs,
             slices: vec![],
         };
 
         for next_slice in &graph.slices {
+            // Generate slices for caps
             let end_slices =
                 Slice::insert_caps_cups_deletes(next_slice.inputs(), builder.open_edges(), false);
 
+            // Closure to obtain the target links before cap generation
             let next_inputs = || {
                 end_slices
                     .get(0)
                     .map_or(next_slice.inputs(), InOutIter::inputs)
             };
 
+            // Add cups and deletes
             builder.extend(Slice::insert_caps_cups_deletes(
                 builder.open_edges(),
                 next_inputs(),
                 true,
             ));
 
+            // Add swap layer
             builder.extend(Slice::permutation_to_swaps(
                 builder.open_edges(),
                 next_inputs(),
             ));
 
+            // Add caps
             builder.extend(end_slices);
 
+            // Add the next operation layer
             builder.extend([next_slice.into()]);
         }
 
+        // Add final cups and deletes
         builder.extend(Slice::insert_caps_cups_deletes(
             builder.open_edges(),
             graph
@@ -399,6 +420,7 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
             true,
         ));
 
+        // add final swap layer
         builder.extend(Slice::permutation_to_swaps(
             builder.open_edges(),
             graph
@@ -416,10 +438,13 @@ impl<V: Debug, E: Debug> From<&MonoidalWiredGraph<V, E>> for MonoidalGraph<(V, E
 
         debug!("Monoidal Term: {:#?}", graph);
 
+        // Perform sanity check
         graph.check_in_out_count();
 
+        // Perform local optimisations to graph
         graph.squash_layers();
 
+        // Recheck sanity
         graph.check_in_out_count();
 
         graph
@@ -432,6 +457,7 @@ where
     T::Thunk: Debug,
     T::Edge: Debug,
 {
+    /// Perform local optimisations on a `MonoidalGraph` to try to shrink the number of layers
     fn squash_layers(&mut self) {
         self.slices = std::mem::take(&mut self.slices)
             .into_iter()
@@ -455,6 +481,7 @@ where
     T::Thunk: Debug,
     T::Edge: Debug,
 {
+    /// Check if two layers are canonically mergable into one layer
     fn check_mergeablity(&self, other: &Self) -> bool {
         let mut first_iter = self.ops.iter();
         let mut second_iter = other.ops.iter();
@@ -493,6 +520,7 @@ where
         canonical || second_iter.next().is_none()
     }
 
+    /// Merge two slices under the assumption they are mergable
     fn merge_slice(self, other: Self) -> Self {
         // Assume that slices are mergeable
         let mut first_iter = self.ops.into_iter();
