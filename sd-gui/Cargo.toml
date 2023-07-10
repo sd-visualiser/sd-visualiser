@@ -39,3 +39,4 @@ wasm-bindgen-futures = "0.4.34"
 
 [features]
 cbc = ["sd-graphics/cbc"]
+highs = ["sd-graphics/highs"]
