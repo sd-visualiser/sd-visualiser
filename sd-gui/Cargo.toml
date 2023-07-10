@@ -38,5 +38,7 @@ tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.34"
 
 [features]
+default = ["minilp"]
 cbc = ["sd-graphics/cbc"]
 highs = ["sd-graphics/highs"]
+minilp = ["sd-graphics/minilp"]
