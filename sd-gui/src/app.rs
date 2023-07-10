@@ -213,6 +213,8 @@ impl eframe::App for App {
             }
         }
 
+        let mut find_request_focus = false;
+
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
             egui::trace!(ui);
             ui.horizontal_wrapped(|ui| {
@@ -314,6 +316,7 @@ impl eframe::App for App {
 
                 if button!("Find", egui::Modifiers::COMMAND, egui::Key::F) {
                     self.find = Some(String::new());
+                    find_request_focus = true;
                 }
 
                 ui.separator();
@@ -418,10 +421,14 @@ impl eframe::App for App {
         if let Some((find, graph_ui)) = self.find.as_mut().zip(finished_mut(&mut self.graph_ui)) {
             egui::Window::new("find_panel")
                 .movable(false)
+                .resizable(false)
                 .anchor(Align2::RIGHT_TOP, Vec2::default())
                 .title_bar(false)
                 .show(ctx, |ui| {
-                    ui.text_edit_singleline(find);
+                    let response = ui.text_edit_singleline(find);
+                    if find_request_focus {
+                        response.request_focus();
+                    }
                     ui.horizontal(|ui| {
                         if ui.button("Find").clicked() {
                             graph_ui.find_variable(find);
