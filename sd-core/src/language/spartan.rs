@@ -13,6 +13,7 @@ use pest_derive::Parser;
 use serde::Serialize;
 
 use super::span_into_str;
+use crate::common::Matchable;
 
 pub struct Spartan;
 
@@ -161,6 +162,12 @@ impl<'pest> FromPest<'pest> for Op {
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
+impl Matchable for Variable {
+    fn is_match(&self, variable: &str) -> bool {
+        self.0 == variable
+    }
+}
+
 impl Display for Variable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
@@ -170,6 +177,12 @@ impl Display for Variable {
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub struct Addr;
+
+impl Matchable for Addr {
+    fn is_match(&self, _: &str) -> bool {
+        false
+    }
+}
 
 impl Display for Addr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

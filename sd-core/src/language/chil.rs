@@ -11,6 +11,7 @@ use pest_ast::FromPest;
 use pest_derive::Parser;
 
 use super::{span_into_str, AsVar};
+use crate::common::Matchable;
 
 pub struct Chil;
 
@@ -127,6 +128,16 @@ pub struct Variable {
     pub addr: Addr,
 }
 
+impl Matchable for Variable {
+    fn is_match(&self, variable: &str) -> bool {
+        self.name
+            .as_ref()
+            .map(|id| id.0 == variable)
+            .unwrap_or_default()
+            || self.addr.is_match(variable)
+    }
+}
+
 impl Display for Variable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.name {
@@ -142,6 +153,12 @@ pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
     #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
 );
+
+impl Matchable for Addr {
+    fn is_match(&self, variable: &str) -> bool {
+        self.1.to_string() == variable
+    }
+}
 
 impl PartialEq for Addr {
     fn eq(&self, other: &Self) -> bool {

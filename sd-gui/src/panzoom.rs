@@ -59,6 +59,11 @@ impl Panzoom {
         self.pan(vec2(PAN_FACTOR, 0.0));
     }
 
+    /// Pan to location
+    pub fn set_pan(&mut self, center: Pos2) {
+        self.translation = center;
+    }
+
     /// Zoom by a relative factor with the given anchor.
     pub fn zoom(&mut self, zoom_delta: f32, anchor: Pos2) {
         self.translation = anchor + (self.translation - anchor) / zoom_delta;

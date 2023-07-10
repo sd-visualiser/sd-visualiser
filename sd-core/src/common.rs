@@ -91,3 +91,8 @@ impl<V, E> InOutIter for Thunk<V, E> {
         Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
     }
 }
+
+/// Check if an object matches a variable name
+pub trait Matchable {
+    fn is_match(&self, variable: &str) -> bool;
+}

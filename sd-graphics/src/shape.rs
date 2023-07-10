@@ -5,7 +5,10 @@ use egui::{
     vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
 use indexmap::IndexSet;
-use sd_core::{common::Addr, selection::SelectionMap};
+use sd_core::{
+    common::{Addr, Matchable},
+    selection::SelectionMap,
+};
 
 use crate::common::{ContainsPoint, GraphMetadata, TEXT_SIZE, TOLERANCE};
 
@@ -355,6 +358,18 @@ impl<T: Addr> Shape<T> {
             Shape::Arrow { center, height, .. } => {
                 Rect::from_center_size(*center, Vec2::splat(*height * 5.0))
             }
+        }
+    }
+
+    pub fn find_variable(&self, variable: &str) -> Option<Pos2>
+    where
+        T::Operation: Matchable,
+        T::Thunk: Matchable,
+    {
+        match self {
+            Shape::Rectangle { rect, addr, .. } => addr.is_match(variable).then_some(rect.center()),
+            Shape::Operation { center, addr, .. } => addr.is_match(variable).then_some(*center),
+            _ => None,
         }
     }
 }

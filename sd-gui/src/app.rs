@@ -7,7 +7,11 @@ use std::{
 };
 
 use anyhow::anyhow;
-use eframe::egui::{self, FontDefinitions, TextBuffer};
+use eframe::{
+    egui::{self, FontDefinitions, TextBuffer},
+    emath::Align2,
+    epaint::Vec2,
+};
 use egui_notify::Toasts;
 use poll_promise::Promise;
 use sd_core::{common::Direction, graph::SyntaxHypergraph};
@@ -40,6 +44,7 @@ pub struct App {
     language: UiLanguage,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
+    find: Option<String>,
     toasts: Toasts,
 }
 
@@ -56,6 +61,7 @@ impl Default for App {
             language: UiLanguage::default(),
             graph_ui: Option::default(),
             selections: Vec::default(),
+            find: None,
             toasts: Toasts::default(),
         }
     }
@@ -184,6 +190,7 @@ impl App {
         }
 
         self.selections.clear();
+        self.find = None;
     }
 }
 
@@ -305,6 +312,10 @@ impl eframe::App for App {
                     }
                 }
 
+                if button!("Find", egui::Modifiers::COMMAND, egui::Key::F) {
+                    self.find = Some(String::new());
+                }
+
                 ui.separator();
 
                 if button!("Compile", egui::Key::F5) {
@@ -402,6 +413,29 @@ impl eframe::App for App {
                 }
             });
         });
+
+        let mut clear_find = false;
+        if let Some((find, graph_ui)) = self.find.as_mut().zip(finished_mut(&mut self.graph_ui)) {
+            egui::Window::new("find_panel")
+                .movable(false)
+                .anchor(Align2::RIGHT_TOP, Vec2::default())
+                .title_bar(false)
+                .show(ctx, |ui| {
+                    ui.text_edit_singleline(find);
+                    ui.horizontal(|ui| {
+                        if ui.button("Find").clicked() {
+                            graph_ui.find_variable(find);
+                            clear_find = true;
+                        }
+                        if ui.button("Cancel").clicked() {
+                            clear_find = true;
+                        }
+                    })
+                });
+        }
+        if clear_find {
+            self.find = None;
+        }
 
         self.toasts.show(ctx);
     }

@@ -12,6 +12,7 @@ use thiserror::Error;
 use tracing::{debug, Level};
 
 use crate::{
+    common::Matchable,
     hypergraph::{
         builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
         subgraph::Subgraph,
@@ -64,6 +65,21 @@ pub enum Name<T: Language> {
     Thunk(T::Addr),
     FreeVar(T::Var),
     BoundVar(T::VarDef),
+}
+
+impl<T: Language> Matchable for Name<T>
+where
+    T::Addr: Matchable,
+    T::Var: Matchable,
+{
+    fn is_match(&self, variable: &str) -> bool {
+        match self {
+            Name::Op => false,
+            Name::Thunk(addr) => addr.is_match(variable),
+            Name::FreeVar(var) => var.is_match(variable),
+            Name::BoundVar(var_def) => var_def.as_var().is_match(variable),
+        }
+    }
 }
 
 impl<T: Language> Name<T> {

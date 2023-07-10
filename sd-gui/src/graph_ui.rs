@@ -8,7 +8,7 @@ use eframe::{
     epaint::{Rounding, Shape},
 };
 use sd_core::{
-    common::Direction,
+    common::{Direction, Matchable},
     graph::{Name, Op, SyntaxHypergraph, SyntaxSubgraph},
     hypergraph::{subgraph::Subgraph, Thunk},
     language::{chil::Chil, spartan::Spartan, Expr, Language},
@@ -50,6 +50,7 @@ impl GraphUi {
             pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
+            pub(crate) fn find_variable(&mut self, variable: &str);
             pub(crate) fn export_svg(&self) -> String;
         }
     }
@@ -221,6 +222,26 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         T::Op: Display,
     {
         self.reset_requested = true;
+    }
+
+    /// Searches through the shapes by variable name and pans to the operation which generates the variable
+    pub(crate) fn find_variable(&mut self, variable: &str)
+    where
+        T::Op: Display,
+        T::Addr: Matchable,
+        T::Var: Matchable,
+    {
+        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata, None);
+        let guard = shapes.lock().unwrap();
+
+        if let Some(shapes) = guard.ready() {
+            for shape in &shapes.shapes {
+                if let Some(center) = shape.find_variable(variable) {
+                    self.panzoom.set_pan(center);
+                    break;
+                }
+            }
+        }
     }
 
     delegate! {

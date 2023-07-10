@@ -7,7 +7,11 @@ use by_address::ByThinAddress;
 use derivative::Derivative;
 use indexmap::IndexMap;
 
-use crate::{common::InOut, selection::SelectionMap, weak_map::WeakMap};
+use crate::{
+    common::{InOut, Matchable},
+    selection::SelectionMap,
+    weak_map::WeakMap,
+};
 
 pub mod builder;
 mod internal;
@@ -65,6 +69,18 @@ impl<V: Debug, E: Debug> Debug for Operation<V, E> {
     }
 }
 
+impl<V, E> Matchable for Operation<V, E>
+where
+    E: Matchable,
+{
+    fn is_match(&self, variable: &str) -> bool {
+        self.outputs()
+            .next()
+            .map(|edge| edge.weight().is_match(variable))
+            .unwrap_or_default()
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
@@ -91,6 +107,18 @@ impl<V: Debug, E: Debug> Debug for Thunk<V, E> {
                 &self.graph_outputs().zip(self.outputs()).collect::<Vec<_>>(),
             )
             .finish()
+    }
+}
+
+impl<V, E> Matchable for Thunk<V, E>
+where
+    E: Matchable,
+{
+    fn is_match(&self, variable: &str) -> bool {
+        self.outputs()
+            .next()
+            .map(|edge| edge.weight().is_match(variable))
+            .unwrap_or_default()
     }
 }
 
