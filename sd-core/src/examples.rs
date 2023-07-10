@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use delegate::delegate;
 
 use crate::{
@@ -22,6 +24,12 @@ impl InOut for SyntaxOp {
 
     fn number_of_outputs(&self) -> usize {
         1
+    }
+}
+
+impl Display for SyntaxOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "")
     }
 }
 

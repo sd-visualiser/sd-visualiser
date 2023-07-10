@@ -1,5 +1,5 @@
 use std::{
-    fmt::Debug,
+    fmt::{Debug, Display},
     sync::{Arc, Weak},
 };
 
@@ -66,6 +66,12 @@ impl<V: Debug, E: Debug> Debug for Operation<V, E> {
             .field("inputs", &self.inputs().collect::<Vec<_>>())
             .field("outputs", &self.outputs().collect::<Vec<_>>())
             .finish()
+    }
+}
+
+impl<V: Display, E> Display for Operation<V, E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.weight().fmt(f)
     }
 }
 

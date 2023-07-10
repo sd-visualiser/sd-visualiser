@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
@@ -11,7 +11,10 @@ use sd_core::{
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{common::GraphMetadata, lp::LpProblem};
+use crate::{
+    common::{GraphMetadata, RADIUS_OPERATION},
+    lp::LpProblem,
+};
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
@@ -22,8 +25,11 @@ pub enum LayoutError {
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Node<T> {
+    Atom {
+        pos: T,
+        extra_size: f32,
+    },
     // If the atom is a swap we want to remember where it’s inputs are
-    Atom(T),
     Swap {
         pos: T,
         input_offset: usize,
@@ -33,24 +39,30 @@ pub enum Node<T> {
     Thunk(LayoutInternal<T>),
 }
 
+impl Node<Variable> {
+    #[must_use]
+    pub fn min(&self) -> Expression {
+        match self {
+            Self::Atom { pos, extra_size } => *pos - *extra_size,
+            Self::Swap { pos, .. } => (*pos).into(),
+            Self::Thunk(layout) => layout.min.into(),
+        }
+    }
+
+    #[must_use]
+    pub fn max(&self) -> Expression {
+        match self {
+            Self::Atom { pos, extra_size } => *pos + *extra_size,
+            Self::Swap { pos, .. } => (*pos).into(),
+            Self::Thunk(layout) => layout.max.into(),
+        }
+    }
+}
+
 impl<T> Node<T> {
-    pub const fn min(&self) -> &T {
-        match self {
-            Self::Atom(pos) | Self::Swap { pos, .. } => pos,
-            Self::Thunk(layout) => &layout.min,
-        }
-    }
-
-    pub const fn max(&self) -> &T {
-        match self {
-            Self::Atom(pos) | Self::Swap { pos, .. } => pos,
-            Self::Thunk(layout) => &layout.max,
-        }
-    }
-
     pub fn unwrap_atom(&self) -> &T {
         match self {
-            Self::Atom(pos) | Self::Swap { pos, .. } => pos,
+            Self::Atom { pos, .. } | Self::Swap { pos, .. } => pos,
             Self::Thunk(_layout) => panic!(),
         }
     }
@@ -125,7 +137,7 @@ impl Layout {
                             / 2.0,
                     ) - 1.0
                 }
-                Node::Atom(_) => 0.0,
+                Node::Atom { .. } => 0.0,
                 Node::Thunk(body) => body.height(),
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
@@ -144,7 +156,10 @@ impl Layout {
                 .map(|ns| {
                     ns.into_iter()
                         .map(|n| match n {
-                            Node::Atom(pos) => Node::Atom(solution.value(pos) as f32),
+                            Node::Atom { pos, extra_size } => Node::Atom {
+                                pos: (solution.value(pos) as f32),
+                                extra_size,
+                            },
                             Node::Swap {
                                 pos,
                                 input_offset,
@@ -177,7 +192,10 @@ fn layout_internal<T: Addr>(
     graph: &MonoidalGraph<T>,
     metadata: &GraphMetadata<T>,
     problem: &mut LpProblem,
-) -> LayoutInternal<Variable> {
+) -> LayoutInternal<Variable>
+where
+    T::Operation: Display,
+{
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
     let max = problem.add_variable(variable().min(0.0));
@@ -199,13 +217,13 @@ fn layout_internal<T: Addr>(
 
     let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<Node<Variable>>| {
         if let Some(x) = ns.first() {
-            problem.add_constraint((*x.min() - min).geq(0.5));
+            problem.add_constraint((x.min() - min).geq(0.5));
         }
         if let Some(x) = ns.last() {
-            problem.add_constraint((max - *x.max()).geq(0.5));
+            problem.add_constraint((max - x.max()).geq(0.5));
         }
         for (x, y) in ns.iter().tuple_windows() {
-            problem.add_constraint((*y.min() - *x.max()).geq(1.0));
+            problem.add_constraint((y.min() - x.max()).geq(1.0));
         }
     };
 
@@ -237,7 +255,16 @@ fn layout_internal<T: Addr>(
                         output_offset,
                         out_to_in: out_to_in.clone(),
                     },
-                    _ => Node::Atom(problem.add_variable(variable().min(0.0))),
+                    MonoidalOp::Operation { addr } => Node::Atom {
+                        pos: problem.add_variable(variable().min(0.0)),
+                        extra_size: (addr.to_string().chars().count().saturating_sub(1) as f32
+                            / 2.0)
+                            * RADIUS_OPERATION,
+                    },
+                    _ => Node::Atom {
+                        pos: problem.add_variable(variable().min(0.0)),
+                        extra_size: 0.0,
+                    },
                 };
                 input_offset += op.number_of_inputs();
                 output_offset += op.number_of_outputs();
@@ -267,12 +294,12 @@ fn layout_internal<T: Addr>(
 
             // Distance constraints
             let constraints = [
-                (prev_in, Some(*node.min())),
-                (prev_out, Some(*node.min())),
-                (prev_op, ins.first().copied()),
-                (prev_op, outs.first().copied()),
-                (prev_in, outs.first().copied()),
-                (prev_out, ins.first().copied()),
+                (prev_in.clone(), Some(node.min())),
+                (prev_out.clone(), Some(node.min())),
+                (prev_op.clone(), ins.first().copied().map(Into::into)),
+                (prev_op, outs.first().copied().map(Into::into)),
+                (prev_in, outs.first().copied().map(Into::into)),
+                (prev_out, ins.first().copied().map(Into::into)),
             ];
             for (x, y) in constraints.into_iter().filter_map(|(x, y)| x.zip(y)) {
                 problem.add_constraint((y - x).geq(1.0));
@@ -293,7 +320,7 @@ fn layout_internal<T: Addr>(
             }
 
             match node {
-                Node::Atom(pos) => {
+                Node::Atom { pos, .. } => {
                     // Fair averaging constraints
                     if ni > 0 {
                         let sum_ins: Expression = ins.iter().sum();
@@ -328,9 +355,9 @@ fn layout_internal<T: Addr>(
                 }
             }
 
-            prev_op = Some(*node.max());
-            prev_in = ins.last().copied();
-            prev_out = outs.last().copied();
+            prev_op = Some(node.max());
+            prev_in = ins.last().copied().map(Into::into);
+            prev_out = outs.last().copied().map(Into::into);
 
             offset_i += ni;
             offset_o += no;
@@ -348,7 +375,10 @@ fn layout_internal<T: Addr>(
 pub fn layout<T: Addr>(
     graph: &MonoidalGraph<T>,
     metadata: &GraphMetadata<T>,
-) -> Result<Layout, LayoutError> {
+) -> Result<Layout, LayoutError>
+where
+    T::Operation: Display,
+{
     let mut problem = LpProblem::default();
 
     let layout = layout_internal(graph, metadata, &mut problem);
