@@ -4,7 +4,7 @@ use std::{fmt::Display, sync::Arc};
 
 use delegate::delegate;
 use eframe::{
-    egui,
+    egui::{self, Id, Sense},
     epaint::{Rounding, Shape},
 };
 use sd_core::{
@@ -105,12 +105,20 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
                 ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
+
             let to_screen = self.panzoom.transform(response.rect);
             if let Some(hover_pos) = response.hover_pos() {
+                let drag_response = ui.interact_with_hovered(
+                    response.rect,
+                    true,
+                    Id::new("drag_interact"),
+                    Sense::drag(),
+                );
                 let anchor = to_screen.inverse().transform_pos(hover_pos);
                 ui.input(|i| {
                     self.panzoom.zoom(i.zoom_delta(), anchor);
                     self.panzoom.pan(i.scroll_delta);
+                    self.panzoom.pan(drag_response.drag_delta());
                 });
                 ui.input_mut(|i| {
                     let mut pan_by_key = |key, pan: fn(&mut Panzoom) -> ()| {
