@@ -50,7 +50,7 @@ pub trait InOut {
     fn number_of_outputs(&self) -> usize;
 }
 
-pub trait InOutIter {
+pub trait InOutIter: InOut {
     type T: Addr;
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;

@@ -2,7 +2,6 @@ use std::{collections::HashMap, fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 use num::rational::Ratio;
-use tracing::debug;
 
 use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
@@ -94,19 +93,13 @@ impl<T: Addr, O: InOut + Debug> MonoidalTerm<T, O> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-impl<O: InOutIter> MonoidalTerm<O::T, O>
-where
-    <O::T as Addr>::Edge: Debug,
-{
+impl<O: InOutIter + PartialEq + Eq + Hash + Clone> MonoidalTerm<O::T, O> {
     /// Reorder the operations on each slice of a monoidal term to attempt to reduce the amount of swapping
     pub fn minimise_swaps(&mut self) {
-        fn fold_slice<'a, O: InOutIter>(
+        fn fold_slice<'a, O: InOutIter + PartialEq + Eq + Hash + Clone>(
             edges_below: Box<dyn Iterator<Item = Link<O::T>> + 'a>,
             slice: &'a mut Slice<O>,
-        ) -> Box<dyn Iterator<Item = Link<O::T>> + 'a>
-        where
-            <O::T as Addr>::Edge: Debug,
-        {
+        ) -> Box<dyn Iterator<Item = Link<O::T>> + 'a> {
             slice.minimise_swaps(edges_below);
             slice.input_links()
         }
@@ -140,31 +133,33 @@ where
     }
 }
 
-impl<O: InOutIter> Slice<O>
-where
-    <O::T as Addr>::Edge: Debug,
-{
+impl<O: InOutIter + PartialEq + Eq + Hash + Clone> Slice<O> {
     /// Reorder the operations in a slice to try to reduce the number of swapping needed to link with the edges in `edges_below`
     pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<O::T>>) {
         let outputs = self.output_links();
 
-        let perm_map: HashMap<Link<O::T>, PermutationOutput> =
-            generate_permutation(outputs, edges_below)
-                .into_iter()
-                .collect();
+        let mut perm_list = generate_permutation(outputs, edges_below);
 
-        debug!("Map: {:#?}", perm_map);
+        let perm_map: HashMap<O, Ratio<usize>> = self
+            .ops
+            .iter()
+            .rev()
+            .map(|op| {
+                let outs = op.number_of_outputs();
+                let ret = match perm_list
+                    .split_off(perm_list.len() - outs)
+                    .into_iter()
+                    .filter_map(|(_, y)| Option::<usize>::from(y))
+                    .fold((0, 0), |(a, b), c: usize| (a + c, b + 1))
+                {
+                    (_, 0) => usize::MAX.into(),
+                    (x, y) => Ratio::new_raw(x, y),
+                };
+                (op.clone(), ret)
+            })
+            .collect();
 
-        self.ops.sort_by_cached_key(|op| -> Ratio<usize> {
-            match op
-                .output_links()
-                .filter_map(|link| perm_map.get(&link).copied().and_then(Into::into))
-                .fold((0, 0), |(a, b), c: usize| (a + c, b + 1))
-            {
-                (_, 0) => usize::MAX.into(),
-                (x, y) => Ratio::new_raw(x, y),
-            }
-        });
+        self.ops.sort_by_key(|op| perm_map[op]);
     }
 }
 
