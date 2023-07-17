@@ -18,6 +18,7 @@ mod internal;
 pub mod petgraph;
 pub mod reachability;
 pub mod subgraph;
+pub mod traits;
 mod weakbyaddress;
 
 use self::{
@@ -25,6 +26,7 @@ use self::{
         HypergraphInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
         WeakNodeInternal,
     },
+    traits::{EdgeLike, Graph, NodeLike, WithWeight},
     weakbyaddress::WeakByAddress,
 };
 
@@ -152,6 +154,28 @@ impl<V, E> From<Thunk<V, E>> for Node<V, E> {
     }
 }
 
+impl<V, E> TryFrom<Node<V, E>> for Operation<V, E> {
+    type Error = ();
+
+    fn try_from(node: Node<V, E>) -> Result<Self, Self::Error> {
+        match node {
+            Node::Operation(op) => Ok(op),
+            Node::Thunk(_) => Err(()),
+        }
+    }
+}
+
+impl<V, E> TryFrom<Node<V, E>> for Thunk<V, E> {
+    type Error = ();
+
+    fn try_from(node: Node<V, E>) -> Result<Self, Self::Error> {
+        match node {
+            Node::Operation(_) => Err(()),
+            Node::Thunk(thunk) => Ok(thunk),
+        }
+    }
+}
+
 impl<V, E> WeakNodeInternal<V, E> {
     pub(super) fn unwrap_node(&self) -> Node<V, E> {
         match self {
@@ -165,35 +189,40 @@ impl<V, E> WeakNodeInternal<V, E> {
     }
 }
 
-impl<V, E> Edge<V, E> {
-    #[must_use]
-    pub fn weight(&self) -> &E {
+impl<V, E> WithWeight for Edge<V, E> {
+    type Weight = E;
+
+    fn weight(&self) -> &Self::Weight {
         &self.0.weight
     }
+}
 
-    #[must_use]
-    pub fn source(&self) -> Option<Node<V, E>> {
+impl<V, E> EdgeLike for Edge<V, E> {
+    type T = (V, E);
+
+    fn source(&self) -> Option<Node<V, E>> {
         self.0.node.as_ref().map(WeakNodeInternal::unwrap_node)
     }
 
-    pub fn targets(&self) -> impl Iterator<Item = Option<Node<V, E>>> {
-        self.0
-            .links
-            .try_read()
-            .expect("Lock unexpectedly taken")
-            .iter()
-            .map(|WeakByAddress(in_port)| {
-                let in_port = in_port
-                    .upgrade()
-                    .expect("got dangling reference to in_port");
-                in_port.node.as_ref().map(WeakNodeInternal::unwrap_node)
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<V, E>>> + '_> {
+        Box::new(
+            self.0
+                .links
+                .try_read()
+                .expect("Lock unexpectedly taken")
+                .iter()
+                .map(|WeakByAddress(in_port)| {
+                    let in_port = in_port
+                        .upgrade()
+                        .expect("got dangling reference to in_port");
+                    in_port.node.as_ref().map(WeakNodeInternal::unwrap_node)
+                })
+                .collect::<Vec<_>>()
+                .into_iter(),
+        )
     }
 
-    #[must_use]
-    pub fn number_of_targets(&self) -> usize {
+    fn number_of_targets(&self) -> usize {
         self.0
             .links
             .try_read()
@@ -202,57 +231,8 @@ impl<V, E> Edge<V, E> {
     }
 }
 
-pub trait Graph {
-    type NodeWeight;
-    type EdgeWeight;
-    fn bound_graph_inputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::NodeWeight, Self::EdgeWeight>> + '_>;
-    fn unbound_graph_inputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::NodeWeight, Self::EdgeWeight>> + '_>;
-    fn graph_inputs<'a>(
-        &'a self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::NodeWeight, Self::EdgeWeight>> + 'a>
-    where
-        Self::EdgeWeight: 'a,
-        Self::NodeWeight: 'a,
-    {
-        Box::new(self.unbound_graph_inputs().chain(self.bound_graph_inputs()))
-    }
-    fn graph_outputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::NodeWeight, Self::EdgeWeight>> + '_>;
-    fn nodes(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Node<Self::NodeWeight, Self::EdgeWeight>> + '_>;
-    fn operations<'a>(
-        &'a self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Operation<Self::NodeWeight, Self::EdgeWeight>> + 'a>
-    where
-        Self::NodeWeight: 'a,
-        Self::EdgeWeight: 'a,
-    {
-        Box::new(self.nodes().filter_map(|node| match node {
-            Node::Operation(operation) => Some(operation),
-            Node::Thunk(_) => None,
-        }))
-    }
-    fn thunks<'a>(
-        &'a self,
-    ) -> Box<dyn DoubleEndedIterator<Item = Thunk<Self::NodeWeight, Self::EdgeWeight>> + 'a>
-    where
-        Self::NodeWeight: 'a,
-        Self::EdgeWeight: 'a,
-    {
-        Box::new(self.nodes().filter_map(|node| match node {
-            Node::Operation(_) => None,
-            Node::Thunk(thunk) => Some(thunk),
-        }))
-    }
-}
-
 impl<V, E> Graph for Hypergraph<V, E> {
+    type T = (V, E);
     type NodeWeight = V;
     type EdgeWeight = E;
     fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -290,6 +270,7 @@ impl<V, E> Graph for Hypergraph<V, E> {
 }
 
 impl<V, E> Graph for Thunk<V, E> {
+    type T = (V, E);
     type NodeWeight = V;
     type EdgeWeight = E;
     fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -337,31 +318,37 @@ impl<V, E> Graph for Thunk<V, E> {
     }
 }
 
-impl<V, E> Operation<V, E> {
-    #[must_use]
-    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = Edge<V, E>> + '_ {
-        self.0
-            .inputs
-            .iter()
-            .map(|i| Edge(ByThinAddress(i.link.read().unwrap().upgrade().unwrap())))
-    }
+impl<V, E> WithWeight for Operation<V, E> {
+    type Weight = V;
 
-    #[must_use]
-    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = Edge<V, E>> + '_ {
-        self.0
-            .outputs
-            .iter()
-            .cloned()
-            .map(|o| Edge(ByThinAddress(o)))
-    }
-
-    #[must_use]
-    pub fn weight(&self) -> &V {
+    fn weight(&self) -> &Self::Weight {
         &self.0.weight
     }
+}
 
-    #[must_use]
-    pub fn backlink(&self) -> Option<Thunk<V, E>> {
+impl<V, E> NodeLike for Operation<V, E> {
+    type T = (V, E);
+
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+        Box::new(
+            self.0
+                .inputs
+                .iter()
+                .map(|i| Edge(ByThinAddress(i.link.read().unwrap().upgrade().unwrap()))),
+        )
+    }
+
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+        Box::new(
+            self.0
+                .outputs
+                .iter()
+                .cloned()
+                .map(|o| Edge(ByThinAddress(o))),
+        )
+    }
+
+    fn backlink(&self) -> Option<Thunk<V, E>> {
         self.0
             .backlink
             .as_ref()
@@ -370,28 +357,31 @@ impl<V, E> Operation<V, E> {
     }
 }
 
-impl<V, E> Thunk<V, E> {
-    #[must_use]
-    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = Edge<V, E>> + '_ {
-        self.0
-            .free_variable_edges
-            .get()
-            .expect("Failed to unlock")
-            .clone()
-            .into_iter()
-            .map(|out_port| Edge(out_port))
+impl<V, E> NodeLike for Thunk<V, E> {
+    type T = (V, E);
+
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+        Box::new(
+            self.0
+                .free_variable_edges
+                .get()
+                .expect("Failed to unlock")
+                .clone()
+                .into_iter()
+                .map(|out_port| Edge(out_port)),
+        )
     }
 
-    #[must_use]
-    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = Edge<V, E>> + '_ {
-        self.0
-            .outputs
-            .values()
-            .map(|out_port| Edge(ByThinAddress(out_port.clone())))
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+        Box::new(
+            self.0
+                .outputs
+                .values()
+                .map(|out_port| Edge(ByThinAddress(out_port.clone()))),
+        )
     }
 
-    #[must_use]
-    pub fn backlink(&self) -> Option<Thunk<V, E>> {
+    fn backlink(&self) -> Option<Thunk<V, E>> {
         self.0
             .backlink
             .as_ref()
@@ -400,25 +390,24 @@ impl<V, E> Thunk<V, E> {
     }
 }
 
-impl<V, E> Node<V, E> {
-    #[must_use]
-    pub fn inputs(&self) -> Box<dyn Iterator<Item = Edge<V, E>> + '_> {
+impl<V, E> NodeLike for Node<V, E> {
+    type T = (V, E);
+
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         match self {
-            Node::Operation(op) => Box::new(op.inputs()),
-            Node::Thunk(thunk) => Box::new(thunk.inputs()),
+            Node::Operation(op) => op.inputs(),
+            Node::Thunk(thunk) => thunk.inputs(),
         }
     }
 
-    #[must_use]
-    pub fn outputs(&self) -> Box<dyn Iterator<Item = Edge<V, E>> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         match self {
-            Node::Operation(op) => Box::new(op.outputs()),
-            Node::Thunk(thunk) => Box::new(thunk.outputs()),
+            Node::Operation(op) => op.outputs(),
+            Node::Thunk(thunk) => thunk.outputs(),
         }
     }
 
-    #[must_use]
-    pub fn backlink(&self) -> Option<Thunk<V, E>> {
+    fn backlink(&self) -> Option<Thunk<V, E>> {
         match self {
             Node::Operation(op) => op.backlink(),
             Node::Thunk(thunk) => thunk.backlink(),

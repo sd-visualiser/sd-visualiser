@@ -11,7 +11,8 @@ use super::{
         HypergraphInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
         ThunkInternal,
     },
-    Edge, Graph, Hypergraph, Node, Operation, Thunk,
+    traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    Edge, Hypergraph, Node, Operation, Thunk,
 };
 use crate::common::InOut;
 

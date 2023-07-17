@@ -7,7 +7,10 @@ use tracing::debug;
 use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
-    hypergraph::{Edge, Graph, Node},
+    hypergraph::{
+        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        Node,
+    },
 };
 
 /// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
@@ -136,10 +139,10 @@ struct MonoidalWiredGraphBuilder<T: Addr> {
     backlinks: HashMap<T::Edge, BacklinkData>,
 }
 
-impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
+impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     /// Adds a slice of operations to a layer, creating this layer if it doesn't exist yet.
     /// Does not process any of the inputs or outputs
-    fn add_op(&mut self, op: Slice<WiredOp<(V, E)>>, layer: usize) {
+    fn add_op(&mut self, op: Slice<WiredOp<T>>, layer: usize) {
         while layer >= self.slices.len() {
             self.slices.push(Slice::default());
         }
@@ -148,7 +151,10 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
     }
 
     /// Determines the minimum layer from which we can output to the given `edge`
-    fn edge_layer(&self, edge: &Edge<V, E>) -> usize {
+    fn edge_layer(&self, edge: &T::Edge) -> usize
+    where
+        T::Edge: EdgeLike<T = T>,
+    {
         let layers = self.open_edges.get(edge);
 
         // Get the maximum layer that the slice is used on
@@ -167,7 +173,7 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
     }
 
     /// Insert copies and identities so that `edge` is ready to output to at `layer`
-    fn prepare_input(&mut self, edge: &Edge<V, E>, layer: usize) {
+    fn prepare_input(&mut self, edge: &T::Edge, layer: usize) {
         let mut layers = self.open_edges.remove(edge).unwrap_or_default();
         layers.sort_by_key(|x| Reverse(*x));
         if let Some(mut current_layer) = layers.pop() {
@@ -202,7 +208,11 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
     /// The added backlink is inserted into the same "compound operation" (slice) as the operation whose
     /// input/output it will form a cap/cup with.
     /// This ensures that caps and cups are not made arbitrarily wide by swap minimisation.
-    fn insert_backlink_on_layer(&mut self, edge: Edge<V, E>, layer: usize, is_cap: bool) {
+    fn insert_backlink_on_layer(&mut self, edge: T::Edge, layer: usize, is_cap: bool)
+    where
+        T::Operation: InOutIter<T = T>,
+        T::Thunk: InOutIter<T = T>,
+    {
         let ops = &mut self.slices[layer]
             .ops
             .iter_mut()
@@ -225,7 +235,13 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
 
     /// Inserts a node of a hypergraph into the builder
     /// This prepares all the inputs of the node and inserts relevant backlinks
-    fn insert_operation(&mut self, node: &Node<V, E>) {
+    fn insert_operation(&mut self, node: &T::Node)
+    where
+        T::Node: NodeLike<T = T> + Into<WiredOp<T>>,
+        T::Edge: EdgeLike<T = T>,
+        T::Operation: InOutIter<T = T>,
+        T::Thunk: InOutIter<T = T>,
+    {
         // The layer we place the node is the max of the layers that the outputs can be prepared
         // and the layers that any backlinked inputs originate.
         let node_layer = node
@@ -290,13 +306,20 @@ impl<V: Debug, E: Debug> MonoidalWiredGraphBuilder<(V, E)> {
 }
 
 #[allow(clippy::fallible_impl_from)]
-impl<G, V: Debug, E: Debug> From<&G> for MonoidalWiredGraph<(V, E)>
+impl<G> From<&G> for MonoidalWiredGraph<G::T>
 where
-    G: Graph<NodeWeight = V, EdgeWeight = E>,
+    G: Graph,
+    <G::T as Addr>::Node: NodeLike<T = G::T> + Into<WiredOp<G::T>> + Debug,
+    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = G::EdgeWeight> + Debug,
+    <G::T as Addr>::Operation:
+        NodeLike<T = G::T> + WithWeight<Weight = G::NodeWeight> + InOutIter<T = G::T>,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T>
+        + Graph<T = G::T, NodeWeight = G::NodeWeight, EdgeWeight = G::EdgeWeight>
+        + InOutIter<T = G::T>,
 {
     fn from(graph: &G) -> Self {
-        let mut builder = MonoidalWiredGraphBuilder::default();
-        let outputs: Vec<Edge<V, E>> = graph.graph_outputs().collect();
+        let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();
+        let outputs: Vec<<G::T as Addr>::Edge> = graph.graph_outputs().collect();
 
         for edge in &outputs {
             builder.open_edges.entry(edge.clone()).or_default().push(0);
@@ -356,7 +379,7 @@ where
 
         builder.slices.reverse();
 
-        let mut graph = MonoidalTerm::<(V, E), Slice<WiredOp<(V, E)>>> {
+        let mut graph = MonoidalTerm::<G::T, Slice<WiredOp<G::T>>> {
             free_inputs: graph.unbound_graph_inputs().collect(),
             bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,

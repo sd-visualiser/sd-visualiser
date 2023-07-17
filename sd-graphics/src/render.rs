@@ -6,7 +6,10 @@ use sd_core::{
     common::{InOut, InOutIter, Link},
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{Edge, Graph, Node},
+    hypergraph::{
+        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        Edge, Node,
+    },
     language::{Expr, Language},
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,

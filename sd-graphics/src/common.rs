@@ -9,7 +9,11 @@ use pretty::RcDoc;
 use sd_core::{
     common::Addr,
     graph::{Name, Op},
-    hypergraph::{subgraph::Mapping, Edge, Node},
+    hypergraph::{
+        subgraph::Mapping,
+        traits::{EdgeLike, NodeLike, WithWeight},
+        Edge, Node,
+    },
     language::Language,
     prettyprinter::{paran_list, PrettyPrint},
     weak_map::WeakMap,

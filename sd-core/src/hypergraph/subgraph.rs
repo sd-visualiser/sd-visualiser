@@ -5,6 +5,7 @@ use indexmap::{IndexMap, IndexSet};
 
 use super::{
     builder::{fragment::Fragment, HypergraphBuilder, InPort, OutPort},
+    traits::{EdgeLike, NodeLike, WithWeight},
     Edge, Hypergraph, Node, Thunk,
 };
 use crate::{

@@ -80,6 +80,28 @@ impl From<SyntaxThunk> for SyntaxNode {
     }
 }
 
+impl TryFrom<SyntaxNode> for SyntaxOp {
+    type Error = ();
+
+    fn try_from(node: SyntaxNode) -> Result<Self, Self::Error> {
+        match node {
+            SyntaxNode::Operation(op) => Ok(op),
+            SyntaxNode::Thunk(_) => Err(()),
+        }
+    }
+}
+
+impl TryFrom<SyntaxNode> for SyntaxThunk {
+    type Error = ();
+
+    fn try_from(node: SyntaxNode) -> Result<Self, Self::Error> {
+        match node {
+            SyntaxNode::Operation(_) => Err(()),
+            SyntaxNode::Thunk(thunk) => Ok(thunk),
+        }
+    }
+}
+
 pub struct Syntax;
 
 impl Addr for Syntax {

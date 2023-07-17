@@ -4,8 +4,9 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
+    common::Addr,
     graph::{Name, Op},
-    hypergraph::{Graph, Node},
+    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
     language::{Arg, Bind, Expr, Language, Thunk, Value},
 };
 
@@ -18,13 +19,19 @@ pub enum DecompilationError {
     MultipleOutputs,
 }
 
-pub fn decompile<T: Language>(
-    graph: &impl Graph<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
-) -> Result<Expr<T>, DecompilationError> {
+pub fn decompile<G, T: Language>(graph: &G) -> Result<Expr<T>, DecompilationError>
+where
+    G: Graph<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
+    <G::T as Addr>::Node: NodeLike<T = G::T>,
+    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = Name<T>>,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = Op<T>>,
+    <G::T as Addr>::Thunk:
+        NodeLike<T = G::T> + Graph<T = G::T, NodeWeight = Op<T>, EdgeWeight = Name<T>>,
+{
     let mut binds = Vec::default();
 
     // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).
-    let mut node_to_syntax = HashMap::<Node<_, _>, Arg<T>>::default();
+    let mut node_to_syntax = HashMap::<<G::T as Addr>::Node, Arg<T>>::default();
 
     for node in graph.nodes().rev() {
         // Check the node has a unique output.
@@ -33,64 +40,63 @@ pub fn decompile<T: Language>(
             .exactly_one()
             .map_err(|_err| DecompilationError::MultipleOutputs)?;
 
-        match &node {
-            Node::Operation(op) => {
-                let mut args = Vec::default();
-                for edge in op.inputs() {
-                    match edge.weight().to_var() {
-                        Some(var) => {
-                            args.push(Arg::Value(Value::Variable(var.clone())));
+        if let Ok(op) = <G::T as Addr>::Operation::try_from(node.clone()) {
+            let mut args = Vec::default();
+            for edge in op.inputs() {
+                match edge.weight().to_var() {
+                    Some(var) => {
+                        args.push(Arg::Value(Value::Variable(var.clone())));
+                    }
+                    None => match edge.source() {
+                        None => return Err(DecompilationError::Corrupt),
+                        Some(other_node) => {
+                            args.push(
+                                node_to_syntax
+                                    .get(&other_node)
+                                    .ok_or(DecompilationError::Corrupt)?
+                                    .clone(),
+                            );
                         }
-                        None => match edge.source() {
-                            None => return Err(DecompilationError::Corrupt),
-                            Some(other_node) => {
-                                args.push(
-                                    node_to_syntax
-                                        .get(&other_node)
-                                        .ok_or(DecompilationError::Corrupt)?
-                                        .clone(),
-                                );
-                            }
-                        },
-                    }
-                }
-
-                let value = Value::Op {
-                    op: op.weight().0.clone(),
-                    args,
-                };
-
-                match output.weight() {
-                    Name::Op => {
-                        node_to_syntax.insert(node, Arg::Value(value));
-                    }
-                    Name::BoundVar(def) => {
-                        binds.push(Bind {
-                            def: def.clone(),
-                            value,
-                        });
-                    }
-                    Name::Thunk(_) | Name::FreeVar(_) => return Err(DecompilationError::Corrupt),
+                    },
                 }
             }
-            Node::Thunk(thunk) => {
-                let addr = match output.weight() {
-                    Name::Thunk(addr) => addr.clone(),
-                    _ => return Err(DecompilationError::Corrupt),
-                };
-                let thunk = Thunk {
-                    addr,
-                    args: thunk
-                        .bound_graph_inputs()
-                        .map(|edge| match edge.weight() {
-                            Name::BoundVar(arg) => Ok(arg.clone()),
-                            _ => Err(DecompilationError::Corrupt),
-                        })
-                        .collect::<Result<Vec<_>, _>>()?,
-                    body: decompile(thunk)?,
-                };
-                node_to_syntax.insert(node, Arg::Thunk(thunk));
+
+            let value = Value::Op {
+                op: op.weight().0.clone(),
+                args,
+            };
+
+            match output.weight() {
+                Name::Op => {
+                    node_to_syntax.insert(node, Arg::Value(value));
+                }
+                Name::BoundVar(def) => {
+                    binds.push(Bind {
+                        def: def.clone(),
+                        value,
+                    });
+                }
+                Name::Thunk(_) | Name::FreeVar(_) => return Err(DecompilationError::Corrupt),
             }
+        } else if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
+            let addr = match output.weight() {
+                Name::Thunk(addr) => addr.clone(),
+                _ => return Err(DecompilationError::Corrupt),
+            };
+            let thunk = Thunk {
+                addr,
+                args: thunk
+                    .bound_graph_inputs()
+                    .map(|edge| match edge.weight() {
+                        Name::BoundVar(arg) => Ok(arg.clone()),
+                        _ => Err(DecompilationError::Corrupt),
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+                body: decompile(&thunk)?,
+            };
+            node_to_syntax.insert(node, Arg::Thunk(thunk));
+        } else {
+            return Err(DecompilationError::Corrupt);
         }
     }
 

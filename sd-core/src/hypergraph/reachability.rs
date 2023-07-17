@@ -3,12 +3,15 @@ use std::collections::{HashSet, VecDeque};
 use indexmap::IndexSet;
 use itertools::Itertools;
 
-use super::Node;
+use super::{
+    traits::{EdgeLike, NodeLike},
+    Node,
+};
 
 impl<V, E> Node<V, E> {
     pub fn successors(&self) -> impl Iterator<Item = Self> + '_ {
         self.outputs()
-            .flat_map(|edge| edge.targets().flatten())
+            .flat_map(|edge| edge.targets().flatten().collect::<Vec<_>>())
             .unique()
     }
 

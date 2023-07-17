@@ -4,7 +4,8 @@ use petgraph::graph::NodeIndex;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::{Edge, Graph, Node};
+use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
+use crate::common::Addr;
 
 pub type PetGraph<V, E> = petgraph::Graph<PetNode<V, E>, usize>;
 
@@ -15,15 +16,21 @@ pub enum PetNode<V, E> {
     Thunk(PetGraph<V, E>),
 }
 
-pub fn to_pet<V, E>(hypergraph: &impl Graph<NodeWeight = V, EdgeWeight = E>) -> PetGraph<V, E>
+pub fn to_pet<G>(hypergraph: &G) -> PetGraph<G::NodeWeight, G::EdgeWeight>
 where
-    V: Clone,
-    E: Clone,
+    G: Graph,
+    G::NodeWeight: Clone,
+    G::EdgeWeight: Clone,
+    <G::T as Addr>::Node: NodeLike<T = G::T>,
+    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = G::EdgeWeight>,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = G::NodeWeight>,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T>
+        + Graph<T = G::T, NodeWeight = G::NodeWeight, EdgeWeight = G::EdgeWeight>,
 {
     let mut graph = petgraph::Graph::new();
 
     // Maps hyperedges to petgraph nodes.
-    let mut edge_map: HashMap<Edge<V, E>, NodeIndex> = HashMap::new();
+    let mut edge_map: HashMap<<G::T as Addr>::Edge, NodeIndex> = HashMap::new();
 
     // Need to do this in case there are any inputs that are immediately discarded.
     for edge in hypergraph.graph_inputs() {
@@ -34,9 +41,12 @@ where
     }
 
     for node in hypergraph.nodes() {
-        let pet_node = match &node {
-            Node::Operation(op) => graph.add_node(PetNode::Operation(op.weight().clone())),
-            Node::Thunk(thunk) => graph.add_node(PetNode::Thunk(to_pet(thunk))),
+        let pet_node = if let Ok(op) = <G::T as Addr>::Operation::try_from(node.clone()) {
+            graph.add_node(PetNode::Operation(op.weight().clone()))
+        } else if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
+            graph.add_node(PetNode::Thunk(to_pet(&thunk)))
+        } else {
+            unreachable!()
         };
 
         for (i, edge) in node.inputs().enumerate() {
