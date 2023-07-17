@@ -3,6 +3,18 @@ use good_lp::{
     VariableDefinition,
 };
 
+pub const LP_BACKEND: &str =
+    // good_lp default solver hierarchy is cbc > minilp > highs
+    if cfg!(feature = "cbc") {
+        "cbc"
+    } else if cfg!(feature = "minilp") {
+        "minilp"
+    } else if cfg!(feature = "highs") {
+        "highs"
+    } else {
+        unreachable!()
+    };
+
 #[derive(Default)]
 pub struct LpProblem {
     problem: ProblemVariables,

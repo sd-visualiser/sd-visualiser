@@ -4,6 +4,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use sd_graphics::LP_BACKEND;
 
 #[derive(Parser)]
 struct Args {
@@ -30,6 +31,7 @@ fn main() -> anyhow::Result<()> {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .with_thread_names(true)
         .init();
+    tracing::info!("lp solver: {}", LP_BACKEND);
 
     let args = Args::parse();
 
@@ -78,6 +80,7 @@ fn main() {
 
     // Redirect tracing to console.log and friends:
     tracing_wasm::set_as_global_default();
+    tracing::info!("lp solver: {}", LP_BACKEND);
 
     let web_options = eframe::WebOptions::default();
 
