@@ -22,7 +22,7 @@ use sd_core::{
 pub const RADIUS_ARG: f32 = 0.05;
 pub const RADIUS_COPY: f32 = 0.1;
 pub const BOX_SIZE: Vec2 = vec2(0.4, 0.4);
-pub const TOLERANCE: f32 = 0.5;
+pub const TOLERANCE: f32 = 0.25;
 pub const TEXT_SIZE: f32 = 0.28;
 pub const RADIUS_OPERATION: f32 = 0.2;
 
