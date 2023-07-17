@@ -151,7 +151,8 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     }
 
     /// Determines the minimum layer from which we can output to the given `edge`
-    fn edge_layer(&self, edge: &T::Edge) -> usize
+    /// `input` should be set to true if the edge is a global input
+    fn edge_layer(&self, edge: &T::Edge, input: bool) -> usize
     where
         T::Edge: EdgeLike<T = T>,
     {
@@ -163,7 +164,13 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
             .copied()
             .unwrap_or_default();
 
-        if edge.number_of_targets() > 1 {
+        let should_add_one = if input {
+            layers.map(|v| v.len() > 1).unwrap_or_default()
+        } else {
+            edge.number_of_targets() > 1
+        };
+
+        if should_add_one {
             // If the edge has more than one target then we will need
             // to insert a copy before being able to output to it
             max + 1
@@ -246,7 +253,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         // and the layers that any backlinked inputs originate.
         let node_layer = node
             .outputs()
-            .map(|edge| self.edge_layer(&edge))
+            .map(|edge| self.edge_layer(&edge, false))
             .chain(
                 node.inputs()
                     .filter_map(|x| self.backlinks.get(&x).map(|x| x.originating_layer)),
@@ -367,7 +374,7 @@ where
             builder.slices.len(),
             other_edges
                 .iter()
-                .map(|edge| builder.edge_layer(edge))
+                .map(|edge| builder.edge_layer(edge, true))
                 .max()
                 .unwrap_or_default(),
         );
