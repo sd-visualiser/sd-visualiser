@@ -1,0 +1,7 @@
+---
+source: sd-core/src/prettyprinter/spartan.rs
+expression: expr.to_pretty()
+---
+bind x = 1 in
+bind y = plus(x, x . minus(x)) in
+y
