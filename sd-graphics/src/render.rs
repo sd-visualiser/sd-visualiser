@@ -3,13 +3,10 @@ use std::fmt::Display;
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use sd_core::{
-    common::{InOut, InOutIter, Link},
+    common::{Addr, InOut, InOutIter, Link},
     decompile::decompile,
     graph::{Name, Op},
-    hypergraph::{
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
-        Edge, Node,
-    },
+    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
     language::{Expr, Language},
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
@@ -24,13 +21,13 @@ use crate::{
 
 #[allow(clippy::needless_collect)]
 #[allow(clippy::type_complexity)]
-pub fn render<T>(
+pub fn render<T, U>(
     ui: &egui::Ui,
-    shapes: &[Shape<(Op<T>, Name<T>)>],
+    shapes: &[Shape<U>],
     response: &Response,
-    metadata: &mut GraphMetadata<(Op<T>, Name<T>)>,
-    mut selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
-    mut subgraph_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
+    metadata: &mut GraphMetadata<U>,
+    mut selection: Option<&mut SelectionMap<U>>,
+    mut subgraph_selection: Option<&mut SelectionMap<U>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
@@ -40,6 +37,11 @@ where
     T::Addr: Display,
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
+    U: Addr,
+    U::Node: NodeLike<T = U>,
+    U::Edge: EdgeLike<T = U> + WithWeight<Weight = Name<T>>,
+    U::Operation: NodeLike<T = U> + WithWeight<Weight = Op<T>>,
+    U::Thunk: NodeLike<T = U> + Graph<T = U, NodeWeight = Op<T>, EdgeWeight = Name<T>>,
 {
     let viewport = *to_screen.from();
 
@@ -70,19 +72,17 @@ where
     let labels = match highlight_node {
         Some(node) => {
             highlight_edges.extend(node.inputs().chain(node.outputs()));
-            match node {
-                Node::Operation(op) => {
-                    vec![op.weight().to_pretty()]
-                }
-                Node::Thunk(thunk) => {
-                    vec![decompile(&thunk)
-                        .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
-                }
+            if let Ok(op) = U::Operation::try_from(node.clone()) {
+                vec![op.weight().to_pretty()]
+            } else if let Ok(thunk) = U::Thunk::try_from(node.clone()) {
+                vec![decompile(&thunk).map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
+            } else {
+                unreachable!()
             }
         }
         None => highlight_edges
             .iter()
-            .map(|edge| EdgeLabel::from_edge(edge).to_pretty())
+            .map(|edge| EdgeLabel::from_edge::<U>(edge).to_pretty())
             .collect(),
     };
     for label in labels {
@@ -98,15 +98,19 @@ where
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn generate_shapes<V, E>(
-    shapes: &mut Vec<Shape<(V, E)>>,
+pub fn generate_shapes<T>(
+    shapes: &mut Vec<Shape<T>>,
     mut y_offset: f32,
     layout: &Layout,
-    graph: &MonoidalGraph<(V, E)>,
-    metadata: &GraphMetadata<(V, E)>,
-    subgraph_selection: Option<&SelectionMap<(V, E)>>,
+    graph: &MonoidalGraph<T>,
+    metadata: &GraphMetadata<T>,
+    subgraph_selection: Option<&SelectionMap<T>>,
 ) where
-    V: Display,
+    T: Addr,
+    T::Edge: EdgeLike<T = T>,
+    T::Operation: WithWeight + InOutIter<T = T>,
+    T::Thunk: Graph<T = T> + InOutIter<T = T>,
+    <T::Operation as WithWeight>::Weight: Display,
 {
     // Source
     for (&x, addr) in layout
@@ -127,7 +131,7 @@ pub fn generate_shapes<V, E>(
                 .mapping
                 .as_ref()
                 .and_then(|mapping| mapping.edge_mapping.get(addr))
-                .and_then(Edge::source),
+                .and_then(EdgeLike::source),
         ) {
             if !selection[&node] {
                 shapes.push(Shape::Arrow {
@@ -186,7 +190,7 @@ pub fn generate_shapes<V, E>(
                             addr: edge.clone(),
                         });
                     }
-                    for (&x, edge) in x_outs.iter().zip(addr.outputs()) {
+                    for (&x, edge) in x_outs.iter().zip(addr.graph_outputs()) {
                         let start = Pos2::new(x, y_max);
                         let end = Pos2::new(x, y_output);
                         shapes.push(Shape::Line {

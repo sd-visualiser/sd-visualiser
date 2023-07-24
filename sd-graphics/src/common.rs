@@ -13,7 +13,6 @@ use sd_core::{
     hypergraph::{
         subgraph::Mapping,
         traits::{EdgeLike, NodeLike, WithWeight},
-        Edge, Node,
     },
     language::Language,
     prettyprinter::{paran_list, PrettyPrint},
@@ -44,15 +43,22 @@ pub enum EdgeLabel<T: Language> {
 }
 
 impl<T: Language> EdgeLabel<T> {
-    pub(crate) fn from_edge(edge: &Edge<Op<T>, Name<T>>) -> Self {
+    pub(crate) fn from_edge<U>(edge: &U::Edge) -> Self
+    where
+        U: Addr,
+        U::Edge: EdgeLike<T = U> + WithWeight<Weight = Name<T>>,
+        U::Operation: NodeLike<T = U> + WithWeight<Weight = Op<T>>,
+    {
         match edge.weight() {
-            Name::Op => match edge.source() {
-                Some(Node::Operation(op)) => Self::Operation(
+            Name::Op => {
+                let op: U::Operation = edge.source().unwrap().try_into().ok().unwrap();
+                Self::Operation(
                     op.weight().0.clone(),
-                    op.inputs().map(|edge| Self::from_edge(&edge)).collect(),
-                ),
-                _ => unreachable!(),
-            },
+                    op.inputs()
+                        .map(|edge| Self::from_edge::<U>(&edge))
+                        .collect(),
+                )
+            }
             Name::Thunk(addr) => Self::Thunk(addr.clone()),
             Name::FreeVar(var) => Self::FreeVar(var.clone()),
             Name::BoundVar(def) => Self::BoundVar(def.clone()),
