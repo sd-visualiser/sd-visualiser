@@ -319,6 +319,20 @@ impl eframe::App for App {
                     find_request_focus = true;
                 }
 
+                if button!("Expand all") {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                        graph_ui.set_expanded_all(true);
+                        graph_ui.reset();
+                    }
+                }
+
+                if button!("Collapse all") {
+                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                        graph_ui.set_expanded_all(false);
+                        graph_ui.reset();
+                    }
+                }
+
                 ui.separator();
 
                 if button!("Compile", egui::Key::F5) {

@@ -17,6 +17,14 @@ impl<S: PartialEq + Eq + Hash, T> WeakMap<S, T> {
     }
 }
 
+impl<S, T: Clone> WeakMap<S, T> {
+    pub fn set_all(&mut self, value: T) {
+        for x in self.0.values_mut() {
+            *x = value.clone();
+        }
+    }
+}
+
 impl<S, T> From<IndexMap<S, T>> for WeakMap<S, T> {
     fn from(value: IndexMap<S, T>) -> Self {
         WeakMap(value)

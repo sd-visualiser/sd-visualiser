@@ -52,6 +52,7 @@ impl GraphUi {
             pub(crate) fn zoom_out(&mut self);
             pub(crate) fn find_variable(&mut self, variable: &str);
             pub(crate) fn export_svg(&self) -> String;
+        pub(crate) fn set_expanded_all(&mut self, expanded: bool);
         }
     }
 
@@ -275,5 +276,9 @@ impl<T: 'static + Language> GraphUiInternal<T> {
 
     pub(crate) const fn get_hypergraph(&self) -> &SyntaxHypergraph<T> {
         &self.hypergraph
+    }
+
+    pub(crate) fn set_expanded_all(&mut self, expanded: bool) {
+        self.metadata.expanded.set_all(expanded);
     }
 }
