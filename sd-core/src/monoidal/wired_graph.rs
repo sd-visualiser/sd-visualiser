@@ -7,10 +7,7 @@ use tracing::debug;
 use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
-    hypergraph::{
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
-        Node,
-    },
+    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
 };
 
 /// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
@@ -99,18 +96,6 @@ where
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
-        }
-    }
-}
-
-impl<V: Debug, E: Debug> From<Node<V, E>> for WiredOp<(V, E)> {
-    fn from(value: Node<V, E>) -> Self {
-        match value {
-            Node::Operation(op) => WiredOp::Operation { addr: op },
-            Node::Thunk(thunk) => WiredOp::Thunk {
-                body: (&thunk).into(),
-                addr: thunk,
-            },
         }
     }
 }
@@ -244,10 +229,15 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     /// This prepares all the inputs of the node and inserts relevant backlinks
     fn insert_operation(&mut self, node: &T::Node)
     where
-        T::Node: NodeLike<T = T> + Into<WiredOp<T>>,
-        T::Edge: EdgeLike<T = T>,
-        T::Operation: InOutIter<T = T>,
-        T::Thunk: InOutIter<T = T>,
+        T::Node: NodeLike<T = T> + Debug,
+        T::Edge: EdgeLike<T = T> + WithWeight + Debug,
+        T::Operation: NodeLike<T = T> + WithWeight + InOutIter<T = T>,
+        T::Thunk: NodeLike<T = T>
+            + Graph<
+                T = T,
+                NodeWeight = <T::Operation as WithWeight>::Weight,
+                EdgeWeight = <T::Edge as WithWeight>::Weight,
+            > + InOutIter<T = T>,
     {
         // The layer we place the node is the max of the layers that the outputs can be prepared
         // and the layers that any backlinked inputs originate.
@@ -261,7 +251,17 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
             .max()
             .unwrap_or_default();
 
-        let mut ops = vec![node.clone().into()];
+        let wired_op = if let Ok(op) = T::Operation::try_from(node.clone()) {
+            WiredOp::Operation { addr: op }
+        } else if let Ok(thunk) = T::Thunk::try_from(node.clone()) {
+            WiredOp::Thunk {
+                body: MonoidalWiredGraph::from(&thunk),
+                addr: thunk,
+            }
+        } else {
+            unreachable!()
+        };
+        let mut ops = vec![wired_op];
 
         node.outputs().for_each(|edge| {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
@@ -316,7 +316,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 impl<G> From<&G> for MonoidalWiredGraph<G::T>
 where
     G: Graph,
-    <G::T as Addr>::Node: NodeLike<T = G::T> + Into<WiredOp<G::T>> + Debug,
+    <G::T as Addr>::Node: NodeLike<T = G::T> + Debug,
     <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = G::EdgeWeight> + Debug,
     <G::T as Addr>::Operation:
         NodeLike<T = G::T> + WithWeight<Weight = G::NodeWeight> + InOutIter<T = G::T>,
