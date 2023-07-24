@@ -2,7 +2,7 @@ use std::{fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 
-use crate::hypergraph::{traits::NodeLike, Edge, Node, Operation, Thunk};
+use crate::hypergraph::{Edge, Node, Operation, Thunk};
 
 pub trait Addr {
     type Edge: Clone + Eq + PartialEq + Hash;
@@ -54,42 +54,6 @@ pub trait InOutIter: InOut {
     type T: Addr;
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
-}
-
-impl<V, E> InOutIter for Node<V, E> {
-    type T = (V, E);
-
-    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
-        Box::new(self.inputs().map(|edge| Link(edge, Direction::Forward)))
-    }
-
-    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
-        Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
-    }
-}
-
-impl<V, E> InOutIter for Operation<V, E> {
-    type T = (V, E);
-
-    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
-        Box::new(self.inputs().map(|edge| Link(edge, Direction::Forward)))
-    }
-
-    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
-        Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
-    }
-}
-
-impl<V, E> InOutIter for Thunk<V, E> {
-    type T = (V, E);
-
-    fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
-        Box::new(self.inputs().map(|edge| Link(edge, Direction::Forward)))
-    }
-
-    fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<(V, E)>> + 'a> {
-        Box::new(self.outputs().map(|edge| Link(edge, Direction::Forward)))
-    }
 }
 
 /// Check if an object matches a variable name

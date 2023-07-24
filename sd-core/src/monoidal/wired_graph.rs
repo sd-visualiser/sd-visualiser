@@ -64,8 +64,8 @@ impl<T: Addr> InOut for WiredOp<T> {
 
 impl<T: Addr> InOutIter for WiredOp<T>
 where
-    T::Operation: InOutIter<T = T>,
-    T::Thunk: InOutIter<T = T>,
+    T::Operation: NodeLike<T = T>,
+    T::Thunk: NodeLike<T = T>,
 {
     type T = T;
 
@@ -74,12 +74,12 @@ where
             WiredOp::Copy { addr, .. } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Forward)))
             }
-            WiredOp::Operation { addr } => addr.input_links(),
-            WiredOp::Thunk { body, .. } => Box::new(
-                body.free_inputs
-                    .iter()
-                    .map(|edge| Link(edge.clone(), Direction::Forward)),
-            ),
+            WiredOp::Operation { addr } => {
+                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
+            }
+            WiredOp::Thunk { addr, .. } => {
+                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
+            }
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
@@ -91,8 +91,12 @@ where
             WiredOp::Copy { addr, copies } => {
                 Box::new(std::iter::repeat(Link(addr.clone(), Direction::Forward)).take(*copies))
             }
-            WiredOp::Operation { addr } => addr.output_links(),
-            WiredOp::Thunk { addr, .. } => addr.output_links(),
+            WiredOp::Operation { addr } => {
+                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+            }
+            WiredOp::Thunk { addr, .. } => {
+                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+            }
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }
@@ -202,8 +206,8 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     /// This ensures that caps and cups are not made arbitrarily wide by swap minimisation.
     fn insert_backlink_on_layer(&mut self, edge: T::Edge, layer: usize, is_cap: bool)
     where
-        T::Operation: InOutIter<T = T>,
-        T::Thunk: InOutIter<T = T>,
+        T::Operation: NodeLike<T = T>,
+        T::Thunk: NodeLike<T = T>,
     {
         let ops = &mut self.slices[layer]
             .ops
@@ -231,8 +235,8 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     where
         T::Node: NodeLike<T = T> + Debug,
         T::Edge: EdgeLike<T = T> + WithWeight + Debug,
-        T::Operation: NodeLike<T = T> + WithWeight + InOutIter<T = T>,
-        T::Thunk: NodeLike<T = T> + Graph<T = T> + InOutIter<T = T>,
+        T::Operation: NodeLike<T = T> + WithWeight,
+        T::Thunk: NodeLike<T = T> + Graph<T = T>,
     {
         // The layer we place the node is the max of the layers that the outputs can be prepared
         // and the layers that any backlinked inputs originate.
@@ -313,8 +317,8 @@ where
     G: Graph,
     <G::T as Addr>::Node: NodeLike<T = G::T> + Debug,
     <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight + Debug,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + InOutIter<T = G::T>,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + InOutIter<T = G::T>,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();

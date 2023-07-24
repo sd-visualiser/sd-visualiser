@@ -9,7 +9,10 @@ use super::{
     wired_graph::{MonoidalWiredGraph, WiredOp},
     MonoidalTerm, Slice,
 };
-use crate::common::{Addr, Direction, InOut, InOutIter, Link};
+use crate::{
+    common::{Addr, Direction, InOut, InOutIter, Link},
+    hypergraph::traits::NodeLike,
+};
 
 impl<T: Addr> Slice<MonoidalOp<T>>
 where
@@ -256,8 +259,8 @@ impl<T: Addr> InOut for MonoidalOp<T> {
 
 impl<T: Addr> InOutIter for MonoidalOp<T>
 where
-    T::Operation: InOutIter<T = T>,
-    T::Thunk: InOutIter<T = T>,
+    T::Operation: NodeLike<T = T>,
+    T::Thunk: NodeLike<T = T>,
 {
     type T = T;
 
@@ -266,12 +269,12 @@ where
             MonoidalOp::Copy { addr, .. } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Forward)))
             }
-            MonoidalOp::Operation { addr, .. } => addr.input_links(),
-            MonoidalOp::Thunk { body, .. } => Box::new(
-                body.free_inputs
-                    .iter()
-                    .map(|edge| Link(edge.clone(), Direction::Forward)),
-            ),
+            MonoidalOp::Operation { addr, .. } => {
+                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
+            }
+            MonoidalOp::Thunk { addr, .. } => {
+                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
+            }
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
@@ -294,8 +297,12 @@ where
             MonoidalOp::Copy { addr, copies } => {
                 Box::new(std::iter::repeat(Link(addr.clone(), Direction::Forward)).take(*copies))
             }
-            MonoidalOp::Operation { addr, .. } => addr.output_links(),
-            MonoidalOp::Thunk { addr, .. } => addr.output_links(),
+            MonoidalOp::Operation { addr, .. } => {
+                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+            }
+            MonoidalOp::Thunk { addr, .. } => {
+                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+            }
             MonoidalOp::Swap { addrs, out_to_in } => {
                 Box::new(out_to_in.iter().map(|idx| addrs[*idx].clone()))
             }
@@ -319,8 +326,8 @@ where
 impl<T: Addr> From<&WiredOp<T>> for MonoidalOp<T>
 where
     T::Edge: Debug,
-    T::Operation: Debug + InOutIter<T = T>,
-    T::Thunk: Debug + InOutIter<T = T>,
+    T::Operation: Debug + NodeLike<T = T>,
+    T::Thunk: Debug + NodeLike<T = T>,
 {
     fn from(op: &WiredOp<T>) -> Self {
         match op {
@@ -355,8 +362,8 @@ impl<T: Addr> MonoidalGraphBuilder<T> {
 
 impl<T: Addr> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T>
 where
-    T::Operation: InOutIter<T = T>,
-    T::Thunk: InOutIter<T = T>,
+    T::Operation: NodeLike<T = T>,
+    T::Thunk: NodeLike<T = T>,
 {
     fn extend<I: IntoIterator<Item = Slice<MonoidalOp<T>>>>(&mut self, iter: I) {
         let mut peeking = iter.into_iter().peekable();
@@ -370,8 +377,8 @@ where
 impl<T: Addr> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T>
 where
     T::Edge: Debug,
-    T::Operation: Debug + InOutIter<T = T>,
-    T::Thunk: Debug + InOutIter<T = T>,
+    T::Operation: Debug + NodeLike<T = T>,
+    T::Thunk: Debug + NodeLike<T = T>,
 {
     fn from(graph: &MonoidalWiredGraph<T>) -> Self {
         debug!("Input graph {:#?}", graph);

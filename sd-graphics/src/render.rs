@@ -108,8 +108,8 @@ pub fn generate_shapes<T>(
 ) where
     T: Addr,
     T::Edge: EdgeLike<T = T>,
-    T::Operation: WithWeight + InOutIter<T = T>,
-    T::Thunk: Graph<T = T> + InOutIter<T = T>,
+    T::Operation: NodeLike<T = T> + WithWeight,
+    T::Thunk: NodeLike<T = T> + Graph<T = T>,
     <T::Operation as WithWeight>::Weight: Display,
 {
     // Source

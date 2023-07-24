@@ -7,8 +7,8 @@ use eframe::egui::{util::IdTypeMap, Id};
 use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
-    common::{Addr, InOutIter},
-    hypergraph::traits::{EdgeLike, Graph, WithWeight},
+    common::Addr,
+    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
     monoidal::graph::MonoidalGraph,
     selection::SelectionMap,
 };
@@ -60,8 +60,8 @@ where
     T: Addr,
     T::Node: Send + Sync,
     T::Edge: Send + Sync + EdgeLike<T = T>,
-    T::Operation: Send + Sync + WithWeight + InOutIter<T = T>,
-    T::Thunk: Send + Sync + Graph<T = T> + InOutIter<T = T>,
+    T::Operation: Send + Sync + NodeLike<T = T> + WithWeight,
+    T::Thunk: Send + Sync + NodeLike<T = T> + Graph<T = T>,
     <T::Operation as WithWeight>::Weight: Display,
 {
     let cache = shape_cache();
