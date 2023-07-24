@@ -4,13 +4,14 @@ use egui::{
     epaint::{CubicBezierShape, PathShape, RectShape},
     vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
 };
+use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::{Addr, Matchable},
     selection::SelectionMap,
 };
 
-use crate::common::{ContainsPoint, GraphMetadata, TEXT_SIZE, TOLERANCE};
+use crate::common::{to_coord2, GraphMetadata, TEXT_SIZE, TOLERANCE};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
@@ -102,27 +103,19 @@ impl<T: Addr> Shape<T> {
         let tolerance = TOLERANCE * transform.scale().min_elem();
 
         let bounding_box = self.bounding_box();
+
+        if let Some(hover_pos) = response.hover_pos() {
+            if self.contains_point(hover_pos, tolerance) {
+                match self {
+                    Shape::Line { addr, .. } | Shape::CubicBezier { addr, .. } => {
+                        highlight_edges.insert(addr.clone());
+                    }
+                    _ => {}
+                }
+            }
+        }
         match self {
-            Shape::Line { start, end, addr } => {
-                if let Some(hover_pos) = response.hover_pos() {
-                    if [*start, *end].contains_point(hover_pos, tolerance) {
-                        highlight_edges.insert(addr.clone());
-                    }
-                }
-            }
-            Shape::CubicBezier { points, addr } => {
-                if let Some(hover_pos) = response.hover_pos() {
-                    let bezier = CubicBezierShape::from_points_stroke(
-                        *points,
-                        false,
-                        Color32::TRANSPARENT,
-                        Stroke::default(),
-                    );
-                    if bezier.contains_point(hover_pos, tolerance) {
-                        highlight_edges.insert(addr.clone());
-                    }
-                }
-            }
+            Shape::Line { .. } | Shape::CubicBezier { .. } | Shape::CircleFilled { .. } => {}
             Shape::Rectangle {
                 addr, fill, stroke, ..
             } => {
@@ -216,7 +209,6 @@ impl<T: Addr> Shape<T> {
                     }
                 }
             }
-            Shape::CircleFilled { .. } => {}
         }
     }
 
@@ -370,6 +362,36 @@ impl<T: Addr> Shape<T> {
             Shape::Rectangle { rect, addr, .. } => addr.is_match(variable).then_some(rect.center()),
             Shape::Operation { center, addr, .. } => addr.is_match(variable).then_some(*center),
             _ => None,
+        }
+    }
+
+    pub fn contains_point(&self, point: Pos2, tolerance: f32) -> bool {
+        match self {
+            Shape::Line { start, end, .. } => {
+                let start = *start;
+                let end = *end;
+                let distance = if start == end {
+                    (start - point).length()
+                } else {
+                    let vec = end - start;
+                    let t = (point - start).dot(vec) / vec.length_sq();
+                    let t = t.clamp(0.0, 1.0);
+                    let projected = start + vec * t;
+                    (projected - point).length()
+                };
+                distance < tolerance
+            }
+            Shape::CubicBezier { points, .. } => solve_curve_for_t_along_axis(
+                &Curve {
+                    start_point: to_coord2(points[0]),
+                    end_point: to_coord2(points[3]),
+                    control_points: (to_coord2(points[1]), to_coord2(points[2])),
+                },
+                &to_coord2(point),
+                f64::from(tolerance),
+            )
+            .is_some(),
+            _ => false,
         }
     }
 }

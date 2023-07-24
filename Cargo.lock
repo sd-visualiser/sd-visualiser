@@ -1145,6 +1145,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "flo_curves"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21c3da91984f219319fc08a775ffdbc4962d4a1a6b3181967f64b456ac84d2eb"
+dependencies = [
+ "itertools",
+ "roots",
+ "smallvec",
+]
+
+[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2606,6 +2617,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "roots"
+version = "0.0.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "082f11ffa03bbef6c2c6ea6bea1acafaade2fd9050ae0234ab44a2153742b058"
+
+[[package]]
 name = "rstest"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2742,6 +2759,7 @@ dependencies = [
  "cargo-husky",
  "derivative",
  "egui",
+ "flo_curves",
  "good_lp",
  "html-escape",
  "indexmap",

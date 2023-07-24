@@ -9,6 +9,7 @@ repository = "https://github.com/calintat/sd-visualiser"
 [dependencies]
 derivative = "2.2.0"
 egui = "0.21.0"
+flo_curves = "0.7.2"
 good_lp = { version = "1.4.0", default_features = false }
 html-escape = "0.2.13"
 indexmap = "1.9.3"
@@ -25,6 +26,7 @@ insta = { version = "1.29.0", features = ["ron"] }
 serde = "1.0.160"
 
 [features]
+default = ["minilp"]
 cbc = ["good_lp/coin_cbc"]
 highs = ["good_lp/highs"]
 minilp = ["good_lp/minilp"]
