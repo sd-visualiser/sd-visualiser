@@ -21,12 +21,11 @@ pub enum DecompilationError {
 
 pub fn decompile<G, T: Language>(graph: &G) -> Result<Expr<T>, DecompilationError>
 where
-    G: Graph<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
+    G: Graph,
     <G::T as Addr>::Node: NodeLike<T = G::T>,
     <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = Name<T>>,
     <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = Op<T>>,
-    <G::T as Addr>::Thunk:
-        NodeLike<T = G::T> + Graph<T = G::T, NodeWeight = Op<T>, EdgeWeight = Name<T>>,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
 {
     let mut binds = Vec::default();
 

@@ -232,12 +232,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         T::Node: NodeLike<T = T> + Debug,
         T::Edge: EdgeLike<T = T> + WithWeight + Debug,
         T::Operation: NodeLike<T = T> + WithWeight + InOutIter<T = T>,
-        T::Thunk: NodeLike<T = T>
-            + Graph<
-                T = T,
-                NodeWeight = <T::Operation as WithWeight>::Weight,
-                EdgeWeight = <T::Edge as WithWeight>::Weight,
-            > + InOutIter<T = T>,
+        T::Thunk: NodeLike<T = T> + Graph<T = T> + InOutIter<T = T>,
     {
         // The layer we place the node is the max of the layers that the outputs can be prepared
         // and the layers that any backlinked inputs originate.
@@ -317,12 +312,9 @@ impl<G> From<&G> for MonoidalWiredGraph<G::T>
 where
     G: Graph,
     <G::T as Addr>::Node: NodeLike<T = G::T> + Debug,
-    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = G::EdgeWeight> + Debug,
-    <G::T as Addr>::Operation:
-        NodeLike<T = G::T> + WithWeight<Weight = G::NodeWeight> + InOutIter<T = G::T>,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T>
-        + Graph<T = G::T, NodeWeight = G::NodeWeight, EdgeWeight = G::EdgeWeight>
-        + InOutIter<T = G::T>,
+    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight + Debug,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + InOutIter<T = G::T>,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + InOutIter<T = G::T>,
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();

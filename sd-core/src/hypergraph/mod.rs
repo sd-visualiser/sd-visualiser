@@ -227,8 +227,6 @@ impl<V, E> EdgeLike for Edge<V, E> {
 
 impl<V, E> Graph for Hypergraph<V, E> {
     type T = (V, E);
-    type NodeWeight = V;
-    type EdgeWeight = E;
     fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
@@ -265,8 +263,6 @@ impl<V, E> Graph for Hypergraph<V, E> {
 
 impl<V, E> Graph for Thunk<V, E> {
     type T = (V, E);
-    type NodeWeight = V;
-    type EdgeWeight = E;
     fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0

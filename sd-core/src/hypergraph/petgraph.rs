@@ -16,16 +16,15 @@ pub enum PetNode<V, E> {
     Thunk(PetGraph<V, E>),
 }
 
-pub fn to_pet<G>(hypergraph: &G) -> PetGraph<G::NodeWeight, G::EdgeWeight>
+pub fn to_pet<V, E, G>(hypergraph: &G) -> PetGraph<V, E>
 where
+    V: Clone,
+    E: Clone,
     G: Graph,
-    G::NodeWeight: Clone,
-    G::EdgeWeight: Clone,
     <G::T as Addr>::Node: NodeLike<T = G::T>,
-    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = G::EdgeWeight>,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = G::NodeWeight>,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T>
-        + Graph<T = G::T, NodeWeight = G::NodeWeight, EdgeWeight = G::EdgeWeight>,
+    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = E>,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = V>,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
 {
     let mut graph = petgraph::Graph::new();
 

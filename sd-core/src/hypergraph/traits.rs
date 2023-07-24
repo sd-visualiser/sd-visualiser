@@ -21,8 +21,6 @@ pub trait EdgeLike {
 
 pub trait Graph {
     type T: Addr;
-    type NodeWeight;
-    type EdgeWeight;
 
     fn bound_graph_inputs(
         &self,

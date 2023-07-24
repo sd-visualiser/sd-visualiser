@@ -41,7 +41,7 @@ where
     U::Node: NodeLike<T = U>,
     U::Edge: EdgeLike<T = U> + WithWeight<Weight = Name<T>>,
     U::Operation: NodeLike<T = U> + WithWeight<Weight = Op<T>>,
-    U::Thunk: NodeLike<T = U> + Graph<T = U, NodeWeight = Op<T>, EdgeWeight = Name<T>>,
+    U::Thunk: NodeLike<T = U> + Graph<T = U>,
 {
     let viewport = *to_screen.from();
 
