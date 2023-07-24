@@ -1,0 +1,13 @@
+[target.x86_64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:main"
+pre-build = [
+  "dpkg --add-architecture $CROSS_DEB_ARCH",
+  "export DEBIAN_FRONTEND=noninteractive",
+  """\
+  apt-get update && apt-get install --assume-yes \
+    libglib2.0-dev:$CROSS_DEB_ARCH \
+    libatk1.0-dev:$CROSS_DEB_ARCH \
+    libgtk-3-dev:$CROSS_DEB_ARCH \
+    coinor-libcbc-dev:$CROSS_DEB_ARCH \
+  """
+]
