@@ -5,6 +5,7 @@ use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
     common::{Addr, InOut},
+    hypergraph::traits::WithWeight,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
 };
 #[cfg(test)]
@@ -194,7 +195,8 @@ fn layout_internal<T: Addr>(
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable>
 where
-    T::Operation: Display,
+    T::Operation: WithWeight,
+    <T::Operation as WithWeight>::Weight: Display,
 {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
@@ -257,7 +259,8 @@ where
                     },
                     MonoidalOp::Operation { addr } => Node::Atom {
                         pos: problem.add_variable(variable().min(0.0)),
-                        extra_size: (addr.to_string().chars().count().saturating_sub(1) as f32
+                        extra_size: (addr.weight().to_string().chars().count().saturating_sub(1)
+                            as f32
                             / 2.0)
                             * RADIUS_OPERATION,
                     },
@@ -377,7 +380,8 @@ pub fn layout<T: Addr>(
     metadata: &GraphMetadata<T>,
 ) -> Result<Layout, LayoutError>
 where
-    T::Operation: Display,
+    T::Operation: WithWeight,
+    <T::Operation as WithWeight>::Weight: Display,
 {
     let mut problem = LpProblem::default();
 

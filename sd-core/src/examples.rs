@@ -1,9 +1,8 @@
-use std::fmt::Display;
-
 use delegate::delegate;
 
 use crate::{
     common::{Addr, InOut},
+    hypergraph::traits::WithWeight,
     language::spartan::Op,
     monoidal::{
         graph::{MonoidalGraph, MonoidalOp},
@@ -27,9 +26,11 @@ impl InOut for SyntaxOp {
     }
 }
 
-impl Display for SyntaxOp {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "")
+impl WithWeight for SyntaxOp {
+    type Weight = Op;
+
+    fn weight(&self) -> &Self::Weight {
+        &self.op
     }
 }
 
