@@ -1,10 +1,12 @@
 [package]
 name = "sd-gui"
-version = "1.0.0"
-authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
-edition = "2021"
-license = "BSD-3-Clause"
-repository = "https://github.com/HuaweiUKPL/sd-visualiser"
+description = "String diagram visualiser"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
 
 [dependencies]
 anyhow = "1.0.72"

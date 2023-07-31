@@ -472,9 +472,17 @@ impl eframe::App for App {
                 .resizable(false)
                 .anchor(Align2::CENTER_CENTER, Vec2::default())
                 .show(ctx, |ui| {
-                    ui.heading("SD visualiser");
+                    ui.heading(format!("SD visualiser ({})", env!("CARGO_PKG_VERSION")));
                     ui.label("A string diagram visualiser.");
-                    ui.collapsing("License", |ui| {
+                    ui.horizontal(|ui| {
+                        ui.label("Homepage:");
+                        ui.hyperlink(env!("CARGO_PKG_HOMEPAGE"));
+                    });
+                    ui.horizontal(|ui| {
+                        ui.label("Repository:");
+                        ui.hyperlink(env!("CARGO_PKG_REPOSITORY"));
+                    });
+                    ui.collapsing(format!("License ({})", env!("CARGO_PKG_LICENSE")), |ui| {
                         ui.label(include_str!("../../LICENSE"));
                     });
                 });

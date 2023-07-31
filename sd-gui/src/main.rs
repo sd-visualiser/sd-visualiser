@@ -7,11 +7,25 @@ use clap::Parser;
 use sd_graphics::LP_BACKEND;
 
 #[derive(Parser)]
-struct Args {
-    /// Print version of the tool
-    #[arg(short, long)]
-    version: bool,
+#[command(
+    help_template = "\
+{before-help}{name} {version}
+{author-with-newline}
+{about-with-newline}
+{usage-heading} {usage}
 
+{all-args}{after-help}
+",
+    author,
+    version,
+    about
+)]
+/// String diagram visualiser
+///
+/// Homepage: <https://huaweiukpl.github.io/sd-visualiser>
+///
+/// Please report bugs at <https://github.com/HuaweiUKPL/sd-visualiser/issues>.
+struct Args {
     /// Read in a chil file
     #[arg(long, value_name = "FILE")]
     chil: Option<PathBuf>,
@@ -35,41 +49,36 @@ fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    if args.version {
-        println!("sd visualiser: 0.1.0");
-        anyhow::Result::Ok(())
+    let native_options = eframe::NativeOptions {
+        maximized: true,
+        ..Default::default()
+    };
+
+    let file = if let Some(path) = args.chil {
+        let code = std::fs::read_to_string(path)?;
+        Some((code, sd_gui::UiLanguage::Chil))
+    } else if let Some(path) = args.spartan {
+        let code = std::fs::read_to_string(path)?;
+        Some((code, sd_gui::UiLanguage::Spartan))
     } else {
-        let native_options = eframe::NativeOptions {
-            maximized: true,
-            ..Default::default()
-        };
+        None
+    };
+    eframe::run_native(
+        "SD Visualiser",
+        native_options,
+        Box::new(|cc| {
+            let mut app = sd_gui::App::new(cc);
 
-        let file = if let Some(path) = args.chil {
-            let code = std::fs::read_to_string(path)?;
-            Some((code, sd_gui::UiLanguage::Chil))
-        } else if let Some(path) = args.spartan {
-            let code = std::fs::read_to_string(path)?;
-            Some((code, sd_gui::UiLanguage::Spartan))
-        } else {
-            None
-        };
-        eframe::run_native(
-            "SD Visualiser",
-            native_options,
-            Box::new(|cc| {
-                let mut app = sd_gui::App::new(cc);
+            if let Some((code, language)) = file {
+                app.set_file(&code, Some(language));
+            }
 
-                if let Some((code, language)) = file {
-                    app.set_file(&code, Some(language));
-                }
+            Box::new(app)
+        }),
+    )
+    .map_err(|err| anyhow!("{}", err))?;
 
-                Box::new(app)
-            }),
-        )
-        .map_err(|err| anyhow!("{}", err))?;
-
-        Ok(())
-    }
+    Ok(())
 }
 
 // when compiling to web using trunk.
