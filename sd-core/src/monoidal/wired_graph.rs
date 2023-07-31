@@ -1,6 +1,7 @@
 use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
+use indexmap::IndexMap;
 use itertools::Itertools;
 use tracing::debug;
 
@@ -122,7 +123,7 @@ struct MonoidalWiredGraphBuilder<T: Addr> {
     slices: Vec<Slice<Slice<WiredOp<T>>>>,
     /// Edges that have been connected to an output yet.
     /// Each is mapped to a list of slice indices for where inputs of the edge have been seen.
-    open_edges: HashMap<T::Edge, Vec<usize>>,
+    open_edges: IndexMap<T::Edge, Vec<usize>>,
     /// Edges that have been connected to an output but not all their inputs.
     /// Each is mapped to a `BacklinkData`
     backlinks: HashMap<T::Edge, BacklinkData>,
@@ -329,7 +330,7 @@ where
         }
 
         for node in graph.nodes() {
-            debug!("Node recieved: {node:#?}");
+            debug!("Node recieved: {node:?}");
             // Use topsorted graph here
             builder.insert_operation(&node);
         }
