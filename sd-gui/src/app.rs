@@ -37,6 +37,7 @@ pub struct App {
     // message queue
     tx: Sender<Message>,
     rx: Receiver<Message>,
+    about: bool,
     editor: bool,
     code: Arc<Mutex<String>>,
     last_parse: Option<Arc<Mutex<Promise<Option<ParseOutput>>>>>,
@@ -54,6 +55,7 @@ impl Default for App {
         Self {
             tx,
             rx,
+            about: Default::default(),
             editor: Default::default(),
             code: Arc::default(),
             last_parse: Option::default(),
@@ -369,23 +371,29 @@ impl eframe::App for App {
                     }
                 });
 
-                ui.separator();
-
                 #[cfg(not(target_arch = "wasm32"))]
-                if let Some(graph_ui) = finished(&self.graph_ui)
-                    .and_then(|graph_ui| graph_ui.ready().then_some(graph_ui))
                 {
-                    ui.add_enabled_ui(true, |ui| {
-                        if ui.button("Export SVG").clicked() {
-                            let svg = graph_ui.export_svg();
-                            if let Some(path) = rfd::FileDialog::new().save_file() {
-                                let _ = std::fs::write(path, svg);
+                    ui.separator();
+                    if let Some(graph_ui) = finished(&self.graph_ui)
+                        .and_then(|graph_ui| graph_ui.ready().then_some(graph_ui))
+                    {
+                        ui.add_enabled_ui(true, |ui| {
+                            if ui.button("Export SVG").clicked() {
+                                let svg = graph_ui.export_svg();
+                                if let Some(path) = rfd::FileDialog::new().save_file() {
+                                    let _ = std::fs::write(path, svg);
+                                }
                             }
-                        }
-                    });
-                } else {
-                    ui.add_enabled_ui(false, |ui| ui.button("Export SVG"));
+                        });
+                    } else {
+                        ui.add_enabled_ui(false, |ui| ui.button("Export SVG"));
+                    }
                 }
+
+                ui.separator();
+                if ui.selectable_label(self.about, "About").clicked() {
+                    self.about = !self.about;
+                };
             });
         });
 
@@ -456,6 +464,20 @@ impl eframe::App for App {
         }
         if clear_find {
             self.find = None;
+        }
+
+        if self.about {
+            egui::Window::new("about")
+                .title_bar(false)
+                .resizable(false)
+                .anchor(Align2::CENTER_CENTER, Vec2::default())
+                .show(ctx, |ui| {
+                    ui.heading("SD visualiser");
+                    ui.label("A string diagram visualiser.");
+                    ui.collapsing("License", |ui| {
+                        ui.label(include_str!("../../LICENSE"));
+                    });
+                });
         }
 
         self.toasts.show(ctx);
