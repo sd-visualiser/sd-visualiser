@@ -190,7 +190,7 @@ pub fn generate_shapes<T>(
                             addr: edge.clone(),
                         });
                     }
-                    for (&x, edge) in x_outs.iter().zip(addr.graph_outputs()) {
+                    for (&x, edge) in x_outs.iter().zip(addr.outputs()) {
                         let start = Pos2::new(x, y_max);
                         let end = Pos2::new(x, y_output);
                         shapes.push(Shape::Line {
