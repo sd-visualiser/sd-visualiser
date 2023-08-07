@@ -472,8 +472,9 @@ impl eframe::App for App {
                 .resizable(false)
                 .anchor(Align2::CENTER_CENTER, Vec2::default())
                 .show(ctx, |ui| {
-                    ui.heading(format!("SD visualiser ({})", env!("CARGO_PKG_VERSION")));
+                    ui.heading(format!("SD Visualiser ({})", env!("CARGO_PKG_VERSION")));
                     ui.label("A string diagram visualiser.");
+                    ui.label(format!("LP backend: {}", sd_graphics::LP_BACKEND));
                     ui.horizontal(|ui| {
                         ui.label("Homepage:");
                         ui.hyperlink(env!("CARGO_PKG_HOMEPAGE"));
