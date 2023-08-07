@@ -9,8 +9,8 @@ use std::{
 use anyhow::anyhow;
 use eframe::{
     egui::{self, FontDefinitions, TextBuffer},
-    emath::Align2,
-    epaint::Vec2,
+    emath::{Align, Align2},
+    epaint::{vec2, Vec2},
 };
 use egui_notify::Toasts;
 use poll_promise::Promise;
@@ -219,7 +219,23 @@ impl eframe::App for App {
 
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
             egui::trace!(ui);
-            ui.horizontal_wrapped(|ui| {
+
+            // Code below is copied from ui.horizontal_wrapped,
+            // except we add the with_main_align to get button shortcut text to work properly
+            let initial_size = vec2(
+                ui.available_size_before_wrap().x,
+                ui.spacing().interact_size.y, // Assume there will be something interactive on the horizontal layout
+            );
+
+            let layout = if ui.layout().prefer_right_to_left() {
+                egui::Layout::right_to_left(Align::Center)
+            } else {
+                egui::Layout::left_to_right(Align::Center)
+            }
+            .with_main_wrap(true)
+            .with_main_align(Align::Min);
+
+            ui.allocate_ui_with_layout(initial_size, layout, |ui| {
                 macro_rules! button {
                     ($label:literal) => {
                         ui.button($label).clicked()
