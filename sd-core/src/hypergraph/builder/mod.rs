@@ -7,10 +7,7 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use super::{
-    internal::{
-        HypergraphInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
-        ThunkInternal,
-    },
+    internal::{InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal},
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
     Edge, Hypergraph, Node, Operation, Thunk,
 };
@@ -177,10 +174,10 @@ impl<V, E> ThunkBuilder<V, E> {
         for node in nodes {
             match node {
                 NodeInternal::Operation(op) => {
-                    on_operation(OperationBuilder(ByThinAddress(op.clone())))?;
+                    on_operation(OperationBuilder(op.clone()))?;
                 }
                 NodeInternal::Thunk(thunk) => {
-                    let thunk = ThunkBuilder(ByThinAddress(thunk.clone()));
+                    let thunk = ThunkBuilder(thunk.clone());
                     thunk.fold(on_operation, on_thunk)?;
                     on_thunk(thunk)?;
                 }
@@ -192,7 +189,7 @@ impl<V, E> ThunkBuilder<V, E> {
 
 #[derive(Debug, Derivative)]
 #[derivative(Clone(bound = ""), Default(bound = ""))]
-pub struct HypergraphBuilder<V, E>(HypergraphInternal<V, E>);
+pub struct HypergraphBuilder<V, E>(Hypergraph<V, E>);
 
 impl<V, E> HypergraphBuilder<V, E>
 where
@@ -204,14 +201,14 @@ where
     pub fn new(input_weights: Vec<E>, number_of_outputs: usize) -> Self {
         let graph_inputs = input_weights
             .into_iter()
-            .map(|weight| Arc::new(OutPortInternal::new(None, weight)))
+            .map(|weight| ByThinAddress(Arc::new(OutPortInternal::new(None, weight))))
             .collect();
 
         let graph_outputs = (0..number_of_outputs)
-            .map(|_| Arc::new(InPortInternal::new(None)))
+            .map(|_| ByThinAddress(Arc::new(InPortInternal::new(None))))
             .collect();
 
-        HypergraphBuilder(HypergraphInternal {
+        HypergraphBuilder(Hypergraph {
             nodes: Vec::default(),
             graph_inputs,
             graph_outputs,
@@ -223,7 +220,7 @@ where
         self.0
             .graph_inputs
             .iter()
-            .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
+            .map(|out_port| OutPort(out_port.clone()))
     }
 
     fn fold<Err>(
@@ -234,10 +231,10 @@ where
         for node in &self.0.nodes {
             match node {
                 NodeInternal::Operation(op) => {
-                    on_operation(OperationBuilder(ByThinAddress(op.clone())))?;
+                    on_operation(OperationBuilder(op.clone()))?;
                 }
                 NodeInternal::Thunk(thunk) => {
-                    let thunk = ThunkBuilder(ByThinAddress(thunk.clone()));
+                    let thunk = ThunkBuilder(thunk.clone());
                     thunk.fold(&on_operation, &on_thunk)?;
                     on_thunk(thunk)?;
                 }
@@ -387,19 +384,17 @@ where
                 .iter()
                 .map(|ni| match ni {
                     NodeInternal::Operation(operation) => {
-                        Node::Operation(Operation(ByThinAddress(operation.clone())))
+                        Node::Operation(Operation(operation.clone()))
                     }
-                    NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(ByThinAddress(thunk.clone()))),
+                    NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(thunk.clone())),
                 })
                 .collect();
             nodes = tarjans(nodes);
             *internals = nodes
                 .into_iter()
                 .map(|node| match node {
-                    Node::Operation(Operation(ByThinAddress(operation))) => {
-                        NodeInternal::Operation(operation)
-                    }
-                    Node::Thunk(Thunk(ByThinAddress(thunk))) => NodeInternal::Thunk(thunk),
+                    Node::Operation(Operation(operation)) => NodeInternal::Operation(operation),
+                    Node::Thunk(Thunk(thunk)) => NodeInternal::Thunk(thunk),
                 })
                 .collect();
         }
@@ -458,7 +453,7 @@ where
             },
         )?;
 
-        Ok(Hypergraph(self.0))
+        Ok(self.0)
     }
 }
 

@@ -23,7 +23,7 @@ mod weakbyaddress;
 
 use self::{
     internal::{
-        HypergraphInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
+        InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
         WeakNodeInternal,
     },
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
@@ -49,8 +49,18 @@ impl<V, E: Debug> Debug for Edge<V, E> {
 }
 
 #[derive(Debug, Derivative)]
-#[derivative(Clone(bound = ""), Default(bound = ""))]
-pub struct Hypergraph<V, E>(HypergraphInternal<V, E>);
+#[derivative(
+    Clone(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = ""),
+    Hash(bound = ""),
+    Default(bound = "")
+)]
+pub struct Hypergraph<V, E> {
+    nodes: Vec<NodeInternal<V, E>>,
+    graph_inputs: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
+    graph_outputs: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
+}
 
 #[derive(Derivative)]
 #[derivative(
@@ -228,13 +238,7 @@ impl<V, E> EdgeLike for Edge<V, E> {
 impl<V, E> Graph for Hypergraph<V, E> {
     type T = (V, E);
     fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
-        Box::new(
-            self.0
-                .graph_inputs
-                .iter()
-                .cloned()
-                .map(|o| Edge(ByThinAddress(o))),
-        )
+        Box::new(self.graph_inputs.iter().cloned().map(|o| Edge(o)))
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -243,8 +247,7 @@ impl<V, E> Graph for Hypergraph<V, E> {
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
-            self.0
-                .graph_outputs
+            self.graph_outputs
                 .iter()
                 .cloned()
                 .map(|in_port| Edge(ByThinAddress(in_port.link()))),
@@ -252,11 +255,9 @@ impl<V, E> Graph for Hypergraph<V, E> {
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E>> + '_> {
-        Box::new(self.0.nodes.iter().cloned().map(|node| match node {
-            NodeInternal::Operation(operation) => {
-                Node::Operation(Operation(ByThinAddress(operation)))
-            }
-            NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(ByThinAddress(thunk))),
+        Box::new(self.nodes.iter().cloned().map(|node| match node {
+            NodeInternal::Operation(operation) => Node::Operation(Operation(operation)),
+            NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(thunk)),
         }))
     }
 }
@@ -297,10 +298,8 @@ impl<V, E> Graph for Thunk<V, E> {
                 .iter()
                 .cloned()
                 .map(|node| match node {
-                    NodeInternal::Operation(operation) => {
-                        Node::Operation(Operation(ByThinAddress(operation)))
-                    }
-                    NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(ByThinAddress(thunk))),
+                    NodeInternal::Operation(operation) => Node::Operation(Operation(operation)),
+                    NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(thunk)),
                 })
                 .collect::<Vec<_>>()
                 .into_iter(),

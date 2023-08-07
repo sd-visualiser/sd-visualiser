@@ -79,7 +79,9 @@ impl<V, E> Fragment for HypergraphBuilder<V, E> {
         weight: V,
     ) -> OperationBuilder<V, E> {
         let op = OperationInternal::new(input_len, output_weights, weight, None);
-        self.0.nodes.push(NodeInternal::Operation(op.clone()));
+        self.0
+            .nodes
+            .push(NodeInternal::Operation(ByThinAddress(op.clone())));
         OperationBuilder(ByThinAddress(op))
     }
 
@@ -89,7 +91,9 @@ impl<V, E> Fragment for HypergraphBuilder<V, E> {
         output_weights: impl IntoIterator<Item = E>,
     ) -> ThunkBuilder<V, E> {
         let thunk = ThunkInternal::new(bound_variables, output_weights, None);
-        self.0.nodes.push(NodeInternal::Thunk(thunk.clone()));
+        self.0
+            .nodes
+            .push(NodeInternal::Thunk(ByThinAddress(thunk.clone())));
         ThunkBuilder(ByThinAddress(thunk))
     }
 
@@ -100,7 +104,7 @@ impl<V, E> Fragment for HypergraphBuilder<V, E> {
             self.0
                 .graph_outputs
                 .iter()
-                .map(|in_port| InPort(ByThinAddress(in_port.clone()))),
+                .map(|in_port| InPort(in_port.clone())),
         )
     }
 }
@@ -128,7 +132,7 @@ impl<V, E> Fragment for ThunkCursor<V, E> {
             .nodes
             .try_write()
             .expect("Lock unexpectedly taken")
-            .push(NodeInternal::Operation(op.clone()));
+            .push(NodeInternal::Operation(ByThinAddress(op.clone())));
         OperationBuilder(ByThinAddress(op))
     }
 
@@ -147,7 +151,7 @@ impl<V, E> Fragment for ThunkCursor<V, E> {
             .nodes
             .try_write()
             .expect("Lock unexpectedly taken")
-            .push(NodeInternal::Thunk(thunk.clone()));
+            .push(NodeInternal::Thunk(ByThinAddress(thunk.clone())));
         ThunkBuilder(ByThinAddress(thunk))
     }
 

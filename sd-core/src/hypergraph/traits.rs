@@ -1,3 +1,5 @@
+use std::hash::Hash;
+
 use crate::common::Addr;
 
 pub trait WithWeight {
@@ -19,7 +21,7 @@ pub trait EdgeLike {
     fn number_of_targets(&self) -> usize;
 }
 
-pub trait Graph {
+pub trait Graph: Clone + Eq + PartialEq + Hash {
     type T: Addr;
 
     fn bound_graph_inputs(

@@ -52,19 +52,16 @@ impl<V, E> OutPortInternal<V, E> {
     }
 }
 
-#[derive(Debug, Derivative)]
-#[derivative(Clone(bound = ""), Default(bound = ""))]
-pub(super) struct HypergraphInternal<V, E> {
-    pub(super) nodes: Vec<NodeInternal<V, E>>,
-    pub(super) graph_inputs: Vec<Arc<OutPortInternal<V, E>>>,
-    pub(super) graph_outputs: Vec<Arc<InPortInternal<V, E>>>,
-}
-
 #[derive(Derivative, Debug)]
-#[derivative(Clone(bound = ""))]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = "")
+)]
 pub(super) enum NodeInternal<V, E> {
-    Operation(Arc<OperationInternal<V, E>>),
-    Thunk(Arc<ThunkInternal<V, E>>),
+    Operation(ByThinAddress<Arc<OperationInternal<V, E>>>),
+    Thunk(ByThinAddress<Arc<ThunkInternal<V, E>>>),
 }
 
 #[derive(Debug)]
