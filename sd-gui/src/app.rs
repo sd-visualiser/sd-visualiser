@@ -235,23 +235,29 @@ impl eframe::App for App {
             .with_main_wrap(true)
             .with_main_align(Align::Min);
 
+            #[allow(clippy::cognitive_complexity)]
             ui.allocate_ui_with_layout(initial_size, layout, |ui| {
                 macro_rules! button {
                     ($label:literal) => {
-                        ui.button($label).clicked()
+                        button!($label, enabled = true)
+                    };
+                    ($label:literal, enabled = $enabled:expr) => {
+                        ui.add_enabled($enabled, egui::Button::new($label))
+                            .clicked()
                     };
                     ($label:literal, $shortcut:expr) => {{
-                        let shortcut =
-                            egui::KeyboardShortcut::new(egui::Modifiers::NONE, $shortcut);
-                        ui.add(
-                            egui::Button::new($label).shortcut_text(ctx.format_shortcut(&shortcut)),
-                        )
-                        .clicked()
-                            || ui.input_mut(|i| i.consume_shortcut(&shortcut))
+                        button!($label, egui::Modifiers::NONE, $shortcut, enabled = true)
+                    }};
+                    ($label:literal, $shortcut:expr, enabled = $enabled:expr) => {{
+                        button!($label, egui::Modifiers::NONE, $shortcut, enabled = $enabled)
                     }};
                     ($label:literal, $modifiers:expr, $shortcut:expr) => {{
+                        button!($label, $modifiers, $shortcut, enabled = true)
+                    }};
+                    ($label:literal, $modifiers:expr, $shortcut:expr, enabled = $enabled:expr) => {{
                         let shortcut = egui::KeyboardShortcut::new($modifiers, $shortcut);
-                        ui.add(
+                        ui.add_enabled(
+                            $enabled,
                             egui::Button::new($label).shortcut_text(ctx.format_shortcut(&shortcut)),
                         )
                         .clicked()
@@ -316,35 +322,47 @@ impl eframe::App for App {
 
                 ui.separator();
 
-                if button!("Reset", egui::Key::Num0) {
+                // will be true if any graph is currently being drawn
+                let ready = finished(&self.graph_ui)
+                    .map(GraphUi::ready)
+                    .unwrap_or_default();
+                let has_selections = finished(&self.graph_ui)
+                    .map(|graph_ui| !graph_ui.is_empty())
+                    .unwrap_or_default();
+                if button!("Reset", egui::Key::Num0, enabled = ready) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.reset();
                     }
                 }
-                if button!("Zoom In", egui::Key::PlusEquals) {
+                if button!("Zoom In", egui::Key::PlusEquals, enabled = ready) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_in();
                     }
                 }
-                if button!("Zoom Out", egui::Key::Minus) {
+                if button!("Zoom Out", egui::Key::Minus, enabled = ready) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_out();
                     }
                 }
 
-                if button!("Find", egui::Modifiers::COMMAND, egui::Key::F) {
+                if button!(
+                    "Find",
+                    egui::Modifiers::COMMAND,
+                    egui::Key::F,
+                    enabled = ready
+                ) {
                     self.find = Some(String::new());
                     find_request_focus = true;
                 }
 
-                if button!("Expand all") {
+                if button!("Expand all", enabled = ready) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.set_expanded_all(true);
                         graph_ui.reset();
                     }
                 }
 
-                if button!("Collapse all") {
+                if button!("Collapse all", enabled = ready) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.set_expanded_all(false);
                         graph_ui.reset();
@@ -357,7 +375,12 @@ impl eframe::App for App {
                     self.trigger_compile(ui.ctx());
                 }
 
-                if button!("Save selection", egui::Modifiers::COMMAND, egui::Key::S) {
+                if button!(
+                    "Save selection",
+                    egui::Modifiers::COMMAND,
+                    egui::Key::S,
+                    enabled = ready && has_selections
+                ) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         self.selections.push(Selection::from_graph(
                             graph_ui,
@@ -366,43 +389,39 @@ impl eframe::App for App {
                         graph_ui.clear_selection();
                     }
                 }
-                if ui.button("Clear selection").clicked() {
+                if button!("Clear selection", enabled = ready && has_selections) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.clear_selection();
                     }
                 }
-                ui.menu_button("Extend selection", |ui| {
-                    for (label, direction) in [
-                        ("Bidirectional", None),
-                        ("Forward (1)", Some((Direction::Forward, 1))),
-                        ("Forward", Some((Direction::Forward, usize::MAX))),
-                        ("Backward (1)", Some((Direction::Backward, 1))),
-                        ("Backward", Some((Direction::Backward, usize::MAX))),
-                    ] {
-                        if ui.button(label).clicked() {
-                            if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
-                                graph_ui.extend_selection(direction);
+                ui.add_enabled_ui(ready && has_selections, |ui| {
+                    ui.menu_button("Extend selection", |ui| {
+                        for (label, direction) in [
+                            ("Bidirectional", None),
+                            ("Forward (1)", Some((Direction::Forward, 1))),
+                            ("Forward", Some((Direction::Forward, usize::MAX))),
+                            ("Backward (1)", Some((Direction::Backward, 1))),
+                            ("Backward", Some((Direction::Backward, usize::MAX))),
+                        ] {
+                            if ui.button(label).clicked() {
+                                if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                                    graph_ui.extend_selection(direction);
+                                }
                             }
                         }
-                    }
+                    });
                 });
 
                 #[cfg(not(target_arch = "wasm32"))]
                 {
                     ui.separator();
-                    if let Some(graph_ui) = finished(&self.graph_ui)
-                        .and_then(|graph_ui| graph_ui.ready().then_some(graph_ui))
-                    {
-                        ui.add_enabled_ui(true, |ui| {
-                            if ui.button("Export SVG").clicked() {
-                                let svg = graph_ui.export_svg();
-                                if let Some(path) = rfd::FileDialog::new().save_file() {
-                                    let _ = std::fs::write(path, svg);
-                                }
+                    if button!("Export SVG", enabled = ready) {
+                        if let Some(graph_ui) = finished(&self.graph_ui) {
+                            let svg = graph_ui.export_svg();
+                            if let Some(path) = rfd::FileDialog::new().save_file() {
+                                let _ = std::fs::write(path, svg);
                             }
-                        });
-                    } else {
-                        ui.add_enabled_ui(false, |ui| ui.button("Export SVG"));
+                        }
                     }
                 }
 

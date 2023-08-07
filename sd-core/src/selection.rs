@@ -68,6 +68,18 @@ where
             .filter_map(|(node, selected)| selected.then_some(node))
             .cloned()
     }
+
+    /// Number of selected nodes.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.iter().count()
+    }
+
+    /// Whether any nodes are selected.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
 }
 
 impl<V, E> SelectionMap<(V, E)> {

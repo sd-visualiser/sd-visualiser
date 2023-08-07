@@ -70,6 +70,7 @@ impl GraphUi {
         } {
             pub(crate) fn clear_selection(&mut self);
             pub(crate) fn extend_selection(&mut self, direction: Option<(Direction, usize)>);
+            pub(crate) fn is_empty(&self) -> bool;
         }
     }
 }
