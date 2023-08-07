@@ -1,0 +1,6 @@
+[book]
+authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
+language = "en"
+multilingual = false
+src = "src"
+title = "SD Visualiser"
