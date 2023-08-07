@@ -92,6 +92,8 @@ impl PrettyPrint for Op {
             Self::Atom => RcDoc::text("atom"),
             Self::Deref => RcDoc::text("deref"),
             Self::Assign => RcDoc::text("assign"),
+            Self::Tuple => RcDoc::text("tuple"),
+            Self::Detuple => RcDoc::text("detuple"),
             Self::Bool(b) => RcDoc::as_string(b),
             Self::Number(n) => RcDoc::as_string(n),
         }

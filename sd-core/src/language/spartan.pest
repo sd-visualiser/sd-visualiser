@@ -13,7 +13,7 @@ value = { variable | op ~ ("(" ~ args ~ ")")? }
 arg = _{ thunk | value }
 args = _{ arg ~ ("," ~ args)* }
 
-op = { "plus" | "minus" | "times" | "div" | "rem" | "and" | "or" | "not" | "if" | "eq" | "neq" | "lt" | "leq" | "gt" | "geq" | "app" | "lambda" | "atom" | "deref" | "assign" | "true" | "false" | number }
+op = { "plus" | "minus" | "times" | "div" | "rem" | "and" | "or" | "not" | "if" | "eq" | "neq" | "lt" | "leq" | "gt" | "geq" | "app" | "lambda" | "atom" | "deref" | "assign" | "tuple" | "detuple" | "true" | "false" | number }
 number = @{ ASCII_DIGIT+ }
 
 variable = @{ !(keyword | op) ~ "_"* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }

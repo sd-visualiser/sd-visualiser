@@ -71,6 +71,8 @@ pub enum Op {
     Atom,
     Deref,
     Assign,
+    Tuple,
+    Detuple,
     Bool(bool),
     Number(usize),
 }
@@ -98,6 +100,8 @@ impl Display for Op {
             Self::Atom => f.write_char('&'),
             Self::Deref => f.write_char('!'),
             Self::Assign => f.write_str(":="),
+            Self::Tuple => f.write_str("()"),
+            Self::Detuple => f.write_str(")("),
             Self::Bool(b) => f.write_str(&b.to_string()),
             Self::Number(n) => f.write_str(&n.to_string()),
         }
@@ -129,6 +133,8 @@ impl FromStr for Op {
             "atom" => Ok(Self::Atom),
             "deref" => Ok(Self::Deref),
             "assign" => Ok(Self::Assign),
+            "tuple" => Ok(Self::Tuple),
+            "detuple" => Ok(Self::Detuple),
             "true" => Ok(Self::Bool(true)),
             "false" => Ok(Self::Bool(false)),
             _ => s.parse().map(Self::Number).map_err(|_err| ()),

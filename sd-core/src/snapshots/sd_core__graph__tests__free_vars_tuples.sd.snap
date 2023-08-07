@@ -1,0 +1,12 @@
+---
+source: sd-core/src/graph.rs
+expression: expr.free_vars()
+---
+{
+    Variable(
+        "x",
+    ),
+    Variable(
+        "y",
+    ),
+}

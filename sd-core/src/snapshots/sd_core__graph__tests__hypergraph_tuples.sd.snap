@@ -1,0 +1,36 @@
+---
+source: sd-core/src/graph.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Edge(FreeVar(Variable("x"))),
+    Edge(FreeVar(Variable("y"))),
+    Operation(Op(Tuple)),
+    Edge(BoundVar(Variable("a"))),
+    Edge(BoundVar(Variable("d"))),
+    Edge(Op),
+    Operation(Op(Tuple)),
+    Edge(BoundVar(Variable("b"))),
+    Edge(BoundVar(Variable("c"))),
+    Edge(Op),
+    Operation(Op(Detuple)),
+    Operation(Op(Detuple)),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((3, 2, 0)),
+    Some((4, 2, 1)),
+    Some((2, 5, 0)),
+    Some((7, 6, 0)),
+    Some((8, 6, 1)),
+    Some((6, 9, 0)),
+    Some((1, 10, 0)),
+    Some((10, 8, 0)),
+    Some((10, 4, 1)),
+    Some((0, 11, 0)),
+    Some((11, 3, 0)),
+    Some((11, 7, 1)),
+  ],
+)
