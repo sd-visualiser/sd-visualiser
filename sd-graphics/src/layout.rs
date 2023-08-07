@@ -333,6 +333,14 @@ where
                         let sum_outs: Expression = outs.iter().sum();
                         problem.add_constraint((*pos * no as f64).eq(sum_outs));
                     }
+                    // Try to "squish" inputs and outputs
+                    if ni >= 2 {
+                        problem.add_objective((ins[ni - 1] - ins[0]) * ni as f32);
+                    }
+
+                    if no >= 2 {
+                        problem.add_objective((outs[no - 1] - outs[0]) * no as f32);
+                    }
                 }
                 Node::Swap { pos, out_to_in, .. } => {
                     let in_outs: Expression = ins.iter().chain(outs.iter()).sum();
