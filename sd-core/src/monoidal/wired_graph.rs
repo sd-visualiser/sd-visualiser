@@ -78,9 +78,11 @@ where
             WiredOp::Operation { addr } => {
                 Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
             }
-            WiredOp::Thunk { addr, .. } => {
-                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
-            }
+            WiredOp::Thunk { body, .. } => Box::new(
+                body.free_inputs
+                    .iter()
+                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+            ),
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
             }

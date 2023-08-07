@@ -272,9 +272,11 @@ where
             MonoidalOp::Operation { addr, .. } => {
                 Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
             }
-            MonoidalOp::Thunk { addr, .. } => {
-                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
-            }
+            MonoidalOp::Thunk { body, .. } => Box::new(
+                body.free_inputs
+                    .iter()
+                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+            ),
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
                 Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
