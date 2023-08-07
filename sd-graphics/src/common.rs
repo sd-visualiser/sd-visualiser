@@ -1,7 +1,4 @@
-use std::{
-    fmt::Display,
-    ops::{Index, IndexMut},
-};
+use std::fmt::Display;
 
 use derivative::Derivative;
 use egui::{vec2, Pos2, Vec2};
@@ -10,13 +7,9 @@ use pretty::RcDoc;
 use sd_core::{
     common::Addr,
     graph::{Name, Op},
-    hypergraph::{
-        subgraph::Mapping,
-        traits::{EdgeLike, NodeLike, WithWeight},
-    },
+    hypergraph::traits::{EdgeLike, NodeLike, WithWeight},
     language::Language,
     prettyprinter::{paran_list, PrettyPrint},
-    weak_map::WeakMap,
 };
 
 pub const RADIUS_ARG: f32 = 0.05;
@@ -36,6 +29,7 @@ pub const RADIUS_OPERATION: f32 = 0.2;
     Debug(bound = "")
 )]
 pub enum EdgeLabel<T: Language> {
+    Fresh,
     Thunk(T::Addr),
     FreeVar(T::Var),
     BoundVar(T::VarDef),
@@ -50,15 +44,18 @@ impl<T: Language> EdgeLabel<T> {
         U::Operation: NodeLike<T = U> + WithWeight<Weight = Op<T>>,
     {
         match edge.weight() {
-            Name::Op => {
-                let op: U::Operation = edge.source().unwrap().try_into().ok().unwrap();
-                Self::Operation(
-                    op.weight().0.clone(),
-                    op.inputs()
-                        .map(|edge| Self::from_edge::<U>(&edge))
-                        .collect(),
-                )
-            }
+            Name::Op => match edge.source() {
+                None => Self::Fresh,
+                Some(node) => {
+                    let op: U::Operation = node.try_into().ok().unwrap();
+                    Self::Operation(
+                        op.weight().0.clone(),
+                        op.inputs()
+                            .map(|edge| Self::from_edge::<U>(&edge))
+                            .collect(),
+                    )
+                }
+            },
             Name::Thunk(addr) => Self::Thunk(addr.clone()),
             Name::FreeVar(var) => Self::FreeVar(var.clone()),
             Name::BoundVar(def) => Self::BoundVar(def.clone()),
@@ -75,6 +72,7 @@ where
 {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
+            Self::Fresh => RcDoc::text("?"),
             Self::Thunk(addr) => {
                 let addr = addr.to_string();
                 if addr.is_empty() {
@@ -123,39 +121,4 @@ where
 
 pub(crate) fn to_coord2(pos2: Pos2) -> Coord2 {
     Coord2(f64::from(pos2.x), f64::from(pos2.y))
-}
-
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = "T::Thunk: Clone, T::Edge: Clone"),
-    Hash(bound = ""),
-    Default(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = "")
-)]
-pub struct GraphMetadata<T: Addr> {
-    pub expanded: WeakMap<T::Thunk, bool>,
-    pub mapping: Option<Mapping<T>>,
-}
-
-impl<T: Addr> Index<&T::Thunk> for GraphMetadata<T> {
-    type Output = bool;
-
-    fn index(&self, index: &T::Thunk) -> &Self::Output {
-        if let Some(map) = &self.mapping {
-            &self.expanded[&map.thunk_mapping[index]]
-        } else {
-            &self.expanded[index]
-        }
-    }
-}
-
-impl<T: Addr> IndexMut<&T::Thunk> for GraphMetadata<T> {
-    fn index_mut(&mut self, index: &T::Thunk) -> &mut Self::Output {
-        if let Some(map) = &self.mapping {
-            &mut self.expanded[&map.thunk_mapping[index]]
-        } else {
-            &mut self.expanded[index]
-        }
-    }
 }

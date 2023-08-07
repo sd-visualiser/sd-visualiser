@@ -93,7 +93,7 @@ impl<T: Language> Name<T> {
 }
 
 pub type SyntaxHypergraph<T> = Hypergraph<Op<T>, Name<T>>;
-pub type SyntaxSubgraph<T> = Subgraph<Op<T>, Name<T>>;
+pub type SyntaxSubgraph<T> = Subgraph<(Op<T>, Name<T>)>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]

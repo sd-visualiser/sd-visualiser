@@ -1,6 +1,6 @@
 #![allow(clippy::inline_always)]
 
-use std::{fmt::Display, sync::Arc};
+use std::fmt::{Debug, Display};
 
 use delegate::delegate;
 use eframe::{
@@ -8,37 +8,44 @@ use eframe::{
     epaint::{Rounding, Shape},
 };
 use sd_core::{
-    common::{Direction, Matchable},
-    graph::{Name, Op, SyntaxHypergraph, SyntaxSubgraph},
-    hypergraph::{subgraph::Subgraph, Thunk},
+    common::{Addr, Direction, Matchable},
+    decompile::Fresh,
+    graph::{Name, Op, SyntaxHypergraph},
+    hypergraph::{
+        create_expanded, create_selected,
+        subgraph::{ExtensibleEdge, ExtensibleGraph},
+        traits::{Graph, NodeLike, WithWeight},
+    },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
-    monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,
     weak_map::WeakMap,
 };
-use sd_graphics::common::GraphMetadata;
-use tracing::debug;
 
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub enum GraphUi {
-    Chil(GraphUiInternal<Chil>, SelectionMap<(Op<Chil>, Name<Chil>)>),
+    Chil(
+        GraphUiInternal<SyntaxHypergraph<Chil>>,
+        SelectionMap<(Op<Chil>, Name<Chil>)>,
+    ),
     Spartan(
-        GraphUiInternal<Spartan>,
+        GraphUiInternal<SyntaxHypergraph<Spartan>>,
         SelectionMap<(Op<Spartan>, Name<Spartan>)>,
     ),
 }
 
 impl GraphUi {
-    pub(crate) fn new_chil(hypergraph: SyntaxHypergraph<Chil>) -> Self {
-        let selected = hypergraph.create_selected();
-        Self::Chil(GraphUiInternal::from_graph(hypergraph), selected)
+    pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>) -> Self {
+        let expanded = create_expanded(&graph);
+        let selected = create_selected(&graph);
+        Self::Chil(GraphUiInternal::new(graph, expanded), selected)
     }
 
-    pub(crate) fn new_spartan(hypergraph: SyntaxHypergraph<Spartan>) -> Self {
-        let selected = hypergraph.create_selected();
-        Self::Spartan(GraphUiInternal::from_graph(hypergraph), selected)
+    pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>) -> Self {
+        let expanded = create_expanded(&graph);
+        let selected = create_selected(&graph);
+        Self::Spartan(GraphUiInternal::new(graph, expanded), selected)
     }
 
     delegate! {
@@ -52,14 +59,14 @@ impl GraphUi {
             pub(crate) fn zoom_out(&mut self);
             pub(crate) fn find_variable(&mut self, variable: &str);
             pub(crate) fn export_svg(&self) -> String;
-        pub(crate) fn set_expanded_all(&mut self, expanded: bool);
+            pub(crate) fn set_expanded_all(&mut self, expanded: bool);
         }
     }
 
     pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
         match self {
-            GraphUi::Chil(graph_ui, selection) => graph_ui.ui(ui, Some(selection), None),
-            GraphUi::Spartan(graph_ui, selection) => graph_ui.ui(ui, Some(selection), None),
+            GraphUi::Chil(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
+            GraphUi::Spartan(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
         }
     }
 
@@ -75,34 +82,45 @@ impl GraphUi {
     }
 }
 
-pub struct GraphUiInternal<T: Language> {
-    #[allow(dead_code)] // Dropping this breaks the app
-    hypergraph: SyntaxHypergraph<T>,
-    monoidal_graph: Arc<MonoidalGraph<(Op<T>, Name<T>)>>,
-    metadata: GraphMetadata<(Op<T>, Name<T>)>,
+pub struct GraphUiInternal<G: Graph> {
+    pub(crate) graph: G,
+    pub(crate) expanded: WeakMap<<G::T as Addr>::Thunk, bool>,
     panzoom: Panzoom,
     ready: bool,
     reset_requested: bool,
 }
 
-impl<T: 'static + Language> GraphUiInternal<T> {
-    pub(crate) fn ui(
-        &mut self,
-        ui: &mut egui::Ui,
-        current_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
-        subgraph_selection: Option<&mut SelectionMap<(Op<T>, Name<T>)>>,
-    ) where
-        T::Op: Display + PrettyPrint,
-        T::Var: PrettyPrint,
+impl<G> GraphUiInternal<G>
+where
+    G: ExtensibleGraph + Send + Sync + 'static,
+{
+    pub(crate) fn new(graph: G, expanded: WeakMap<<G::T as Addr>::Thunk, bool>) -> Self {
+        Self {
+            graph,
+            expanded,
+            panzoom: Panzoom::default(),
+            ready: false,
+            reset_requested: true,
+        }
+    }
+
+    pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui, selection: Option<&mut SelectionMap<G::T>>)
+    where
+        T: Language,
+        T::Op: PrettyPrint,
+        T::Var: PrettyPrint + Fresh,
         T::Addr: Display,
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
+        <G::T as Addr>::Node: NodeLike<T = G::T> + Debug + Send + Sync,
+        <G::T as Addr>::Edge:
+            ExtensibleEdge<T = G::T> + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
+        <G::T as Addr>::Operation:
+            NodeLike<T = G::T> + WithWeight<Weight = Op<T>> + Debug + Send + Sync,
+        <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + Debug + Send + Sync,
+        <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
     {
-        let shapes = generate_shapes(
-            &self.monoidal_graph,
-            &self.metadata,
-            subgraph_selection.as_deref(),
-        );
+        let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
@@ -155,12 +173,12 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             ));
 
             painter.extend(sd_graphics::render::render(
+                &mut self.graph,
                 ui,
                 &shapes.shapes,
                 &response,
-                &mut self.metadata,
-                current_selection,
-                subgraph_selection,
+                &mut self.expanded,
+                selection,
                 to_screen,
             ));
             self.ready = true;
@@ -170,79 +188,26 @@ impl<T: 'static + Language> GraphUiInternal<T> {
         }
     }
 
-    pub(crate) fn from_graph(hypergraph: SyntaxHypergraph<T>) -> Self
-    where
-        T::Op: Display,
-    {
-        let expanded = hypergraph.create_expanded();
-        Self::from_subgraph(
-            Subgraph {
-                graph: hypergraph,
-                mapping: None,
-            },
-            expanded,
-        )
-    }
-
-    pub(crate) fn from_subgraph(
-        subgraph: SyntaxSubgraph<T>,
-        expanded: WeakMap<Thunk<Op<T>, Name<T>>, bool>,
-    ) -> Self
-    where
-        T::Op: Display,
-    {
-        let hypergraph = subgraph.graph;
-
-        debug!("Converting to monoidal term");
-        let monoidal_term = MonoidalWiredGraph::from(&hypergraph);
-        debug!("Got term {:#?}", monoidal_term);
-
-        debug!("Inserting swaps and copies");
-        let monoidal_graph = Arc::new(MonoidalGraph::from(&monoidal_term));
-        debug!("Got graph {:#?}", monoidal_graph);
-
-        let metadata = GraphMetadata {
-            expanded,
-            mapping: subgraph.mapping,
-        };
-
-        let mut this = Self {
-            hypergraph,
-            monoidal_graph,
-            metadata,
-            panzoom: Panzoom::default(),
-            ready: bool::default(),
-            reset_requested: bool::default(),
-        };
-        this.reset();
-        this
-    }
-
-    pub(crate) fn update_from_other_ui(&mut self, other: &Self) {
-        self.panzoom = other.panzoom;
-        self.ready = false;
-        self.reset_requested = other.reset_requested;
-    }
-
     pub(crate) const fn ready(&self) -> bool {
         self.ready
     }
 
-    pub(crate) fn reset(&mut self)
-    where
-        T::Op: Display,
-    {
+    pub(crate) fn reset(&mut self) {
         self.reset_requested = true;
     }
 
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        T::Op: Display,
-        T::Addr: Matchable,
-        T::Var: Matchable,
+        <G::T as Addr>::Node: NodeLike<T = G::T> + Debug + Send + Sync,
+        <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + WithWeight + Debug + Send + Sync,
+        <G::T as Addr>::Operation:
+            NodeLike<T = G::T> + WithWeight + Matchable + Debug + Send + Sync,
+        <G::T as Addr>::Thunk:
+            NodeLike<T = G::T> + Graph<T = G::T> + Matchable + Debug + Send + Sync,
+        <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata, None);
+        let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
 
         if let Some(shapes) = guard.ready() {
@@ -264,23 +229,19 @@ impl<T: 'static + Language> GraphUiInternal<T> {
 
     pub(crate) fn export_svg(&self) -> String
     where
-        T::Op: Display,
+        <G::T as Addr>::Node: NodeLike<T = G::T> + Debug + Send + Sync,
+        <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + WithWeight + Debug + Send + Sync,
+        <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + Debug + Send + Sync,
+        <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + Debug + Send + Sync,
+        <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
     {
-        let shapes = generate_shapes(&self.monoidal_graph, &self.metadata, None);
+        let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here
                                             // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()
     }
 
-    pub(crate) const fn get_expanded(&self) -> &WeakMap<Thunk<Op<T>, Name<T>>, bool> {
-        &self.metadata.expanded
-    }
-
-    pub(crate) const fn get_hypergraph(&self) -> &SyntaxHypergraph<T> {
-        &self.hypergraph
-    }
-
     pub(crate) fn set_expanded_all(&mut self, expanded: bool) {
-        self.metadata.expanded.set_all(expanded);
+        self.expanded.set_all(expanded);
     }
 }

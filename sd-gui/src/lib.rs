@@ -8,7 +8,6 @@ pub(crate) mod parser;
 pub(crate) mod selection;
 pub(crate) mod shape_generator;
 pub(crate) mod squiggly_line;
-pub(crate) mod subgraph_generator;
 
 pub use app::App;
 pub use parser::UiLanguage;

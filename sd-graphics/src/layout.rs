@@ -7,15 +7,13 @@ use sd_core::{
     common::{Addr, InOut},
     hypergraph::traits::WithWeight,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
+    weak_map::WeakMap,
 };
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{
-    common::{GraphMetadata, RADIUS_OPERATION},
-    lp::LpProblem,
-};
+use crate::{common::RADIUS_OPERATION, lp::LpProblem};
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
@@ -191,7 +189,7 @@ impl Layout {
 #[allow(clippy::too_many_lines)]
 fn layout_internal<T: Addr>(
     graph: &MonoidalGraph<T>,
-    metadata: &GraphMetadata<T>,
+    expanded: &WeakMap<T::Thunk, bool>,
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable>
 where
@@ -248,8 +246,8 @@ where
             .iter()
             .map(|op| {
                 let node = match op {
-                    MonoidalOp::Thunk { body, addr, .. } if metadata[addr] => {
-                        Node::Thunk(layout_internal(body, metadata, problem))
+                    MonoidalOp::Thunk { body, addr, .. } if expanded[addr] => {
+                        Node::Thunk(layout_internal(body, expanded, problem))
                     }
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         pos: problem.add_variable(variable().min(0.0)),
@@ -385,7 +383,7 @@ where
 
 pub fn layout<T: Addr>(
     graph: &MonoidalGraph<T>,
-    metadata: &GraphMetadata<T>,
+    expanded: &WeakMap<T::Thunk, bool>,
 ) -> Result<Layout, LayoutError>
 where
     T::Operation: WithWeight,
@@ -393,7 +391,7 @@ where
 {
     let mut problem = LpProblem::default();
 
-    let layout = layout_internal(graph, metadata, &mut problem);
+    let layout = layout_internal(graph, expanded, &mut problem);
     problem.add_objective(layout.max);
     let solution = problem.minimise(good_lp::default_solver)?;
 
@@ -402,22 +400,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sd_core::examples;
+    use sd_core::{examples, weak_map::WeakMap};
 
     use super::layout;
-    use crate::common::GraphMetadata;
 
     #[test]
     fn int() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::int(), &GraphMetadata::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::int(), &WeakMap::default()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn copy() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::copy(), &GraphMetadata::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::copy(), &WeakMap::default()).expect("Layout failed"));
         });
     }
 }

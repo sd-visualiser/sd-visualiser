@@ -7,8 +7,27 @@ use crate::{
     common::Addr,
     graph::{Name, Op},
     hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
-    language::{Arg, Bind, Expr, Language, Thunk, Value},
+    language::{chil, spartan, Arg, Bind, Expr, Language, Thunk, Value},
 };
+
+pub trait Fresh {
+    fn fresh(number: usize) -> Self;
+}
+
+impl Fresh for chil::Variable {
+    fn fresh(number: usize) -> Self {
+        Self {
+            name: None,
+            addr: chil::Addr('?', number),
+        }
+    }
+}
+
+impl Fresh for spartan::Variable {
+    fn fresh(number: usize) -> Self {
+        Self(format!("?{number}"))
+    }
+}
 
 #[derive(Clone, Debug, Error)]
 pub enum DecompilationError {
@@ -26,12 +45,14 @@ where
     <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = Name<T>>,
     <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = Op<T>>,
     <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
+    T::Var: Fresh,
 {
     let mut binds = Vec::default();
 
     // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).
     let mut node_to_syntax = HashMap::<<G::T as Addr>::Node, Arg<T>>::default();
 
+    let mut fresh_vars = 0;
     for node in graph.nodes().rev() {
         // Check the node has a unique output.
         let output = node
@@ -47,7 +68,10 @@ where
                         args.push(Arg::Value(Value::Variable(var.clone())));
                     }
                     None => match edge.source() {
-                        None => return Err(DecompilationError::Corrupt),
+                        None => {
+                            args.push(Arg::Value(Value::Variable(T::Var::fresh(fresh_vars))));
+                            fresh_vars += 1;
+                        }
                         Some(other_node) => {
                             args.push(
                                 node_to_syntax

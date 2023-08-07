@@ -4,44 +4,48 @@ use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use sd_core::{
     common::{Addr, InOut, InOutIter, Link},
-    decompile::decompile,
+    decompile::{decompile, Fresh},
     graph::{Name, Op},
-    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    hypergraph::{
+        subgraph::{ExtensibleEdge, ExtensibleGraph},
+        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    },
     language::{Expr, Language},
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,
+    weak_map::WeakMap,
 };
 
 use crate::{
-    common::{EdgeLabel, GraphMetadata, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     layout::Layout,
     shape::Shape,
 };
 
 #[allow(clippy::needless_collect)]
 #[allow(clippy::type_complexity)]
-pub fn render<T, U>(
+pub fn render<T, G>(
+    graph: &mut G,
     ui: &egui::Ui,
-    shapes: &[Shape<U>],
+    shapes: &[Shape<G::T>],
     response: &Response,
-    metadata: &mut GraphMetadata<U>,
-    mut selection: Option<&mut SelectionMap<U>>,
-    mut subgraph_selection: Option<&mut SelectionMap<U>>,
+    expanded: &mut WeakMap<<G::T as Addr>::Thunk, bool>,
+    mut selection: Option<&mut SelectionMap<G::T>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
     T: Language,
     T::Op: PrettyPrint,
-    T::Var: PrettyPrint,
+    T::Var: PrettyPrint + Fresh,
     T::Addr: Display,
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
-    U: Addr,
-    U::Node: NodeLike<T = U>,
-    U::Edge: EdgeLike<T = U> + WithWeight<Weight = Name<T>>,
-    U::Operation: NodeLike<T = U> + WithWeight<Weight = Op<T>>,
-    U::Thunk: NodeLike<T = U> + Graph<T = U>,
+    G: ExtensibleGraph,
+    <G::T as Addr>::Node: NodeLike<T = G::T>,
+    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = Name<T>>,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = Op<T>>,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
 {
     let viewport = *to_screen.from();
 
@@ -55,14 +59,14 @@ where
             let mut s = shape.clone();
             s.apply_transform(&to_screen);
             s.collect_highlights(
+                graph,
                 ui,
                 response,
                 &to_screen,
                 &mut highlight_node,
                 &mut highlight_edges,
-                metadata,
+                expanded,
                 selection.as_deref_mut(),
-                subgraph_selection.as_deref_mut(),
             );
             s
         })
@@ -72,9 +76,9 @@ where
     let labels = match highlight_node {
         Some(node) => {
             highlight_edges.extend(node.inputs().chain(node.outputs()));
-            if let Ok(op) = U::Operation::try_from(node.clone()) {
+            if let Ok(op) = <G::T as Addr>::Operation::try_from(node.clone()) {
                 vec![op.weight().to_pretty()]
-            } else if let Ok(thunk) = U::Thunk::try_from(node.clone()) {
+            } else if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
                 vec![decompile(&thunk).map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
             } else {
                 unreachable!()
@@ -82,7 +86,7 @@ where
         }
         None => highlight_edges
             .iter()
-            .map(|edge| EdgeLabel::from_edge::<U>(edge).to_pretty())
+            .map(|edge| EdgeLabel::from_edge::<G::T>(edge).to_pretty())
             .collect(),
     };
     for label in labels {
@@ -103,11 +107,11 @@ pub fn generate_shapes<T>(
     mut y_offset: f32,
     layout: &Layout,
     graph: &MonoidalGraph<T>,
-    metadata: &GraphMetadata<T>,
-    subgraph_selection: Option<&SelectionMap<T>>,
+    expanded: &WeakMap<T::Thunk, bool>,
+    arrows: bool,
 ) where
     T: Addr,
-    T::Edge: EdgeLike<T = T>,
+    T::Edge: ExtensibleEdge<T = T>,
     T::Operation: NodeLike<T = T> + WithWeight,
     T::Thunk: NodeLike<T = T> + Graph<T = T>,
     <T::Operation as WithWeight>::Weight: Display,
@@ -126,14 +130,8 @@ pub fn generate_shapes<T>(
             addr: addr.clone(),
         });
 
-        if let Some((selection, node)) = subgraph_selection.zip(
-            metadata
-                .mapping
-                .as_ref()
-                .and_then(|mapping| mapping.edge_mapping.get(addr))
-                .and_then(EdgeLike::source),
-        ) {
-            if !selection[&node] {
+        if arrows {
+            if let Some(node) = addr.extend_source() {
                 shapes.push(Shape::Arrow {
                     addr: addr.clone(),
                     to_add: vec![node],
@@ -176,7 +174,7 @@ pub fn generate_shapes<T>(
                         });
                     }
                 }
-                MonoidalOp::Thunk { addr, body, .. } if metadata[addr] => {
+                MonoidalOp::Thunk { addr, body, .. } if expanded[addr] => {
                     let x_op = x_op.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
@@ -219,7 +217,7 @@ pub fn generate_shapes<T>(
                             addr: edge,
                         });
                     }
-                    generate_shapes(shapes, y_min, x_op, body, metadata, None);
+                    generate_shapes(shapes, y_min, x_op, body, expanded, false);
                 }
                 _ => {
                     let x_op = *x_op.unwrap_atom();
@@ -340,17 +338,8 @@ pub fn generate_shapes<T>(
             addr: edge.clone(),
         });
 
-        if let Some((selection, edge)) = subgraph_selection.zip(
-            metadata
-                .mapping
-                .as_ref()
-                .and_then(|mapping| mapping.edge_mapping.get(edge)),
-        ) {
-            let targets: Vec<_> = edge
-                .targets()
-                .flatten()
-                .filter(|node| !selection[node])
-                .collect();
+        if arrows {
+            let targets = edge.extend_targets().collect::<Vec<_>>();
             if !targets.is_empty() {
                 shapes.push(Shape::Arrow {
                     addr: edge.clone(),

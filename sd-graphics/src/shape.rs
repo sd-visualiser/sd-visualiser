@@ -8,10 +8,12 @@ use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::{Addr, Matchable},
+    hypergraph::subgraph::ExtensibleGraph,
     selection::SelectionMap,
+    weak_map::WeakMap,
 };
 
-use crate::common::{to_coord2, GraphMetadata, TEXT_SIZE, TOLERANCE};
+use crate::common::{to_coord2, TEXT_SIZE, TOLERANCE};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
@@ -88,17 +90,19 @@ impl<T: Addr> Shape<T> {
 
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn collect_highlights(
+    pub(crate) fn collect_highlights<G>(
         &mut self,
+        graph: &mut G,
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
         highlight_node: &mut Option<T::Node>,
         highlight_edges: &mut IndexSet<T::Edge>,
-        metadata: &mut GraphMetadata<T>,
+        expanded: &mut WeakMap<T::Thunk, bool>,
         selection: Option<&mut SelectionMap<T>>,
-        subgraph_selection: Option<&mut SelectionMap<T>>,
-    ) {
+    ) where
+        G: ExtensibleGraph<T = T>,
+    {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
 
@@ -132,11 +136,11 @@ impl<T: Addr> Shape<T> {
                     .style()
                     .interact_selectable(&thunk_response, selected)
                     .fg_stroke;
-                if !selected && metadata[addr] {
+                if !selected && expanded[addr] {
                     new_stroke.color = new_stroke.color.gamma_multiply(0.35);
                 }
                 *stroke = Some(new_stroke);
-                if !metadata[addr] {
+                if !expanded[addr] {
                     *fill = Some(
                         ui.style()
                             .interact_selectable(&thunk_response, selected)
@@ -147,7 +151,7 @@ impl<T: Addr> Shape<T> {
                     }
                 }
                 if thunk_response.clicked() {
-                    metadata[addr] = !metadata[addr];
+                    expanded[addr] = !expanded[addr];
                 }
                 if let Some(s) = selection {
                     if thunk_response.secondary_clicked() {
@@ -202,11 +206,7 @@ impl<T: Addr> Shape<T> {
                 }
 
                 if arrow_response.clicked() {
-                    if let Some(selection) = subgraph_selection {
-                        for y in std::mem::take(to_add) {
-                            selection[&y] = true;
-                        }
-                    }
+                    graph.extend(to_add.iter().cloned());
                 }
             }
         }

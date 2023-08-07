@@ -2,16 +2,15 @@ use std::{cmp::min, collections::HashMap, fmt::Debug, sync::Arc};
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexSet;
 use itertools::Itertools;
 use thiserror::Error;
 
 use super::{
     internal::{InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal},
-    traits::{EdgeLike, Graph, NodeLike, WithWeight},
-    Edge, Hypergraph, Node, Operation, Thunk,
+    traits::{EdgeLike, Graph, NodeLike},
+    Hypergraph, Node, Operation, Thunk,
 };
-use crate::common::InOut;
 
 pub mod fragment;
 pub use self::fragment::Fragment;
@@ -89,13 +88,6 @@ impl<V, E> Debug for OutPort<V, E> {
     }
 }
 
-impl<V, E> OutPort<V, E> {
-    #[allow(clippy::missing_const_for_fn)]
-    pub(super) fn into_edge_unchecked(self) -> Edge<V, E> {
-        Edge(self.0)
-    }
-}
-
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
@@ -158,11 +150,6 @@ impl<V, E> ThunkBuilder<V, E> {
             .outputs
             .keys()
             .map(|in_port| InPort(in_port.clone()))
-    }
-
-    #[allow(clippy::missing_const_for_fn)]
-    pub(super) fn into_thunk_unchecked(self) -> Thunk<V, E> {
-        Thunk(self.0)
     }
 
     fn fold<Err>(
@@ -454,59 +441,5 @@ where
         )?;
 
         Ok(self.0)
-    }
-}
-
-impl<V: Clone, E: Clone> Thunk<V, E> {
-    /// Clone a thunk into the fragment, maintaining a map from `in_ports` and `out_ports`
-    /// in the generated graph to edges in the original thunk.
-    pub(in crate::hypergraph) fn clone_thunk<F: Fragment<NodeWeight = V, EdgeWeight = E>>(
-        &self,
-        fragment: &mut F,
-        in_port_map: &mut HashMap<InPort<V, E>, Edge<V, E>>,
-        out_port_map: &mut IndexMap<Edge<V, E>, OutPort<V, E>>,
-        thunk_mapping: &mut IndexMap<Thunk<V, E>, Thunk<V, E>>,
-    ) {
-        let bound_variables = self.bound_graph_inputs().map(|edge| edge.weight().clone());
-
-        let output_weights = self.outputs().map(|edge| edge.weight().clone());
-
-        let thunk = fragment.add_thunk(bound_variables, output_weights);
-
-        thunk_mapping.insert(thunk.clone().into_thunk_unchecked(), self.clone());
-
-        out_port_map.extend(self.bound_graph_inputs().zip(thunk.bound_inputs()));
-        out_port_map.extend(self.outputs().zip(thunk.outputs()));
-
-        fragment.in_thunk(thunk, |mut inner_fragment| {
-            in_port_map.extend(inner_fragment.graph_outputs().zip(self.graph_outputs()));
-
-            for node in self.nodes() {
-                match &node {
-                    super::Node::Operation(op) => {
-                        let input_len = op.number_of_inputs();
-                        let output_weights: Vec<_> = op
-                            .outputs()
-                            .map(|out_port| out_port.weight().clone())
-                            .collect();
-                        let weight: V = op.weight().clone();
-
-                        let op = inner_fragment.add_operation(input_len, output_weights, weight);
-
-                        in_port_map.extend(op.inputs().zip(node.inputs()));
-
-                        out_port_map.extend(node.outputs().zip(op.outputs()));
-                    }
-                    super::Node::Thunk(thunk) => {
-                        thunk.clone_thunk(
-                            &mut inner_fragment,
-                            in_port_map,
-                            out_port_map,
-                            thunk_mapping,
-                        );
-                    }
-                }
-            }
-        });
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    fmt::Display,
+    fmt::{Debug, Display},
     sync::{Arc, Mutex, OnceLock},
 };
 
@@ -8,39 +8,39 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     common::Addr,
-    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
-    monoidal::graph::MonoidalGraph,
-    selection::SelectionMap,
+    hypergraph::{
+        subgraph::ExtensibleEdge,
+        traits::{Graph, NodeLike, WithWeight},
+    },
+    monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
+    weak_map::WeakMap,
 };
-use sd_graphics::{common::GraphMetadata, layout::layout, render, shape::Shapes};
+use sd_graphics::{layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
-type Cache<T> = LruCache<
-    (
-        Arc<MonoidalGraph<T>>,
-        GraphMetadata<T>,
-        Option<SelectionMap<T>>,
-    ),
-    Arc<Mutex<Promise<Shapes<T>>>>,
->;
+type Cache<G, T, Thunk> = LruCache<(G, WeakMap<Thunk, bool>), Arc<Mutex<Promise<Shapes<T>>>>>;
 
-fn shape_cache<T>() -> Arc<Mutex<Cache<T>>>
+#[allow(clippy::type_complexity)]
+fn shape_cache<G>() -> Arc<Mutex<Cache<G, G::T, <G::T as Addr>::Thunk>>>
 where
-    T: Addr,
-    T::Node: Send + Sync,
-    T::Edge: Send + Sync,
-    T::Operation: Send + Sync,
-    T::Thunk: Send + Sync,
+    G: Graph + Send + Sync + 'static,
+    <G::T as Addr>::Node: Send + Sync,
+    <G::T as Addr>::Edge: Send + Sync,
+    <G::T as Addr>::Operation: Send + Sync,
+    <G::T as Addr>::Thunk: Send + Sync,
 {
     CACHE
         .get_or_init(Mutex::default)
         .lock()
         .unwrap()
-        .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<T>>>>(Id::null(), || {
-            tracing::trace!("initialise shape cache");
-            Arc::new(Mutex::new(LruCache::unbounded()))
-        })
+        .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<G, G::T, <G::T as Addr>::Thunk>>>>(
+            Id::null(),
+            || {
+                tracing::trace!("initialise shape cache");
+                Arc::new(Mutex::new(LruCache::unbounded()))
+            },
+        )
         .clone()
 }
 
@@ -51,48 +51,51 @@ pub fn clear_shape_cache() {
 }
 
 #[allow(clippy::type_complexity)]
-pub fn generate_shapes<T>(
-    graph: &Arc<MonoidalGraph<T>>,
-    metadata: &GraphMetadata<T>,
-    subgraph_selection: Option<&SelectionMap<T>>,
-) -> Arc<Mutex<Promise<Shapes<T>>>>
+pub fn generate_shapes<G>(
+    graph: &G,
+    expanded: &WeakMap<<G::T as Addr>::Thunk, bool>,
+) -> Arc<Mutex<Promise<Shapes<G::T>>>>
 where
-    T: Addr,
-    T::Node: Send + Sync,
-    T::Edge: Send + Sync + EdgeLike<T = T>,
-    T::Operation: Send + Sync + NodeLike<T = T> + WithWeight,
-    T::Thunk: Send + Sync + NodeLike<T = T> + Graph<T = T>,
-    <T::Operation as WithWeight>::Weight: Display,
+    G: Graph + Send + Sync + 'static,
+    <G::T as Addr>::Node: NodeLike<T = G::T> + Debug + Send + Sync,
+    <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + WithWeight + Debug + Send + Sync,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + Debug + Send + Sync,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + Debug + Send + Sync,
+    <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
 {
-    let cache = shape_cache();
+    let cache = shape_cache::<G>();
     let mut guard = cache.lock().unwrap();
     guard
-        .get_or_insert(
-            (graph.clone(), metadata.clone(), subgraph_selection.cloned()),
-            || {
-                let graph = graph.clone();
-                let metadata = metadata.clone();
-                let subgraph_selection = subgraph_selection.cloned();
-                Arc::new(Mutex::new(crate::spawn!("shape", {
-                    tracing::debug!("Calculating layout...");
-                    let layout = layout(&graph, &metadata).unwrap();
-                    tracing::debug!("Calculating shapes...");
-                    let mut shapes = Vec::new();
-                    render::generate_shapes(
-                        &mut shapes,
-                        0.0,
-                        &layout,
-                        &graph,
-                        &metadata,
-                        subgraph_selection.as_ref(),
-                    );
-                    tracing::debug!("Generated {} shapes...", shapes.len());
-                    Shapes {
-                        shapes,
-                        size: layout.size(),
-                    }
-                })))
-            },
-        )
+        .get_or_insert((graph.clone(), expanded.clone()), || {
+            let graph = graph.clone();
+            let expanded = expanded.clone();
+            Arc::new(Mutex::new(crate::spawn!("shape", {
+                tracing::debug!("Converting to monoidal term");
+                let monoidal_term = MonoidalWiredGraph::from(&graph);
+                tracing::debug!("Got term {:#?}", monoidal_term);
+
+                tracing::debug!("Inserting swaps and copies");
+                let monoidal_graph = Arc::new(MonoidalGraph::from(&monoidal_term));
+                tracing::debug!("Got graph {:#?}", monoidal_graph);
+
+                tracing::debug!("Calculating layout...");
+                let layout = layout(&monoidal_graph, &expanded).unwrap();
+                tracing::debug!("Calculating shapes...");
+                let mut shapes = Vec::new();
+                render::generate_shapes(
+                    &mut shapes,
+                    0.0,
+                    &layout,
+                    &monoidal_graph,
+                    &expanded,
+                    true,
+                );
+                tracing::debug!("Generated {} shapes...", shapes.len());
+                Shapes {
+                    shapes,
+                    size: layout.size(),
+                }
+            })))
+        })
         .clone()
 }

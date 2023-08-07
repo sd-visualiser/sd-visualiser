@@ -1,7 +1,6 @@
 use std::{
     fmt::Debug,
     hash::{Hash, Hasher},
-    ops::{Index, IndexMut},
 };
 
 use derivative::Derivative;
@@ -11,9 +10,17 @@ use indexmap::IndexMap;
 #[derivative(Default(bound = ""))]
 pub struct WeakMap<S, T>(pub(crate) IndexMap<S, T>);
 
-impl<S: PartialEq + Eq + Hash, T> WeakMap<S, T> {
-    pub fn get(&self, key: &S) -> Option<&T> {
-        self.0.get(key)
+impl<S, T> std::ops::Deref for WeakMap<S, T> {
+    type Target = IndexMap<S, T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<S, T> std::ops::DerefMut for WeakMap<S, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -42,20 +49,6 @@ impl<S: PartialEq, T: PartialEq> PartialEq for WeakMap<S, T> {
 }
 
 impl<S: PartialEq + Eq, T: PartialEq + Eq> Eq for WeakMap<S, T> {}
-
-impl<S: PartialEq + Eq + Hash, T> Index<&S> for WeakMap<S, T> {
-    type Output = T;
-
-    fn index(&self, index: &S) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
-impl<S: PartialEq + Eq + Hash, T> IndexMut<&S> for WeakMap<S, T> {
-    fn index_mut(&mut self, index: &S) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
 
 impl<S: Hash, T: Hash> Hash for WeakMap<S, T> {
     fn hash<H: Hasher>(&self, state: &mut H) {

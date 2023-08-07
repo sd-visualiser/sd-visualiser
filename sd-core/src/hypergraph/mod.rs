@@ -8,7 +8,7 @@ use derivative::Derivative;
 use indexmap::IndexMap;
 
 use crate::{
-    common::{InOut, Matchable},
+    common::{Addr, InOut, Matchable},
     selection::SelectionMap,
     weak_map::WeakMap,
 };
@@ -450,45 +450,58 @@ impl<V, E> InOut for Node<V, E> {
     }
 }
 
-impl<V, E> Hypergraph<V, E> {
-    #[must_use]
-    pub fn create_expanded(&self) -> WeakMap<Thunk<V, E>, bool> {
-        fn helper<V, E>(set: &mut IndexMap<Thunk<V, E>, bool>, thunk: Thunk<V, E>) {
-            for t in thunk.thunks() {
-                helper(set, t);
-            }
-            set.insert(thunk, true);
+pub fn create_expanded<G>(graph: &G) -> WeakMap<<G::T as Addr>::Thunk, bool>
+where
+    G: Graph,
+    <G::T as Addr>::Thunk: Graph<T = G::T>,
+{
+    fn helper<T>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk)
+    where
+        T: Addr,
+        T::Thunk: Graph<T = T>,
+    {
+        for t in thunk.thunks() {
+            helper::<T>(set, t);
         }
-
-        let mut set = IndexMap::new();
-
-        for thunk in self.thunks() {
-            helper(&mut set, thunk);
-        }
-
-        WeakMap(set)
+        set.insert(thunk, true);
     }
 
-    #[must_use]
-    pub fn create_selected(&self) -> SelectionMap<(V, E)> {
-        fn helper<V, E>(set: &mut IndexMap<Node<V, E>, bool>, thunk: &Thunk<V, E>) {
-            for node in thunk.nodes() {
-                if let Node::Thunk(thunk) = &node {
-                    helper(set, thunk);
-                }
-                set.insert(node, false);
-            }
-        }
+    let mut set = IndexMap::new();
 
-        let mut set = IndexMap::new();
+    for thunk in graph.thunks() {
+        helper::<G::T>(&mut set, thunk);
+    }
 
-        for node in self.nodes() {
-            if let Node::Thunk(thunk) = &node {
-                helper(&mut set, thunk);
+    WeakMap(set)
+}
+
+#[must_use]
+pub fn create_selected<G>(graph: &G) -> SelectionMap<G::T>
+where
+    G: Graph,
+    <G::T as Addr>::Thunk: Graph<T = G::T>,
+{
+    fn helper<T>(set: &mut IndexMap<T::Node, bool>, thunk: &T::Thunk)
+    where
+        T: Addr,
+        T::Thunk: Graph<T = T>,
+    {
+        for node in thunk.nodes() {
+            if let Ok(thunk) = T::Thunk::try_from(node.clone()) {
+                helper::<T>(set, &thunk);
             }
             set.insert(node, false);
         }
-
-        SelectionMap::from(set)
     }
+
+    let mut set = IndexMap::new();
+
+    for node in graph.nodes() {
+        if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
+            helper::<G::T>(&mut set, &thunk);
+        }
+        set.insert(node, false);
+    }
+
+    SelectionMap::from(set)
 }
