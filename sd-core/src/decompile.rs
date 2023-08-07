@@ -71,7 +71,7 @@ where
                 }
                 Name::BoundVar(def) => {
                     binds.push(Bind {
-                        def: def.clone(),
+                        def: vec![def.clone()],
                         value,
                     });
                 }

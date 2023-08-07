@@ -105,8 +105,8 @@ where
     HypergraphError(#[from] HypergraphError<Op<T>, Name<T>>),
     #[error("Couldn't find location of variable `{0}`")]
     VariableError(T::Var),
-    #[error("Attempted to alias `{0}` to `{1}`")]
-    Aliased(T::Var, T::Var),
+    #[error("Attempted to alias `{0:?}` to `{1}`")]
+    Aliased(Vec<T::Var>, T::Var),
     #[error("Attempted to shadow `{0}`")]
     Shadowed(T::Var),
     #[error("Fragment did not have output")]
@@ -129,7 +129,7 @@ struct Environment<F, T: Language> {
 }
 
 enum ProcessInput<T: Language> {
-    Variable(T::VarDef),
+    Variables(Vec<T::VarDef>),
     InPort(InPort<Op<T>, Name<T>>),
 }
 
@@ -162,24 +162,27 @@ where
         input: ProcessInput<T>,
     ) -> Result<(), ConvertError<T>> {
         match (value, input) {
-            (Value::Variable(var), ProcessInput::Variable(input)) => {
+            (Value::Variable(var), ProcessInput::Variables(inputs)) => {
                 // We have tried to assign a variable to another variable
-                Err(ConvertError::Aliased(input.as_var().clone(), var.clone()))
+                Err(ConvertError::Aliased(
+                    inputs.into_iter().map(|x| x.as_var().clone()).collect(),
+                    var.clone(),
+                ))
             }
             (Value::Variable(var), ProcessInput::InPort(in_port)) => {
                 self.inputs.push((in_port, var.clone()));
                 Ok(())
             }
             (Value::Op { op, args }, input) => {
-                let output_weight = if let ProcessInput::Variable(input) = &input {
-                    Name::BoundVar(input.clone())
+                let output_weights = if let ProcessInput::Variables(inputs) = &input {
+                    inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
                 } else {
-                    Name::Op
+                    vec![Name::Op]
                 };
 
                 let operation_node =
                     self.fragment
-                        .add_operation(args.len(), [output_weight], Op(op.clone()));
+                        .add_operation(args.len(), output_weights, Op(op.clone()));
                 for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
                     match arg {
                         Arg::Value(value) => {
@@ -191,21 +194,22 @@ where
                     }
                 }
 
-                let out_port = operation_node
-                    .outputs()
-                    .next()
-                    .ok_or(ConvertError::NoOutputError)?;
+                let mut out_ports = operation_node.outputs();
 
                 match input {
-                    ProcessInput::Variable(input) => {
-                        let var = input.as_var();
-                        self.outputs
-                            .insert(var.clone(), out_port)
-                            .is_none()
-                            .then_some(())
-                            .ok_or(ConvertError::Shadowed(var.clone()))?;
+                    ProcessInput::Variables(inputs) => {
+                        for (input, out_port) in inputs.into_iter().zip(out_ports) {
+                            let var = input.as_var();
+                            self.outputs
+                                .insert(var.clone(), out_port)
+                                .is_none()
+                                .then_some(())
+                                .ok_or(ConvertError::Shadowed(var.clone()))?;
+                        }
                     }
-                    ProcessInput::InPort(in_port) => self.fragment.link(out_port, in_port)?,
+                    ProcessInput::InPort(in_port) => {
+                        self.fragment.link(out_ports.next().unwrap(), in_port)?;
+                    }
                 }
 
                 Ok(())
@@ -281,7 +285,7 @@ where
         }
 
         for bind in expr.binds.iter().rev() {
-            self.process_value(&bind.value, ProcessInput::Variable(bind.def.clone()))?;
+            self.process_value(&bind.value, ProcessInput::Variables(bind.def.clone()))?;
         }
         debug!("processed binds: {:?}", self.outputs);
 

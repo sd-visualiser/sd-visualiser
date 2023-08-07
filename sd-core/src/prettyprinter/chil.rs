@@ -24,7 +24,7 @@ impl PrettyPrint for Bind {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("def")
             .append(RcDoc::space())
-            .append(self.def.to_doc())
+            .append(self.def[0].to_doc())
             .append(RcDoc::space())
             .append(RcDoc::text("="))
             .append(RcDoc::space())

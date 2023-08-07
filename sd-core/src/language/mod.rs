@@ -56,7 +56,7 @@ pub struct Expr<T: Language> {
     Debug(bound = "")
 )]
 pub struct Bind<T: Language> {
-    pub def: T::VarDef,
+    pub def: Vec<T::VarDef>,
     pub value: Value<T>,
 }
 
@@ -142,7 +142,7 @@ impl<T: Language> Bind<T> {
         U::VarDef: From<T::VarDef>,
     {
         Bind {
-            def: self.def.into(),
+            def: self.def.into_iter().map(Into::into).collect(),
             value: self.value.into(),
         }
     }
