@@ -142,7 +142,8 @@ impl<T: 'static + Language> GraphUiInternal<T> {
             }
 
             if self.reset_requested {
-                self.panzoom.reset(shapes.size);
+                self.panzoom
+                    .reset(shapes.size, response.rect.max - response.rect.min);
                 self.reset_requested = false;
             }
             // Background

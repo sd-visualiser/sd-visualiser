@@ -29,9 +29,16 @@ impl Panzoom {
     }
 
     /// Pan to the center and reset the zoom.
-    pub fn reset(&mut self, size: Vec2) {
+    pub fn reset(&mut self, size: Vec2, screen_size: Vec2) {
         self.translation = (size / 2.0).to_pos2();
-        self.zoom = 50.0;
+        self.zoom = [
+            50.0,
+            screen_size.x / (size.x + 2.0),
+            screen_size.y / (size.y + 2.0),
+        ]
+        .into_iter()
+        .min_by(|x, y| x.partial_cmp(y).unwrap())
+        .unwrap();
     }
 
     /// Pan by a vector (in screen coordinates).
