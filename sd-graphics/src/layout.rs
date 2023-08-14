@@ -275,8 +275,6 @@ where
         let mut prev_op = None;
         let mut prev_in = None;
         let mut prev_out = None;
-        let mut offset_i = 0;
-        let mut offset_o = 0;
         for (i, op) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
@@ -284,8 +282,8 @@ where
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
             let node = &nodes[j][i];
-            let ins = &wires[j][offset_i..offset_i + ni];
-            let outs = &wires[j + 1][offset_o..offset_o + no];
+            let ins = &wires[j][node.input_offset..node.input_offset + ni];
+            let outs = &wires[j + 1][node.output_offset..node.output_offset + no];
 
             // Distance constraints
             let constraints = [
@@ -361,9 +359,6 @@ where
             prev_op = Some(node.node.max());
             prev_in = ins.last().copied().map(Into::into);
             prev_out = outs.last().copied().map(Into::into);
-
-            offset_i += ni;
-            offset_o += no;
         }
     }
 
