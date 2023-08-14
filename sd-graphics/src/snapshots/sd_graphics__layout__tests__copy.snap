@@ -11,9 +11,12 @@ LayoutInternal(
         node: Atom(
           pos: 1.75,
           extra_size: 0.0,
+          atype: Other,
         ),
         input_offset: 0,
+        inputs: 1,
         output_offset: 0,
+        outputs: 2,
       ),
     ],
     [
@@ -21,17 +24,23 @@ LayoutInternal(
         node: Atom(
           pos: 1.0,
           extra_size: 0.0,
+          atype: Other,
         ),
         input_offset: 0,
+        inputs: 1,
         output_offset: 0,
+        outputs: 2,
       ),
       NodeOffset(
         node: Atom(
           pos: 2.5,
           extra_size: 0.0,
+          atype: Other,
         ),
         input_offset: 1,
+        inputs: 1,
         output_offset: 2,
+        outputs: 1,
       ),
     ],
   ],

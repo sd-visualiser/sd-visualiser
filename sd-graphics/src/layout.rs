@@ -26,33 +26,56 @@ pub enum LayoutError {
 pub struct NodeOffset<T> {
     pub(crate) node: Node<T>,
     input_offset: usize,
+    inputs: usize,
     output_offset: usize,
+    outputs: usize,
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Serialize))]
+pub enum AtomType {
+    Cup,
+    Cap,
+    Other,
 }
 
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(Serialize))]
 pub enum Node<T> {
-    Atom { pos: T, extra_size: f32 },
-    Swap { pos: T, out_to_in: Vec<usize> },
-    Thunk(LayoutInternal<T>),
+    Atom {
+        pos: T,
+        extra_size: f32,
+        atype: AtomType,
+    },
+    Swap {
+        pos: T,
+        out_to_in: Vec<usize>,
+    },
+    Thunk {
+        layout: LayoutInternal<T>,
+    },
 }
 
 impl Node<Variable> {
     #[must_use]
     pub fn min(&self) -> Expression {
         match self {
-            Self::Atom { pos, extra_size } => *pos - *extra_size,
+            Self::Atom {
+                pos, extra_size, ..
+            } => *pos - *extra_size,
             Self::Swap { pos, .. } => (*pos).into(),
-            Self::Thunk(layout) => layout.min.into(),
+            Self::Thunk { layout, .. } => layout.min.into(),
         }
     }
 
     #[must_use]
     pub fn max(&self) -> Expression {
         match self {
-            Self::Atom { pos, extra_size } => *pos + *extra_size,
+            Self::Atom {
+                pos, extra_size, ..
+            } => *pos + *extra_size,
             Self::Swap { pos, .. } => (*pos).into(),
-            Self::Thunk(layout) => layout.max.into(),
+            Self::Thunk { layout, .. } => layout.max.into(),
         }
     }
 }
@@ -61,15 +84,25 @@ impl<T> Node<T> {
     pub fn unwrap_atom(&self) -> &T {
         match self {
             Self::Atom { pos, .. } | Self::Swap { pos, .. } => pos,
-            Self::Thunk(_layout) => panic!(),
+            Self::Thunk { .. } => panic!(),
         }
     }
 
     pub fn unwrap_thunk(&self) -> &LayoutInternal<T> {
         match self {
             Self::Atom { .. } | Self::Swap { .. } => panic!(),
-            Self::Thunk(layout) => layout,
+            Self::Thunk { layout, .. } => layout,
         }
+    }
+}
+
+impl<T> InOut for NodeOffset<T> {
+    fn number_of_inputs(&self) -> usize {
+        self.inputs
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        self.outputs
     }
 }
 
@@ -131,7 +164,7 @@ impl Layout {
                     ) - 1.0
                 }
                 Node::Atom { .. } => 0.0,
-                Node::Thunk(body) => body.height(),
+                Node::Thunk { layout, .. } => layout.height(),
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
             .unwrap_or_default()
@@ -150,20 +183,27 @@ impl Layout {
                     ns.into_iter()
                         .map(|n| NodeOffset {
                             node: match n.node {
-                                Node::Atom { pos, extra_size } => Node::Atom {
+                                Node::Atom {
+                                    pos,
+                                    extra_size,
+                                    atype,
+                                } => Node::Atom {
                                     pos: (solution.value(pos) as f32),
                                     extra_size,
+                                    atype,
                                 },
                                 Node::Swap { pos, out_to_in } => Node::Swap {
                                     pos: solution.value(pos) as f32,
                                     out_to_in,
                                 },
-                                Node::Thunk(layout) => {
-                                    Node::Thunk(Self::from_solution(layout, solution))
-                                }
+                                Node::Thunk { layout } => Node::Thunk {
+                                    layout: Self::from_solution(layout, solution),
+                                },
                             },
                             input_offset: n.input_offset,
+                            inputs: n.inputs,
                             output_offset: n.output_offset,
+                            outputs: n.outputs,
                         })
                         .collect()
                 })
@@ -237,12 +277,22 @@ where
             .iter()
             .map(|op| {
                 let node = match op {
-                    MonoidalOp::Thunk { body, addr, .. } if expanded[addr] => {
-                        Node::Thunk(layout_internal(body, expanded, problem))
-                    }
+                    MonoidalOp::Thunk { body, addr, .. } if expanded[addr] => Node::Thunk {
+                        layout: layout_internal(body, expanded, problem),
+                    },
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         pos: problem.add_variable(variable().min(0.0)),
                         out_to_in: out_to_in.clone(),
+                    },
+                    MonoidalOp::Cup { .. } => Node::Atom {
+                        pos: problem.add_variable(variable().min(0.0)),
+                        extra_size: 0.0,
+                        atype: AtomType::Cup,
+                    },
+                    MonoidalOp::Cap { .. } => Node::Atom {
+                        pos: problem.add_variable(variable().min(0.0)),
+                        extra_size: 0.0,
+                        atype: AtomType::Cap,
                     },
                     MonoidalOp::Operation { addr } => Node::Atom {
                         pos: problem.add_variable(variable().min(0.0)),
@@ -250,16 +300,20 @@ where
                             as f32
                             / 2.0)
                             * RADIUS_OPERATION,
+                        atype: AtomType::Other,
                     },
                     _ => Node::Atom {
                         pos: problem.add_variable(variable().min(0.0)),
                         extra_size: 0.0,
+                        atype: AtomType::Other,
                     },
                 };
                 let node_offset = NodeOffset {
                     node,
                     input_offset,
                     output_offset,
+                    inputs: op.number_of_inputs(),
+                    outputs: op.number_of_outputs(),
                 };
                 input_offset += op.number_of_inputs();
                 output_offset += op.number_of_outputs();
@@ -273,9 +327,10 @@ where
     // STEP 2. Add constraints between layers.
     for (j, slice) in graph.slices.iter().enumerate() {
         let mut prev_op = None;
-        for (i, op) in slice.ops.iter().enumerate() {
-            let ni = op.number_of_inputs();
-            let no = op.number_of_outputs();
+        for (i, _) in slice.ops.iter().enumerate() {
+            let node = &nodes[j][i];
+            let ni = node.number_of_inputs();
+            let no = node.number_of_outputs();
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
@@ -310,22 +365,8 @@ where
                 problem.add_constraint((y - x).geq(1.0));
             }
 
-            match op {
-                MonoidalOp::Cup { .. } => {
-                    for (x, y) in ins[1..].iter().copied().zip(outs) {
-                        problem.add_constraint(Expression::eq(x.into(), y));
-                    }
-                }
-                MonoidalOp::Cap { .. } => {
-                    for (x, y) in outs[1..].iter().copied().zip(ins) {
-                        problem.add_constraint(Expression::eq(x.into(), y));
-                    }
-                }
-                _ => {}
-            }
-
             match &node.node {
-                Node::Atom { pos, .. } => {
+                Node::Atom { pos, atype, .. } => {
                     // Fair averaging constraints
                     if ni > 0 {
                         let sum_ins: Expression = ins.iter().sum();
@@ -343,6 +384,20 @@ where
                     if no >= 2 {
                         problem.add_objective((outs[no - 1] - outs[0]) * no as f32);
                     }
+
+                    match atype {
+                        AtomType::Cup => {
+                            for (x, y) in ins[1..].iter().copied().zip(outs) {
+                                problem.add_constraint(Expression::eq(x.into(), y));
+                            }
+                        }
+                        AtomType::Cap => {
+                            for (x, y) in outs[1..].iter().copied().zip(ins) {
+                                problem.add_constraint(Expression::eq(x.into(), y));
+                            }
+                        }
+                        AtomType::Other => {}
+                    }
                 }
                 Node::Swap { pos, out_to_in, .. } => {
                     let in_outs: Expression = ins.iter().chain(outs.iter()).sum();
@@ -355,7 +410,7 @@ where
                         problem.add_objective(distance);
                     }
                 }
-                Node::Thunk(layout) => {
+                Node::Thunk { layout, .. } => {
                     // Align internal wires with the external ones.
                     for (&x, &y) in ins.iter().zip(layout.inputs()) {
                         problem.add_constraint((x - y).eq(0.0));
