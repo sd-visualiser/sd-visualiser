@@ -325,31 +325,26 @@ where
     }
 
     // STEP 2. Add constraints between layers.
-    for (j, slice) in graph.slices.iter().enumerate() {
+    for (nodes, (wires_i, wires_o)) in nodes.iter().zip(wires.iter().tuple_windows()) {
         let mut prev_op = None;
-        for (i, _) in slice.ops.iter().enumerate() {
-            let node = &nodes[j][i];
+        for node in nodes {
             let ni = node.number_of_inputs();
             let no = node.number_of_outputs();
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
-            let node = &nodes[j][i];
-            let ins = &wires[j][node.input_offset..node.input_offset + ni];
-            let outs = &wires[j + 1][node.output_offset..node.output_offset + no];
+            let ins = &wires_i[node.input_offset..node.input_offset + ni];
+            let outs = &wires_o[node.output_offset..node.output_offset + no];
 
             let prev_in: Option<Expression> = if node.input_offset == 0 {
                 None
             } else {
-                wires[j].get(node.input_offset - 1).copied().map(Into::into)
+                wires_i.get(node.input_offset - 1).copied().map(Into::into)
             };
             let prev_out: Option<Expression> = if node.output_offset == 0 {
                 None
             } else {
-                wires[j + 1]
-                    .get(node.output_offset - 1)
-                    .copied()
-                    .map(Into::into)
+                wires_o.get(node.output_offset - 1).copied().map(Into::into)
             };
 
             // Distance constraints
