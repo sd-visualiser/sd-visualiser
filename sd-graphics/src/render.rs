@@ -179,21 +179,25 @@ pub fn generate_shapes<T>(
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
-                    for (&x, edge) in x_ins.iter().zip(&body.free_inputs) {
-                        let start = Pos2::new(x, y_min);
-                        let end = Pos2::new(x, y_input);
-                        shapes.push(Shape::Line {
-                            start,
-                            end,
+                    for ((&x, &x_body), edge) in x_ins
+                        .iter()
+                        .zip(x_op.inputs().iter())
+                        .zip(&body.free_inputs)
+                    {
+                        let start = Pos2::new(x, y_input);
+                        let end = Pos2::new(x_body, y_min);
+                        shapes.push(Shape::CubicBezier {
+                            points: vertical_out_vertical_in(start, end),
                             addr: edge.clone(),
                         });
                     }
-                    for (&x, edge) in x_outs.iter().zip(addr.outputs()) {
-                        let start = Pos2::new(x, y_max);
+                    for ((&x, &x_body), edge) in
+                        x_outs.iter().zip(x_op.outputs().iter()).zip(addr.outputs())
+                    {
+                        let start = Pos2::new(x_body, y_max);
                         let end = Pos2::new(x, y_output);
-                        shapes.push(Shape::Line {
-                            start,
-                            end,
+                        shapes.push(Shape::CubicBezier {
+                            points: vertical_out_vertical_in(start, end),
                             addr: edge,
                         });
                     }

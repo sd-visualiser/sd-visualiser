@@ -150,10 +150,8 @@ impl Layout {
     pub fn slice_height(&self, j: usize) -> f32 {
         self.nodes[j]
             .iter()
-            .map(|n| {
-                if let Node::Thunk { layout, .. } = &n.node {
-                    layout.height()
-                } else {
+            .map(|n| match &n.node {
+                Node::Atom { .. } => {
                     let in_width = if n.inputs < 2 {
                         1.0
                     } else {
@@ -168,6 +166,32 @@ impl Layout {
                     };
 
                     f32::sqrt((in_width + out_width) / 2.0) - 1.0
+                }
+                Node::Swap { out_to_in, .. } => out_to_in
+                    .iter()
+                    .enumerate()
+                    .map(|(i, x)| {
+                        (f32::sqrt((self.wires[j + 1][i] - self.wires[j][*x]).abs()) - 1.0)
+                            .clamp(0.0, f32::INFINITY)
+                    })
+                    .max_by(|x, y| x.partial_cmp(y).unwrap())
+                    .unwrap_or_default(),
+                Node::Thunk { layout } => {
+                    let height_above = self.wires[j][n.input_offset..]
+                        .iter()
+                        .zip(layout.inputs().iter())
+                        .map(|(x, y)| (f32::sqrt((x - y).abs()) - 1.0).clamp(0.0, f32::INFINITY))
+                        .max_by(|x, y| x.partial_cmp(y).unwrap())
+                        .unwrap_or_default();
+
+                    let height_below = self.wires[j + 1][n.output_offset..]
+                        .iter()
+                        .zip(layout.outputs().iter())
+                        .map(|(x, y)| (f32::sqrt((x - y).abs()) - 1.0).clamp(0.0, f32::INFINITY))
+                        .max_by(|x, y| x.partial_cmp(y).unwrap())
+                        .unwrap_or_default();
+
+                    layout.height() + height_above + height_below
                 }
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
@@ -412,10 +436,16 @@ where
                 Node::Thunk { layout, .. } => {
                     // Align internal wires with the external ones.
                     for (&x, &y) in ins.iter().zip(layout.inputs()) {
-                        problem.add_constraint((x - y).eq(0.0));
+                        let distance = problem.add_variable(variable().min(0.0));
+                        problem.add_constraint((x - y).leq(distance));
+                        problem.add_constraint((y - x).leq(distance));
+                        problem.add_objective(distance * 1.5);
                     }
                     for (&x, &y) in outs.iter().zip(layout.outputs()) {
-                        problem.add_constraint((x - y).eq(0.0));
+                        let distance = problem.add_variable(variable().min(0.0));
+                        problem.add_constraint((x - y).leq(distance));
+                        problem.add_constraint((y - x).leq(distance));
+                        problem.add_objective(distance * 1.5);
                     }
 
                     problem.add_objective(layout.max - layout.min);
