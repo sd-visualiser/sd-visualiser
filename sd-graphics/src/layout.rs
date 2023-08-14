@@ -150,21 +150,25 @@ impl Layout {
     pub fn slice_height(&self, j: usize) -> f32 {
         self.nodes[j]
             .iter()
-            .map(|n| match &n.node {
-                Node::Swap { out_to_in, .. } => {
-                    let in_left = n.input_offset;
-                    let in_right = n.input_offset + out_to_in.len() - 1;
-                    let out_left = n.output_offset;
-                    let out_right = n.output_offset + out_to_in.len() - 1;
-                    f32::sqrt(
-                        (self.wires[j][in_right] - self.wires[j][in_left]
-                            + self.wires[j + 1][out_right]
-                            - self.wires[j + 1][out_left])
-                            / 2.0,
-                    ) - 1.0
+            .map(|n| {
+                if let Node::Thunk { layout, .. } = &n.node {
+                    layout.height()
+                } else {
+                    let in_width = if n.inputs < 2 {
+                        1.0
+                    } else {
+                        self.wires[j][n.input_offset + n.inputs - 1] - self.wires[j][n.input_offset]
+                    };
+
+                    let out_width = if n.outputs < 2 {
+                        1.0
+                    } else {
+                        self.wires[j + 1][n.output_offset + n.outputs - 1]
+                            - self.wires[j + 1][n.output_offset]
+                    };
+
+                    f32::sqrt((in_width + out_width) / 2.0) - 1.0
                 }
-                Node::Atom { .. } => 0.0,
-                Node::Thunk { layout, .. } => layout.height(),
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap())
             .unwrap_or_default()
