@@ -273,8 +273,6 @@ where
     // STEP 2. Add constraints between layers.
     for (j, slice) in graph.slices.iter().enumerate() {
         let mut prev_op = None;
-        let mut prev_in = None;
-        let mut prev_out = None;
         for (i, op) in slice.ops.iter().enumerate() {
             let ni = op.number_of_inputs();
             let no = op.number_of_outputs();
@@ -284,6 +282,20 @@ where
             let node = &nodes[j][i];
             let ins = &wires[j][node.input_offset..node.input_offset + ni];
             let outs = &wires[j + 1][node.output_offset..node.output_offset + no];
+
+            let prev_in: Option<Expression> = if node.input_offset == 0 {
+                None
+            } else {
+                wires[j].get(node.input_offset - 1).copied().map(Into::into)
+            };
+            let prev_out: Option<Expression> = if node.output_offset == 0 {
+                None
+            } else {
+                wires[j + 1]
+                    .get(node.output_offset - 1)
+                    .copied()
+                    .map(Into::into)
+            };
 
             // Distance constraints
             let constraints = [
@@ -357,8 +369,6 @@ where
             }
 
             prev_op = Some(node.node.max());
-            prev_in = ins.last().copied().map(Into::into);
-            prev_out = outs.last().copied().map(Into::into);
         }
     }
 
