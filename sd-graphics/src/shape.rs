@@ -8,7 +8,7 @@ use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::{Addr, Matchable},
-    hypergraph::subgraph::ExtensibleGraph,
+    hypergraph::subgraph::ModifiableGraph,
     selection::SelectionMap,
     weak_map::WeakMap,
 };
@@ -101,7 +101,7 @@ impl<T: Addr> Shape<T> {
         expanded: &mut WeakMap<T::Thunk, bool>,
         selection: Option<&mut SelectionMap<T>>,
     ) where
-        G: ExtensibleGraph<T = T>,
+        G: ModifiableGraph<T = T>,
     {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
@@ -129,7 +129,7 @@ impl<T: Addr> Shape<T> {
                     .map_or(false, |s| s[&T::Node::from(addr.clone())]);
                 let thunk_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new(addr),
+                    Id::new((&graph, &addr)),
                     Sense::click(),
                 );
                 let mut new_stroke = ui
@@ -153,9 +153,12 @@ impl<T: Addr> Shape<T> {
                 if thunk_response.clicked() {
                     expanded[addr] = !expanded[addr];
                 }
-                if let Some(s) = selection {
-                    if thunk_response.secondary_clicked() {
-                        s[&T::Node::from(addr.clone())] ^= true;
+                if thunk_response.secondary_clicked() {
+                    let node = T::Node::from(addr.clone());
+                    if let Some(s) = selection {
+                        s[&node] ^= true;
+                    } else {
+                        graph.remove(node);
                     }
                 }
             }
@@ -167,12 +170,15 @@ impl<T: Addr> Shape<T> {
                     .map_or(false, |s| s[&T::Node::from(addr.clone())]);
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new(&addr),
+                    Id::new((&graph, &addr)),
                     Sense::click(),
                 );
-                if let Some(s) = selection {
-                    if op_response.clicked() {
-                        s[&T::Node::from(addr.clone())] ^= true;
+                if op_response.clicked() {
+                    let node = T::Node::from(addr.clone());
+                    if let Some(s) = selection {
+                        s[&node] ^= true;
+                    } else {
+                        graph.remove(node);
                     }
                 }
                 *fill = Some(
@@ -197,7 +203,7 @@ impl<T: Addr> Shape<T> {
             } => {
                 let arrow_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new(addr),
+                    Id::new((&graph, &addr)),
                     Sense::click(),
                 );
 

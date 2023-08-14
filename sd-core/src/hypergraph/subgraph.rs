@@ -455,20 +455,29 @@ where
     }
 }
 
-pub trait ExtensibleGraph: Graph {
+pub trait ModifiableGraph: Graph {
+    fn remove(&mut self, node: <Self::T as Addr>::Node);
     fn extend(&mut self, nodes: impl Iterator<Item = <Self::T as Addr>::Node>);
 }
 
-impl<V, E> ExtensibleGraph for super::Hypergraph<V, E> {
+impl<V, E> ModifiableGraph for super::Hypergraph<V, E> {
+    fn remove(&mut self, _node: <Self::T as Addr>::Node) {}
     fn extend(&mut self, _nodes: impl Iterator<Item = <Self::T as Addr>::Node>) {}
 }
 
-impl<T: Addr> ExtensibleGraph for Subgraph<T>
+impl<T: Addr> ModifiableGraph for Subgraph<T>
 where
     T::Node: NodeLike<T = T>,
     T::Edge: EdgeLike<T = T>,
     T::Thunk: NodeLike<T = T>,
 {
+    fn remove(&mut self, node: <Self::T as Addr>::Node) {
+        let mut extended = (*self.selection).clone();
+        extended[&node.inner] = false;
+        extended.normalize();
+        self.selection = Arc::new(extended);
+    }
+
     fn extend(&mut self, nodes: impl Iterator<Item = <Self::T as Addr>::Node>) {
         let mut extended = (*self.selection).clone();
         for node in nodes {

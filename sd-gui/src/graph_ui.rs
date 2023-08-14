@@ -13,7 +13,7 @@ use sd_core::{
     graph::{Name, Op, SyntaxHypergraph},
     hypergraph::{
         create_expanded, create_selected,
-        subgraph::{ExtensibleEdge, ExtensibleGraph},
+        subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, NodeLike, WithWeight},
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
@@ -92,7 +92,7 @@ pub struct GraphUiInternal<G: Graph> {
 
 impl<G> GraphUiInternal<G>
 where
-    G: ExtensibleGraph + Send + Sync + 'static,
+    G: ModifiableGraph + Send + Sync + 'static,
 {
     pub(crate) fn new(graph: G, expanded: WeakMap<<G::T as Addr>::Thunk, bool>) -> Self {
         Self {

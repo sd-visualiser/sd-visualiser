@@ -7,7 +7,7 @@ use sd_core::{
     decompile::{decompile, Fresh},
     graph::{Name, Op},
     hypergraph::{
-        subgraph::{ExtensibleEdge, ExtensibleGraph},
+        subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::{Expr, Language},
@@ -41,7 +41,7 @@ where
     T::Addr: Display,
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
-    G: ExtensibleGraph,
+    G: ModifiableGraph,
     <G::T as Addr>::Node: NodeLike<T = G::T>,
     <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = Name<T>>,
     <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = Op<T>>,
