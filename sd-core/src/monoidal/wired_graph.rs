@@ -159,7 +159,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         let should_add_one = if input {
             layers.map(|v| v.len() > 1).unwrap_or_default()
         } else {
-            edge.number_of_targets() > 1
+            edge.number_of_normalised_targets() > 1
         };
 
         if should_add_one {
@@ -238,8 +238,8 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     where
         T::Node: NodeLike<T = T> + Debug,
         T::Edge: EdgeLike<T = T> + WithWeight + Debug,
-        T::Operation: NodeLike<T = T> + WithWeight,
-        T::Thunk: NodeLike<T = T> + Graph<T = T>,
+        T::Operation: NodeLike<T = T> + WithWeight + Debug,
+        T::Thunk: NodeLike<T = T> + Graph<T = T> + Debug,
     {
         // The layer we place the node is the max of the layers that the outputs can be prepared
         // and the layers that any backlinked inputs originate.
@@ -268,7 +268,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         node.outputs().for_each(|edge| {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
-            if open_edges < edge.number_of_targets() {
+            if open_edges < edge.number_of_normalised_targets() {
                 // We need to backlink the edge as it is not done
                 if open_edges == 0 {
                     // Only backlink without copying
@@ -320,8 +320,8 @@ where
     G: Graph,
     <G::T as Addr>::Node: NodeLike<T = G::T> + Debug,
     <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight + Debug,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
+    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + Debug,
+    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + Debug,
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();
@@ -396,6 +396,8 @@ where
         graph.minimise_swaps();
 
         // After this we can flatten the "compound terms"
-        graph.flatten_graph()
+        let g = graph.flatten_graph();
+        debug!("{g:?}");
+        g
     }
 }

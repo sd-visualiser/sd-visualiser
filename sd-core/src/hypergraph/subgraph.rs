@@ -385,8 +385,8 @@ where
         }))
     }
 
-    fn number_of_targets(&self) -> usize {
-        self.inner.number_of_targets()
+    fn number_of_normalised_targets(&self) -> usize {
+        self.inner.number_of_normalised_targets()
     }
 }
 

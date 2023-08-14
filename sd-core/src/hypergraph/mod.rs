@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     fmt::Debug,
     sync::{Arc, Weak},
 };
@@ -226,12 +227,26 @@ impl<V, E> EdgeLike for Edge<V, E> {
         )
     }
 
-    fn number_of_targets(&self) -> usize {
-        self.0
-            .links
-            .try_read()
-            .expect("Lock unexpectedly taken")
-            .len()
+    fn number_of_normalised_targets(&self) -> usize {
+        let containing = self.source().and_then(|x| x.backlink());
+        let targets = self
+            .targets()
+            .map(|x| x.and_then(|y| find_ancestor(&containing, y)))
+            .collect::<Vec<_>>();
+
+        let mut non_dupe_outputs = HashSet::new();
+        let mut other_outputs = 0;
+        for x in targets {
+            match x {
+                Some(Node::Thunk(t)) => {
+                    non_dupe_outputs.insert(t);
+                }
+                _ => {
+                    other_outputs += 1;
+                }
+            }
+        }
+        other_outputs + non_dupe_outputs.len()
     }
 }
 
@@ -504,4 +519,15 @@ where
     }
 
     SelectionMap::from(set)
+}
+
+/// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
+fn find_ancestor<V, E>(
+    containing: &Option<Thunk<V, E>>,
+    mut node: Node<V, E>,
+) -> Option<Node<V, E>> {
+    while &node.backlink() != containing {
+        node = Node::Thunk(node.backlink()?);
+    }
+    Some(node)
 }
