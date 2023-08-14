@@ -23,18 +23,17 @@ pub enum LayoutError {
 
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(Serialize))]
+pub struct NodeOffset<T> {
+    pub(crate) node: Node<T>,
+    input_offset: usize,
+    output_offset: usize,
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Node<T> {
-    Atom {
-        pos: T,
-        extra_size: f32,
-    },
-    // If the atom is a swap we want to remember where it’s inputs are
-    Swap {
-        pos: T,
-        input_offset: usize,
-        output_offset: usize,
-        out_to_in: Vec<usize>,
-    },
+    Atom { pos: T, extra_size: f32 },
+    Swap { pos: T, out_to_in: Vec<usize> },
     Thunk(LayoutInternal<T>),
 }
 
@@ -79,7 +78,7 @@ impl<T> Node<T> {
 pub struct LayoutInternal<T> {
     pub min: T,
     pub max: T,
-    pub nodes: Vec<Vec<Node<T>>>,
+    pub nodes: Vec<Vec<NodeOffset<T>>>,
     pub wires: Vec<Vec<T>>,
 }
 
@@ -118,17 +117,12 @@ impl Layout {
     pub fn slice_height(&self, j: usize) -> f32 {
         self.nodes[j]
             .iter()
-            .map(|n| match n {
-                Node::Swap {
-                    input_offset,
-                    output_offset,
-                    out_to_in,
-                    ..
-                } => {
-                    let in_left = *input_offset;
-                    let in_right = input_offset + out_to_in.len() - 1;
-                    let out_left = *output_offset;
-                    let out_right = output_offset + out_to_in.len() - 1;
+            .map(|n| match &n.node {
+                Node::Swap { out_to_in, .. } => {
+                    let in_left = n.input_offset;
+                    let in_right = n.input_offset + out_to_in.len() - 1;
+                    let out_left = n.output_offset;
+                    let out_right = n.output_offset + out_to_in.len() - 1;
                     f32::sqrt(
                         (self.wires[j][in_right] - self.wires[j][in_left]
                             + self.wires[j + 1][out_right]
@@ -154,25 +148,22 @@ impl Layout {
                 .into_iter()
                 .map(|ns| {
                     ns.into_iter()
-                        .map(|n| match n {
-                            Node::Atom { pos, extra_size } => Node::Atom {
-                                pos: (solution.value(pos) as f32),
-                                extra_size,
+                        .map(|n| NodeOffset {
+                            node: match n.node {
+                                Node::Atom { pos, extra_size } => Node::Atom {
+                                    pos: (solution.value(pos) as f32),
+                                    extra_size,
+                                },
+                                Node::Swap { pos, out_to_in } => Node::Swap {
+                                    pos: solution.value(pos) as f32,
+                                    out_to_in,
+                                },
+                                Node::Thunk(layout) => {
+                                    Node::Thunk(Self::from_solution(layout, solution))
+                                }
                             },
-                            Node::Swap {
-                                pos,
-                                input_offset,
-                                output_offset,
-                                out_to_in,
-                            } => Node::Swap {
-                                pos: solution.value(pos) as f32,
-                                input_offset,
-                                output_offset,
-                                out_to_in,
-                            },
-                            Node::Thunk(layout) => {
-                                Node::Thunk(Self::from_solution(layout, solution))
-                            }
+                            input_offset: n.input_offset,
+                            output_offset: n.output_offset,
                         })
                         .collect()
                 })
@@ -215,15 +206,15 @@ where
         }
     };
 
-    let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<Node<Variable>>| {
+    let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<NodeOffset<Variable>>| {
         if let Some(x) = ns.first() {
-            problem.add_constraint((x.min() - min).geq(0.5));
+            problem.add_constraint((x.node.min() - min).geq(0.5));
         }
         if let Some(x) = ns.last() {
-            problem.add_constraint((max - x.max()).geq(0.5));
+            problem.add_constraint((max - x.node.max()).geq(0.5));
         }
         for (x, y) in ns.iter().tuple_windows() {
-            problem.add_constraint((y.min() - x.max()).geq(1.0));
+            problem.add_constraint((y.node.min() - x.node.max()).geq(1.0));
         }
     };
 
@@ -251,8 +242,6 @@ where
                     }
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         pos: problem.add_variable(variable().min(0.0)),
-                        input_offset,
-                        output_offset,
                         out_to_in: out_to_in.clone(),
                     },
                     MonoidalOp::Operation { addr } => Node::Atom {
@@ -267,9 +256,14 @@ where
                         extra_size: 0.0,
                     },
                 };
+                let node_offset = NodeOffset {
+                    node,
+                    input_offset,
+                    output_offset,
+                };
                 input_offset += op.number_of_inputs();
                 output_offset += op.number_of_outputs();
-                node
+                node_offset
             })
             .collect_vec();
         add_constraints_nodes(problem, &ns);
@@ -295,8 +289,8 @@ where
 
             // Distance constraints
             let constraints = [
-                (prev_in.clone(), Some(node.min())),
-                (prev_out.clone(), Some(node.min())),
+                (prev_in.clone(), Some(node.node.min())),
+                (prev_out.clone(), Some(node.node.min())),
                 (prev_op.clone(), ins.first().copied().map(Into::into)),
                 (prev_op, outs.first().copied().map(Into::into)),
                 (prev_in, outs.first().copied().map(Into::into)),
@@ -320,7 +314,7 @@ where
                 _ => {}
             }
 
-            match node {
+            match &node.node {
                 Node::Atom { pos, .. } => {
                     // Fair averaging constraints
                     if ni > 0 {
@@ -364,7 +358,7 @@ where
                 }
             }
 
-            prev_op = Some(node.max());
+            prev_op = Some(node.node.max());
             prev_in = ins.last().copied().map(Into::into);
             prev_out = outs.last().copied().map(Into::into);
 

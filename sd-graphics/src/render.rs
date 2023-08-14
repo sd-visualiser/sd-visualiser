@@ -175,7 +175,7 @@ pub fn generate_shapes<T>(
                     }
                 }
                 MonoidalOp::Thunk { addr, body, .. } if expanded[addr] => {
-                    let x_op = x_op.unwrap_thunk();
+                    let x_op = x_op.node.unwrap_thunk();
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
@@ -220,7 +220,7 @@ pub fn generate_shapes<T>(
                     generate_shapes(shapes, y_min, x_op, body, expanded, false);
                 }
                 _ => {
-                    let x_op = *x_op.unwrap_atom();
+                    let x_op = *x_op.node.unwrap_atom();
                     let y_op = (y_input + y_output) / 2.0;
                     let center = Pos2::new(x_op, y_op);
 
