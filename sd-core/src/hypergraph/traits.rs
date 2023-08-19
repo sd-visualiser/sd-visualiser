@@ -24,11 +24,11 @@ pub trait EdgeLike {
 pub trait Graph: Clone + Eq + PartialEq + Hash {
     type T: Addr;
 
-    fn bound_graph_inputs(
+    fn free_graph_inputs(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
 
-    fn unbound_graph_inputs(
+    fn bound_graph_inputs(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
 
@@ -38,7 +38,7 @@ pub trait Graph: Clone + Eq + PartialEq + Hash {
     where
         <Self::T as Addr>::Edge: 'a,
     {
-        Box::new(self.unbound_graph_inputs().chain(self.bound_graph_inputs()))
+        Box::new(self.free_graph_inputs().chain(self.bound_graph_inputs()))
     }
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;

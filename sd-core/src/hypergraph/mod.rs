@@ -106,10 +106,7 @@ pub struct Thunk<V, E>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 impl<V: Debug, E: Debug> Debug for Thunk<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
-            .field(
-                "free_vars",
-                &self.unbound_graph_inputs().collect::<Vec<_>>(),
-            )
+            .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
             .field(
                 "bound_inputs",
                 &self.bound_graph_inputs().collect::<Vec<_>>(),
@@ -252,7 +249,7 @@ impl<V, E> EdgeLike for Edge<V, E> {
 
 impl<V, E> Graph for Hypergraph<V, E> {
     type T = (V, E);
-    fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(self.graph_inputs.iter().cloned().map(|o| Edge(o)))
     }
 
@@ -279,7 +276,7 @@ impl<V, E> Graph for Hypergraph<V, E> {
 
 impl<V, E> Graph for Thunk<V, E> {
     type T = (V, E);
-    fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
                 .free_variable_edges

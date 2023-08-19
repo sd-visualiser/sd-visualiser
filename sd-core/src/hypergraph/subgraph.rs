@@ -178,11 +178,7 @@ where
 {
     type T = Sub<T>;
 
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(std::iter::empty())
-    }
-
-    fn unbound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
         let mut inputs: IndexSet<T::Edge> = IndexSet::default();
         for node in self.selection.roots() {
             for edge in node.inputs() {
@@ -199,6 +195,10 @@ where
             inner: edge,
             selection: self.selection.clone(),
         }))
+    }
+
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
+        Box::new(std::iter::empty())
     }
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
@@ -232,19 +232,19 @@ where
 {
     type T = Sub<T>;
 
-    fn bound_graph_inputs(
+    fn free_graph_inputs(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
-        Box::new(self.inner.bound_graph_inputs().map(|edge| SubEdge {
+        Box::new(self.inner.free_graph_inputs().map(|edge| SubEdge {
             inner: edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn unbound_graph_inputs(
+    fn bound_graph_inputs(
         &self,
     ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
-        Box::new(self.inner.unbound_graph_inputs().map(|edge| SubEdge {
+        Box::new(self.inner.bound_graph_inputs().map(|edge| SubEdge {
             inner: edge,
             selection: self.selection.clone(),
         }))

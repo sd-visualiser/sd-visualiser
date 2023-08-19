@@ -386,7 +386,7 @@ where
         builder.slices.reverse();
 
         let mut graph = MonoidalTerm::<G::T, Slice<WiredOp<G::T>>> {
-            free_inputs: graph.unbound_graph_inputs().collect(),
+            free_inputs: graph.free_graph_inputs().collect(),
             bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,
             outputs,
