@@ -18,14 +18,15 @@ pub trait Fragment {
     fn add_operation(
         &mut self,
         input_len: usize,
-        output_weights: impl IntoIterator<Item = Self::EdgeWeight>,
+        outputs: impl IntoIterator<Item = Self::EdgeWeight>,
         weight: Self::NodeWeight,
     ) -> OperationBuilder<Self::NodeWeight, Self::EdgeWeight>;
 
     fn add_thunk(
         &mut self,
-        bound_variables: impl IntoIterator<Item = Self::EdgeWeight>,
-        output_weights: impl IntoIterator<Item = Self::EdgeWeight>,
+        bound_inputs: impl IntoIterator<Item = Self::EdgeWeight>,
+        inner_output_len: usize,
+        outer_outputs: impl IntoIterator<Item = Self::EdgeWeight>,
     ) -> ThunkBuilder<Self::NodeWeight, Self::EdgeWeight>;
 
     fn graph_outputs(
@@ -75,10 +76,10 @@ impl<V, E> Fragment for HypergraphBuilder<V, E> {
     fn add_operation(
         &mut self,
         input_len: usize,
-        output_weights: impl IntoIterator<Item = E>,
+        outputs: impl IntoIterator<Item = E>,
         weight: V,
     ) -> OperationBuilder<V, E> {
-        let op = OperationInternal::new(input_len, output_weights, weight, None);
+        let op = OperationInternal::new(input_len, outputs, weight, None);
         self.0
             .nodes
             .push(NodeInternal::Operation(ByThinAddress(op.clone())));
@@ -87,10 +88,11 @@ impl<V, E> Fragment for HypergraphBuilder<V, E> {
 
     fn add_thunk(
         &mut self,
-        bound_variables: impl IntoIterator<Item = E>,
-        output_weights: impl IntoIterator<Item = E>,
+        bound_inputs: impl IntoIterator<Item = E>,
+        inner_output_len: usize,
+        outer_outputs: impl IntoIterator<Item = E>,
     ) -> ThunkBuilder<V, E> {
-        let thunk = ThunkInternal::new(bound_variables, output_weights, None);
+        let thunk = ThunkInternal::new(bound_inputs, inner_output_len, outer_outputs, None);
         self.0
             .nodes
             .push(NodeInternal::Thunk(ByThinAddress(thunk.clone())));
@@ -118,12 +120,12 @@ impl<V, E> Fragment for ThunkCursor<V, E> {
     fn add_operation(
         &mut self,
         input_len: usize,
-        output_weights: impl IntoIterator<Item = E>,
+        outputs: impl IntoIterator<Item = E>,
         weight: V,
     ) -> OperationBuilder<V, E> {
         let op = OperationInternal::new(
             input_len,
-            output_weights,
+            outputs,
             weight,
             Some(Arc::downgrade(&self.0 .0 .0)),
         );
@@ -138,12 +140,14 @@ impl<V, E> Fragment for ThunkCursor<V, E> {
 
     fn add_thunk(
         &mut self,
-        bound_variables: impl IntoIterator<Item = E>,
-        output_weights: impl IntoIterator<Item = E>,
+        bound_inputs: impl IntoIterator<Item = E>,
+        inner_output_len: usize,
+        outer_outputs: impl IntoIterator<Item = E>,
     ) -> ThunkBuilder<V, E> {
         let thunk = ThunkInternal::new(
-            bound_variables,
-            output_weights,
+            bound_inputs,
+            inner_output_len,
+            outer_outputs,
             Some(Arc::downgrade(&self.0 .0 .0)),
         );
         self.0

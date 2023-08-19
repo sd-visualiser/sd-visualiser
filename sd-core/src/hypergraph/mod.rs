@@ -279,7 +279,7 @@ impl<V, E> Graph for Thunk<V, E> {
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
-                .free_variable_edges
+                .free_inputs
                 .get()
                 .expect("Could not lock")
                 .iter()
@@ -289,14 +289,19 @@ impl<V, E> Graph for Thunk<V, E> {
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
-        Box::new(self.0.bound_variables.iter().cloned().map(Edge))
+        Box::new(
+            self.0
+                .bound_inputs
+                .iter()
+                .map(|out_port| Edge(ByThinAddress(out_port.clone()))),
+        )
     }
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
-                .outputs
-                .keys()
+                .inner_outputs
+                .iter()
                 .map(|in_port| Edge(ByThinAddress(in_port.link()))),
         )
     }
@@ -363,7 +368,7 @@ impl<V, E> NodeLike for Thunk<V, E> {
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
-                .free_variable_edges
+                .free_inputs
                 .get()
                 .expect("Failed to unlock")
                 .iter()
@@ -375,8 +380,8 @@ impl<V, E> NodeLike for Thunk<V, E> {
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
-                .outputs
-                .values()
+                .outer_outputs
+                .iter()
                 .map(|out_port| Edge(ByThinAddress(out_port.clone()))),
         )
     }
@@ -430,16 +435,12 @@ impl<V, E> InOut for Operation<V, E> {
 impl<V, E> InOut for Thunk<V, E> {
     #[must_use]
     fn number_of_inputs(&self) -> usize {
-        self.0
-            .free_variable_edges
-            .get()
-            .expect("Failed to unlock")
-            .len()
+        self.0.free_inputs.get().expect("Failed to unlock").len()
     }
 
     #[must_use]
     fn number_of_outputs(&self) -> usize {
-        self.0.outputs.len()
+        self.0.outer_outputs.len()
     }
 }
 

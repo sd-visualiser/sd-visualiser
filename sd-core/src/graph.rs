@@ -111,8 +111,6 @@ where
     Shadowed(T::Var),
     #[error("Fragment did not have output")]
     NoOutputError,
-    #[error("Thunks must have exactly one output")]
-    ThunkOutputError,
 }
 
 /// Environments capture the local information needed to build a hypergraph from an AST
@@ -229,12 +227,9 @@ where
         thunk: &Thunk<T>,
         in_port: InPort<Op<T>, Name<T>>,
     ) -> Result<(), ConvertError<T>> {
-        if thunk.body.values.len() != 1 {
-            // Thunks should have 1 output
-            return Err(ConvertError::ThunkOutputError);
-        }
         let thunk_node = self.fragment.add_thunk(
             thunk.args.iter().cloned().map(Name::BoundVar),
+            thunk.body.values.len(),
             [Name::Thunk(thunk.addr.clone())],
         );
 

@@ -130,26 +130,25 @@ impl<V, E> ThunkBuilder<V, E> {
     #[must_use]
     pub fn bound_inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
         self.0
-            .bound_variables
+            .bound_inputs
             .iter()
-            .map(|out_port| OutPort(out_port.clone()))
+            .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
     }
 
     #[must_use]
     pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
         self.0
-            .outputs
-            .values()
+            .outer_outputs
+            .iter()
             .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
     }
 
     #[must_use]
     pub fn graph_outputs(&self) -> impl DoubleEndedIterator<Item = InPort<V, E>> + '_ {
         self.0
-             .0
-            .outputs
-            .keys()
-            .map(|in_port| InPort(in_port.clone()))
+            .inner_outputs
+            .iter()
+            .map(|in_port| InPort(ByThinAddress(in_port.clone())))
     }
 
     fn fold<Err>(
@@ -301,7 +300,7 @@ where
                 }
             }
 
-            thunk.0.free_variable_edges.set(inputs).unwrap();
+            thunk.0.free_inputs.set(inputs).unwrap();
         }
 
         fn strongconnect<V, E>(

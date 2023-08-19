@@ -5,7 +5,7 @@ use std::{
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexSet;
 
 use super::weakbyaddress::WeakByAddress;
 
@@ -75,7 +75,7 @@ pub(super) struct OperationInternal<V, E> {
 impl<V, E> OperationInternal<V, E> {
     pub(super) fn new(
         input_len: usize,
-        output_weights: impl IntoIterator<Item = E>,
+        outputs: impl IntoIterator<Item = E>,
         weight: V,
         backlink: Option<Weak<ThunkInternal<V, E>>>,
     ) -> Arc<Self> {
@@ -88,7 +88,7 @@ impl<V, E> OperationInternal<V, E> {
                     })
                 })
                 .collect();
-            let outputs = output_weights
+            let outputs = outputs
                 .into_iter()
                 .map(|weight| {
                     Arc::new(OutPortInternal {
@@ -112,45 +112,50 @@ impl<V, E> OperationInternal<V, E> {
 pub(super) struct ThunkInternal<V, E> {
     pub(super) nodes: RwLock<Vec<NodeInternal<V, E>>>,
     #[allow(clippy::type_complexity)]
-    pub(super) free_variable_edges: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
-    pub(super) bound_variables: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
-    #[allow(clippy::type_complexity)]
-    pub(super) outputs:
-        IndexMap<ByThinAddress<Arc<InPortInternal<V, E>>>, Arc<OutPortInternal<V, E>>>,
+    pub(super) free_inputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
+    pub(super) bound_inputs: Vec<Arc<OutPortInternal<V, E>>>,
+    pub(super) inner_outputs: Vec<Arc<InPortInternal<V, E>>>,
+    pub(super) outer_outputs: Vec<Arc<OutPortInternal<V, E>>>,
     pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
 }
 
 impl<V, E> ThunkInternal<V, E> {
     pub(super) fn new(
-        bound_variables: impl IntoIterator<Item = E>,
-        output_weights: impl IntoIterator<Item = E>,
+        bound_inputs: impl IntoIterator<Item = E>,
+        inner_output_len: usize,
+        outer_outputs: impl IntoIterator<Item = E>,
         backlink: Option<Weak<ThunkInternal<V, E>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
-            let bound_variables = bound_variables
+            let bound_inputs = bound_inputs
                 .into_iter()
-                .map(|bv| ByThinAddress(Arc::new(OutPortInternal::new(None, bv))))
+                .map(|weight| Arc::new(OutPortInternal::new(None, weight)))
                 .collect();
 
-            let outputs = output_weights
+            let inner_outputs = (0..inner_output_len)
+                .map(|_| {
+                    Arc::new(InPortInternal::new(Some(WeakNodeInternal::Thunk(
+                        weak.clone(),
+                    ))))
+                })
+                .collect();
+
+            let outer_outputs = outer_outputs
                 .into_iter()
                 .map(|weight| {
-                    let inner_output = ByThinAddress(Arc::new(InPortInternal::new(Some(
-                        WeakNodeInternal::Thunk(weak.clone()),
-                    ))));
-                    let outer_output = Arc::new(OutPortInternal::new(
+                    Arc::new(OutPortInternal::new(
                         Some(WeakNodeInternal::Thunk(weak.clone())),
                         weight,
-                    ));
-                    (inner_output, outer_output)
+                    ))
                 })
                 .collect();
 
             ThunkInternal {
                 nodes: RwLock::new(Vec::default()),
-                free_variable_edges: OnceLock::new(),
-                bound_variables,
-                outputs,
+                free_inputs: OnceLock::new(),
+                bound_inputs,
+                inner_outputs,
+                outer_outputs,
                 backlink,
             }
         })
