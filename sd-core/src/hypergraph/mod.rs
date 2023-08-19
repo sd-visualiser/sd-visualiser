@@ -250,7 +250,7 @@ impl<V, E> EdgeLike for Edge<V, E> {
 impl<V, E> Graph for Hypergraph<V, E> {
     type T = (V, E);
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
-        Box::new(self.graph_inputs.iter().cloned().map(|o| Edge(o)))
+        Box::new(self.graph_inputs.iter().cloned().map(Edge))
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -282,14 +282,14 @@ impl<V, E> Graph for Thunk<V, E> {
                 .free_variable_edges
                 .get()
                 .expect("Could not lock")
-                .clone()
-                .into_iter()
+                .iter()
+                .cloned()
                 .map(Edge),
         )
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
-        Box::new(self.0.bound_variables.iter().cloned().map(|o| Edge(o)))
+        Box::new(self.0.bound_variables.iter().cloned().map(Edge))
     }
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -335,7 +335,7 @@ impl<V, E> NodeLike for Operation<V, E> {
             self.0
                 .inputs
                 .iter()
-                .map(|i| Edge(ByThinAddress(i.link.read().unwrap().upgrade().unwrap()))),
+                .map(|in_port| Edge(ByThinAddress(in_port.link()))),
         )
     }
 
@@ -344,8 +344,7 @@ impl<V, E> NodeLike for Operation<V, E> {
             self.0
                 .outputs
                 .iter()
-                .cloned()
-                .map(|o| Edge(ByThinAddress(o))),
+                .map(|out_port| Edge(ByThinAddress(out_port.clone()))),
         )
     }
 
@@ -367,9 +366,9 @@ impl<V, E> NodeLike for Thunk<V, E> {
                 .free_variable_edges
                 .get()
                 .expect("Failed to unlock")
-                .clone()
-                .into_iter()
-                .map(|out_port| Edge(out_port)),
+                .iter()
+                .cloned()
+                .map(Edge),
         )
     }
 
