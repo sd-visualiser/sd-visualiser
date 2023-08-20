@@ -5,7 +5,7 @@ use indexmap::{IndexMap, IndexSet};
 
 use crate::{
     common::{Addr, Direction},
-    hypergraph::{reachability::NReachable, traits::NodeLike},
+    hypergraph::{reachability::NReachable, traits::NodeLike, Hypergraph},
     weak_map::WeakMap,
 };
 
@@ -109,7 +109,7 @@ where
     }
 }
 
-impl<V, E> SelectionMap<(V, E)> {
+impl<V, E> SelectionMap<Hypergraph<V, E>> {
     /// Extend the selection using reachability.
     /// If `direction` is `None`, extend the selection in both directions.
     /// Otherwise extend the selection in the given direction up to the given depth.

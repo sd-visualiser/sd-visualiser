@@ -15,7 +15,6 @@ use crate::{
     common::Matchable,
     hypergraph::{
         builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
-        subgraph::Subgraph,
         Hypergraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
@@ -93,7 +92,6 @@ impl<T: Language> Name<T> {
 }
 
 pub type SyntaxHypergraph<T> = Hypergraph<Op<T>, Name<T>>;
-pub type SyntaxSubgraph<T> = Subgraph<(Op<T>, Name<T>)>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]

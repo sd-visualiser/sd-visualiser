@@ -160,11 +160,7 @@ impl<T: Addr> TryFrom<SubNode<T>> for SubThunk<T> {
     }
 }
 
-pub struct Sub<T: Addr> {
-    _phantom: std::marker::PhantomData<T>,
-}
-
-impl<T: Addr> Addr for Sub<T> {
+impl<T: Addr> Addr for Subgraph<T> {
     type Node = SubNode<T>;
     type Edge = SubEdge<T>;
     type Operation = SubOperation<T>;
@@ -176,7 +172,7 @@ where
     T::Node: NodeLike<T = T>,
     T::Edge: EdgeLike<T = T>,
 {
-    type T = Sub<T>;
+    type T = Subgraph<T>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
         let mut inputs: IndexSet<T::Edge> = IndexSet::default();
@@ -230,7 +226,7 @@ impl<T: Addr> Graph for SubThunk<T>
 where
     T::Thunk: Graph<T = T>,
 {
-    type T = Sub<T>;
+    type T = Subgraph<T>;
 
     fn free_graph_inputs(
         &self,
@@ -269,7 +265,7 @@ impl<T: Addr> NodeLike for SubNode<T>
 where
     T::Node: NodeLike<T = T>,
 {
-    type T = Sub<T>;
+    type T = Subgraph<T>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
         Box::new(self.inner.inputs().map(|edge| SubEdge {
@@ -300,7 +296,7 @@ impl<T: Addr> NodeLike for SubOperation<T>
 where
     T::Operation: NodeLike<T = T>,
 {
-    type T = Sub<T>;
+    type T = Subgraph<T>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
         Box::new(self.inner.inputs().map(|edge| SubEdge {
@@ -331,7 +327,7 @@ impl<T: Addr> NodeLike for SubThunk<T>
 where
     T::Thunk: NodeLike<T = T>,
 {
-    type T = Sub<T>;
+    type T = Subgraph<T>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
         Box::new(self.inner.inputs().map(|edge| SubEdge {
@@ -362,7 +358,7 @@ impl<T: Addr> EdgeLike for SubEdge<T>
 where
     T::Edge: EdgeLike<T = T>,
 {
-    type T = Sub<T>;
+    type T = Subgraph<T>;
 
     fn source(&self) -> Option<SubNode<T>> {
         self.inner

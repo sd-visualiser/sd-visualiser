@@ -200,7 +200,7 @@ impl<V, E> WithWeight for Edge<V, E> {
 }
 
 impl<V, E> EdgeLike for Edge<V, E> {
-    type T = (V, E);
+    type T = Hypergraph<V, E>;
 
     fn source(&self) -> Option<Node<V, E>> {
         self.0.node.as_ref().map(WeakNodeInternal::unwrap_node)
@@ -248,7 +248,8 @@ impl<V, E> EdgeLike for Edge<V, E> {
 }
 
 impl<V, E> Graph for Hypergraph<V, E> {
-    type T = (V, E);
+    type T = Hypergraph<V, E>;
+
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(self.graph_inputs.iter().cloned().map(Edge))
     }
@@ -275,7 +276,8 @@ impl<V, E> Graph for Hypergraph<V, E> {
 }
 
 impl<V, E> Graph for Thunk<V, E> {
-    type T = (V, E);
+    type T = Hypergraph<V, E>;
+
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
             self.0
@@ -333,7 +335,7 @@ impl<V, E> WithWeight for Operation<V, E> {
 }
 
 impl<V, E> NodeLike for Operation<V, E> {
-    type T = (V, E);
+    type T = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
@@ -363,7 +365,7 @@ impl<V, E> NodeLike for Operation<V, E> {
 }
 
 impl<V, E> NodeLike for Thunk<V, E> {
-    type T = (V, E);
+    type T = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
@@ -396,7 +398,7 @@ impl<V, E> NodeLike for Thunk<V, E> {
 }
 
 impl<V, E> NodeLike for Node<V, E> {
-    type T = (V, E);
+    type T = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         match self {

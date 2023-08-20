@@ -27,11 +27,11 @@ use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 pub enum GraphUi {
     Chil(
         GraphUiInternal<SyntaxHypergraph<Chil>>,
-        SelectionMap<(Op<Chil>, Name<Chil>)>,
+        SelectionMap<SyntaxHypergraph<Chil>>,
     ),
     Spartan(
         GraphUiInternal<SyntaxHypergraph<Spartan>>,
-        SelectionMap<(Op<Spartan>, Name<Spartan>)>,
+        SelectionMap<SyntaxHypergraph<Spartan>>,
     ),
 }
 
