@@ -40,11 +40,12 @@ use self::{
 )]
 pub struct Edge<V, E>(ByThinAddress<Arc<OutPortInternal<V, E>>>);
 
-impl<V, E: Debug> Debug for Edge<V, E> {
+impl<V: Debug, E: Debug> Debug for Edge<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Edge")
             .field("weight", self.weight())
-            .field("ptr", &Arc::as_ptr(&self.0))
+            .field("source", &self.source())
+            .field("targets", &self.targets().collect::<Vec<_>>())
             .finish()
     }
 }
@@ -78,6 +79,7 @@ impl<V: Debug, E: Debug> Debug for Operation<V, E> {
             .field("weight", self.weight())
             .field("inputs", &self.inputs().collect::<Vec<_>>())
             .field("outputs", &self.outputs().collect::<Vec<_>>())
+            .field("backlink", &self.backlink())
             .finish()
     }
 }
@@ -106,16 +108,15 @@ pub struct Thunk<V, E>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 impl<V: Debug, E: Debug> Debug for Thunk<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
+            .field("nodes", &self.nodes().collect::<Vec<_>>())
             .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
             .field(
                 "bound_inputs",
                 &self.bound_graph_inputs().collect::<Vec<_>>(),
             )
-            .field("nodes", &self.nodes().collect::<Vec<_>>())
-            .field(
-                "outputs",
-                &self.graph_outputs().zip(self.outputs()).collect::<Vec<_>>(),
-            )
+            .field("inner_outputs", &self.graph_outputs().collect::<Vec<_>>())
+            .field("outer_outputs", &self.outputs().collect::<Vec<_>>())
+            .field("backlink", &self.backlink())
             .finish()
     }
 }
