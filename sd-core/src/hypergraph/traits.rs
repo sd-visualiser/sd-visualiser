@@ -18,7 +18,6 @@ pub trait EdgeLike {
     type T: Addr;
     fn source(&self) -> Option<<Self::T as Addr>::Node>;
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<<Self::T as Addr>::Node>> + '_>;
-    fn number_of_normalised_targets(&self) -> usize;
 }
 
 pub trait Graph: Clone + Eq + PartialEq + Hash {

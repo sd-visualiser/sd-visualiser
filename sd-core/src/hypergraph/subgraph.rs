@@ -380,10 +380,6 @@ where
                 })
         }))
     }
-
-    fn number_of_normalised_targets(&self) -> usize {
-        self.inner.number_of_normalised_targets()
-    }
 }
 
 impl<T: Addr> WithWeight for SubEdge<T>

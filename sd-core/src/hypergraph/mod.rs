@@ -224,28 +224,6 @@ impl<V, E> EdgeLike for Edge<V, E> {
                 .into_iter(),
         )
     }
-
-    fn number_of_normalised_targets(&self) -> usize {
-        let containing = self.source().and_then(|x| x.backlink());
-        let targets = self
-            .targets()
-            .map(|x| x.and_then(|y| find_ancestor(&containing, y)))
-            .collect::<Vec<_>>();
-
-        let mut non_dupe_outputs = HashSet::new();
-        let mut other_outputs = 0;
-        for x in targets {
-            match x {
-                Some(Node::Thunk(t)) => {
-                    non_dupe_outputs.insert(t);
-                }
-                _ => {
-                    other_outputs += 1;
-                }
-            }
-        }
-        other_outputs + non_dupe_outputs.len()
-    }
 }
 
 impl<V, E> Graph for Hypergraph<V, E> {
@@ -522,12 +500,40 @@ where
 }
 
 /// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
-fn find_ancestor<V, E>(
-    containing: &Option<Thunk<V, E>>,
-    mut node: Node<V, E>,
-) -> Option<Node<V, E>> {
+pub fn find_ancestor<T>(containing: &Option<T::Thunk>, mut node: T::Node) -> Option<T::Node>
+where
+    T: Addr,
+    T::Node: NodeLike<T = T>,
+{
     while &node.backlink() != containing {
-        node = Node::Thunk(node.backlink()?);
+        node = node.backlink()?.into();
     }
     Some(node)
+}
+
+pub fn number_of_normalised_targets<T>(edge: &T::Edge) -> usize
+where
+    T: Addr,
+    T::Node: NodeLike<T = T>,
+    T::Edge: EdgeLike<T = T>,
+{
+    let containing = edge.source().and_then(|x| x.backlink());
+    let targets = edge
+        .targets()
+        .map(|x| x.and_then(|y| find_ancestor::<T>(&containing, y)))
+        .collect::<Vec<_>>();
+
+    let mut non_dupe_outputs = HashSet::new();
+    let mut other_outputs = 0;
+    for x in targets {
+        match x.map(T::Thunk::try_from) {
+            Some(Ok(t)) => {
+                non_dupe_outputs.insert(t);
+            }
+            _ => {
+                other_outputs += 1;
+            }
+        }
+    }
+    other_outputs + non_dupe_outputs.len()
 }

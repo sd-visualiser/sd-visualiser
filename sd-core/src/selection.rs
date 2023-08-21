@@ -5,7 +5,7 @@ use indexmap::{IndexMap, IndexSet};
 
 use crate::{
     common::{Addr, Direction},
-    hypergraph::{reachability::NReachable, traits::NodeLike, Hypergraph},
+    hypergraph::{find_ancestor, reachability::NReachable, traits::NodeLike, Hypergraph},
     weak_map::WeakMap,
 };
 
@@ -133,17 +133,6 @@ impl<V, E> SelectionMap<Hypergraph<V, E>> {
             }
         };
     }
-}
-
-/// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
-fn find_ancestor<T: Addr>(containing: &Option<T::Thunk>, mut node: T::Node) -> Option<T::Node>
-where
-    T::Node: NodeLike<T = T>,
-{
-    while &node.backlink() != containing {
-        node = node.backlink()?.into();
-    }
-    Some(node)
 }
 
 #[must_use]

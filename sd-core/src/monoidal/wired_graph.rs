@@ -8,7 +8,10 @@ use tracing::debug;
 use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
-    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    hypergraph::{
+        number_of_normalised_targets,
+        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    },
 };
 
 /// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
@@ -146,6 +149,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     /// `input` should be set to true if the edge is a global input
     fn edge_layer(&self, edge: &T::Edge, input: bool) -> usize
     where
+        T::Node: NodeLike<T = T>,
         T::Edge: EdgeLike<T = T>,
     {
         let layers = self.open_edges.get(edge);
@@ -159,7 +163,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         let should_add_one = if input {
             layers.map(|v| v.len() > 1).unwrap_or_default()
         } else {
-            edge.number_of_normalised_targets() > 1
+            number_of_normalised_targets::<T>(edge) > 1
         };
 
         if should_add_one {
@@ -268,7 +272,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         node.outputs().for_each(|edge| {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
-            if open_edges < edge.number_of_normalised_targets() {
+            if open_edges < number_of_normalised_targets::<T>(&edge) {
                 // We need to backlink the edge as it is not done
                 if open_edges == 0 {
                     // Only backlink without copying
