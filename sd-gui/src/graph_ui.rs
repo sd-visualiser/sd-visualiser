@@ -113,8 +113,7 @@ where
         T::Addr: Display,
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
-        Edge<G::Ctx>:
-            ExtensibleEdge<Ctx = G::Ctx> + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
         Operation<G::Ctx>: WithWeight<Weight = Op<T>> + Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
     {
@@ -197,7 +196,7 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        Edge<G::Ctx>: ExtensibleEdge<Ctx = G::Ctx> + Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
         Operation<G::Ctx>: WithWeight + Matchable + Debug + Send + Sync,
         Thunk<G::Ctx>: Matchable + Debug + Send + Sync,
         <Operation<G::Ctx> as WithWeight>::Weight: Display,
@@ -224,7 +223,7 @@ where
 
     pub(crate) fn export_svg(&self) -> String
     where
-        Edge<G::Ctx>: ExtensibleEdge<Ctx = G::Ctx> + Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
         Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
         <Operation<G::Ctx> as WithWeight>::Weight: Display,

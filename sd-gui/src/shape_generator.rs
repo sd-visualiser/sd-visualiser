@@ -53,7 +53,7 @@ pub fn generate_shapes<G>(
 ) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
 where
     G: Graph + Send + Sync + 'static,
-    Edge<G::Ctx>: ExtensibleEdge<Ctx = G::Ctx> + Debug + Send + Sync,
+    Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
     Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
     Thunk<G::Ctx>: Debug + Send + Sync,
     <Operation<G::Ctx> as WithWeight>::Weight: Display,
