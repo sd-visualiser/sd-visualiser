@@ -1,6 +1,7 @@
 use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
+use good_lp::{variable, Expression, Solution, Variable};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use tracing::debug;
@@ -9,9 +10,10 @@ use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
     hypergraph::{
-        number_of_normalised_targets,
+        normalised_targets, number_of_normalised_targets,
         traits::{Graph, NodeLike},
     },
+    lp::LpProblem,
 };
 
 /// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
@@ -106,15 +108,6 @@ impl<T: Addr> InOutIter for WiredOp<T> {
     }
 }
 
-/// The information we need to store about a "backlinked" edge
-/// A edge is backlinked if if it travels upwards through the graph
-struct BacklinkData {
-    /// The layer from which we must build backlink operations
-    available_layer: usize,
-    /// The layer on which the edge is outputted to
-    originating_layer: usize,
-}
-
 /// A structure to help build a monoidal wired graph
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
@@ -127,7 +120,7 @@ struct MonoidalWiredGraphBuilder<T: Addr> {
     open_edges: IndexMap<T::Edge, Vec<usize>>,
     /// Edges that have been connected to an output but not all their inputs.
     /// Each is mapped to a `BacklinkData`
-    backlinks: HashMap<T::Edge, BacklinkData>,
+    backlinks: HashMap<T::Edge, usize>,
 }
 
 impl<T: Addr> MonoidalWiredGraphBuilder<T> {
@@ -139,32 +132,6 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
         }
 
         self.slices[layer].ops.push(op);
-    }
-
-    /// Determines the minimum layer from which we can output to the given `edge`
-    /// `input` should be set to true if the edge is a global input
-    fn edge_layer(&self, edge: &T::Edge, input: bool) -> usize {
-        let layers = self.open_edges.get(edge);
-
-        // Get the maximum layer that the slice is used on
-        let max = layers
-            .and_then(|x| x.iter().max())
-            .copied()
-            .unwrap_or_default();
-
-        let should_add_one = if input {
-            layers.map(|v| v.len() > 1).unwrap_or_default()
-        } else {
-            number_of_normalised_targets::<T>(edge) > 1
-        };
-
-        if should_add_one {
-            // If the edge has more than one target then we will need
-            // to insert a copy before being able to output to it
-            max + 1
-        } else {
-            max
-        }
     }
 
     /// Insert copies and identities so that `edge` is ready to output to at `layer`
@@ -226,25 +193,13 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 
     /// Inserts a node of a hypergraph into the builder
     /// This prepares all the inputs of the node and inserts relevant backlinks
-    fn insert_operation(&mut self, node: &T::Node)
+    fn insert_operation(&mut self, node: &T::Node, node_layer: usize)
     where
         T::Node: Debug,
         T::Edge: Debug,
         T::Operation: Debug,
         T::Thunk: Debug,
     {
-        // The layer we place the node is the max of the layers that the outputs can be prepared
-        // and the layers that any backlinked inputs originate.
-        let node_layer = node
-            .outputs()
-            .map(|edge| self.edge_layer(&edge, false))
-            .chain(
-                node.inputs()
-                    .filter_map(|x| self.backlinks.get(&x).map(|x| x.originating_layer)),
-            )
-            .max()
-            .unwrap_or_default();
-
         let wired_op = if let Ok(op) = T::Operation::try_from(node.clone()) {
             WiredOp::Operation { addr: op }
         } else if let Ok(thunk) = T::Thunk::try_from(node.clone()) {
@@ -265,13 +220,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
                 if open_edges == 0 {
                     // Only backlink without copying
                     ops.push(WiredOp::Backlink { addr: edge.clone() });
-                    self.backlinks.insert(
-                        edge,
-                        BacklinkData {
-                            available_layer: node_layer + 1,
-                            originating_layer: node_layer,
-                        },
-                    );
+                    self.backlinks.insert(edge, node_layer + 1);
                 } else {
                     // Backlink and other edges
                     self.open_edges
@@ -280,13 +229,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
                         .push(node_layer - 1);
                     self.prepare_input(&edge, node_layer);
                     self.insert_backlink_on_layer(edge.clone(), node_layer - 1, false);
-                    self.backlinks.insert(
-                        edge,
-                        BacklinkData {
-                            available_layer: node_layer,
-                            originating_layer: node_layer,
-                        },
-                    );
+                    self.backlinks.insert(edge, node_layer);
                 }
             } else {
                 // No backlink
@@ -315,7 +258,69 @@ where
     <G::T as Addr>::Operation: Debug,
     <G::T as Addr>::Thunk: Debug,
 {
+    #[allow(clippy::too_many_lines)]
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
     fn from(graph: &G) -> Self {
+        let mut problem = LpProblem::default();
+        let max = problem.add_variable(variable().min(0.0));
+        let nodes: IndexMap<<G::T as Addr>::Node, Variable> = graph
+            .nodes()
+            .map(|x| (x, problem.add_variable(variable().min(0.0))))
+            .collect();
+
+        for (i, (node, var)) in nodes.iter().enumerate() {
+            problem.add_constraint(Expression::leq((*var).into(), max));
+            for edge in node.outputs() {
+                let targets = normalised_targets::<G::T>(&edge, &node.backlink());
+                let bottom = problem.add_variable(variable().min(0.0));
+                let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
+                problem.add_constraint(Expression::leq(bottom + offset, var));
+                let top = problem.add_variable(variable().min(0.0));
+                problem.add_constraint(Expression::leq((*var).into(), top));
+                problem.add_objective(top - bottom);
+
+                for target in targets {
+                    if let Some(target_node) = target {
+                        let (j, _, var_target) = nodes.get_full(&target_node).unwrap();
+                        problem.add_constraint(Expression::leq(bottom.into(), var_target));
+                        problem.add_constraint(Expression::geq(top.into(), *var_target));
+                        match j.cmp(&i) {
+                            std::cmp::Ordering::Less => {
+                                problem.add_constraint((*var_target + offset + 1.0).leq(*var));
+                            }
+                            std::cmp::Ordering::Equal => {}
+                            std::cmp::Ordering::Greater => {
+                                problem.add_constraint(Expression::leq((*var).into(), var_target));
+                            }
+                        };
+                    } else {
+                        problem.add_constraint(Expression::eq(bottom.into(), 0.0));
+                    }
+                }
+            }
+        }
+
+        for edge in graph.graph_inputs() {
+            let targets = normalised_targets::<G::T>(&edge, &graph.graph_backlink());
+            let bottom = problem.add_variable(variable().min(0.0));
+            let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
+            problem.add_constraint(Expression::leq(bottom + offset, max));
+            problem.add_objective(max - bottom);
+            for target in targets {
+                if let Some(target_node) = target {
+                    let var_target = nodes.get(&target_node).unwrap();
+                    problem.add_constraint(Expression::leq(bottom.into(), *var_target));
+                    problem.add_constraint((*var_target + offset).leq(max));
+                } else {
+                    problem.add_constraint(Expression::eq(bottom.into(), 0.0));
+                }
+            }
+        }
+        problem.add_objective(max);
+
+        let soln = problem.minimise(good_lp::default_solver).unwrap();
+
         let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();
         let outputs: Vec<<G::T as Addr>::Edge> = graph.graph_outputs().collect();
 
@@ -323,10 +328,10 @@ where
             builder.open_edges.entry(edge.clone()).or_default().push(0);
         }
 
-        for node in graph.nodes() {
+        for (node, var) in nodes {
             debug!("Node recieved: {node:?}");
             // Use topsorted graph here
-            builder.insert_operation(&node);
+            builder.insert_operation(&node, soln.value(var).floor() as usize);
         }
 
         let (backlinked_edges, other_edges): (Vec<_>, Vec<_>) = builder
@@ -351,7 +356,7 @@ where
                 layer
             };
 
-            for x in backlink.available_layer..layer {
+            for x in backlink..layer {
                 builder.add_op(
                     Slice {
                         ops: vec![WiredOp::Backlink { addr: edge.clone() }],
@@ -361,14 +366,7 @@ where
             }
         }
 
-        let final_height = std::cmp::max(
-            builder.slices.len(),
-            other_edges
-                .iter()
-                .map(|edge| builder.edge_layer(edge, true))
-                .max()
-                .unwrap_or_default(),
-        );
+        let final_height = soln.value(max).floor() as usize + 1;
 
         // Connect up global inputs
         for edge in other_edges {
@@ -388,8 +386,6 @@ where
         graph.minimise_swaps();
 
         // After this we can flatten the "compound terms"
-        let g = graph.flatten_graph();
-        debug!("{g:?}");
-        g
+        graph.flatten_graph()
     }
 }

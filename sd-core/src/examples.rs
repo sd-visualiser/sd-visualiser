@@ -114,6 +114,10 @@ impl Graph for SyntaxThunk {
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Node> + '_> {
         panic!("unsupported")
     }
+
+    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+        panic!("unsupported")
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

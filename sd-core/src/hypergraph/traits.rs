@@ -67,4 +67,6 @@ pub trait Graph: Clone + Eq + PartialEq + Hash {
     {
         Box::new(self.nodes().filter_map(|node| node.try_into().ok()))
     }
+
+    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk>;
 }

@@ -179,6 +179,10 @@ impl<T: Addr> Graph for Subgraph<T> {
             selection: self.selection.clone(),
         }))
     }
+
+    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+        None
+    }
 }
 
 impl<T: Addr> Graph for SubThunk<T> {
@@ -214,6 +218,10 @@ impl<T: Addr> Graph for SubThunk<T> {
             inner: edge,
             selection: self.selection.clone(),
         }))
+    }
+
+    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+        Some(self.clone())
     }
 }
 

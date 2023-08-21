@@ -251,6 +251,10 @@ impl<V, E> Graph for Hypergraph<V, E> {
             NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(thunk)),
         }))
     }
+
+    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+        None
+    }
 }
 
 impl<V, E> Graph for Thunk<V, E> {
@@ -301,6 +305,10 @@ impl<V, E> Graph for Thunk<V, E> {
                 .collect::<Vec<_>>()
                 .into_iter(),
         )
+    }
+
+    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+        Some(self.clone())
     }
 }
 
@@ -482,6 +490,31 @@ pub fn find_ancestor<T: Addr>(containing: &Option<T::Thunk>, mut node: T::Node) 
         node = node.backlink()?.into();
     }
     Some(node)
+}
+
+pub fn normalised_targets<T: Addr>(
+    edge: &T::Edge,
+    containing: &Option<T::Thunk>,
+) -> Vec<Option<T::Node>> {
+    let targets = edge
+        .targets()
+        .map(|x| x.and_then(|y| find_ancestor::<T>(containing, y)))
+        .collect::<Vec<_>>();
+
+    let mut non_dupe_outputs = HashSet::new();
+    let mut outputs = Vec::new();
+    for x in targets {
+        match x.clone().map(T::Thunk::try_from) {
+            Some(Ok(t)) => {
+                non_dupe_outputs.insert(t);
+            }
+            _ => {
+                outputs.push(x);
+            }
+        }
+    }
+    outputs.extend(non_dupe_outputs.into_iter().map(|x| Some(x.into())));
+    outputs
 }
 
 pub fn number_of_normalised_targets<T: Addr>(edge: &T::Edge) -> usize {
