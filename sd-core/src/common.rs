@@ -2,7 +2,10 @@ use std::{fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 
-use crate::hypergraph::generic::Ctx;
+use crate::hypergraph::{
+    generic::{Ctx, Edge},
+    traits::{NodeLike, WithWeight},
+};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
@@ -45,4 +48,15 @@ pub trait InOutIter: InOut {
 /// Check if an object matches a variable name
 pub trait Matchable {
     fn is_match(&self, variable: &str) -> bool;
+}
+
+impl<V> Matchable for &V
+where
+    V: NodeLike,
+    Edge<V::Ctx>: WithWeight,
+    <Edge<V::Ctx> as WithWeight>::Weight: Matchable,
+{
+    fn is_match(&self, variable: &str) -> bool {
+        self.outputs().any(|edge| edge.weight().is_match(variable))
+    }
 }

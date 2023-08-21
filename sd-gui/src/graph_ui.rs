@@ -196,9 +196,10 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
-        Operation<G::Ctx>: WithWeight + Matchable + Debug + Send + Sync,
-        Thunk<G::Ctx>: Matchable + Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + WithWeight + Debug + Send + Sync,
+        Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
+        Thunk<G::Ctx>: Debug + Send + Sync,
+        <Edge<G::Ctx> as WithWeight>::Weight: Matchable,
         <Operation<G::Ctx> as WithWeight>::Weight: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
