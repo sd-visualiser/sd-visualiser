@@ -4,8 +4,8 @@ use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
-    common::{Addr, InOut},
-    hypergraph::traits::WithWeight,
+    common::InOut,
+    hypergraph::{generic::Ctx, traits::WithWeight},
     lp::LpProblem,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     weak_map::WeakMap,
@@ -247,7 +247,7 @@ impl Layout {
 }
 
 #[allow(clippy::too_many_lines)]
-fn layout_internal<T: Addr>(
+fn layout_internal<T: Ctx>(
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
     problem: &mut LpProblem,
@@ -470,7 +470,7 @@ where
     }
 }
 
-pub fn layout<T: Addr>(
+pub fn layout<T: Ctx>(
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
 ) -> Result<Layout, LayoutError>

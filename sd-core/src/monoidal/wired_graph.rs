@@ -8,9 +8,9 @@ use tracing::debug;
 
 use super::{MonoidalTerm, Slice};
 use crate::{
-    common::{Addr, Direction, InOut, InOutIter, Link},
+    common::{Direction, InOut, InOutIter, Link},
     hypergraph::{
-        generic::Node,
+        generic::{Ctx, Edge, Node, Operation, Thunk},
         traits::{Graph, NodeLike},
         utils::{normalised_targets, number_of_normalised_targets},
     },
@@ -32,7 +32,7 @@ pub type MonoidalWiredGraph<T> = MonoidalTerm<T, WiredOp<T>>;
     Hash(bound = ""),
     Debug(bound = "T::Edge: Debug, T::Thunk: Debug, T::Operation: Debug")
 )]
-pub enum WiredOp<T: Addr> {
+pub enum WiredOp<T: Ctx> {
     Copy {
         addr: T::Edge,
         copies: usize,
@@ -49,7 +49,7 @@ pub enum WiredOp<T: Addr> {
     },
 }
 
-impl<T: Addr> InOut for WiredOp<T> {
+impl<T: Ctx> InOut for WiredOp<T> {
     fn number_of_inputs(&self) -> usize {
         match self {
             WiredOp::Copy { copies, .. } => *copies,
@@ -69,7 +69,7 @@ impl<T: Addr> InOut for WiredOp<T> {
     }
 }
 
-impl<T: Addr> InOutIter for WiredOp<T> {
+impl<T: Ctx> InOutIter for WiredOp<T> {
     type T = T;
 
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
@@ -112,7 +112,7 @@ impl<T: Addr> InOutIter for WiredOp<T> {
 /// A structure to help build a monoidal wired graph
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-struct MonoidalWiredGraphBuilder<T: Addr> {
+struct MonoidalWiredGraphBuilder<T: Ctx> {
     /// A vector of slices from the bottom up.
     /// Each operation in these slices is itself a slice of operations, allowing operations to be "bundled".
     slices: Vec<Slice<Slice<WiredOp<T>>>>,
@@ -124,7 +124,7 @@ struct MonoidalWiredGraphBuilder<T: Addr> {
     backlinks: HashMap<T::Edge, usize>,
 }
 
-impl<T: Addr> MonoidalWiredGraphBuilder<T> {
+impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
     /// Adds a slice of operations to a layer, creating this layer if it doesn't exist yet.
     /// Does not process any of the inputs or outputs
     fn add_op(&mut self, op: Slice<WiredOp<T>>, layer: usize) {
@@ -247,12 +247,12 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 }
 
 #[allow(clippy::fallible_impl_from)]
-impl<G> From<&G> for MonoidalWiredGraph<G::T>
+impl<G> From<&G> for MonoidalWiredGraph<G::Ctx>
 where
     G: Graph,
-    <G::T as Addr>::Edge: Debug,
-    <G::T as Addr>::Operation: Debug,
-    <G::T as Addr>::Thunk: Debug,
+    Edge<G::Ctx>: Debug,
+    Operation<G::Ctx>: Debug,
+    Thunk<G::Ctx>: Debug,
 {
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::cast_possible_truncation)]
@@ -260,7 +260,7 @@ where
     fn from(graph: &G) -> Self {
         let mut problem = LpProblem::default();
         let max = problem.add_variable(variable().min(0.0));
-        let nodes: IndexMap<Node<G::T>, Variable> = graph
+        let nodes: IndexMap<Node<G::Ctx>, Variable> = graph
             .nodes()
             .map(|x| (x, problem.add_variable(variable().min(0.0))))
             .collect();
@@ -268,7 +268,7 @@ where
         for (i, (node, var)) in nodes.iter().enumerate() {
             problem.add_constraint(Expression::leq((*var).into(), max));
             for edge in node.outputs() {
-                let targets = normalised_targets::<G::T>(&edge, &node.backlink());
+                let targets = normalised_targets::<G::Ctx>(&edge, &node.backlink());
                 let bottom = problem.add_variable(variable().min(0.0));
                 let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
                 problem.add_constraint(Expression::leq(bottom + offset, var));
@@ -298,7 +298,7 @@ where
         }
 
         for edge in graph.graph_inputs() {
-            let targets = normalised_targets::<G::T>(&edge, &graph.graph_backlink());
+            let targets = normalised_targets::<G::Ctx>(&edge, &graph.graph_backlink());
             let bottom = problem.add_variable(variable().min(0.0));
             let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
             problem.add_constraint(Expression::leq(bottom + offset, max));
@@ -317,8 +317,8 @@ where
 
         let soln = problem.minimise(good_lp::default_solver).unwrap();
 
-        let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();
-        let outputs: Vec<<G::T as Addr>::Edge> = graph.graph_outputs().collect();
+        let mut builder = MonoidalWiredGraphBuilder::<G::Ctx>::default();
+        let outputs: Vec<Edge<G::Ctx>> = graph.graph_outputs().collect();
 
         for edge in &outputs {
             builder.open_edges.entry(edge.clone()).or_default().push(0);
@@ -371,7 +371,7 @@ where
 
         builder.slices.reverse();
 
-        let mut graph = MonoidalTerm::<G::T, Slice<WiredOp<G::T>>> {
+        let mut graph = MonoidalTerm::<G::Ctx, Slice<WiredOp<G::Ctx>>> {
             free_inputs: graph.free_graph_inputs().collect(),
             bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,

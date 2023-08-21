@@ -3,11 +3,11 @@ use std::fmt::Display;
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use sd_core::{
-    common::{Addr, InOut, InOutIter, Link},
+    common::{InOut, InOutIter, Link},
     decompile::{decompile, Fresh},
     graph::{Name, Op},
     hypergraph::{
-        generic::Node,
+        generic::{Ctx, Edge, Node, Operation, Thunk},
         subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, NodeLike, WithWeight},
     },
@@ -29,10 +29,10 @@ use crate::{
 pub fn render<T, G>(
     graph: &mut G,
     ui: &egui::Ui,
-    shapes: &[Shape<G::T>],
+    shapes: &[Shape<G::Ctx>],
     response: &Response,
-    expanded: &mut WeakMap<<G::T as Addr>::Thunk, bool>,
-    mut selection: Option<&mut SelectionMap<G::T>>,
+    expanded: &mut WeakMap<Thunk<G::Ctx>, bool>,
+    mut selection: Option<&mut SelectionMap<G::Ctx>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
@@ -43,8 +43,8 @@ where
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
     G: ModifiableGraph,
-    <G::T as Addr>::Edge: WithWeight<Weight = Name<T>>,
-    <G::T as Addr>::Operation: WithWeight<Weight = Op<T>>,
+    Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
+    Operation<G::Ctx>: WithWeight<Weight = Op<T>>,
 {
     let viewport = *to_screen.from();
 
@@ -87,7 +87,7 @@ where
         }
         None => highlight_edges
             .iter()
-            .map(|edge| EdgeLabel::from_edge::<G::T>(edge).to_pretty())
+            .map(|edge| EdgeLabel::from_edge::<G::Ctx>(edge).to_pretty())
             .collect(),
     };
     for label in labels {
@@ -111,8 +111,8 @@ pub fn generate_shapes<T>(
     expanded: &WeakMap<T::Thunk, bool>,
     arrows: bool,
 ) where
-    T: Addr,
-    T::Edge: ExtensibleEdge<T = T>,
+    T: Ctx,
+    T::Edge: ExtensibleEdge<Ctx = T>,
     T::Operation: WithWeight,
     <T::Operation as WithWeight>::Weight: Display,
 {

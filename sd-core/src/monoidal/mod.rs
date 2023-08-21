@@ -4,7 +4,8 @@ use derivative::Derivative;
 use num::rational::Ratio;
 
 use crate::{
-    common::{Addr, Direction, InOut, InOutIter, Link},
+    common::{Direction, InOut, InOutIter, Link},
+    hypergraph::generic::Ctx,
     monoidal::permutation::{generate_permutation, PermutationOutput},
 };
 
@@ -64,7 +65,7 @@ where
     Hash(bound = "O: Hash"),
     Debug(bound = "T::Edge: Debug, O: Debug")
 )]
-pub struct MonoidalTerm<T: Addr, O> {
+pub struct MonoidalTerm<T: Ctx, O> {
     /// Free inputs to the term
     pub free_inputs: Vec<T::Edge>,
     /// Bound inputs to the term which should not be reordered
@@ -75,7 +76,7 @@ pub struct MonoidalTerm<T: Addr, O> {
     pub outputs: Vec<T::Edge>,
 }
 
-impl<T: Addr, O: InOut + Debug> MonoidalTerm<T, O> {
+impl<T: Ctx, O: InOut + Debug> MonoidalTerm<T, O> {
     /// Check that each slice of a monoidal term has a consistent number of inputs and outputs
     pub(crate) fn check_in_out_count(&self) {
         let mut input_count = self.free_inputs.len() + self.bound_inputs.len();
@@ -163,7 +164,7 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> Slice<O> {
     }
 }
 
-impl<T: Addr, O> MonoidalTerm<T, Slice<O>> {
+impl<T: Ctx, O> MonoidalTerm<T, Slice<O>> {
     /// Flattens a monoidal term where each operation is itself a slice by inlining these slices
     #[must_use]
     pub fn flatten_graph(self) -> MonoidalTerm<T, O> {

@@ -1,7 +1,6 @@
 use crate::{
-    common::Addr,
     hypergraph::{
-        generic::Node,
+        generic::{Ctx, Node},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::spartan::Op,
@@ -15,13 +14,13 @@ use crate::{
 pub struct SyntaxEdge;
 
 impl EdgeLike for SyntaxEdge {
-    type T = Syntax;
+    type Ctx = Syntax;
 
-    fn source(&self) -> Option<Node<Self::T>> {
+    fn source(&self) -> Option<Node<Syntax>> {
         panic!("unsupported")
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::T>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Syntax>>> + '_> {
         panic!("unsupported")
     }
 }
@@ -33,17 +32,17 @@ pub struct SyntaxOp {
 }
 
 impl NodeLike for SyntaxOp {
-    type T = Syntax;
+    type Ctx = Syntax;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+    fn backlink(&self) -> Option<SyntaxThunk> {
         panic!("unsupported")
     }
 
@@ -70,17 +69,17 @@ pub struct SyntaxThunk {
 }
 
 impl NodeLike for SyntaxThunk {
-    type T = Syntax;
+    type Ctx = Syntax;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+    fn backlink(&self) -> Option<SyntaxThunk> {
         panic!("unsupported")
     }
 
@@ -94,36 +93,32 @@ impl NodeLike for SyntaxThunk {
 }
 
 impl Graph for SyntaxThunk {
-    type T = Syntax;
+    type Ctx = Syntax;
 
-    fn free_graph_inputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn bound_graph_inputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::T>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Syntax>> + '_> {
         panic!("unsupported")
     }
 
-    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+    fn graph_backlink(&self) -> Option<SyntaxThunk> {
         panic!("unsupported")
     }
 }
 
 pub struct Syntax;
 
-impl Addr for Syntax {
+impl Ctx for Syntax {
     type Edge = SyntaxEdge;
     type Thunk = SyntaxThunk;
     type Operation = SyntaxOp;

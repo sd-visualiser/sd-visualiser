@@ -6,7 +6,7 @@ use std::{
 use by_address::ByThinAddress;
 use derivative::Derivative;
 
-use crate::common::{Addr, Matchable};
+use crate::common::Matchable;
 
 pub mod builder;
 pub mod generic;
@@ -19,6 +19,7 @@ pub mod utils;
 mod weakbyaddress;
 
 use self::{
+    generic::Ctx,
     internal::{
         InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
         WeakNodeInternal,
@@ -57,6 +58,12 @@ pub struct Hypergraph<V, E> {
     nodes: Vec<NodeInternal<V, E>>,
     graph_inputs: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
     graph_outputs: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
+}
+
+impl<V, E> Ctx for Hypergraph<V, E> {
+    type Edge = Edge<V, E>;
+    type Thunk = Thunk<V, E>;
+    type Operation = Operation<V, E>;
 }
 
 #[derive(Derivative)]
@@ -152,7 +159,7 @@ impl<V, E> WithWeight for Edge<V, E> {
 }
 
 impl<V, E> EdgeLike for Edge<V, E> {
-    type T = Hypergraph<V, E>;
+    type Ctx = Hypergraph<V, E>;
 
     fn source(&self) -> Option<Node<V, E>> {
         self.0.node.as_ref().map(WeakNodeInternal::unwrap_node)
@@ -178,7 +185,7 @@ impl<V, E> EdgeLike for Edge<V, E> {
 }
 
 impl<V, E> Graph for Hypergraph<V, E> {
-    type T = Hypergraph<V, E>;
+    type Ctx = Hypergraph<V, E>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(self.graph_inputs.iter().cloned().map(Edge))
@@ -204,13 +211,13 @@ impl<V, E> Graph for Hypergraph<V, E> {
         }))
     }
 
-    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+    fn graph_backlink(&self) -> Option<Thunk<V, E>> {
         None
     }
 }
 
 impl<V, E> Graph for Thunk<V, E> {
-    type T = Hypergraph<V, E>;
+    type Ctx = Hypergraph<V, E>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
@@ -259,7 +266,7 @@ impl<V, E> Graph for Thunk<V, E> {
         )
     }
 
-    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
+    fn graph_backlink(&self) -> Option<Thunk<V, E>> {
         Some(self.clone())
     }
 }
@@ -273,7 +280,7 @@ impl<V, E> WithWeight for Operation<V, E> {
 }
 
 impl<V, E> NodeLike for Operation<V, E> {
-    type T = Hypergraph<V, E>;
+    type Ctx = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(
@@ -313,7 +320,7 @@ impl<V, E> NodeLike for Operation<V, E> {
 }
 
 impl<V, E> NodeLike for Thunk<V, E> {
-    type T = Hypergraph<V, E>;
+    type Ctx = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
         Box::new(

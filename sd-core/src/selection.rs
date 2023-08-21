@@ -4,9 +4,13 @@ use derivative::Derivative;
 use indexmap::{IndexMap, IndexSet};
 
 use crate::{
-    common::{Addr, Direction},
+    common::Direction,
     hypergraph::{
-        generic::Node, reachability::NReachable, traits::NodeLike, utils::find_ancestor, Hypergraph,
+        generic::{Ctx, Node},
+        reachability::NReachable,
+        traits::NodeLike,
+        utils::find_ancestor,
+        Hypergraph,
     },
     weak_map::WeakMap,
 };
@@ -19,11 +23,11 @@ use crate::{
     PartialEq(bound = ""),
     Eq(bound = "")
 )]
-pub struct SelectionMap<T: Addr>(WeakMap<Node<T>, bool>);
+pub struct SelectionMap<T: Ctx>(WeakMap<Node<T>, bool>);
 
 impl<T> From<IndexMap<Node<T>, bool>> for SelectionMap<T>
 where
-    T: Addr,
+    T: Ctx,
 {
     fn from(map: IndexMap<Node<T>, bool>) -> Self {
         Self(WeakMap(map))
@@ -32,7 +36,7 @@ where
 
 impl<T> Index<&Node<T>> for SelectionMap<T>
 where
-    T: Addr,
+    T: Ctx,
 {
     type Output = bool;
 
@@ -43,7 +47,7 @@ where
 
 impl<T> IndexMut<&Node<T>> for SelectionMap<T>
 where
-    T: Addr,
+    T: Ctx,
 {
     fn index_mut(&mut self, index: &Node<T>) -> &mut Self::Output {
         &mut self.0[index]
@@ -52,7 +56,7 @@ where
 
 impl<T> SelectionMap<T>
 where
-    T: Addr,
+    T: Ctx,
 {
     /// Unselect all nodes.
     pub fn clear_selection(&mut self) {
@@ -131,7 +135,7 @@ impl<V, E> SelectionMap<Hypergraph<V, E>> {
 }
 
 #[must_use]
-fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<Node<T>> {
+fn normalise_selection<T: Ctx>(selection: &SelectionMap<T>) -> IndexSet<Node<T>> {
     let selected: Vec<_> = selection.iter().collect();
     if let Some(op) = selected.first() {
         let mut containing = op.backlink();
@@ -150,7 +154,7 @@ fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<Node<T>
     }
 }
 
-fn contains_transitively<T: Addr>(selection: &IndexSet<Node<T>>, node: &Node<T>) -> bool {
+fn contains_transitively<T: Ctx>(selection: &IndexSet<Node<T>>, node: &Node<T>) -> bool {
     selection.contains(node)
         || node.backlink().map_or(false, |thunk| {
             contains_transitively::<T>(selection, &Node::Thunk(thunk))

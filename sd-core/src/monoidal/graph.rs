@@ -10,11 +10,11 @@ use super::{
     MonoidalTerm, Slice,
 };
 use crate::{
-    common::{Addr, Direction, InOut, InOutIter, Link},
-    hypergraph::traits::NodeLike,
+    common::{Direction, InOut, InOutIter, Link},
+    hypergraph::{generic::Ctx, traits::NodeLike},
 };
 
-impl<T: Addr> Slice<MonoidalOp<T>>
+impl<T: Ctx> Slice<MonoidalOp<T>>
 where
     T::Operation: Debug,
     T::Thunk: Debug,
@@ -179,7 +179,7 @@ pub type MonoidalGraph<T> = MonoidalTerm<T, MonoidalOp<T>>;
     Hash(bound = ""),
     Debug(bound = "T::Edge: Debug, T::Thunk: Debug, T::Operation: Debug")
 )]
-pub enum MonoidalOp<T: Addr> {
+pub enum MonoidalOp<T: Ctx> {
     Copy {
         addr: T::Edge,
         copies: usize,
@@ -208,7 +208,7 @@ pub enum MonoidalOp<T: Addr> {
     },
 }
 
-impl<T: Addr> MonoidalOp<T> {
+impl<T: Ctx> MonoidalOp<T> {
     /// Create an identity (unary copy) or backlink from a `link`
     fn id_from_link(link: Link<T>) -> Self {
         if link.1 == Direction::Backward {
@@ -232,7 +232,7 @@ impl<T: Addr> MonoidalOp<T> {
     }
 }
 
-impl<T: Addr> InOut for MonoidalOp<T> {
+impl<T: Ctx> InOut for MonoidalOp<T> {
     fn number_of_inputs(&self) -> usize {
         match self {
             Self::Copy { .. } | Self::Backlink { .. } => 1,
@@ -257,7 +257,7 @@ impl<T: Addr> InOut for MonoidalOp<T> {
     }
 }
 
-impl<T: Addr> InOutIter for MonoidalOp<T> {
+impl<T: Ctx> InOutIter for MonoidalOp<T> {
     type T = T;
 
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
@@ -321,7 +321,7 @@ impl<T: Addr> InOutIter for MonoidalOp<T> {
     }
 }
 
-impl<T: Addr> From<&WiredOp<T>> for MonoidalOp<T>
+impl<T: Ctx> From<&WiredOp<T>> for MonoidalOp<T>
 where
     T::Edge: Debug,
     T::Operation: Debug,
@@ -344,21 +344,21 @@ where
 }
 
 /// Builder to help build monoidal graphs
-struct MonoidalGraphBuilder<T: Addr> {
+struct MonoidalGraphBuilder<T: Ctx> {
     /// Slices that have been added
     slices: Vec<Slice<MonoidalOp<T>>>,
     /// Stores the edges at the bottom of the last slice, or the global inputs if there are no slices
     open_edges: Vec<Link<T>>,
 }
 
-impl<T: Addr> MonoidalGraphBuilder<T> {
+impl<T: Ctx> MonoidalGraphBuilder<T> {
     /// Returns an iterator over the open edges of the builder
     pub(crate) fn open_edges(&self) -> impl Iterator<Item = Link<T>> + '_ {
         self.open_edges.iter().cloned()
     }
 }
 
-impl<T: Addr> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T> {
+impl<T: Ctx> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T> {
     fn extend<I: IntoIterator<Item = Slice<MonoidalOp<T>>>>(&mut self, iter: I) {
         let mut peeking = iter.into_iter().peekable();
         if peeking.peek().is_some() {
@@ -368,7 +368,7 @@ impl<T: Addr> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T> {
     }
 }
 
-impl<T: Addr> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T>
+impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T>
 where
     T::Edge: Debug,
     T::Operation: Debug,
@@ -465,7 +465,7 @@ where
     }
 }
 
-impl<T: Addr> MonoidalGraph<T>
+impl<T: Ctx> MonoidalGraph<T>
 where
     T::Operation: Debug,
     T::Thunk: Debug,
@@ -489,7 +489,7 @@ where
     }
 }
 
-impl<T: Addr> Slice<MonoidalOp<T>>
+impl<T: Ctx> Slice<MonoidalOp<T>>
 where
     T::Operation: Debug,
     T::Thunk: Debug,

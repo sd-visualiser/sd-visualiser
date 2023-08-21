@@ -2,11 +2,14 @@ use std::collections::HashSet;
 
 use indexmap::IndexMap;
 
-use super::traits::{EdgeLike, Graph, NodeLike};
-use crate::{common::Addr, hypergraph::generic::Node, selection::SelectionMap, weak_map::WeakMap};
+use super::{
+    generic::{Ctx, Node, Thunk},
+    traits::{EdgeLike, Graph, NodeLike},
+};
+use crate::{selection::SelectionMap, weak_map::WeakMap};
 
-pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<<G::T as Addr>::Thunk, bool> {
-    fn helper<T: Addr>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk) {
+pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<Thunk<G::Ctx>, bool> {
+    fn helper<T: Ctx>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk) {
         for t in thunk.thunks() {
             helper::<T>(set, t);
         }
@@ -16,15 +19,15 @@ pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<<G::T as Addr>::Thunk, bo
     let mut set = IndexMap::new();
 
     for thunk in graph.thunks() {
-        helper::<G::T>(&mut set, thunk);
+        helper::<G::Ctx>(&mut set, thunk);
     }
 
     WeakMap(set)
 }
 
 #[must_use]
-pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::T> {
-    fn helper<T: Addr>(set: &mut IndexMap<Node<T>, bool>, thunk: &T::Thunk) {
+pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::Ctx> {
+    fn helper<T: Ctx>(set: &mut IndexMap<Node<T>, bool>, thunk: &T::Thunk) {
         for node in thunk.nodes() {
             if let Node::Thunk(thunk) = &node {
                 helper::<T>(set, thunk);
@@ -37,7 +40,7 @@ pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::T> {
 
     for node in graph.nodes() {
         if let Node::Thunk(thunk) = &node {
-            helper::<G::T>(&mut set, thunk);
+            helper::<G::Ctx>(&mut set, thunk);
         }
         set.insert(node, false);
     }
@@ -46,14 +49,14 @@ pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::T> {
 }
 
 /// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
-pub fn find_ancestor<T: Addr>(containing: &Option<T::Thunk>, mut node: Node<T>) -> Option<Node<T>> {
+pub fn find_ancestor<T: Ctx>(containing: &Option<T::Thunk>, mut node: Node<T>) -> Option<Node<T>> {
     while &node.backlink() != containing {
         node = Node::Thunk(node.backlink()?);
     }
     Some(node)
 }
 
-pub fn normalised_targets<T: Addr>(
+pub fn normalised_targets<T: Ctx>(
     edge: &T::Edge,
     containing: &Option<T::Thunk>,
 ) -> Vec<Option<Node<T>>> {
@@ -78,7 +81,7 @@ pub fn normalised_targets<T: Addr>(
     outputs
 }
 
-pub fn number_of_normalised_targets<T: Addr>(edge: &T::Edge) -> usize {
+pub fn number_of_normalised_targets<T: Ctx>(edge: &T::Edge) -> usize {
     let containing = edge.source().and_then(|x| x.backlink());
     let targets = edge
         .targets()

@@ -1,18 +1,17 @@
 use std::hash::Hash;
 
-use super::generic::Node;
-use crate::common::Addr;
+use super::generic::{Ctx, Edge, Node, Operation, Thunk};
 
 pub trait WithWeight {
     type Weight;
     fn weight(&self) -> &Self::Weight;
 }
 
-pub trait NodeLike {
-    type T: Addr;
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
-    fn backlink(&self) -> Option<<Self::T as Addr>::Thunk>;
+pub trait NodeLike: Clone + Eq + PartialEq + Hash {
+    type Ctx: Ctx;
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+    fn backlink(&self) -> Option<Thunk<Self::Ctx>>;
 
     fn number_of_inputs(&self) -> usize {
         self.inputs().count()
@@ -23,45 +22,37 @@ pub trait NodeLike {
     }
 }
 
-pub trait EdgeLike {
-    type T: Addr;
-    fn source(&self) -> Option<Node<Self::T>>;
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::T>>> + '_>;
+pub trait EdgeLike: Clone + Eq + PartialEq + Hash {
+    type Ctx: Ctx;
+    fn source(&self) -> Option<Node<Self::Ctx>>;
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_>;
 }
 
 pub trait Graph: Clone + Eq + PartialEq + Hash {
-    type T: Addr;
+    type Ctx: Ctx;
 
-    fn free_graph_inputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
 
-    fn bound_graph_inputs(
-        &self,
-    ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
 
-    fn graph_inputs<'a>(
-        &'a self,
-    ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + 'a>
+    fn graph_inputs<'a>(&'a self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + 'a>
     where
-        <Self::T as Addr>::Edge: 'a,
+        Edge<Self::Ctx>: 'a,
     {
         Box::new(self.free_graph_inputs().chain(self.bound_graph_inputs()))
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::T>> + '_>;
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_>;
 
-    fn operations<'a>(
-        &'a self,
-    ) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Operation> + 'a> {
+    fn operations<'a>(&'a self) -> Box<dyn DoubleEndedIterator<Item = Operation<Self::Ctx>> + 'a> {
         Box::new(self.nodes().filter_map(Node::into_operation))
     }
 
-    fn thunks<'a>(&'a self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Thunk> + 'a> {
+    fn thunks<'a>(&'a self) -> Box<dyn DoubleEndedIterator<Item = Thunk<Self::Ctx>> + 'a> {
         Box::new(self.nodes().filter_map(Node::into_thunk))
     }
 
-    fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk>;
+    fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>>;
 }

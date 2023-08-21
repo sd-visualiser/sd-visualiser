@@ -5,9 +5,11 @@ use egui::{vec2, Pos2, Vec2};
 use flo_curves::Coord2;
 use pretty::RcDoc;
 use sd_core::{
-    common::Addr,
     graph::{Name, Op},
-    hypergraph::traits::{EdgeLike, NodeLike, WithWeight},
+    hypergraph::{
+        generic::Ctx,
+        traits::{EdgeLike, NodeLike, WithWeight},
+    },
     language::Language,
     prettyprinter::{paran_list, PrettyPrint},
 };
@@ -39,7 +41,7 @@ pub enum EdgeLabel<T: Language> {
 impl<T: Language> EdgeLabel<T> {
     pub(crate) fn from_edge<U>(edge: &U::Edge) -> Self
     where
-        U: Addr,
+        U: Ctx,
         U::Edge: WithWeight<Weight = Name<T>>,
         U::Operation: WithWeight<Weight = Op<T>>,
     {

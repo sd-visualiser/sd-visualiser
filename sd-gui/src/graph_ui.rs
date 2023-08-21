@@ -8,10 +8,11 @@ use eframe::{
     epaint::{Rounding, Shape},
 };
 use sd_core::{
-    common::{Addr, Direction, Matchable},
+    common::{Direction, Matchable},
     decompile::Fresh,
     graph::{Name, Op, SyntaxHypergraph},
     hypergraph::{
+        generic::{Edge, Operation, Thunk},
         subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, WithWeight},
         utils::{create_expanded, create_selected},
@@ -84,7 +85,7 @@ impl GraphUi {
 
 pub struct GraphUiInternal<G: Graph> {
     pub(crate) graph: G,
-    pub(crate) expanded: WeakMap<<G::T as Addr>::Thunk, bool>,
+    pub(crate) expanded: WeakMap<Thunk<G::Ctx>, bool>,
     panzoom: Panzoom,
     ready: bool,
     reset_requested: bool,
@@ -94,7 +95,7 @@ impl<G> GraphUiInternal<G>
 where
     G: ModifiableGraph + Send + Sync + 'static,
 {
-    pub(crate) fn new(graph: G, expanded: WeakMap<<G::T as Addr>::Thunk, bool>) -> Self {
+    pub(crate) fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
         Self {
             graph,
             expanded,
@@ -104,7 +105,7 @@ where
         }
     }
 
-    pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui, selection: Option<&mut SelectionMap<G::T>>)
+    pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui, selection: Option<&mut SelectionMap<G::Ctx>>)
     where
         T: Language,
         T::Op: Display + PrettyPrint,
@@ -112,10 +113,10 @@ where
         T::Addr: Display,
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
-        <G::T as Addr>::Edge:
-            ExtensibleEdge<T = G::T> + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
-        <G::T as Addr>::Operation: WithWeight<Weight = Op<T>> + Debug + Send + Sync,
-        <G::T as Addr>::Thunk: Debug + Send + Sync,
+        Edge<G::Ctx>:
+            ExtensibleEdge<Ctx = G::Ctx> + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
+        Operation<G::Ctx>: WithWeight<Weight = Op<T>> + Debug + Send + Sync,
+        Thunk<G::Ctx>: Debug + Send + Sync,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -196,10 +197,10 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + Debug + Send + Sync,
-        <G::T as Addr>::Operation: WithWeight + Matchable + Debug + Send + Sync,
-        <G::T as Addr>::Thunk: Matchable + Debug + Send + Sync,
-        <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
+        Edge<G::Ctx>: ExtensibleEdge<Ctx = G::Ctx> + Debug + Send + Sync,
+        Operation<G::Ctx>: WithWeight + Matchable + Debug + Send + Sync,
+        Thunk<G::Ctx>: Matchable + Debug + Send + Sync,
+        <Operation<G::Ctx> as WithWeight>::Weight: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -223,10 +224,10 @@ where
 
     pub(crate) fn export_svg(&self) -> String
     where
-        <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + Debug + Send + Sync,
-        <G::T as Addr>::Operation: WithWeight + Debug + Send + Sync,
-        <G::T as Addr>::Thunk: Debug + Send + Sync,
-        <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
+        Edge<G::Ctx>: ExtensibleEdge<Ctx = G::Ctx> + Debug + Send + Sync,
+        Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
+        Thunk<G::Ctx>: Debug + Send + Sync,
+        <Operation<G::Ctx> as WithWeight>::Weight: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here

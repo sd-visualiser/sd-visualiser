@@ -2,22 +2,7 @@ use std::{fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 
-use crate::hypergraph::{
-    traits::{EdgeLike, Graph, NodeLike},
-    Edge, Hypergraph, Operation, Thunk,
-};
-
-pub trait Addr {
-    type Edge: Clone + Eq + PartialEq + Hash + EdgeLike<T = Self>;
-    type Thunk: Clone + Eq + PartialEq + Hash + NodeLike<T = Self> + Graph<T = Self>;
-    type Operation: Clone + Eq + PartialEq + Hash + NodeLike<T = Self>;
-}
-
-impl<V, E> Addr for Hypergraph<V, E> {
-    type Edge = Edge<V, E>;
-    type Thunk = Thunk<V, E>;
-    type Operation = Operation<V, E>;
-}
+use crate::hypergraph::generic::Ctx;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Direction {
@@ -43,7 +28,7 @@ impl Direction {
     Hash(bound = ""),
     Debug(bound = "T::Edge: Debug")
 )]
-pub struct Link<T: Addr>(pub T::Edge, pub Direction);
+pub struct Link<T: Ctx>(pub T::Edge, pub Direction);
 
 /// Specifies an operation which has inputs and outputs.
 pub trait InOut {
@@ -52,7 +37,7 @@ pub trait InOut {
 }
 
 pub trait InOutIter: InOut {
-    type T: Addr;
+    type T: Ctx;
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
 }

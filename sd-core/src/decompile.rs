@@ -4,10 +4,9 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
-    common::Addr,
     graph::{Name, Op},
     hypergraph::{
-        generic::Node,
+        generic::{Edge, Node, Operation},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::{chil, spartan, Arg, Bind, Expr, Language, Thunk, Value},
@@ -44,14 +43,14 @@ pub enum DecompilationError {
 pub fn decompile<G, T: Language>(graph: &G) -> Result<Expr<T>, DecompilationError>
 where
     G: Graph,
-    <G::T as Addr>::Edge: WithWeight<Weight = Name<T>>,
-    <G::T as Addr>::Operation: WithWeight<Weight = Op<T>>,
+    Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
+    Operation<G::Ctx>: WithWeight<Weight = Op<T>>,
     T::Var: Fresh,
 {
     let mut binds = Vec::default();
 
     // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).
-    let mut node_to_syntax = HashMap::<Node<G::T>, Arg<T>>::default();
+    let mut node_to_syntax = HashMap::<Node<G::Ctx>, Arg<T>>::default();
 
     let mut fresh_vars = 0;
     for node in graph.nodes().rev() {

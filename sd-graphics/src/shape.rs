@@ -7,8 +7,11 @@ use egui::{
 use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
-    common::{Addr, Matchable},
-    hypergraph::{generic::Node, subgraph::ModifiableGraph},
+    common::Matchable,
+    hypergraph::{
+        generic::{Ctx, Node},
+        subgraph::ModifiableGraph,
+    },
     selection::SelectionMap,
     weak_map::WeakMap,
 };
@@ -17,7 +20,7 @@ use crate::common::{to_coord2, TEXT_SIZE, TOLERANCE};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
-pub enum Shape<T: Addr> {
+pub enum Shape<T: Ctx> {
     Line {
         start: Pos2,
         end: Pos2,
@@ -56,12 +59,12 @@ pub enum Shape<T: Addr> {
     },
 }
 
-pub struct Shapes<T: Addr> {
+pub struct Shapes<T: Ctx> {
     pub shapes: Vec<Shape<T>>,
     pub size: Vec2,
 }
 
-impl<T: Addr> Shape<T> {
+impl<T: Ctx> Shape<T> {
     pub(crate) fn apply_transform(&mut self, transform: &RectTransform) {
         match self {
             Shape::Line { start, end, .. } => {
@@ -101,7 +104,7 @@ impl<T: Addr> Shape<T> {
         expanded: &mut WeakMap<T::Thunk, bool>,
         selection: Option<&mut SelectionMap<T>>,
     ) where
-        G: ModifiableGraph<T = T>,
+        G: ModifiableGraph<Ctx = T>,
     {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();

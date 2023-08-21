@@ -1,6 +1,9 @@
 use std::collections::{HashMap, VecDeque};
 
-use crate::common::{Addr, Direction, Link};
+use crate::{
+    common::{Direction, Link},
+    hypergraph::generic::Ctx,
+};
 
 /// Consume the first `n` items of an iterator `iter`
 pub(crate) fn advance_by<I: Iterator>(iter: &mut I, n: usize) {
@@ -38,7 +41,7 @@ impl From<PermutationOutput> for Option<usize> {
 ///
 /// # Returns
 /// The items in `start` paired with a `PermutationOutput` specifying where they should be sent
-pub(crate) fn generate_permutation<'a, T: Addr>(
+pub(crate) fn generate_permutation<'a, T: Ctx>(
     start: impl Iterator<Item = Link<T>> + 'a,
     end: impl Iterator<Item = Link<T>> + 'a,
 ) -> Vec<(Link<T>, PermutationOutput)> {

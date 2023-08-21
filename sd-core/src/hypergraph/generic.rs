@@ -2,8 +2,20 @@ use std::fmt::Debug;
 
 use derivative::Derivative;
 
-use super::traits::NodeLike;
-use crate::common::Addr;
+use super::traits::{EdgeLike, Graph, NodeLike};
+
+/// A context records which type of graph we are working with.
+///
+/// Normally the type implement `Ctx` will also implement `GraphLike` (see `Hypergraph`).
+pub trait Ctx {
+    type Edge: EdgeLike<Ctx = Self>;
+    type Operation: NodeLike<Ctx = Self>;
+    type Thunk: NodeLike<Ctx = Self> + Graph<Ctx = Self>;
+}
+
+pub type Edge<T> = <T as Ctx>::Edge;
+pub type Operation<T> = <T as Ctx>::Operation;
+pub type Thunk<T> = <T as Ctx>::Thunk;
 
 #[derive(Derivative)]
 #[derivative(
@@ -13,12 +25,12 @@ use crate::common::Addr;
     Hash(bound = ""),
     Debug(bound = "T::Operation: Debug, T::Thunk: Debug")
 )]
-pub enum Node<T: Addr> {
+pub enum Node<T: Ctx> {
     Operation(T::Operation),
     Thunk(T::Thunk),
 }
 
-impl<T: Addr> Node<T> {
+impl<T: Ctx> Node<T> {
     pub fn into_operation(self) -> Option<T::Operation> {
         match self {
             Node::Operation(op) => Some(op),
@@ -34,8 +46,8 @@ impl<T: Addr> Node<T> {
     }
 }
 
-impl<T: Addr> NodeLike for Node<T> {
-    type T = T;
+impl<T: Ctx> NodeLike for Node<T> {
+    type Ctx = T;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = T::Edge> + '_> {
         match self {

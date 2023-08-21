@@ -5,10 +5,9 @@ use petgraph::graph::NodeIndex;
 use serde::Serialize;
 
 use super::{
-    generic::Node,
+    generic::{Edge, Node, Operation},
     traits::{Graph, NodeLike, WithWeight},
 };
-use crate::common::Addr;
 
 pub type PetGraph<V, E> = petgraph::Graph<PetNode<V, E>, usize>;
 
@@ -22,21 +21,18 @@ pub enum PetNode<V, E> {
 #[allow(clippy::type_complexity)]
 pub fn to_pet<G>(
     hypergraph: &G,
-) -> PetGraph<
-    <<G::T as Addr>::Operation as WithWeight>::Weight,
-    <<G::T as Addr>::Edge as WithWeight>::Weight,
->
+) -> PetGraph<<Operation<G::Ctx> as WithWeight>::Weight, <Edge<G::Ctx> as WithWeight>::Weight>
 where
     G: Graph,
-    <G::T as Addr>::Edge: WithWeight,
-    <G::T as Addr>::Operation: WithWeight,
-    <<G::T as Addr>::Edge as WithWeight>::Weight: Clone,
-    <<G::T as Addr>::Operation as WithWeight>::Weight: Clone,
+    Edge<G::Ctx>: WithWeight,
+    Operation<G::Ctx>: WithWeight,
+    <Edge<G::Ctx> as WithWeight>::Weight: Clone,
+    <Operation<G::Ctx> as WithWeight>::Weight: Clone,
 {
     let mut graph = petgraph::Graph::new();
 
     // Maps hyperedges to petgraph nodes.
-    let mut edge_map: HashMap<<G::T as Addr>::Edge, NodeIndex> = HashMap::new();
+    let mut edge_map: HashMap<Edge<G::Ctx>, NodeIndex> = HashMap::new();
 
     // Need to do this in case there are any inputs that are immediately discarded.
     for edge in hypergraph.graph_inputs() {

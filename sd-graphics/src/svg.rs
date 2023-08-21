@@ -1,5 +1,5 @@
 use egui::{emath::RectTransform, Pos2, Rect};
-use sd_core::common::Addr;
+use sd_core::hypergraph::generic::Ctx;
 use svg::{
     node::element::{path::Data, Circle, Group, Line, Path, Rectangle, Text},
     Document, Node,
@@ -7,7 +7,7 @@ use svg::{
 
 use crate::shape::{Shape, Shapes};
 
-impl<T: Addr> Shape<T> {
+impl<T: Ctx> Shape<T> {
     pub(crate) fn to_svg(&self) -> Box<dyn Node> {
         match self {
             Self::Operation {
@@ -87,7 +87,7 @@ impl<T: Addr> Shape<T> {
     }
 }
 
-impl<T: Addr> Shapes<T> {
+impl<T: Ctx> Shapes<T> {
     const SCALE: f32 = 100.0;
 
     #[must_use]
