@@ -25,7 +25,6 @@ type Cache<G, T, Thunk> = LruCache<(G, WeakMap<Thunk, bool>), Arc<Mutex<Promise<
 fn shape_cache<G>() -> Arc<Mutex<Cache<G, G::T, <G::T as Addr>::Thunk>>>
 where
     G: Graph + Send + Sync + 'static,
-    <G::T as Addr>::Node: Send + Sync,
     <G::T as Addr>::Edge: Send + Sync,
     <G::T as Addr>::Operation: Send + Sync,
     <G::T as Addr>::Thunk: Send + Sync,
@@ -57,7 +56,6 @@ pub fn generate_shapes<G>(
 ) -> Arc<Mutex<Promise<Shapes<G::T>>>>
 where
     G: Graph + Send + Sync + 'static,
-    <G::T as Addr>::Node: Debug + Send + Sync,
     <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + Debug + Send + Sync,
     <G::T as Addr>::Operation: WithWeight + Debug + Send + Sync,
     <G::T as Addr>::Thunk: Debug + Send + Sync,

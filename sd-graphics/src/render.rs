@@ -7,6 +7,7 @@ use sd_core::{
     decompile::{decompile, Fresh},
     graph::{Name, Op},
     hypergraph::{
+        generic::Node,
         subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, NodeLike, WithWeight},
     },
@@ -74,12 +75,14 @@ where
     let labels = match highlight_node {
         Some(node) => {
             highlight_edges.extend(node.inputs().chain(node.outputs()));
-            if let Ok(op) = <G::T as Addr>::Operation::try_from(node.clone()) {
-                vec![op.weight().to_pretty()]
-            } else if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
-                vec![decompile(&thunk).map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
-            } else {
-                unreachable!()
+            match &node {
+                Node::Operation(op) => {
+                    vec![op.weight().to_pretty()]
+                }
+                Node::Thunk(thunk) => {
+                    vec![decompile(thunk)
+                        .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
+                }
             }
         }
         None => highlight_edges

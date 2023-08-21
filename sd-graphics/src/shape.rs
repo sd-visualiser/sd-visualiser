@@ -8,7 +8,7 @@ use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::{Addr, Matchable},
-    hypergraph::subgraph::ModifiableGraph,
+    hypergraph::{generic::Node, subgraph::ModifiableGraph},
     selection::SelectionMap,
     weak_map::WeakMap,
 };
@@ -48,7 +48,7 @@ pub enum Shape<T: Addr> {
     },
     Arrow {
         addr: T::Edge,
-        to_add: Vec<T::Node>,
+        to_add: Vec<Node<T>>,
         center: Pos2,
         upwards: bool,
         stroke: Option<Stroke>,
@@ -96,7 +96,7 @@ impl<T: Addr> Shape<T> {
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
-        highlight_node: &mut Option<T::Node>,
+        highlight_node: &mut Option<Node<T>>,
         highlight_edges: &mut IndexSet<T::Edge>,
         expanded: &mut WeakMap<T::Thunk, bool>,
         selection: Option<&mut SelectionMap<T>>,
@@ -126,7 +126,7 @@ impl<T: Addr> Shape<T> {
                 let addr: &_ = addr;
                 let selected = selection
                     .as_ref()
-                    .map_or(false, |s| s[&T::Node::from(addr.clone())]);
+                    .map_or(false, |s| s[&Node::Thunk(addr.clone())]);
                 let thunk_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new((&graph, &addr)),
@@ -147,14 +147,14 @@ impl<T: Addr> Shape<T> {
                             .bg_fill,
                     );
                     if thunk_response.hovered() {
-                        *highlight_node = Some(addr.clone().into());
+                        *highlight_node = Some(Node::Thunk(addr.clone()));
                     }
                 }
                 if thunk_response.clicked() {
                     expanded[addr] = !expanded[addr];
                 }
                 if thunk_response.secondary_clicked() {
-                    let node = T::Node::from(addr.clone());
+                    let node = Node::Thunk(addr.clone());
                     if let Some(s) = selection {
                         s[&node] ^= true;
                     } else {
@@ -167,14 +167,14 @@ impl<T: Addr> Shape<T> {
             } => {
                 let selected = selection
                     .as_ref()
-                    .map_or(false, |s| s[&T::Node::from(addr.clone())]);
+                    .map_or(false, |s| s[&Node::Operation(addr.clone())]);
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new((&graph, &addr)),
                     Sense::click(),
                 );
                 if op_response.clicked() {
-                    let node = T::Node::from(addr.clone());
+                    let node = Node::Operation(addr.clone());
                     if let Some(s) = selection {
                         s[&node] ^= true;
                     } else {
@@ -192,7 +192,7 @@ impl<T: Addr> Shape<T> {
                         .fg_stroke,
                 );
                 if op_response.hovered() {
-                    *highlight_node = Some(addr.clone().into());
+                    *highlight_node = Some(Node::Operation(addr.clone()));
                 }
             }
             Shape::Arrow {

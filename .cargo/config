@@ -6,6 +6,7 @@ rustflags = [
 
     # nursery
     "-Wclippy::nursery",
+    "-Aclippy::missing_const_for_fn",
     "-Aclippy::option_if_let_else",
     "-Aclippy::significant_drop_tightening",
     "-Aclippy::suboptimal_flops",

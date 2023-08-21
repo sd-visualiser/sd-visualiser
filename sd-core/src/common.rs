@@ -4,33 +4,19 @@ use derivative::Derivative;
 
 use crate::hypergraph::{
     traits::{EdgeLike, Graph, NodeLike},
-    Edge, Hypergraph, Node, Operation, Thunk,
+    Edge, Hypergraph, Operation, Thunk,
 };
 
 pub trait Addr {
     type Edge: Clone + Eq + PartialEq + Hash + EdgeLike<T = Self>;
-    type Thunk: Clone
-        + Eq
-        + PartialEq
-        + Hash
-        + NodeLike<T = Self>
-        + Graph<T = Self>
-        + TryFrom<Self::Node>;
-    type Operation: Clone + Eq + PartialEq + Hash + NodeLike<T = Self> + TryFrom<Self::Node>;
-    type Node: Clone
-        + Eq
-        + PartialEq
-        + Hash
-        + NodeLike<T = Self>
-        + From<Self::Thunk>
-        + From<Self::Operation>;
+    type Thunk: Clone + Eq + PartialEq + Hash + NodeLike<T = Self> + Graph<T = Self>;
+    type Operation: Clone + Eq + PartialEq + Hash + NodeLike<T = Self>;
 }
 
 impl<V, E> Addr for Hypergraph<V, E> {
     type Edge = Edge<V, E>;
     type Thunk = Thunk<V, E>;
     type Operation = Operation<V, E>;
-    type Node = Node<V, E>;
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

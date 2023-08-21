@@ -1,8 +1,9 @@
-use delegate::delegate;
-
 use crate::{
     common::Addr,
-    hypergraph::traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    hypergraph::{
+        generic::Node,
+        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    },
     language::spartan::Op,
     monoidal::{
         graph::{MonoidalGraph, MonoidalOp},
@@ -16,11 +17,11 @@ pub struct SyntaxEdge;
 impl EdgeLike for SyntaxEdge {
     type T = Syntax;
 
-    fn source(&self) -> Option<<Self::T as Addr>::Node> {
+    fn source(&self) -> Option<Node<Self::T>> {
         panic!("unsupported")
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<<Self::T as Addr>::Node>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::T>>> + '_> {
         panic!("unsupported")
     }
 }
@@ -111,74 +112,12 @@ impl Graph for SyntaxThunk {
         panic!("unsupported")
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Node> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::T>> + '_> {
         panic!("unsupported")
     }
 
     fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
         panic!("unsupported")
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum SyntaxNode {
-    Operation(SyntaxOp),
-    Thunk(SyntaxThunk),
-}
-
-impl NodeLike for SyntaxNode {
-    type T = Syntax;
-
-    delegate! {
-        to match self {
-            SyntaxNode::Operation(op) => op,
-            SyntaxNode::Thunk(thunk) => thunk,
-        } {
-            #[allow(clippy::inline_always)]
-            fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
-            #[allow(clippy::inline_always)]
-            fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
-            #[allow(clippy::inline_always)]
-            fn backlink(&self) -> Option<<Self::T as Addr>::Thunk>;
-            #[allow(clippy::inline_always)]
-            fn number_of_inputs(&self) -> usize;
-            #[allow(clippy::inline_always)]
-            fn number_of_outputs(&self) -> usize;
-        }
-    }
-}
-
-impl From<SyntaxOp> for SyntaxNode {
-    fn from(value: SyntaxOp) -> Self {
-        SyntaxNode::Operation(value)
-    }
-}
-
-impl From<SyntaxThunk> for SyntaxNode {
-    fn from(value: SyntaxThunk) -> Self {
-        SyntaxNode::Thunk(value)
-    }
-}
-
-impl TryFrom<SyntaxNode> for SyntaxOp {
-    type Error = ();
-
-    fn try_from(node: SyntaxNode) -> Result<Self, Self::Error> {
-        match node {
-            SyntaxNode::Operation(op) => Ok(op),
-            SyntaxNode::Thunk(_) => Err(()),
-        }
-    }
-}
-
-impl TryFrom<SyntaxNode> for SyntaxThunk {
-    type Error = ();
-
-    fn try_from(node: SyntaxNode) -> Result<Self, Self::Error> {
-        match node {
-            SyntaxNode::Operation(_) => Err(()),
-            SyntaxNode::Thunk(thunk) => Ok(thunk),
-        }
     }
 }
 
@@ -188,7 +127,6 @@ impl Addr for Syntax {
     type Edge = SyntaxEdge;
     type Thunk = SyntaxThunk;
     type Operation = SyntaxOp;
-    type Node = SyntaxNode;
 }
 
 /// Corrresponds to the program `bind x = 1 in x`.

@@ -12,9 +12,9 @@ use sd_core::{
     decompile::Fresh,
     graph::{Name, Op, SyntaxHypergraph},
     hypergraph::{
-        create_expanded, create_selected,
         subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, WithWeight},
+        utils::{create_expanded, create_selected},
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
@@ -112,7 +112,6 @@ where
         T::Addr: Display,
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
-        <G::T as Addr>::Node: Debug + Send + Sync,
         <G::T as Addr>::Edge:
             ExtensibleEdge<T = G::T> + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
         <G::T as Addr>::Operation: WithWeight<Weight = Op<T>> + Debug + Send + Sync,
@@ -197,7 +196,6 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        <G::T as Addr>::Node: Debug + Send + Sync,
         <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + Debug + Send + Sync,
         <G::T as Addr>::Operation: WithWeight + Matchable + Debug + Send + Sync,
         <G::T as Addr>::Thunk: Matchable + Debug + Send + Sync,
@@ -225,7 +223,6 @@ where
 
     pub(crate) fn export_svg(&self) -> String
     where
-        <G::T as Addr>::Node: Debug + Send + Sync,
         <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + Debug + Send + Sync,
         <G::T as Addr>::Operation: WithWeight + Debug + Send + Sync,
         <G::T as Addr>::Thunk: Debug + Send + Sync,

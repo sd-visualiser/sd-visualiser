@@ -10,8 +10,9 @@ use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
     hypergraph::{
-        normalised_targets, number_of_normalised_targets,
+        generic::Node,
         traits::{Graph, NodeLike},
+        utils::{normalised_targets, number_of_normalised_targets},
     },
     lp::LpProblem,
 };
@@ -193,22 +194,18 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 
     /// Inserts a node of a hypergraph into the builder
     /// This prepares all the inputs of the node and inserts relevant backlinks
-    fn insert_operation(&mut self, node: &T::Node, node_layer: usize)
+    fn insert_operation(&mut self, node: &Node<T>, node_layer: usize)
     where
-        T::Node: Debug,
         T::Edge: Debug,
         T::Operation: Debug,
         T::Thunk: Debug,
     {
-        let wired_op = if let Ok(op) = T::Operation::try_from(node.clone()) {
-            WiredOp::Operation { addr: op }
-        } else if let Ok(thunk) = T::Thunk::try_from(node.clone()) {
-            WiredOp::Thunk {
-                body: MonoidalWiredGraph::from(&thunk),
-                addr: thunk,
-            }
-        } else {
-            unreachable!()
+        let wired_op = match node {
+            Node::Operation(op) => WiredOp::Operation { addr: op.clone() },
+            Node::Thunk(thunk) => WiredOp::Thunk {
+                body: MonoidalWiredGraph::from(thunk),
+                addr: thunk.clone(),
+            },
         };
         let mut ops = vec![wired_op];
 
@@ -253,7 +250,6 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 impl<G> From<&G> for MonoidalWiredGraph<G::T>
 where
     G: Graph,
-    <G::T as Addr>::Node: Debug,
     <G::T as Addr>::Edge: Debug,
     <G::T as Addr>::Operation: Debug,
     <G::T as Addr>::Thunk: Debug,
@@ -264,7 +260,7 @@ where
     fn from(graph: &G) -> Self {
         let mut problem = LpProblem::default();
         let max = problem.add_variable(variable().min(0.0));
-        let nodes: IndexMap<<G::T as Addr>::Node, Variable> = graph
+        let nodes: IndexMap<Node<G::T>, Variable> = graph
             .nodes()
             .map(|x| (x, problem.add_variable(variable().min(0.0))))
             .collect();

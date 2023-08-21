@@ -4,7 +4,10 @@ use petgraph::graph::NodeIndex;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::traits::{Graph, NodeLike, WithWeight};
+use super::{
+    generic::Node,
+    traits::{Graph, NodeLike, WithWeight},
+};
 use crate::common::Addr;
 
 pub type PetGraph<V, E> = petgraph::Graph<PetNode<V, E>, usize>;
@@ -44,12 +47,9 @@ where
     }
 
     for node in hypergraph.nodes() {
-        let pet_node = if let Ok(op) = <G::T as Addr>::Operation::try_from(node.clone()) {
-            graph.add_node(PetNode::Operation(op.weight().clone()))
-        } else if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
-            graph.add_node(PetNode::Thunk(to_pet(&thunk)))
-        } else {
-            unreachable!()
+        let pet_node = match &node {
+            Node::Operation(op) => graph.add_node(PetNode::Operation(op.weight().clone())),
+            Node::Thunk(thunk) => graph.add_node(PetNode::Thunk(to_pet(thunk))),
         };
 
         for (i, edge) in node.inputs().enumerate() {

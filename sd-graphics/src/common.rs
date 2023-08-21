@@ -47,7 +47,7 @@ impl<T: Language> EdgeLabel<T> {
             Name::Op => match edge.source() {
                 None => Self::Fresh,
                 Some(node) => {
-                    let op: U::Operation = node.try_into().ok().unwrap();
+                    let op = node.into_operation().unwrap();
                     Self::Operation(
                         op.weight().0.clone(),
                         op.inputs()

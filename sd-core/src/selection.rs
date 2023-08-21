@@ -5,7 +5,9 @@ use indexmap::{IndexMap, IndexSet};
 
 use crate::{
     common::{Addr, Direction},
-    hypergraph::{find_ancestor, reachability::NReachable, traits::NodeLike, Hypergraph},
+    hypergraph::{
+        generic::Node, reachability::NReachable, traits::NodeLike, utils::find_ancestor, Hypergraph,
+    },
     weak_map::WeakMap,
 };
 
@@ -17,33 +19,33 @@ use crate::{
     PartialEq(bound = ""),
     Eq(bound = "")
 )]
-pub struct SelectionMap<T: Addr>(WeakMap<T::Node, bool>);
+pub struct SelectionMap<T: Addr>(WeakMap<Node<T>, bool>);
 
-impl<T> From<IndexMap<T::Node, bool>> for SelectionMap<T>
+impl<T> From<IndexMap<Node<T>, bool>> for SelectionMap<T>
 where
     T: Addr,
 {
-    fn from(map: IndexMap<T::Node, bool>) -> Self {
+    fn from(map: IndexMap<Node<T>, bool>) -> Self {
         Self(WeakMap(map))
     }
 }
 
-impl<T> Index<&T::Node> for SelectionMap<T>
+impl<T> Index<&Node<T>> for SelectionMap<T>
 where
     T: Addr,
 {
     type Output = bool;
 
-    fn index(&self, index: &T::Node) -> &Self::Output {
+    fn index(&self, index: &Node<T>) -> &Self::Output {
         &self.0[index]
     }
 }
 
-impl<T> IndexMut<&T::Node> for SelectionMap<T>
+impl<T> IndexMut<&Node<T>> for SelectionMap<T>
 where
     T: Addr,
 {
-    fn index_mut(&mut self, index: &T::Node) -> &mut Self::Output {
+    fn index_mut(&mut self, index: &Node<T>) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
@@ -62,7 +64,7 @@ where
 
     /// Iterator of selected nodes.
     #[must_use]
-    pub fn iter(&self) -> impl DoubleEndedIterator<Item = T::Node> + Clone + '_ {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = Node<T>> + Clone + '_ {
         self.0
              .0
             .iter()
@@ -94,10 +96,10 @@ where
     ///
     /// This should only be used for normalised selections.
     #[must_use]
-    pub fn roots(&self) -> impl DoubleEndedIterator<Item = T::Node> + '_ {
+    pub fn roots(&self) -> impl DoubleEndedIterator<Item = Node<T>> + '_ {
         self.iter().filter(|node| {
             node.backlink()
-                .map_or(true, |backlink| !self[&T::Node::from(backlink)])
+                .map_or(true, |backlink| !self[&Node::Thunk(backlink)])
         })
     }
 }
@@ -129,7 +131,7 @@ impl<V, E> SelectionMap<Hypergraph<V, E>> {
 }
 
 #[must_use]
-fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<T::Node> {
+fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<Node<T>> {
     let selected: Vec<_> = selection.iter().collect();
     if let Some(op) = selected.first() {
         let mut containing = op.backlink();
@@ -148,9 +150,9 @@ fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<T::Node
     }
 }
 
-fn contains_transitively<T: Addr>(selection: &IndexSet<T::Node>, node: &T::Node) -> bool {
+fn contains_transitively<T: Addr>(selection: &IndexSet<Node<T>>, node: &Node<T>) -> bool {
     selection.contains(node)
         || node.backlink().map_or(false, |thunk| {
-            contains_transitively::<T>(selection, &thunk.into())
+            contains_transitively::<T>(selection, &Node::Thunk(thunk))
         })
 }

@@ -1,25 +1,21 @@
 use std::{
-    collections::HashSet,
     fmt::Debug,
     sync::{Arc, Weak},
 };
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
-use indexmap::IndexMap;
 
-use crate::{
-    common::{Addr, Matchable},
-    selection::SelectionMap,
-    weak_map::WeakMap,
-};
+use crate::common::{Addr, Matchable};
 
 pub mod builder;
+pub mod generic;
 mod internal;
 pub mod petgraph;
 pub mod reachability;
 pub mod subgraph;
 pub mod traits;
+pub mod utils;
 mod weakbyaddress;
 
 use self::{
@@ -132,51 +128,7 @@ where
     }
 }
 
-#[derive(Debug, Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    PartialEq(bound = ""),
-    Eq(bound = ""),
-    Hash(bound = "")
-)]
-pub enum Node<V, E> {
-    Operation(Operation<V, E>),
-    Thunk(Thunk<V, E>),
-}
-
-impl<V, E> From<Operation<V, E>> for Node<V, E> {
-    fn from(value: Operation<V, E>) -> Self {
-        Node::Operation(value)
-    }
-}
-
-impl<V, E> From<Thunk<V, E>> for Node<V, E> {
-    fn from(value: Thunk<V, E>) -> Self {
-        Node::Thunk(value)
-    }
-}
-
-impl<V, E> TryFrom<Node<V, E>> for Operation<V, E> {
-    type Error = ();
-
-    fn try_from(node: Node<V, E>) -> Result<Self, Self::Error> {
-        match node {
-            Node::Operation(op) => Ok(op),
-            Node::Thunk(_) => Err(()),
-        }
-    }
-}
-
-impl<V, E> TryFrom<Node<V, E>> for Thunk<V, E> {
-    type Error = ();
-
-    fn try_from(node: Node<V, E>) -> Result<Self, Self::Error> {
-        match node {
-            Node::Operation(_) => Err(()),
-            Node::Thunk(thunk) => Ok(thunk),
-        }
-    }
-}
+pub type Node<V, E> = generic::Node<Hypergraph<V, E>>;
 
 impl<V, E> WeakNodeInternal<V, E> {
     pub(super) fn unwrap_node(&self) -> Node<V, E> {
@@ -401,140 +353,4 @@ impl<V, E> NodeLike for Thunk<V, E> {
     fn number_of_outputs(&self) -> usize {
         self.0.outer_outputs.len()
     }
-}
-
-impl<V, E> NodeLike for Node<V, E> {
-    type T = Hypergraph<V, E>;
-
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
-        match self {
-            Node::Operation(op) => op.inputs(),
-            Node::Thunk(thunk) => thunk.inputs(),
-        }
-    }
-
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
-        match self {
-            Node::Operation(op) => op.outputs(),
-            Node::Thunk(thunk) => thunk.outputs(),
-        }
-    }
-
-    fn backlink(&self) -> Option<Thunk<V, E>> {
-        match self {
-            Node::Operation(op) => op.backlink(),
-            Node::Thunk(thunk) => thunk.backlink(),
-        }
-    }
-
-    #[must_use]
-    fn number_of_inputs(&self) -> usize {
-        match self {
-            Node::Operation(op) => op.number_of_inputs(),
-            Node::Thunk(thunk) => thunk.number_of_inputs(),
-        }
-    }
-
-    #[must_use]
-    fn number_of_outputs(&self) -> usize {
-        match self {
-            Node::Operation(op) => op.number_of_outputs(),
-            Node::Thunk(thunk) => thunk.number_of_outputs(),
-        }
-    }
-}
-
-pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<<G::T as Addr>::Thunk, bool> {
-    fn helper<T: Addr>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk) {
-        for t in thunk.thunks() {
-            helper::<T>(set, t);
-        }
-        set.insert(thunk, true);
-    }
-
-    let mut set = IndexMap::new();
-
-    for thunk in graph.thunks() {
-        helper::<G::T>(&mut set, thunk);
-    }
-
-    WeakMap(set)
-}
-
-#[must_use]
-pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::T> {
-    fn helper<T: Addr>(set: &mut IndexMap<T::Node, bool>, thunk: &T::Thunk) {
-        for node in thunk.nodes() {
-            if let Ok(thunk) = T::Thunk::try_from(node.clone()) {
-                helper::<T>(set, &thunk);
-            }
-            set.insert(node, false);
-        }
-    }
-
-    let mut set = IndexMap::new();
-
-    for node in graph.nodes() {
-        if let Ok(thunk) = <G::T as Addr>::Thunk::try_from(node.clone()) {
-            helper::<G::T>(&mut set, &thunk);
-        }
-        set.insert(node, false);
-    }
-
-    SelectionMap::from(set)
-}
-
-/// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
-pub fn find_ancestor<T: Addr>(containing: &Option<T::Thunk>, mut node: T::Node) -> Option<T::Node> {
-    while &node.backlink() != containing {
-        node = node.backlink()?.into();
-    }
-    Some(node)
-}
-
-pub fn normalised_targets<T: Addr>(
-    edge: &T::Edge,
-    containing: &Option<T::Thunk>,
-) -> Vec<Option<T::Node>> {
-    let targets = edge
-        .targets()
-        .map(|x| x.and_then(|y| find_ancestor::<T>(containing, y)))
-        .collect::<Vec<_>>();
-
-    let mut non_dupe_outputs = HashSet::new();
-    let mut outputs = Vec::new();
-    for x in targets {
-        match x.clone().map(T::Thunk::try_from) {
-            Some(Ok(t)) => {
-                non_dupe_outputs.insert(t);
-            }
-            _ => {
-                outputs.push(x);
-            }
-        }
-    }
-    outputs.extend(non_dupe_outputs.into_iter().map(|x| Some(x.into())));
-    outputs
-}
-
-pub fn number_of_normalised_targets<T: Addr>(edge: &T::Edge) -> usize {
-    let containing = edge.source().and_then(|x| x.backlink());
-    let targets = edge
-        .targets()
-        .map(|x| x.and_then(|y| find_ancestor::<T>(&containing, y)))
-        .collect::<Vec<_>>();
-
-    let mut non_dupe_outputs = HashSet::new();
-    let mut other_outputs = 0;
-    for x in targets {
-        match x.map(T::Thunk::try_from) {
-            Some(Ok(t)) => {
-                non_dupe_outputs.insert(t);
-            }
-            _ => {
-                other_outputs += 1;
-            }
-        }
-    }
-    other_outputs + non_dupe_outputs.len()
 }

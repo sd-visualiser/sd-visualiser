@@ -3,7 +3,10 @@ use std::{fmt::Debug, sync::Arc};
 use derivative::Derivative;
 use indexmap::IndexSet;
 
-use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
+use super::{
+    generic::Node,
+    traits::{EdgeLike, Graph, NodeLike, WithWeight},
+};
 use crate::{common::Addr, selection::SelectionMap};
 
 #[derive(Derivative)]
@@ -27,18 +30,20 @@ impl<T: Addr> Subgraph<T> {
     }
 }
 
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "T::Node: Debug")
-)]
-pub struct SubNode<T: Addr> {
-    pub inner: T::Node,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    pub selection: Arc<SelectionMap<T>>,
+impl<T: Addr> Node<Subgraph<T>> {
+    fn new(inner: Node<T>, selection: Arc<SelectionMap<T>>) -> Self {
+        match inner {
+            Node::Operation(inner) => Node::Operation(SubOperation { inner, selection }),
+            Node::Thunk(inner) => Node::Thunk(SubThunk { inner, selection }),
+        }
+    }
+
+    fn inner(self) -> Node<T> {
+        match self {
+            Node::Operation(SubOperation { inner, .. }) => Node::Operation(inner),
+            Node::Thunk(SubThunk { inner, .. }) => Node::Thunk(inner),
+        }
+    }
 }
 
 #[derive(Derivative)]
@@ -83,48 +88,7 @@ pub struct SubThunk<T: Addr> {
     pub selection: Arc<SelectionMap<T>>,
 }
 
-impl<T: Addr> From<SubOperation<T>> for SubNode<T> {
-    fn from(op: SubOperation<T>) -> Self {
-        Self {
-            inner: op.inner.into(),
-            selection: op.selection,
-        }
-    }
-}
-
-impl<T: Addr> From<SubThunk<T>> for SubNode<T> {
-    fn from(thunk: SubThunk<T>) -> Self {
-        Self {
-            inner: thunk.inner.into(),
-            selection: thunk.selection,
-        }
-    }
-}
-
-impl<T: Addr> TryFrom<SubNode<T>> for SubOperation<T> {
-    type Error = <T::Operation as TryFrom<T::Node>>::Error;
-
-    fn try_from(node: SubNode<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            inner: node.inner.try_into()?,
-            selection: node.selection,
-        })
-    }
-}
-
-impl<T: Addr> TryFrom<SubNode<T>> for SubThunk<T> {
-    type Error = <T::Thunk as TryFrom<T::Node>>::Error;
-
-    fn try_from(node: SubNode<T>) -> Result<Self, Self::Error> {
-        Ok(Self {
-            inner: node.inner.try_into()?,
-            selection: node.selection,
-        })
-    }
-}
-
 impl<T: Addr> Addr for Subgraph<T> {
-    type Node = SubNode<T>;
     type Edge = SubEdge<T>;
     type Operation = SubOperation<T>;
     type Thunk = SubThunk<T>;
@@ -173,11 +137,12 @@ impl<T: Addr> Graph for Subgraph<T> {
         }))
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = SubNode<T>> + '_> {
-        Box::new(self.selection.roots().map(|node| SubNode {
-            inner: node,
-            selection: self.selection.clone(),
-        }))
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Subgraph<T>>> + '_> {
+        Box::new(
+            self.selection
+                .roots()
+                .map(|node| Node::new(node, self.selection.clone())),
+        )
     }
 
     fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
@@ -206,11 +171,12 @@ impl<T: Addr> Graph for SubThunk<T> {
         }))
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Node> + '_> {
-        Box::new(self.inner.nodes().map(|node| SubNode {
-            inner: node,
-            selection: self.selection.clone(),
-        }))
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::T>> + '_> {
+        Box::new(
+            self.inner
+                .nodes()
+                .map(|node| Node::new(node, self.selection.clone())),
+        )
     }
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_> {
@@ -222,42 +188,6 @@ impl<T: Addr> Graph for SubThunk<T> {
 
     fn graph_backlink(&self) -> Option<<Self::T as Addr>::Thunk> {
         Some(self.clone())
-    }
-}
-
-impl<T: Addr> NodeLike for SubNode<T> {
-    type T = Subgraph<T>;
-
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.inputs().map(|edge| SubEdge {
-            inner: edge,
-            selection: self.selection.clone(),
-        }))
-    }
-
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.outputs().map(|edge| SubEdge {
-            inner: edge,
-            selection: self.selection.clone(),
-        }))
-    }
-
-    fn backlink(&self) -> Option<SubThunk<T>> {
-        self.inner
-            .backlink()
-            .filter(|thunk| self.selection[&T::Node::from(thunk.clone())])
-            .map(|thunk| SubThunk {
-                inner: thunk,
-                selection: self.selection.clone(),
-            })
-    }
-
-    fn number_of_inputs(&self) -> usize {
-        self.inner.number_of_inputs()
-    }
-
-    fn number_of_outputs(&self) -> usize {
-        self.inner.number_of_outputs()
     }
 }
 
@@ -281,7 +211,7 @@ impl<T: Addr> NodeLike for SubOperation<T> {
     fn backlink(&self) -> Option<SubThunk<T>> {
         self.inner
             .backlink()
-            .filter(|thunk| self.selection[&T::Node::from(thunk.clone())])
+            .filter(|thunk| self.selection[&Node::Thunk(thunk.clone())])
             .map(|thunk| SubThunk {
                 inner: thunk,
                 selection: self.selection.clone(),
@@ -317,7 +247,7 @@ impl<T: Addr> NodeLike for SubThunk<T> {
     fn backlink(&self) -> Option<SubThunk<T>> {
         self.inner
             .backlink()
-            .filter(|thunk| self.selection[&T::Node::from(thunk.clone())])
+            .filter(|thunk| self.selection[&Node::Thunk(thunk.clone())])
             .map(|thunk| SubThunk {
                 inner: thunk,
                 selection: self.selection.clone(),
@@ -336,24 +266,18 @@ impl<T: Addr> NodeLike for SubThunk<T> {
 impl<T: Addr> EdgeLike for SubEdge<T> {
     type T = Subgraph<T>;
 
-    fn source(&self) -> Option<SubNode<T>> {
+    fn source(&self) -> Option<Node<Subgraph<T>>> {
         self.inner
             .source()
             .filter(|node| self.selection[node])
-            .map(|node| SubNode {
-                inner: node,
-                selection: self.selection.clone(),
-            })
+            .map(|node| Node::new(node, self.selection.clone()))
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<SubNode<T>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Subgraph<T>>>> + '_> {
         Box::new(self.inner.targets().map(|target| {
             target
                 .filter(|node| self.selection[node])
-                .map(|node| SubNode {
-                    inner: node,
-                    selection: self.selection.clone(),
-                })
+                .map(|node| Node::new(node, self.selection.clone()))
         }))
     }
 }
@@ -381,11 +305,11 @@ where
 }
 
 pub trait ExtensibleEdge: EdgeLike {
-    fn extend_source(&self) -> Option<<Self::T as Addr>::Node> {
+    fn extend_source(&self) -> Option<Node<Self::T>> {
         None
     }
 
-    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Node> + '_> {
+    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::T>> + '_> {
         Box::new(std::iter::empty())
     }
 }
@@ -393,49 +317,43 @@ pub trait ExtensibleEdge: EdgeLike {
 impl<V, E> ExtensibleEdge for super::Edge<V, E> {}
 
 impl<T: Addr> ExtensibleEdge for SubEdge<T> {
-    fn extend_source(&self) -> Option<<Self::T as Addr>::Node> {
+    fn extend_source(&self) -> Option<Node<Self::T>> {
         self.inner
             .source()
             .filter(|node| !self.selection[node])
-            .map(|node| SubNode {
-                inner: node,
-                selection: self.selection.clone(),
-            })
+            .map(|node| Node::new(node, self.selection.clone()))
     }
 
-    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Node> + '_> {
+    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::T>> + '_> {
         Box::new(
             self.inner
                 .targets()
                 .flatten()
                 .filter(|node| !self.selection[node])
-                .map(|node| SubNode {
-                    inner: node,
-                    selection: self.selection.clone(),
-                }),
+                .map(|node| Node::new(node, self.selection.clone())),
         )
     }
 }
 
 pub trait ModifiableGraph: Graph {
-    fn remove(&mut self, _node: <Self::T as Addr>::Node) {}
-    fn extend(&mut self, _nodes: impl Iterator<Item = <Self::T as Addr>::Node>) {}
+    fn remove(&mut self, _node: Node<Self::T>) {}
+    fn extend(&mut self, _nodes: impl Iterator<Item = Node<Self::T>>) {}
 }
 
 impl<V, E> ModifiableGraph for super::Hypergraph<V, E> {}
 
 impl<T: Addr> ModifiableGraph for Subgraph<T> {
-    fn remove(&mut self, node: <Self::T as Addr>::Node) {
+    fn remove(&mut self, node: Node<Self::T>) {
         let mut extended = (*self.selection).clone();
-        extended[&node.inner] = false;
+        extended[&node.inner()] = false;
         extended.normalize();
         self.selection = Arc::new(extended);
     }
 
-    fn extend(&mut self, nodes: impl Iterator<Item = <Self::T as Addr>::Node>) {
+    fn extend(&mut self, nodes: impl Iterator<Item = Node<Self::T>>) {
         let mut extended = (*self.selection).clone();
         for node in nodes {
-            extended[&node.inner] = true;
+            extended[&node.inner()] = true;
         }
         extended.normalize();
         self.selection = Arc::new(extended);
