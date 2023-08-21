@@ -2,13 +2,28 @@ use std::{fmt::Debug, hash::Hash};
 
 use derivative::Derivative;
 
-use crate::hypergraph::{Edge, Hypergraph, Node, Operation, Thunk};
+use crate::hypergraph::{
+    traits::{EdgeLike, Graph, NodeLike},
+    Edge, Hypergraph, Node, Operation, Thunk,
+};
 
 pub trait Addr {
-    type Edge: Clone + Eq + PartialEq + Hash;
-    type Thunk: Clone + Eq + PartialEq + Hash + InOut + TryFrom<Self::Node>;
-    type Operation: Clone + Eq + PartialEq + Hash + InOut + TryFrom<Self::Node>;
-    type Node: Clone + Eq + PartialEq + Hash + InOut + From<Self::Thunk> + From<Self::Operation>;
+    type Edge: Clone + Eq + PartialEq + Hash + EdgeLike<T = Self>;
+    type Thunk: Clone
+        + Eq
+        + PartialEq
+        + Hash
+        + NodeLike<T = Self>
+        + Graph<T = Self>
+        + TryFrom<Self::Node>;
+    type Operation: Clone + Eq + PartialEq + Hash + NodeLike<T = Self> + TryFrom<Self::Node>;
+    type Node: Clone
+        + Eq
+        + PartialEq
+        + Hash
+        + NodeLike<T = Self>
+        + From<Self::Thunk>
+        + From<Self::Operation>;
 }
 
 impl<V, E> Addr for Hypergraph<V, E> {

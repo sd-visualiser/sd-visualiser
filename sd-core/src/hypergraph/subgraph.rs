@@ -4,10 +4,7 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
-use crate::{
-    common::{Addr, InOut},
-    selection::SelectionMap,
-};
+use crate::{common::Addr, selection::SelectionMap};
 
 #[derive(Derivative)]
 #[derivative(
@@ -20,11 +17,7 @@ pub struct Subgraph<T: Addr> {
     pub selection: Arc<SelectionMap<T>>,
 }
 
-impl<T: Addr> Subgraph<T>
-where
-    T::Node: NodeLike<T = T>,
-    T::Thunk: NodeLike<T = T>,
-{
+impl<T: Addr> Subgraph<T> {
     #[must_use]
     pub fn new(mut selection: SelectionMap<T>) -> Self {
         selection.normalize();
@@ -90,36 +83,6 @@ pub struct SubThunk<T: Addr> {
     pub selection: Arc<SelectionMap<T>>,
 }
 
-impl<T: Addr> InOut for SubNode<T> {
-    fn number_of_inputs(&self) -> usize {
-        self.inner.number_of_inputs()
-    }
-
-    fn number_of_outputs(&self) -> usize {
-        self.inner.number_of_outputs()
-    }
-}
-
-impl<T: Addr> InOut for SubOperation<T> {
-    fn number_of_inputs(&self) -> usize {
-        self.inner.number_of_inputs()
-    }
-
-    fn number_of_outputs(&self) -> usize {
-        self.inner.number_of_outputs()
-    }
-}
-
-impl<T: Addr> InOut for SubThunk<T> {
-    fn number_of_inputs(&self) -> usize {
-        self.inner.number_of_inputs()
-    }
-
-    fn number_of_outputs(&self) -> usize {
-        self.inner.number_of_outputs()
-    }
-}
-
 impl<T: Addr> From<SubOperation<T>> for SubNode<T> {
     fn from(op: SubOperation<T>) -> Self {
         Self {
@@ -167,11 +130,7 @@ impl<T: Addr> Addr for Subgraph<T> {
     type Thunk = SubThunk<T>;
 }
 
-impl<T: Addr> Graph for Subgraph<T>
-where
-    T::Node: NodeLike<T = T>,
-    T::Edge: EdgeLike<T = T>,
-{
+impl<T: Addr> Graph for Subgraph<T> {
     type T = Subgraph<T>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
@@ -222,10 +181,7 @@ where
     }
 }
 
-impl<T: Addr> Graph for SubThunk<T>
-where
-    T::Thunk: Graph<T = T>,
-{
+impl<T: Addr> Graph for SubThunk<T> {
     type T = Subgraph<T>;
 
     fn free_graph_inputs(
@@ -261,10 +217,7 @@ where
     }
 }
 
-impl<T: Addr> NodeLike for SubNode<T>
-where
-    T::Node: NodeLike<T = T>,
-{
+impl<T: Addr> NodeLike for SubNode<T> {
     type T = Subgraph<T>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
@@ -290,12 +243,17 @@ where
                 selection: self.selection.clone(),
             })
     }
+
+    fn number_of_inputs(&self) -> usize {
+        self.inner.number_of_inputs()
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        self.inner.number_of_outputs()
+    }
 }
 
-impl<T: Addr> NodeLike for SubOperation<T>
-where
-    T::Operation: NodeLike<T = T>,
-{
+impl<T: Addr> NodeLike for SubOperation<T> {
     type T = Subgraph<T>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
@@ -321,12 +279,17 @@ where
                 selection: self.selection.clone(),
             })
     }
+
+    fn number_of_inputs(&self) -> usize {
+        self.inner.number_of_inputs()
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        self.inner.number_of_outputs()
+    }
 }
 
-impl<T: Addr> NodeLike for SubThunk<T>
-where
-    T::Thunk: NodeLike<T = T>,
-{
+impl<T: Addr> NodeLike for SubThunk<T> {
     type T = Subgraph<T>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
@@ -352,12 +315,17 @@ where
                 selection: self.selection.clone(),
             })
     }
+
+    fn number_of_inputs(&self) -> usize {
+        self.inner.number_of_inputs()
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        self.inner.number_of_outputs()
+    }
 }
 
-impl<T: Addr> EdgeLike for SubEdge<T>
-where
-    T::Edge: EdgeLike<T = T>,
-{
+impl<T: Addr> EdgeLike for SubEdge<T> {
     type T = Subgraph<T>;
 
     fn source(&self) -> Option<SubNode<T>> {
@@ -405,11 +373,6 @@ where
 }
 
 pub trait ExtensibleEdge: EdgeLike {
-    fn extend_source(&self) -> Option<<Self::T as Addr>::Node>;
-    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Node> + '_>;
-}
-
-impl<V, E> ExtensibleEdge for super::Edge<V, E> {
     fn extend_source(&self) -> Option<<Self::T as Addr>::Node> {
         None
     }
@@ -419,10 +382,9 @@ impl<V, E> ExtensibleEdge for super::Edge<V, E> {
     }
 }
 
-impl<T: Addr> ExtensibleEdge for SubEdge<T>
-where
-    T::Edge: EdgeLike<T = T>,
-{
+impl<V, E> ExtensibleEdge for super::Edge<V, E> {}
+
+impl<T: Addr> ExtensibleEdge for SubEdge<T> {
     fn extend_source(&self) -> Option<<Self::T as Addr>::Node> {
         self.inner
             .source()
@@ -448,21 +410,13 @@ where
 }
 
 pub trait ModifiableGraph: Graph {
-    fn remove(&mut self, node: <Self::T as Addr>::Node);
-    fn extend(&mut self, nodes: impl Iterator<Item = <Self::T as Addr>::Node>);
-}
-
-impl<V, E> ModifiableGraph for super::Hypergraph<V, E> {
     fn remove(&mut self, _node: <Self::T as Addr>::Node) {}
     fn extend(&mut self, _nodes: impl Iterator<Item = <Self::T as Addr>::Node>) {}
 }
 
-impl<T: Addr> ModifiableGraph for Subgraph<T>
-where
-    T::Node: NodeLike<T = T>,
-    T::Edge: EdgeLike<T = T>,
-    T::Thunk: NodeLike<T = T>,
-{
+impl<V, E> ModifiableGraph for super::Hypergraph<V, E> {}
+
+impl<T: Addr> ModifiableGraph for Subgraph<T> {
     fn remove(&mut self, node: <Self::T as Addr>::Node) {
         let mut extended = (*self.selection).clone();
         extended[&node.inner] = false;

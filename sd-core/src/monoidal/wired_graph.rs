@@ -10,7 +10,7 @@ use crate::{
     common::{Addr, Direction, InOut, InOutIter, Link},
     hypergraph::{
         number_of_normalised_targets,
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        traits::{Graph, NodeLike},
     },
 };
 
@@ -66,11 +66,7 @@ impl<T: Addr> InOut for WiredOp<T> {
     }
 }
 
-impl<T: Addr> InOutIter for WiredOp<T>
-where
-    T::Operation: NodeLike<T = T>,
-    T::Thunk: NodeLike<T = T>,
-{
+impl<T: Addr> InOutIter for WiredOp<T> {
     type T = T;
 
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
@@ -147,11 +143,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 
     /// Determines the minimum layer from which we can output to the given `edge`
     /// `input` should be set to true if the edge is a global input
-    fn edge_layer(&self, edge: &T::Edge, input: bool) -> usize
-    where
-        T::Node: NodeLike<T = T>,
-        T::Edge: EdgeLike<T = T>,
-    {
+    fn edge_layer(&self, edge: &T::Edge, input: bool) -> usize {
         let layers = self.open_edges.get(edge);
 
         // Get the maximum layer that the slice is used on
@@ -211,11 +203,7 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     /// The added backlink is inserted into the same "compound operation" (slice) as the operation whose
     /// input/output it will form a cap/cup with.
     /// This ensures that caps and cups are not made arbitrarily wide by swap minimisation.
-    fn insert_backlink_on_layer(&mut self, edge: T::Edge, layer: usize, is_cap: bool)
-    where
-        T::Operation: NodeLike<T = T>,
-        T::Thunk: NodeLike<T = T>,
-    {
+    fn insert_backlink_on_layer(&mut self, edge: T::Edge, layer: usize, is_cap: bool) {
         let ops = &mut self.slices[layer]
             .ops
             .iter_mut()
@@ -240,10 +228,10 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
     /// This prepares all the inputs of the node and inserts relevant backlinks
     fn insert_operation(&mut self, node: &T::Node)
     where
-        T::Node: NodeLike<T = T> + Debug,
-        T::Edge: EdgeLike<T = T> + WithWeight + Debug,
-        T::Operation: NodeLike<T = T> + WithWeight + Debug,
-        T::Thunk: NodeLike<T = T> + Graph<T = T> + Debug,
+        T::Node: Debug,
+        T::Edge: Debug,
+        T::Operation: Debug,
+        T::Thunk: Debug,
     {
         // The layer we place the node is the max of the layers that the outputs can be prepared
         // and the layers that any backlinked inputs originate.
@@ -322,10 +310,10 @@ impl<T: Addr> MonoidalWiredGraphBuilder<T> {
 impl<G> From<&G> for MonoidalWiredGraph<G::T>
 where
     G: Graph,
-    <G::T as Addr>::Node: NodeLike<T = G::T> + Debug,
-    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight + Debug,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + Debug,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + Debug,
+    <G::T as Addr>::Node: Debug,
+    <G::T as Addr>::Edge: Debug,
+    <G::T as Addr>::Operation: Debug,
+    <G::T as Addr>::Thunk: Debug,
 {
     fn from(graph: &G) -> Self {
         let mut builder = MonoidalWiredGraphBuilder::<G::T>::default();

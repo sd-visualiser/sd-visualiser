@@ -257,11 +257,7 @@ impl<T: Addr> InOut for MonoidalOp<T> {
     }
 }
 
-impl<T: Addr> InOutIter for MonoidalOp<T>
-where
-    T::Operation: NodeLike<T = T>,
-    T::Thunk: NodeLike<T = T>,
-{
+impl<T: Addr> InOutIter for MonoidalOp<T> {
     type T = T;
 
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
@@ -328,8 +324,8 @@ where
 impl<T: Addr> From<&WiredOp<T>> for MonoidalOp<T>
 where
     T::Edge: Debug,
-    T::Operation: Debug + NodeLike<T = T>,
-    T::Thunk: Debug + NodeLike<T = T>,
+    T::Operation: Debug,
+    T::Thunk: Debug,
 {
     fn from(op: &WiredOp<T>) -> Self {
         match op {
@@ -362,11 +358,7 @@ impl<T: Addr> MonoidalGraphBuilder<T> {
     }
 }
 
-impl<T: Addr> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T>
-where
-    T::Operation: NodeLike<T = T>,
-    T::Thunk: NodeLike<T = T>,
-{
+impl<T: Addr> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T> {
     fn extend<I: IntoIterator<Item = Slice<MonoidalOp<T>>>>(&mut self, iter: I) {
         let mut peeking = iter.into_iter().peekable();
         if peeking.peek().is_some() {
@@ -379,8 +371,8 @@ where
 impl<T: Addr> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T>
 where
     T::Edge: Debug,
-    T::Operation: Debug + NodeLike<T = T>,
-    T::Thunk: Debug + NodeLike<T = T>,
+    T::Operation: Debug,
+    T::Thunk: Debug,
 {
     fn from(graph: &MonoidalWiredGraph<T>) -> Self {
         debug!("Input graph {:#?}", graph);

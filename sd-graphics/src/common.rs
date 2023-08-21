@@ -40,8 +40,8 @@ impl<T: Language> EdgeLabel<T> {
     pub(crate) fn from_edge<U>(edge: &U::Edge) -> Self
     where
         U: Addr,
-        U::Edge: EdgeLike<T = U> + WithWeight<Weight = Name<T>>,
-        U::Operation: NodeLike<T = U> + WithWeight<Weight = Op<T>>,
+        U::Edge: WithWeight<Weight = Name<T>>,
+        U::Operation: WithWeight<Weight = Op<T>>,
     {
         match edge.weight() {
             Name::Op => match edge.source() {

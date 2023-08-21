@@ -12,6 +12,14 @@ pub trait NodeLike {
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = <Self::T as Addr>::Edge> + '_>;
     fn backlink(&self) -> Option<<Self::T as Addr>::Thunk>;
+
+    fn number_of_inputs(&self) -> usize {
+        self.inputs().count()
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        self.outputs().count()
+    }
 }
 
 pub trait EdgeLike {

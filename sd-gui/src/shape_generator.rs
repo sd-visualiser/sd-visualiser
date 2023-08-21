@@ -10,7 +10,7 @@ use sd_core::{
     common::Addr,
     hypergraph::{
         subgraph::ExtensibleEdge,
-        traits::{Graph, NodeLike, WithWeight},
+        traits::{Graph, WithWeight},
     },
     monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
     weak_map::WeakMap,
@@ -57,10 +57,10 @@ pub fn generate_shapes<G>(
 ) -> Arc<Mutex<Promise<Shapes<G::T>>>>
 where
     G: Graph + Send + Sync + 'static,
-    <G::T as Addr>::Node: NodeLike<T = G::T> + Debug + Send + Sync,
-    <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + WithWeight + Debug + Send + Sync,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight + Debug + Send + Sync,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T> + Debug + Send + Sync,
+    <G::T as Addr>::Node: Debug + Send + Sync,
+    <G::T as Addr>::Edge: ExtensibleEdge<T = G::T> + Debug + Send + Sync,
+    <G::T as Addr>::Operation: WithWeight + Debug + Send + Sync,
+    <G::T as Addr>::Thunk: Debug + Send + Sync,
     <<G::T as Addr>::Operation as WithWeight>::Weight: Display,
 {
     let cache = shape_cache::<G>();

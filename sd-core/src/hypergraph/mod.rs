@@ -9,7 +9,7 @@ use derivative::Derivative;
 use indexmap::IndexMap;
 
 use crate::{
-    common::{Addr, InOut, Matchable},
+    common::{Addr, Matchable},
     selection::SelectionMap,
     weak_map::WeakMap,
 };
@@ -341,6 +341,16 @@ impl<V, E> NodeLike for Operation<V, E> {
             .and_then(Weak::upgrade)
             .map(|thunk_internal| Thunk(ByThinAddress(thunk_internal)))
     }
+
+    #[must_use]
+    fn number_of_inputs(&self) -> usize {
+        self.0.inputs.len()
+    }
+
+    #[must_use]
+    fn number_of_outputs(&self) -> usize {
+        self.0.outputs.len()
+    }
 }
 
 impl<V, E> NodeLike for Thunk<V, E> {
@@ -374,6 +384,16 @@ impl<V, E> NodeLike for Thunk<V, E> {
             .and_then(Weak::upgrade)
             .map(|thunk_internal| Thunk(ByThinAddress(thunk_internal)))
     }
+
+    #[must_use]
+    fn number_of_inputs(&self) -> usize {
+        self.0.free_inputs.get().expect("Failed to unlock").len()
+    }
+
+    #[must_use]
+    fn number_of_outputs(&self) -> usize {
+        self.0.outer_outputs.len()
+    }
 }
 
 impl<V, E> NodeLike for Node<V, E> {
@@ -399,33 +419,7 @@ impl<V, E> NodeLike for Node<V, E> {
             Node::Thunk(thunk) => thunk.backlink(),
         }
     }
-}
 
-impl<V, E> InOut for Operation<V, E> {
-    #[must_use]
-    fn number_of_inputs(&self) -> usize {
-        self.0.inputs.len()
-    }
-
-    #[must_use]
-    fn number_of_outputs(&self) -> usize {
-        self.0.outputs.len()
-    }
-}
-
-impl<V, E> InOut for Thunk<V, E> {
-    #[must_use]
-    fn number_of_inputs(&self) -> usize {
-        self.0.free_inputs.get().expect("Failed to unlock").len()
-    }
-
-    #[must_use]
-    fn number_of_outputs(&self) -> usize {
-        self.0.outer_outputs.len()
-    }
-}
-
-impl<V, E> InOut for Node<V, E> {
     #[must_use]
     fn number_of_inputs(&self) -> usize {
         match self {
@@ -443,16 +437,8 @@ impl<V, E> InOut for Node<V, E> {
     }
 }
 
-pub fn create_expanded<G>(graph: &G) -> WeakMap<<G::T as Addr>::Thunk, bool>
-where
-    G: Graph,
-    <G::T as Addr>::Thunk: Graph<T = G::T>,
-{
-    fn helper<T>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk)
-    where
-        T: Addr,
-        T::Thunk: Graph<T = T>,
-    {
+pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<<G::T as Addr>::Thunk, bool> {
+    fn helper<T: Addr>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk) {
         for t in thunk.thunks() {
             helper::<T>(set, t);
         }
@@ -469,16 +455,8 @@ where
 }
 
 #[must_use]
-pub fn create_selected<G>(graph: &G) -> SelectionMap<G::T>
-where
-    G: Graph,
-    <G::T as Addr>::Thunk: Graph<T = G::T>,
-{
-    fn helper<T>(set: &mut IndexMap<T::Node, bool>, thunk: &T::Thunk)
-    where
-        T: Addr,
-        T::Thunk: Graph<T = T>,
-    {
+pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::T> {
+    fn helper<T: Addr>(set: &mut IndexMap<T::Node, bool>, thunk: &T::Thunk) {
         for node in thunk.nodes() {
             if let Ok(thunk) = T::Thunk::try_from(node.clone()) {
                 helper::<T>(set, &thunk);
@@ -500,23 +478,14 @@ where
 }
 
 /// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
-pub fn find_ancestor<T>(containing: &Option<T::Thunk>, mut node: T::Node) -> Option<T::Node>
-where
-    T: Addr,
-    T::Node: NodeLike<T = T>,
-{
+pub fn find_ancestor<T: Addr>(containing: &Option<T::Thunk>, mut node: T::Node) -> Option<T::Node> {
     while &node.backlink() != containing {
         node = node.backlink()?.into();
     }
     Some(node)
 }
 
-pub fn number_of_normalised_targets<T>(edge: &T::Edge) -> usize
-where
-    T: Addr,
-    T::Node: NodeLike<T = T>,
-    T::Edge: EdgeLike<T = T>,
-{
+pub fn number_of_normalised_targets<T: Addr>(edge: &T::Edge) -> usize {
     let containing = edge.source().and_then(|x| x.backlink());
     let targets = edge
         .targets()

@@ -4,7 +4,7 @@ use petgraph::graph::NodeIndex;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
+use super::traits::{Graph, NodeLike, WithWeight};
 use crate::common::Addr;
 
 pub type PetGraph<V, E> = petgraph::Graph<PetNode<V, E>, usize>;
@@ -25,10 +25,8 @@ pub fn to_pet<G>(
 >
 where
     G: Graph,
-    <G::T as Addr>::Node: NodeLike<T = G::T>,
-    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
+    <G::T as Addr>::Edge: WithWeight,
+    <G::T as Addr>::Operation: WithWeight,
     <<G::T as Addr>::Edge as WithWeight>::Weight: Clone,
     <<G::T as Addr>::Operation as WithWeight>::Weight: Clone,
 {

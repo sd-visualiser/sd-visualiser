@@ -8,7 +8,7 @@ use sd_core::{
     graph::{Name, Op},
     hypergraph::{
         subgraph::{ExtensibleEdge, ModifiableGraph},
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        traits::{Graph, NodeLike, WithWeight},
     },
     language::{Expr, Language},
     monoidal::graph::{MonoidalGraph, MonoidalOp},
@@ -42,10 +42,8 @@ where
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
     G: ModifiableGraph,
-    <G::T as Addr>::Node: NodeLike<T = G::T>,
-    <G::T as Addr>::Edge: EdgeLike<T = G::T> + WithWeight<Weight = Name<T>>,
-    <G::T as Addr>::Operation: NodeLike<T = G::T> + WithWeight<Weight = Op<T>>,
-    <G::T as Addr>::Thunk: NodeLike<T = G::T> + Graph<T = G::T>,
+    <G::T as Addr>::Edge: WithWeight<Weight = Name<T>>,
+    <G::T as Addr>::Operation: WithWeight<Weight = Op<T>>,
 {
     let viewport = *to_screen.from();
 
@@ -112,8 +110,7 @@ pub fn generate_shapes<T>(
 ) where
     T: Addr,
     T::Edge: ExtensibleEdge<T = T>,
-    T::Operation: NodeLike<T = T> + WithWeight,
-    T::Thunk: NodeLike<T = T> + Graph<T = T>,
+    T::Operation: WithWeight,
     <T::Operation as WithWeight>::Weight: Display,
 {
     // Source

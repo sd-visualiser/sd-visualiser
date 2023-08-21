@@ -83,11 +83,7 @@ where
     }
 
     /// Normalise the selection.
-    pub fn normalize(&mut self)
-    where
-        T::Node: NodeLike<T = T>,
-        T::Thunk: NodeLike<T = T>,
-    {
+    pub fn normalize(&mut self) {
         let root_selection = normalise_selection(self);
         for (k, v) in self.0 .0.iter_mut() {
             *v = contains_transitively::<T>(&root_selection, k);
@@ -98,10 +94,7 @@ where
     ///
     /// This should only be used for normalised selections.
     #[must_use]
-    pub fn roots(&self) -> impl DoubleEndedIterator<Item = T::Node> + '_
-    where
-        T::Node: NodeLike<T = T>,
-    {
+    pub fn roots(&self) -> impl DoubleEndedIterator<Item = T::Node> + '_ {
         self.iter().filter(|node| {
             node.backlink()
                 .map_or(true, |backlink| !self[&T::Node::from(backlink)])
@@ -136,11 +129,7 @@ impl<V, E> SelectionMap<Hypergraph<V, E>> {
 }
 
 #[must_use]
-fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<T::Node>
-where
-    T::Node: NodeLike<T = T>,
-    T::Thunk: NodeLike<T = T>,
-{
+fn normalise_selection<T: Addr>(selection: &SelectionMap<T>) -> IndexSet<T::Node> {
     let selected: Vec<_> = selection.iter().collect();
     if let Some(op) = selected.first() {
         let mut containing = op.backlink();
@@ -159,10 +148,7 @@ where
     }
 }
 
-fn contains_transitively<T: Addr>(selection: &IndexSet<T::Node>, node: &T::Node) -> bool
-where
-    T::Node: NodeLike<T = T>,
-{
+fn contains_transitively<T: Addr>(selection: &IndexSet<T::Node>, node: &T::Node) -> bool {
     selection.contains(node)
         || node.backlink().map_or(false, |thunk| {
             contains_transitively::<T>(selection, &thunk.into())
