@@ -390,36 +390,41 @@ where
 
             match &node.node {
                 Node::Atom { pos, atype, .. } => {
-                    // Fair averaging constraints
-                    if ni > 0 {
-                        let sum_ins: Expression = ins.iter().sum();
-                        problem.add_constraint((*pos * ni as f64).eq(sum_ins));
-                    }
-                    if no > 0 {
-                        let sum_outs: Expression = outs.iter().sum();
-                        problem.add_constraint((*pos * no as f64).eq(sum_outs));
-                    }
-                    // Try to "squish" inputs and outputs
-                    if ni >= 2 {
-                        problem.add_objective((ins[ni - 1] - ins[0]) * ni as f32);
-                    }
-
-                    if no >= 2 {
-                        problem.add_objective((outs[no - 1] - outs[0]) * no as f32);
-                    }
-
                     match atype {
                         AtomType::Cup => {
                             for (x, y) in ins[1..].iter().copied().zip(outs) {
                                 problem.add_constraint(Expression::eq(x.into(), y));
                             }
+                            problem.add_constraint((*pos * 2.0).eq(ins[ni - 1] + ins[0]));
+                            problem.add_objective(ins[ni - 1] - ins[0]);
                         }
                         AtomType::Cap => {
                             for (x, y) in outs[1..].iter().copied().zip(ins) {
                                 problem.add_constraint(Expression::eq(x.into(), y));
                             }
+                            problem.add_constraint((*pos * 2.0).eq(outs[ni - 1] + outs[0]));
+                            problem.add_objective(outs[ni - 1] - outs[0]);
                         }
-                        AtomType::Other => {}
+                        AtomType::Other => {
+                            // Try to "squish" inputs and outputs
+                            if ni >= 2 {
+                                problem.add_objective((ins[ni - 1] - ins[0]) * ni as f32);
+                            }
+
+                            if no >= 2 {
+                                problem.add_objective((outs[no - 1] - outs[0]) * no as f32);
+                            }
+
+                            // Fair averaging constraints
+                            if ni > 0 {
+                                let sum_ins: Expression = ins.iter().sum();
+                                problem.add_constraint((*pos * ni as f64).eq(sum_ins));
+                            }
+                            if no > 0 {
+                                let sum_outs: Expression = outs.iter().sum();
+                                problem.add_constraint((*pos * no as f64).eq(sum_outs));
+                            }
+                        }
                     }
                 }
                 Node::Swap { pos, out_to_in, .. } => {
