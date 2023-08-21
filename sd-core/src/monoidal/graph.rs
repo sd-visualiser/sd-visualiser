@@ -32,7 +32,7 @@ where
     {
         #[allow(clippy::type_complexity)]
         let mut permutation: Vec<Option<(Link<T>, PermutationOutput)>> =
-            generate_permutation(start_edges, end_edges)
+            generate_permutation::<T>(start_edges, end_edges)
                 .into_iter()
                 .map(Option::Some)
                 .collect();
@@ -120,7 +120,7 @@ where
         start_edges: impl Iterator<Item = Link<T>>,
         end_edges: impl Iterator<Item = Link<T>>,
     ) -> Vec<Self> {
-        let permutation = generate_permutation(start_edges, end_edges)
+        let permutation = generate_permutation::<T>(start_edges, end_edges)
             .into_iter()
             .map(|(x, y)| (x, Option::<usize>::from(y).unwrap()));
 
@@ -263,25 +263,25 @@ impl<T: Ctx> InOutIter for MonoidalOp<T> {
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             MonoidalOp::Copy { addr, .. } => {
-                Box::new(std::iter::once(Link(addr.clone(), Direction::Forward)))
+                Box::new(std::iter::once((addr.clone(), Direction::Forward)))
             }
             MonoidalOp::Operation { addr, .. } => {
-                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
+                Box::new(addr.inputs().map(|edge| (edge, Direction::Forward)))
             }
             MonoidalOp::Thunk { body, .. } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+                    .map(|edge| (edge.clone(), Direction::Forward)),
             ),
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
-                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
             MonoidalOp::Cup { addr, intermediate } => Box::new(
                 [
                     vec![addr.clone()],
                     intermediate.clone(),
-                    vec![Link(addr.0.clone(), addr.1.flip())],
+                    vec![(addr.0.clone(), addr.1.flip())],
                 ]
                 .into_iter()
                 .flatten(),
@@ -293,26 +293,26 @@ impl<T: Ctx> InOutIter for MonoidalOp<T> {
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             MonoidalOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat(Link(addr.clone(), Direction::Forward)).take(*copies))
+                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
             }
             MonoidalOp::Operation { addr, .. } => {
-                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
             MonoidalOp::Thunk { addr, .. } => {
-                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
             MonoidalOp::Swap { addrs, out_to_in } => {
                 Box::new(out_to_in.iter().map(|idx| addrs[*idx].clone()))
             }
             MonoidalOp::Backlink { addr } => {
-                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
             MonoidalOp::Cup { intermediate, .. } => Box::new(intermediate.iter().cloned()),
             MonoidalOp::Cap { addr, intermediate } => Box::new(
                 [
                     vec![addr.clone()],
                     intermediate.clone(),
-                    vec![Link(addr.0.clone(), addr.1.flip())],
+                    vec![(addr.0.clone(), addr.1.flip())],
                 ]
                 .into_iter()
                 .flatten(),
@@ -380,7 +380,7 @@ where
             .free_inputs
             .iter()
             .chain(graph.bound_inputs.iter())
-            .map(|edge| Link(edge.clone(), Direction::Forward))
+            .map(|edge| (edge.clone(), Direction::Forward))
             .collect();
 
         // Initialise the open edges to the global inputs of the graph
@@ -430,7 +430,7 @@ where
             graph
                 .outputs
                 .iter()
-                .map(|edge| Link(edge.clone(), Direction::Forward)),
+                .map(|edge| (edge.clone(), Direction::Forward)),
             true,
         ));
 
@@ -440,7 +440,7 @@ where
             graph
                 .outputs
                 .iter()
-                .map(|edge| Link(edge.clone(), Direction::Forward)),
+                .map(|edge| (edge.clone(), Direction::Forward)),
         ));
 
         let mut graph = MonoidalGraph {

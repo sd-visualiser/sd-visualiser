@@ -3,7 +3,7 @@ use std::fmt::Display;
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use sd_core::{
-    common::{InOut, InOutIter, Link},
+    common::{InOut, InOutIter},
     decompile::{decompile, Fresh},
     graph::Name,
     hypergraph::{
@@ -230,7 +230,7 @@ pub fn generate_shapes<T>(
 
                     let (x_ins_rem, x_outs_rem) = match op {
                         MonoidalOp::Cap { addr, intermediate } => {
-                            for (&x, Link(edge, _)) in x_ins.iter().zip(intermediate) {
+                            for (&x, (edge, _)) in x_ins.iter().zip(intermediate) {
                                 let start = Pos2::new(x, y_input);
                                 let end = Pos2::new(x, y_output);
                                 shapes.push(Shape::Line {
@@ -248,7 +248,7 @@ pub fn generate_shapes<T>(
                             )
                         }
                         MonoidalOp::Cup { addr, intermediate } => {
-                            for (&x, Link(edge, _)) in x_outs.iter().zip(intermediate) {
+                            for (&x, (edge, _)) in x_outs.iter().zip(intermediate) {
                                 let start = Pos2::new(x, y_input);
                                 let end = Pos2::new(x, y_output);
                                 shapes.push(Shape::Line {
@@ -269,12 +269,12 @@ pub fn generate_shapes<T>(
                             x_ins
                                 .iter()
                                 .copied()
-                                .zip(op.input_links().map(|Link(edge, _)| edge))
+                                .zip(op.input_links().map(|(edge, _)| edge))
                                 .collect::<Vec<_>>(),
                             x_outs
                                 .iter()
                                 .copied()
-                                .zip(op.output_links().map(|Link(edge, _)| edge))
+                                .zip(op.output_links().map(|(edge, _)| edge))
                                 .collect::<Vec<_>>(),
                         ),
                     };

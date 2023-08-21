@@ -109,16 +109,16 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> MonoidalTerm<O::T, O> {
             Box::new(
                 self.outputs
                     .iter()
-                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+                    .map(|edge| (edge.clone(), Direction::Forward)),
             ) as Box<dyn Iterator<Item = Link<O::T>>>,
             fold_slice::<O>,
         );
 
-        let perm_map: HashMap<Link<O::T>, PermutationOutput> = generate_permutation(
+        let perm_map: HashMap<Link<O::T>, PermutationOutput> = generate_permutation::<O::T>(
             self.free_inputs
                 .iter()
                 .cloned()
-                .map(|edge| Link(edge, Direction::Forward)),
+                .map(|edge| (edge, Direction::Forward)),
             edges_below,
         )
         .into_iter()
@@ -126,7 +126,7 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> MonoidalTerm<O::T, O> {
 
         self.free_inputs.sort_by_key(|edge| {
             perm_map
-                .get(&Link(edge.clone(), Direction::Forward))
+                .get(&(edge.clone(), Direction::Forward))
                 .copied()
                 .and_then(Into::into)
                 .unwrap_or(usize::MAX)
@@ -139,7 +139,7 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> Slice<O> {
     pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<O::T>>) {
         let outputs = self.output_links();
 
-        let mut perm_list = generate_permutation(outputs, edges_below);
+        let mut perm_list = generate_permutation::<O::T>(outputs, edges_below);
 
         let perm_map: HashMap<O, Ratio<usize>> = self
             .ops

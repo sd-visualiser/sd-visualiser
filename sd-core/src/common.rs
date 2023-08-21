@@ -1,7 +1,5 @@
 use std::{fmt::Debug, hash::Hash};
 
-use derivative::Derivative;
-
 use crate::hypergraph::{
     generic::{Ctx, Edge},
     traits::{NodeLike, WithWeight},
@@ -23,15 +21,7 @@ impl Direction {
     }
 }
 
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "T::Edge: Debug")
-)]
-pub struct Link<T: Ctx>(pub T::Edge, pub Direction);
+pub type Link<T> = (Edge<T>, Direction);
 
 /// Specifies an operation which has inputs and outputs.
 pub trait InOut {

@@ -75,18 +75,18 @@ impl<T: Ctx> InOutIter for WiredOp<T> {
     fn input_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             WiredOp::Copy { addr, .. } => {
-                Box::new(std::iter::once(Link(addr.clone(), Direction::Forward)))
+                Box::new(std::iter::once((addr.clone(), Direction::Forward)))
             }
             WiredOp::Operation { addr } => {
-                Box::new(addr.inputs().map(|edge| Link(edge, Direction::Forward)))
+                Box::new(addr.inputs().map(|edge| (edge, Direction::Forward)))
             }
             WiredOp::Thunk { body, .. } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|edge| Link(edge.clone(), Direction::Forward)),
+                    .map(|edge| (edge.clone(), Direction::Forward)),
             ),
             WiredOp::Backlink { addr } => {
-                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
         }
     }
@@ -94,16 +94,16 @@ impl<T: Ctx> InOutIter for WiredOp<T> {
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
             WiredOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat(Link(addr.clone(), Direction::Forward)).take(*copies))
+                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
             }
             WiredOp::Operation { addr } => {
-                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
             WiredOp::Thunk { addr, .. } => {
-                Box::new(addr.outputs().map(|edge| Link(edge, Direction::Forward)))
+                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
             WiredOp::Backlink { addr } => {
-                Box::new(std::iter::once(Link(addr.clone(), Direction::Backward)))
+                Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
         }
     }

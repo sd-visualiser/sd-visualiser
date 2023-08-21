@@ -56,12 +56,12 @@ pub(crate) fn generate_permutation<'a, T: Ctx>(
 
     // Pair up edges that need pairing
     for i in 0..out.len() {
-        let k @ Link(x, dir) = &out[i].0;
+        let k @ (x, dir) = &out[i].0;
         if *dir == Direction::Backward && !end_map.contains_key(k) {
             if let Some(j) = out
                 .iter()
                 .enumerate()
-                .filter(|(_, (Link(y, dir), _))| y == x && *dir == Direction::Forward)
+                .filter(|(_, ((y, dir), _))| y == x && *dir == Direction::Forward)
                 .map(|(a, _)| a)
                 .min_by_key(|a| a.abs_diff(i))
             {
