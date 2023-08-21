@@ -25,6 +25,14 @@ impl EdgeLike for SyntaxEdge {
     }
 }
 
+impl WithWeight for SyntaxEdge {
+    type Weight = ();
+
+    fn weight(&self) -> &Self::Weight {
+        &()
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct SyntaxOp {
     op: Op,

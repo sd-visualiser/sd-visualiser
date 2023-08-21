@@ -9,9 +9,8 @@ use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
     hypergraph::{
-        generic::{Ctx, Node},
+        generic::{Ctx, EdgeWeight, Node},
         subgraph::ModifiableGraph,
-        traits::WithWeight,
     },
     selection::SelectionMap,
     weak_map::WeakMap,
@@ -365,8 +364,7 @@ impl<T: Ctx> Shape<T> {
 
     pub fn find_variable(&self, variable: &str) -> Option<Pos2>
     where
-        T::Edge: WithWeight,
-        <T::Edge as WithWeight>::Weight: Matchable,
+        EdgeWeight<T>: Matchable,
     {
         match self {
             Shape::Rectangle { rect, addr, .. } => addr.is_match(variable).then_some(rect.center()),

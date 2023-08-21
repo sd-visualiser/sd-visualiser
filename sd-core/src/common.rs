@@ -1,7 +1,7 @@
 use std::{fmt::Debug, hash::Hash};
 
 use crate::hypergraph::{
-    generic::{Ctx, Edge},
+    generic::{Ctx, Edge, EdgeWeight},
     traits::{NodeLike, WithWeight},
 };
 
@@ -43,8 +43,7 @@ pub trait Matchable {
 impl<V> Matchable for &V
 where
     V: NodeLike,
-    Edge<V::Ctx>: WithWeight,
-    <Edge<V::Ctx> as WithWeight>::Weight: Matchable,
+    EdgeWeight<V::Ctx>: Matchable,
 {
     fn is_match(&self, variable: &str) -> bool {
         self.outputs().any(|edge| edge.weight().is_match(variable))

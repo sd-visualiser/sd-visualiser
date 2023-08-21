@@ -2,20 +2,23 @@ use std::fmt::Debug;
 
 use derivative::Derivative;
 
-use super::traits::{EdgeLike, Graph, NodeLike};
+use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
 
 /// A context records which type of graph we are working with.
 ///
 /// Normally the type implement `Ctx` will also implement `GraphLike` (see `Hypergraph`).
 pub trait Ctx {
-    type Edge: EdgeLike<Ctx = Self>;
-    type Operation: NodeLike<Ctx = Self>;
+    type Edge: EdgeLike<Ctx = Self> + WithWeight;
+    type Operation: NodeLike<Ctx = Self> + WithWeight;
     type Thunk: NodeLike<Ctx = Self> + Graph<Ctx = Self>;
 }
 
 pub type Edge<T> = <T as Ctx>::Edge;
 pub type Operation<T> = <T as Ctx>::Operation;
 pub type Thunk<T> = <T as Ctx>::Thunk;
+
+pub type EdgeWeight<T> = <Edge<T> as WithWeight>::Weight;
+pub type NodeWeight<T> = <Operation<T> as WithWeight>::Weight;
 
 #[derive(Derivative)]
 #[derivative(

@@ -5,7 +5,7 @@ use petgraph::graph::NodeIndex;
 use serde::Serialize;
 
 use super::{
-    generic::{Edge, Node, Operation},
+    generic::{Edge, EdgeWeight, Node, NodeWeight},
     traits::{Graph, NodeLike, WithWeight},
 };
 
@@ -19,15 +19,11 @@ pub enum PetNode<V, E> {
 }
 
 #[allow(clippy::type_complexity)]
-pub fn to_pet<G>(
-    hypergraph: &G,
-) -> PetGraph<<Operation<G::Ctx> as WithWeight>::Weight, <Edge<G::Ctx> as WithWeight>::Weight>
+pub fn to_pet<G>(hypergraph: &G) -> PetGraph<NodeWeight<G::Ctx>, EdgeWeight<G::Ctx>>
 where
     G: Graph,
-    Edge<G::Ctx>: WithWeight,
-    Operation<G::Ctx>: WithWeight,
-    <Edge<G::Ctx> as WithWeight>::Weight: Clone,
-    <Operation<G::Ctx> as WithWeight>::Weight: Clone,
+    EdgeWeight<G::Ctx>: Clone,
+    NodeWeight<G::Ctx>: Clone,
 {
     let mut graph = petgraph::Graph::new();
 

@@ -4,7 +4,7 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::{
-    generic::Node,
+    generic::{EdgeWeight, Node, NodeWeight},
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
 };
 use crate::{hypergraph::generic::Ctx, selection::SelectionMap};
@@ -280,22 +280,16 @@ impl<T: Ctx> EdgeLike for SubEdge<T> {
     }
 }
 
-impl<T: Ctx> WithWeight for SubEdge<T>
-where
-    T::Edge: WithWeight,
-{
-    type Weight = <T::Edge as WithWeight>::Weight;
+impl<T: Ctx> WithWeight for SubEdge<T> {
+    type Weight = EdgeWeight<T>;
 
     fn weight(&self) -> &Self::Weight {
         self.inner.weight()
     }
 }
 
-impl<T: Ctx> WithWeight for SubOperation<T>
-where
-    T::Operation: WithWeight,
-{
-    type Weight = <T::Operation as WithWeight>::Weight;
+impl<T: Ctx> WithWeight for SubOperation<T> {
+    type Weight = NodeWeight<T>;
 
     fn weight(&self) -> &Self::Weight {
         self.inner.weight()

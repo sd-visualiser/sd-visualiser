@@ -7,7 +7,7 @@ use sd_core::{
     decompile::{decompile, Fresh},
     graph::Name,
     hypergraph::{
-        generic::{Ctx, Edge, Node, Operation, Thunk},
+        generic::{Ctx, Edge, Node, NodeWeight, Operation, Thunk},
         subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, NodeLike, WithWeight},
     },
@@ -113,8 +113,7 @@ pub fn generate_shapes<T>(
 ) where
     T: Ctx,
     T::Edge: ExtensibleEdge<Ctx = T>,
-    T::Operation: WithWeight,
-    <T::Operation as WithWeight>::Weight: Display,
+    NodeWeight<T>: Display,
 {
     // Source
     for (&x, addr) in layout

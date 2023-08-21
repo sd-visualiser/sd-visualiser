@@ -12,7 +12,7 @@ use sd_core::{
     decompile::Fresh,
     graph::{Name, SyntaxHypergraph},
     hypergraph::{
-        generic::{Edge, Operation, Thunk},
+        generic::{Edge, EdgeWeight, NodeWeight, Operation, Thunk},
         subgraph::{ExtensibleEdge, ModifiableGraph},
         traits::{Graph, WithWeight},
         utils::{create_expanded, create_selected},
@@ -196,11 +196,11 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        Edge<G::Ctx>: ExtensibleEdge + WithWeight + Debug + Send + Sync,
-        Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
+        Operation<G::Ctx>: Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
-        <Edge<G::Ctx> as WithWeight>::Weight: Matchable,
-        <Operation<G::Ctx> as WithWeight>::Weight: Display,
+        EdgeWeight<G::Ctx>: Matchable,
+        NodeWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -227,7 +227,7 @@ where
         Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
         Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
-        <Operation<G::Ctx> as WithWeight>::Weight: Display,
+        NodeWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here

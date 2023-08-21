@@ -8,9 +8,9 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     hypergraph::{
-        generic::{Edge, Operation, Thunk},
+        generic::{Edge, NodeWeight, Operation, Thunk},
         subgraph::ExtensibleEdge,
-        traits::{Graph, WithWeight},
+        traits::Graph,
     },
     monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
     weak_map::WeakMap,
@@ -54,9 +54,9 @@ pub fn generate_shapes<G>(
 where
     G: Graph + Send + Sync + 'static,
     Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
-    Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
+    Operation<G::Ctx>: Debug + Send + Sync,
     Thunk<G::Ctx>: Debug + Send + Sync,
-    <Operation<G::Ctx> as WithWeight>::Weight: Display,
+    NodeWeight<G::Ctx>: Display,
 {
     let cache = shape_cache::<G>();
     let mut guard = cache.lock().unwrap();

@@ -5,7 +5,10 @@ use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use sd_core::{
     common::InOut,
-    hypergraph::{generic::Ctx, traits::WithWeight},
+    hypergraph::{
+        generic::{Ctx, NodeWeight},
+        traits::WithWeight,
+    },
     lp::LpProblem,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     weak_map::WeakMap,
@@ -253,8 +256,7 @@ fn layout_internal<T: Ctx>(
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable>
 where
-    T::Operation: WithWeight,
-    <T::Operation as WithWeight>::Weight: Display,
+    NodeWeight<T>: Display,
 {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
@@ -475,8 +477,7 @@ pub fn layout<T: Ctx>(
     expanded: &WeakMap<T::Thunk, bool>,
 ) -> Result<Layout, LayoutError>
 where
-    T::Operation: WithWeight,
-    <T::Operation as WithWeight>::Weight: Display,
+    NodeWeight<T>: Display,
 {
     let mut problem = LpProblem::default();
 
