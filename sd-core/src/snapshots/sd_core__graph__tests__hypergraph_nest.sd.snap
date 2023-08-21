@@ -4,13 +4,13 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Operation(Op(Lambda)),
+    Operation(Lambda),
     Edge(Thunk(Addr)),
     Edge(Op),
     Thunk(Graph(
       nodes: [
         Edge(BoundVar(Variable("x"))),
-        Operation(Op(Lambda)),
+        Operation(Lambda),
         Edge(Thunk(Addr)),
         Edge(Op),
         Thunk(Graph(

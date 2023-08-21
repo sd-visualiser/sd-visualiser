@@ -4,23 +4,23 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Operation(Op(Lambda)),
+    Operation(Lambda),
     Edge(Thunk(Addr)),
     Edge(BoundVar(Variable("f"))),
     Thunk(Graph(
       nodes: [
         Edge(BoundVar(Variable("f"))),
         Edge(BoundVar(Variable("x"))),
-        Operation(Op(App)),
+        Operation(App),
         Edge(BoundVar(Variable("g"))),
         Edge(Op),
-        Operation(Op(Lambda)),
+        Operation(Lambda),
         Edge(Thunk(Addr)),
         Thunk(Graph(
           nodes: [
             Edge(BoundVar(Variable("f"))),
             Edge(BoundVar(Variable("y"))),
-            Operation(Op(App)),
+            Operation(App),
             Edge(Op),
           ],
           node_holes: [],

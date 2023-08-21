@@ -4,7 +4,7 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
-    graph::{Name, Op},
+    graph::Name,
     hypergraph::{
         generic::{Edge, Node, Operation},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
@@ -44,7 +44,7 @@ pub fn decompile<G, T: Language>(graph: &G) -> Result<Expr<T>, DecompilationErro
 where
     G: Graph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    Operation<G::Ctx>: WithWeight<Weight = Op<T>>,
+    Operation<G::Ctx>: WithWeight<Weight = T::Op>,
     T::Var: Fresh,
 {
     let mut binds = Vec::default();
@@ -86,7 +86,7 @@ where
                 }
 
                 let value = Value::Op {
-                    op: op.weight().0.clone(),
+                    op: op.weight().clone(),
                     args,
                 };
 

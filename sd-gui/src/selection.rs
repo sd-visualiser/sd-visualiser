@@ -7,7 +7,7 @@ use eframe::egui;
 use indexmap::IndexMap;
 use sd_core::{
     decompile::{decompile, Fresh},
-    graph::{Name, Op, SyntaxHypergraph},
+    graph::{Name, SyntaxHypergraph},
     hypergraph::{
         subgraph::{SubThunk, Subgraph},
         Thunk,
@@ -63,7 +63,7 @@ pub struct SelectionInternal<T: Language> {
 impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn new(
         selection: &SelectionMap<SyntaxHypergraph<T>>,
-        expanded: &WeakMap<Thunk<Op<T>, Name<T>>, bool>,
+        expanded: &WeakMap<Thunk<T::Op, Name<T>>, bool>,
         name: String,
     ) -> Self
     where

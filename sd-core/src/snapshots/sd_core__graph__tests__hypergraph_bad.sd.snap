@@ -5,14 +5,14 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Edge(FreeVar(Variable("x"))),
-    Operation(Op(Minus)),
+    Operation(Minus),
     Edge(Op),
     Edge(BoundVar(Variable("d"))),
-    Operation(Op(Number(1))),
-    Operation(Op(Eq)),
+    Operation(Number(1)),
+    Operation(Eq),
     Edge(Op),
     Edge(BoundVar(Variable("c"))),
-    Operation(Op(Number(1))),
+    Operation(Number(1)),
   ],
   node_holes: [],
   edge_property: directed,

@@ -4,7 +4,7 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Operation(Op(Lambda)),
+    Operation(Lambda),
     Edge(Thunk(Addr)),
     Edge(Op),
     Thunk(Graph(
@@ -13,7 +13,7 @@ Graph(
         Edge(BoundVar(Variable("b"))),
         Edge(BoundVar(Variable("d"))),
         Edge(BoundVar(Variable("c"))),
-        Operation(Op(Plus)),
+        Operation(Plus),
         Edge(Op),
       ],
       node_holes: [],

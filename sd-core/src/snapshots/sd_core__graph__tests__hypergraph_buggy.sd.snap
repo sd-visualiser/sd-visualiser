@@ -6,7 +6,7 @@ Graph(
   nodes: [
     Edge(FreeVar(Variable("a"))),
     Edge(FreeVar(Variable("b"))),
-    Operation(Op(Lambda)),
+    Operation(Lambda),
     Edge(Thunk(Addr)),
     Edge(Op),
     Thunk(Graph(
@@ -14,14 +14,14 @@ Graph(
         Edge(FreeVar(Variable("a"))),
         Edge(FreeVar(Variable("b"))),
         Edge(BoundVar(Variable("x"))),
-        Operation(Op(Lambda)),
+        Operation(Lambda),
         Edge(Thunk(Addr)),
         Edge(Op),
         Thunk(Graph(
           nodes: [
             Edge(FreeVar(Variable("b"))),
             Edge(BoundVar(Variable("y"))),
-            Operation(Op(Not)),
+            Operation(Not),
             Edge(Op),
           ],
           node_holes: [],

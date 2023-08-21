@@ -4,14 +4,14 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Operation(Op(Plus)),
+    Operation(Plus),
     Edge(BoundVar(Variable("x"))),
     Edge(Thunk(Addr)),
     Edge(BoundVar(Variable("y"))),
     Thunk(Graph(
       nodes: [
         Edge(BoundVar(Variable("x"))),
-        Operation(Op(Minus)),
+        Operation(Minus),
         Edge(Op),
       ],
       node_holes: [],
@@ -21,7 +21,7 @@ Graph(
         Some((1, 2, 0)),
       ],
     )),
-    Operation(Op(Number(1))),
+    Operation(Number(1)),
   ],
   node_holes: [],
   edge_property: directed,

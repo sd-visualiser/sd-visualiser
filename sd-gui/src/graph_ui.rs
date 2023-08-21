@@ -10,7 +10,7 @@ use eframe::{
 use sd_core::{
     common::{Direction, Matchable},
     decompile::Fresh,
-    graph::{Name, Op, SyntaxHypergraph},
+    graph::{Name, SyntaxHypergraph},
     hypergraph::{
         generic::{Edge, Operation, Thunk},
         subgraph::{ExtensibleEdge, ModifiableGraph},
@@ -114,7 +114,7 @@ where
         T::VarDef: PrettyPrint,
         Expr<T>: PrettyPrint,
         Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
-        Operation<G::Ctx>: WithWeight<Weight = Op<T>> + Debug + Send + Sync,
+        Operation<G::Ctx>: WithWeight<Weight = T::Op> + Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);

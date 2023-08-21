@@ -5,7 +5,7 @@ use egui::{vec2, Pos2, Vec2};
 use flo_curves::Coord2;
 use pretty::RcDoc;
 use sd_core::{
-    graph::{Name, Op},
+    graph::Name,
     hypergraph::{
         generic::Ctx,
         traits::{EdgeLike, NodeLike, WithWeight},
@@ -43,7 +43,7 @@ impl<T: Language> EdgeLabel<T> {
     where
         U: Ctx,
         U::Edge: WithWeight<Weight = Name<T>>,
-        U::Operation: WithWeight<Weight = Op<T>>,
+        U::Operation: WithWeight<Weight = T::Op>,
     {
         match edge.weight() {
             Name::Op => match edge.source() {
@@ -51,7 +51,7 @@ impl<T: Language> EdgeLabel<T> {
                 Some(node) => {
                     let op = node.into_operation().unwrap();
                     Self::Operation(
-                        op.weight().0.clone(),
+                        op.weight().clone(),
                         op.inputs()
                             .map(|edge| Self::from_edge::<U>(&edge))
                             .collect(),

@@ -18,37 +18,7 @@ use crate::{
         Hypergraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
-    prettyprinter::PrettyPrint,
 };
-
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct Op<T: Language>(pub T::Op);
-
-impl<T: Language> Display for Op<T>
-where
-    T::Op: Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl<T: Language> PrettyPrint for Op<T>
-where
-    T::Op: PrettyPrint,
-{
-    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
-        self.0.to_doc()
-    }
-}
 
 #[derive(Derivative)]
 #[derivative(
@@ -91,7 +61,7 @@ impl<T: Language> Name<T> {
     }
 }
 
-pub type SyntaxHypergraph<T> = Hypergraph<Op<T>, Name<T>>;
+pub type SyntaxHypergraph<T> = Hypergraph<<T as Language>::Op, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
@@ -100,7 +70,7 @@ where
     T::Var: Display,
 {
     #[error("Error constructing hypergraph")]
-    HypergraphError(#[from] HypergraphError<Op<T>, Name<T>>),
+    HypergraphError(#[from] HypergraphError<T::Op, Name<T>>),
     #[error("Couldn't find location of variable `{0}`")]
     VariableError(T::Var),
     #[error("Attempted to alias `{0:?}` to `{1}`")]
@@ -118,22 +88,22 @@ struct Environment<F, T: Language> {
     /// The fragment of the hypergraph we are building in
     fragment: F,
     /// Hanging input ports of nodes, with the variable they should be connected to
-    inputs: Vec<(InPort<Op<T>, Name<T>>, T::Var)>,
+    inputs: Vec<(InPort<T::Op, Name<T>>, T::Var)>,
 
     /// Mapping from variables to the output port that corresponds to them
-    outputs: HashMap<T::Var, OutPort<Op<T>, Name<T>>>,
+    outputs: HashMap<T::Var, OutPort<T::Op, Name<T>>>,
 }
 
 enum ProcessInput<T: Language> {
     Variables(Vec<T::VarDef>),
-    InPort(InPort<Op<T>, Name<T>>),
+    InPort(InPort<T::Op, Name<T>>),
 }
 
 impl<T, F> Environment<F, T>
 where
     T: Language + 'static,
     T::Var: Display,
-    F: Fragment<NodeWeight = Op<T>, EdgeWeight = Name<T>>,
+    F: Fragment<NodeWeight = T::Op, EdgeWeight = Name<T>>,
 {
     /// Create a new empty environment from a given `fragment`
     fn new(fragment: F) -> Self {
@@ -178,7 +148,7 @@ where
 
                 let operation_node =
                     self.fragment
-                        .add_operation(args.len(), output_weights, Op(op.clone()));
+                        .add_operation(args.len(), output_weights, op.clone());
                 for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
                     match arg {
                         Arg::Value(value) => {
@@ -223,7 +193,7 @@ where
     fn process_thunk(
         &mut self,
         thunk: &Thunk<T>,
-        in_port: InPort<Op<T>, Name<T>>,
+        in_port: InPort<T::Op, Name<T>>,
     ) -> Result<(), ConvertError<T>> {
         let thunk_node = self.fragment.add_thunk(
             thunk.args.iter().cloned().map(Name::BoundVar),

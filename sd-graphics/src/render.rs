@@ -5,7 +5,7 @@ use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter, Link},
     decompile::{decompile, Fresh},
-    graph::{Name, Op},
+    graph::Name,
     hypergraph::{
         generic::{Ctx, Edge, Node, Operation, Thunk},
         subgraph::{ExtensibleEdge, ModifiableGraph},
@@ -44,7 +44,7 @@ where
     Expr<T>: PrettyPrint,
     G: ModifiableGraph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    Operation<G::Ctx>: WithWeight<Weight = Op<T>>,
+    Operation<G::Ctx>: WithWeight<Weight = T::Op>,
 {
     let viewport = *to_screen.from();
 
