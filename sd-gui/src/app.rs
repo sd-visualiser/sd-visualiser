@@ -507,7 +507,7 @@ impl eframe::App for App {
                 .show(ctx, |ui| {
                     ui.heading(format!("SD Visualiser ({})", env!("CARGO_PKG_VERSION")));
                     ui.label("A string diagram visualiser.");
-                    ui.label(format!("LP backend: {}", sd_graphics::LP_BACKEND));
+                    ui.label(format!("LP backend: {}", sd_core::LP_BACKEND));
                     ui.horizontal(|ui| {
                         ui.label("Homepage:");
                         ui.hyperlink(env!("CARGO_PKG_HOMEPAGE"));

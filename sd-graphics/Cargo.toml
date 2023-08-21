@@ -28,6 +28,6 @@ serde = "1.0.175"
 
 [features]
 default = ["minilp"]
-cbc = ["good_lp/coin_cbc"]
-highs = ["good_lp/highs"]
-minilp = ["good_lp/minilp"]
+cbc = ["good_lp/coin_cbc", "sd-core/cbc"]
+highs = ["good_lp/highs", "sd-core/highs"]
+minilp = ["good_lp/minilp", "sd-core/minilp"]

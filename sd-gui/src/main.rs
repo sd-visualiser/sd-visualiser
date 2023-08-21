@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use sd_graphics::LP_BACKEND;
+use sd_core::LP_BACKEND;
 
 #[derive(Parser)]
 #[command(

@@ -6,6 +6,7 @@ use itertools::Itertools;
 use sd_core::{
     common::{Addr, InOut},
     hypergraph::traits::WithWeight,
+    lp::LpProblem,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     weak_map::WeakMap,
 };
@@ -13,7 +14,7 @@ use sd_core::{
 use serde::Serialize;
 use thiserror::Error;
 
-use crate::{common::RADIUS_OPERATION, lp::LpProblem};
+use crate::common::RADIUS_OPERATION;
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {

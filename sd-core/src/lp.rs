@@ -23,27 +23,23 @@ pub struct LpProblem {
 }
 
 impl LpProblem {
-    pub(crate) fn add_variable(&mut self, var_def: VariableDefinition) -> Variable {
+    pub fn add_variable(&mut self, var_def: VariableDefinition) -> Variable {
         self.problem.add(var_def)
     }
 
-    pub(crate) fn add_variables(
-        &mut self,
-        var_def: VariableDefinition,
-        len: usize,
-    ) -> Vec<Variable> {
+    pub fn add_variables(&mut self, var_def: VariableDefinition, len: usize) -> Vec<Variable> {
         self.problem.add_vector(var_def, len)
     }
 
-    pub(crate) fn add_objective(&mut self, objective: impl IntoAffineExpression) {
+    pub fn add_objective(&mut self, objective: impl IntoAffineExpression) {
         self.objective += objective;
     }
 
-    pub(crate) fn add_constraint(&mut self, constraint: Constraint) {
+    pub fn add_constraint(&mut self, constraint: Constraint) {
         self.constraints.push(constraint);
     }
 
-    pub(crate) fn minimise<S: Solver>(
+    pub fn minimise<S: Solver>(
         self,
         solver: S,
     ) -> Result<
