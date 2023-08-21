@@ -402,8 +402,8 @@ where
                             for (x, y) in outs[1..].iter().copied().zip(ins) {
                                 problem.add_constraint(Expression::eq(x.into(), y));
                             }
-                            problem.add_constraint((*pos * 2.0).eq(outs[ni - 1] + outs[0]));
-                            problem.add_objective(outs[ni - 1] - outs[0]);
+                            problem.add_constraint((*pos * 2.0).eq(outs[no - 1] + outs[0]));
+                            problem.add_objective(outs[no - 1] - outs[0]);
                         }
                         AtomType::Other => {
                             // Try to "squish" inputs and outputs
