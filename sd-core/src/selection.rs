@@ -10,7 +10,6 @@ use crate::{
         reachability::NReachable,
         traits::NodeLike,
         utils::find_ancestor,
-        Hypergraph,
     },
     weak_map::WeakMap,
 };
@@ -106,9 +105,7 @@ where
                 .map_or(true, |backlink| !self[&Node::Thunk(backlink)])
         })
     }
-}
 
-impl<V, E> SelectionMap<Hypergraph<V, E>> {
     /// Extend the selection using reachability.
     /// If `direction` is `None`, extend the selection in both directions.
     /// Otherwise extend the selection in the given direction up to the given depth.

@@ -4,11 +4,11 @@ use indexmap::IndexSet;
 use itertools::Itertools;
 
 use super::{
+    generic::{Ctx, Node},
     traits::{EdgeLike, NodeLike},
-    Node,
 };
 
-impl<V, E> Node<V, E> {
+impl<T: Ctx> Node<T> {
     pub fn successors(&self) -> impl Iterator<Item = Self> + '_ {
         self.outputs()
             .flat_map(|edge| edge.targets().flatten().collect::<Vec<_>>())
@@ -77,32 +77,32 @@ impl<V, E> Node<V, E> {
     }
 
     #[inline]
-    fn boxed_sucessors(node: &Node<V, E>) -> Box<dyn Iterator<Item = Node<V, E>> + '_> {
-        Box::new(node.successors())
+    fn boxed_sucessors(&self) -> Box<dyn Iterator<Item = Self> + '_> {
+        Box::new(self.successors())
     }
 
     #[inline]
-    fn boxed_predecessors(node: &Node<V, E>) -> Box<dyn Iterator<Item = Node<V, E>> + '_> {
-        Box::new(node.predecessors())
+    fn boxed_predecessors(&self) -> Box<dyn Iterator<Item = Self> + '_> {
+        Box::new(self.predecessors())
     }
 }
 
 type NextFn<T> = fn(&T) -> Box<dyn Iterator<Item = T> + '_>;
-pub struct NReachable<V, E> {
+pub struct NReachable<T: Ctx> {
     depth_limit: usize,
-    seen: HashSet<Node<V, E>>,
+    seen: HashSet<Node<T>>,
     // invariant: for each (i, node) in frontier, i increases monotonically
-    frontier: VecDeque<(usize, Node<V, E>)>,
-    next_nodes: NextFn<Node<V, E>>,
+    frontier: VecDeque<(usize, Node<T>)>,
+    next_nodes: NextFn<Node<T>>,
 }
 
-impl<V, E> NReachable<V, E> {
+impl<T: Ctx> NReachable<T> {
     #[inline]
-    pub fn forward_from(nodes: impl IntoIterator<Item = Node<V, E>>) -> Self {
+    pub fn forward_from(nodes: impl IntoIterator<Item = Node<T>>) -> Self {
         Self::forward_from_n(nodes, usize::MAX)
     }
 
-    pub fn forward_from_n(nodes: impl IntoIterator<Item = Node<V, E>>, depth_limit: usize) -> Self {
+    pub fn forward_from_n(nodes: impl IntoIterator<Item = Node<T>>, depth_limit: usize) -> Self {
         Self {
             depth_limit,
             seen: HashSet::default(),
@@ -112,14 +112,11 @@ impl<V, E> NReachable<V, E> {
     }
 
     #[inline]
-    pub fn backward_from(nodes: impl IntoIterator<Item = Node<V, E>>) -> Self {
+    pub fn backward_from(nodes: impl IntoIterator<Item = Node<T>>) -> Self {
         Self::backward_from_n(nodes, usize::MAX)
     }
 
-    pub fn backward_from_n(
-        nodes: impl IntoIterator<Item = Node<V, E>>,
-        depth_limit: usize,
-    ) -> Self {
+    pub fn backward_from_n(nodes: impl IntoIterator<Item = Node<T>>, depth_limit: usize) -> Self {
         Self {
             depth_limit,
             seen: HashSet::default(),
@@ -131,16 +128,16 @@ impl<V, E> NReachable<V, E> {
     #[inline]
     #[must_use]
     pub fn bidirectional_from(
-        nodes: impl IntoIterator<Item = Node<V, E>> + Clone,
-    ) -> IndexSet<Node<V, E>> {
+        nodes: impl IntoIterator<Item = Node<T>> + Clone,
+    ) -> IndexSet<Node<T>> {
         Self::bidirectional_from_n(nodes, usize::MAX)
     }
 
     #[must_use]
     pub fn bidirectional_from_n(
-        nodes: impl IntoIterator<Item = Node<V, E>> + Clone,
+        nodes: impl IntoIterator<Item = Node<T>> + Clone,
         depth_limit: usize,
-    ) -> IndexSet<Node<V, E>> {
+    ) -> IndexSet<Node<T>> {
         let forward: IndexSet<_> = Self::forward_from_n(nodes.clone(), depth_limit).collect();
         let backward: IndexSet<_> = Self::backward_from_n(nodes, depth_limit).collect();
         forward.intersection(&backward).cloned().collect()
@@ -156,8 +153,8 @@ impl<V, E> NReachable<V, E> {
     }
 }
 
-impl<V, E> Iterator for NReachable<V, E> {
-    type Item = Node<V, E>;
+impl<T: Ctx> Iterator for NReachable<T> {
+    type Item = Node<T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.frontier.pop_front() {
