@@ -25,7 +25,7 @@
         projects.sd = {
           relPath = "";
           profiles.release = {
-            features = [ "cbc" ]; # NOTE: does not set features for trunk
+            features = if target != "web" then [ "cbc" ] else null;
             runTests = target == "linux";
           };
         };
