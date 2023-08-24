@@ -22,9 +22,9 @@ use sd_core::LP_BACKEND;
 )]
 /// String diagram visualiser
 ///
-/// Homepage: <https://huaweiukpl.github.io/sd-visualiser>
+/// Homepage: <https://calintat.github.io/sd-visualiser>
 ///
-/// Please report bugs at <https://github.com/HuaweiUKPL/sd-visualiser/issues>.
+/// Please report bugs at <https://github.com/calintat/sd-visualiser/issues>.
 struct Args {
     /// Read in a chil file
     #[arg(long, value_name = "FILE")]
