@@ -30,7 +30,6 @@ where
     where
         T::Edge: Debug,
     {
-        #[allow(clippy::type_complexity)]
         let mut permutation: Vec<Option<(Link<T>, PermutationOutput)>> =
             generate_permutation::<T>(start_edges, end_edges)
                 .into_iter()

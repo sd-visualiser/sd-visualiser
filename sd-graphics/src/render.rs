@@ -25,7 +25,6 @@ use crate::{
 };
 
 #[allow(clippy::needless_collect)]
-#[allow(clippy::type_complexity)]
 pub fn render<T, G>(
     graph: &mut G,
     ui: &egui::Ui,
@@ -112,7 +111,7 @@ pub fn generate_shapes<T>(
     arrows: bool,
 ) where
     T: Ctx,
-    T::Edge: ExtensibleEdge<Ctx = T>,
+    T::Edge: ExtensibleEdge,
     NodeWeight<T>: Display,
 {
     // Source

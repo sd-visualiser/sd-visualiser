@@ -18,7 +18,6 @@ pub enum PetNode<V, E> {
     Thunk(PetGraph<V, E>),
 }
 
-#[allow(clippy::type_complexity)]
 pub fn to_pet<G>(hypergraph: &G) -> PetGraph<NodeWeight<G::Ctx>, EdgeWeight<G::Ctx>>
 where
     G: Graph,

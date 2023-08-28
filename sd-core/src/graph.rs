@@ -1,5 +1,3 @@
-#![allow(clippy::type_complexity)]
-
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},
@@ -88,6 +86,7 @@ struct Environment<F, T: Language> {
     /// The fragment of the hypergraph we are building in
     fragment: F,
     /// Hanging input ports of nodes, with the variable they should be connected to
+    #[allow(clippy::type_complexity)]
     inputs: Vec<(InPort<T::Op, Name<T>>, T::Var)>,
 
     /// Mapping from variables to the output port that corresponds to them
