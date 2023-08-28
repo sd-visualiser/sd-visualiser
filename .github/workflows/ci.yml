@@ -13,6 +13,8 @@ env:
 jobs:
   lint:
     name: Lint
+    permissions:
+      checks: write
     runs-on: ubuntu-latest
     steps:
       - name: Install gtk
@@ -36,7 +38,7 @@ jobs:
         uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets
+          args: --all-features
 
   build:
     name: Build
