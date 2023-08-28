@@ -16,10 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install gtk
-        uses: awalsh128/cache-apt-pkgs-action
-	with:
-	  packages: libgtk-3-dev
-	  version: 1.0
+        run: sudo apt-get -y install libgtk-3-dev
       - name: Install Nix
         uses: cachix/install-nix-action@v20
         with:
