@@ -36,10 +36,10 @@ use self::{
 )]
 pub struct Edge<V, E>(ByThinAddress<Arc<OutPortInternal<V, E>>>);
 
-impl<V, E: Debug> Debug for Edge<V, E> {
+impl<V, E: Clone + Debug> Debug for Edge<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Edge")
-            .field("weight", self.weight())
+            .field("weight", &self.weight())
             .field("ptr", &Arc::as_ptr(&self.0))
             .finish()
     }
@@ -59,7 +59,7 @@ pub struct Hypergraph<V, E> {
     graph_outputs: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
 }
 
-impl<V, E> Ctx for Hypergraph<V, E> {
+impl<V: Clone, E: Clone> Ctx for Hypergraph<V, E> {
     type Edge = Edge<V, E>;
     type Thunk = Thunk<V, E>;
     type Operation = Operation<V, E>;
@@ -74,10 +74,10 @@ impl<V, E> Ctx for Hypergraph<V, E> {
 )]
 pub struct Operation<V, E>(ByThinAddress<Arc<OperationInternal<V, E>>>);
 
-impl<V: Debug, E: Debug> Debug for Operation<V, E> {
+impl<V: Clone + Debug, E: Clone + Debug> Debug for Operation<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Operation")
-            .field("weight", self.weight())
+            .field("weight", &self.weight())
             .field("inputs", &self.inputs().collect::<Vec<_>>())
             .field("outputs", &self.outputs().collect::<Vec<_>>())
             .finish()
@@ -93,7 +93,7 @@ impl<V: Debug, E: Debug> Debug for Operation<V, E> {
 )]
 pub struct Thunk<V, E>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
 
-impl<V: Debug, E: Debug> Debug for Thunk<V, E> {
+impl<V: Clone + Debug, E: Clone + Debug> Debug for Thunk<V, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
             .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
@@ -112,7 +112,7 @@ impl<V: Debug, E: Debug> Debug for Thunk<V, E> {
 
 pub type Node<V, E> = generic::Node<Hypergraph<V, E>>;
 
-impl<V, E> WeakNodeInternal<V, E> {
+impl<V: Clone, E: Clone> WeakNodeInternal<V, E> {
     pub(super) fn unwrap_node(&self) -> Node<V, E> {
         match self {
             WeakNodeInternal::Operation(op_weak) => {
@@ -125,15 +125,15 @@ impl<V, E> WeakNodeInternal<V, E> {
     }
 }
 
-impl<V, E> WithWeight for Edge<V, E> {
+impl<V, E: Clone> WithWeight for Edge<V, E> {
     type Weight = E;
 
-    fn weight(&self) -> &Self::Weight {
-        &self.0.weight
+    fn weight(&self) -> Self::Weight {
+        self.0.weight.clone()
     }
 }
 
-impl<V, E> EdgeLike for Edge<V, E> {
+impl<V: Clone, E: Clone> EdgeLike for Edge<V, E> {
     type Ctx = Hypergraph<V, E>;
 
     fn source(&self) -> Option<Node<V, E>> {
@@ -159,7 +159,7 @@ impl<V, E> EdgeLike for Edge<V, E> {
     }
 }
 
-impl<V, E> Graph for Hypergraph<V, E> {
+impl<V: Clone, E: Clone> Graph for Hypergraph<V, E> {
     type Ctx = Hypergraph<V, E>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -191,7 +191,7 @@ impl<V, E> Graph for Hypergraph<V, E> {
     }
 }
 
-impl<V, E> Graph for Thunk<V, E> {
+impl<V: Clone, E: Clone> Graph for Thunk<V, E> {
     type Ctx = Hypergraph<V, E>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -246,15 +246,15 @@ impl<V, E> Graph for Thunk<V, E> {
     }
 }
 
-impl<V, E> WithWeight for Operation<V, E> {
+impl<V: Clone, E> WithWeight for Operation<V, E> {
     type Weight = V;
 
-    fn weight(&self) -> &Self::Weight {
-        &self.0.weight
+    fn weight(&self) -> Self::Weight {
+        self.0.weight.clone()
     }
 }
 
-impl<V, E> NodeLike for Operation<V, E> {
+impl<V: Clone, E: Clone> NodeLike for Operation<V, E> {
     type Ctx = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
@@ -294,7 +294,7 @@ impl<V, E> NodeLike for Operation<V, E> {
     }
 }
 
-impl<V, E> NodeLike for Thunk<V, E> {
+impl<V: Clone, E: Clone> NodeLike for Thunk<V, E> {
     type Ctx = Hypergraph<V, E>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {

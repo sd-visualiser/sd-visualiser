@@ -51,16 +51,16 @@ impl<T: Language> EdgeLabel<T> {
                 Some(node) => {
                     let op = node.into_operation().unwrap();
                     Self::Operation(
-                        op.weight().clone(),
+                        op.weight(),
                         op.inputs()
                             .map(|edge| Self::from_edge::<U>(&edge))
                             .collect(),
                     )
                 }
             },
-            Name::Thunk(addr) => Self::Thunk(addr.clone()),
-            Name::FreeVar(var) => Self::FreeVar(var.clone()),
-            Name::BoundVar(def) => Self::BoundVar(def.clone()),
+            Name::Thunk(addr) => Self::Thunk(addr),
+            Name::FreeVar(var) => Self::FreeVar(var),
+            Name::BoundVar(def) => Self::BoundVar(def),
         }
     }
 }

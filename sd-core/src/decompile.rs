@@ -64,9 +64,9 @@ where
             Node::Operation(op) => {
                 let mut args = Vec::default();
                 for edge in op.inputs() {
-                    match edge.weight().to_var() {
+                    match edge.weight().into_var() {
                         Some(var) => {
-                            args.push(Arg::Value(Value::Variable(var.clone())));
+                            args.push(Arg::Value(Value::Variable(var)));
                         }
                         None => match edge.source() {
                             None => {
@@ -86,7 +86,7 @@ where
                 }
 
                 let value = Value::Op {
-                    op: op.weight().clone(),
+                    op: op.weight(),
                     args,
                 };
 
@@ -113,7 +113,7 @@ where
                     args: thunk
                         .bound_graph_inputs()
                         .map(|edge| match edge.weight() {
-                            Name::BoundVar(arg) => Ok(arg.clone()),
+                            Name::BoundVar(arg) => Ok(arg),
                             _ => Err(DecompilationError::Corrupt),
                         })
                         .collect::<Result<Vec<_>, _>>()?,
@@ -126,8 +126,8 @@ where
 
     let values = graph
         .graph_outputs()
-        .map(|edge| match edge.weight().to_var() {
-            Some(var) => Ok(Value::Variable(var.clone())),
+        .map(|edge| match edge.weight().into_var() {
+            Some(var) => Ok(Value::Variable(var)),
             None => match edge.source() {
                 None => Err(DecompilationError::Corrupt),
                 Some(node) => node_to_syntax

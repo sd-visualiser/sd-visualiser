@@ -50,11 +50,11 @@ where
 }
 
 impl<T: Language> Name<T> {
-    pub fn to_var(&self) -> Option<&T::Var> {
+    pub fn into_var(self) -> Option<T::Var> {
         match self {
             Name::Op | Name::Thunk(_) => None,
             Name::FreeVar(var) => Some(var),
-            Name::BoundVar(def) => Some(def.as_var()),
+            Name::BoundVar(def) => Some(def.as_var().clone()),
         }
     }
 }

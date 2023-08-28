@@ -3,8 +3,8 @@ use std::hash::Hash;
 use super::generic::{Ctx, Edge, Node, Operation, Thunk};
 
 pub trait WithWeight {
-    type Weight;
-    fn weight(&self) -> &Self::Weight;
+    type Weight: Clone;
+    fn weight(&self) -> Self::Weight;
 }
 
 pub trait NodeLike: Clone + Eq + PartialEq + Hash {

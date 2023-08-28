@@ -1,6 +1,5 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use core::panic;
 use std::{fmt::Debug, sync::Arc};
 
 use derivative::Derivative;
@@ -453,21 +452,20 @@ impl<G: Graph> NodeLike for InteractiveThunk<G> {
 impl<G: Graph> WithWeight for InteractiveEdge<G> {
     type Weight = EdgeWeight<G::Ctx>;
 
-    fn weight(&self) -> &Self::Weight {
+    fn weight(&self) -> Self::Weight {
         match &self {
-            Self::Internal { edge: inner, .. } => inner.weight(),
-            Self::Reuse { edge, .. } => edge.weight(),
+            Self::Internal { edge, .. } | Self::Reuse { edge, .. } => edge.weight(),
         }
     }
 }
 
 impl<G: Graph> WithWeight for InteractiveOperation<G> {
-    type Weight = NodeWeight<G::Ctx>;
+    type Weight = Option<NodeWeight<G::Ctx>>;
 
-    fn weight(&self) -> &Self::Weight {
+    fn weight(&self) -> Self::Weight {
         match self {
-            Self::Internal { op, .. } => op.weight(),
-            _ => panic!(),
+            Self::Internal { op, .. } => Some(op.weight()),
+            _ => None,
         }
     }
 }

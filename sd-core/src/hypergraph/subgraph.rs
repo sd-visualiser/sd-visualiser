@@ -284,7 +284,7 @@ impl<T: Ctx> EdgeLike for SubEdge<T> {
 impl<T: Ctx> WithWeight for SubEdge<T> {
     type Weight = EdgeWeight<T>;
 
-    fn weight(&self) -> &Self::Weight {
+    fn weight(&self) -> Self::Weight {
         self.inner.weight()
     }
 }
@@ -292,7 +292,7 @@ impl<T: Ctx> WithWeight for SubEdge<T> {
 impl<T: Ctx> WithWeight for SubOperation<T> {
     type Weight = NodeWeight<T>;
 
-    fn weight(&self) -> &Self::Weight {
+    fn weight(&self) -> Self::Weight {
         self.inner.weight()
     }
 }
@@ -307,7 +307,7 @@ pub trait ExtensibleEdge: EdgeLike {
     }
 }
 
-impl<V, E> ExtensibleEdge for super::Edge<V, E> {}
+impl<V: Clone, E: Clone> ExtensibleEdge for super::Edge<V, E> {}
 
 impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
     fn extend_source(&self) -> Option<Node<Self::Ctx>> {
@@ -333,7 +333,7 @@ pub trait ModifiableGraph: Graph {
     fn extend(&mut self, _nodes: impl Iterator<Item = Node<Self::Ctx>>) {}
 }
 
-impl<V, E> ModifiableGraph for super::Hypergraph<V, E> {}
+impl<V: Clone, E: Clone> ModifiableGraph for super::Hypergraph<V, E> {}
 
 impl<T: Ctx> ModifiableGraph for Subgraph<T> {
     fn remove(&mut self, node: Node<Self::Ctx>) {

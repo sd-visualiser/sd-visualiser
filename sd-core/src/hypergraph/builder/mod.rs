@@ -179,8 +179,8 @@ pub struct HypergraphBuilder<V, E>(Hypergraph<V, E>);
 
 impl<V, E> HypergraphBuilder<V, E>
 where
-    V: Debug,
-    E: Debug,
+    V: Clone + Debug,
+    E: Clone + Debug,
 {
     #[must_use]
     #[tracing::instrument]
@@ -271,8 +271,8 @@ where
 
         fn build_thunk_inputs<V, E>(thunk: Thunk<V, E>)
         where
-            V: Debug,
-            E: Debug,
+            V: Clone + Debug,
+            E: Clone + Debug,
         {
             let built_nodes: IndexSet<Node<V, E>> = thunk.nodes().collect();
 
@@ -309,8 +309,8 @@ where
             output: &mut Vec<Vec<Node<V, E>>>,
             node: &Node<V, E>,
         ) where
-            V: Debug,
-            E: Debug,
+            V: Clone + Debug,
+            E: Clone + Debug,
         {
             let index = stack.insert_full(node.clone()).0;
             visited.insert(node.clone(), index);
@@ -335,8 +335,8 @@ where
 
         fn tarjans<V, E>(xs: Vec<Node<V, E>>) -> Vec<Node<V, E>>
         where
-            V: Debug,
-            E: Debug,
+            V: Clone + Debug,
+            E: Clone + Debug,
         {
             let original_ord: IndexSet<Node<V, E>> = xs.into_iter().collect();
             let mut output: Vec<Vec<Node<V, E>>> = Vec::default();
@@ -363,8 +363,8 @@ where
         // proxy from NodeInternal to Node to get Hash impl
         fn topsort_node_internals<V, E>(internals: &mut Vec<NodeInternal<V, E>>)
         where
-            V: Debug,
-            E: Debug,
+            V: Clone + Debug,
+            E: Clone + Debug,
         {
             let mut nodes: Vec<_> = internals
                 .iter()

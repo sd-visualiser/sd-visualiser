@@ -36,9 +36,7 @@ impl EdgeLike for DummyEdge {
 impl WithWeight for DummyEdge {
     type Weight = ();
 
-    fn weight(&self) -> &Self::Weight {
-        &()
-    }
+    fn weight(&self) -> Self::Weight {}
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
@@ -74,8 +72,8 @@ impl NodeLike for DummyOperation {
 impl WithWeight for DummyOperation {
     type Weight = Op;
 
-    fn weight(&self) -> &Self::Weight {
-        &self.op
+    fn weight(&self) -> Self::Weight {
+        self.op
     }
 }
 
