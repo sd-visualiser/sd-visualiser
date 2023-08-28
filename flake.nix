@@ -58,6 +58,7 @@
                     trunk
                     wasm-bindgen-cli
                     binaryen
+                    gtk3
                   ]);
                 };
               } // extraOverrides;
