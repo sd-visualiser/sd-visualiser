@@ -89,7 +89,6 @@
                         atk
                         gdk-pixbuf
                         gtk3
-                        gtk3.dev
                         pango
                       ]);
                       XDG_DATA_DIRS = with pkgs; "${gtk3}/share/gsettings-schemas/${gtk3.name}";
