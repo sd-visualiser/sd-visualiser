@@ -196,7 +196,6 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
     /// This prepares all the inputs of the node and inserts relevant backlinks
     fn insert_operation(&mut self, node: &Node<T>, node_layer: usize)
     where
-        T::Edge: Debug,
         T::Operation: Debug,
         T::Thunk: Debug,
     {
@@ -250,7 +249,6 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
 impl<G> From<&G> for MonoidalWiredGraph<G::Ctx>
 where
     G: Graph,
-    Edge<G::Ctx>: Debug,
     Operation<G::Ctx>: Debug,
     Thunk<G::Ctx>: Debug,
 {

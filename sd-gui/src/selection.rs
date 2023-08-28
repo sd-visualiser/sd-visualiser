@@ -7,10 +7,10 @@ use eframe::egui;
 use indexmap::IndexMap;
 use sd_core::{
     decompile::{decompile, Fresh},
-    graph::{Name, SyntaxHypergraph},
+    graph::SyntaxHypergraph,
     hypergraph::{
+        generic::Thunk,
         subgraph::{SubThunk, Subgraph},
-        Thunk,
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
@@ -63,7 +63,7 @@ pub struct SelectionInternal<T: Language> {
 impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn new(
         selection: &SelectionMap<SyntaxHypergraph<T>>,
-        expanded: &WeakMap<Thunk<T::Op, Name<T>>, bool>,
+        expanded: &WeakMap<Thunk<SyntaxHypergraph<T>>, bool>,
         name: String,
     ) -> Self
     where

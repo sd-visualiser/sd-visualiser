@@ -19,7 +19,7 @@ use sd_core::{
 use crate::common::{to_coord2, TEXT_SIZE, TOLERANCE};
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = "T::Edge: Clone, T::Thunk: Clone, T::Operation: Clone"))]
+#[derivative(Clone(bound = ""))]
 pub enum Shape<T: Ctx> {
     Line {
         start: Pos2,

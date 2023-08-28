@@ -225,7 +225,7 @@ where
     pub(crate) fn export_svg(&self) -> String
     where
         Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
-        Operation<G::Ctx>: WithWeight + Debug + Send + Sync,
+        Operation<G::Ctx>: Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
         NodeWeight<G::Ctx>: Display,
     {
