@@ -1,4 +1,7 @@
-use std::ops::{Index, IndexMut};
+use std::{
+    fmt::Debug,
+    ops::{Index, IndexMut},
+};
 
 use derivative::Derivative;
 use indexmap::{IndexMap, IndexSet};
@@ -16,11 +19,11 @@ use crate::{
 
 #[derive(Derivative)]
 #[derivative(
-    Clone(bound = "T::Edge: Clone, T::Thunk: Clone"),
-    Hash(bound = ""),
-    Default(bound = ""),
+    Clone(bound = ""),
+    Eq(bound = ""),
     PartialEq(bound = ""),
-    Eq(bound = "")
+    Hash(bound = ""),
+    Debug(bound = "T::Operation: Debug, T::Thunk: Debug")
 )]
 pub struct SelectionMap<T: Ctx>(WeakMap<Node<T>, bool>);
 

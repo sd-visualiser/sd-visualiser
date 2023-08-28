@@ -14,7 +14,8 @@ use crate::{hypergraph::generic::Ctx, selection::SelectionMap};
     Clone(bound = ""),
     Eq(bound = ""),
     PartialEq(bound = ""),
-    Hash(bound = "")
+    Hash(bound = ""),
+    Debug(bound = "T::Operation: Debug, T::Thunk: Debug")
 )]
 pub struct Subgraph<T: Ctx> {
     pub selection: Arc<SelectionMap<T>>,
