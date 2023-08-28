@@ -8,6 +8,7 @@ use derivative::Derivative;
 
 pub mod builder;
 pub mod generic;
+pub mod interactive;
 mod internal;
 pub mod petgraph;
 pub mod reachability;
