@@ -19,10 +19,12 @@ use sd_graphics::{layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
-type Cache<G, T> = LruCache<(G, WeakMap<Thunk<T>, bool>), Arc<Mutex<Promise<Shapes<T>>>>>;
+type Cache<G> = LruCache<
+    (G, WeakMap<Thunk<<G as Graph>::Ctx>, bool>),
+    Arc<Mutex<Promise<Shapes<<G as Graph>::Ctx>>>>,
+>;
 
-#[allow(clippy::type_complexity)]
-fn shape_cache<G>() -> Arc<Mutex<Cache<G, G::Ctx>>>
+fn shape_cache<G>() -> Arc<Mutex<Cache<G>>>
 where
     G: Graph + Send + Sync + 'static,
     Edge<G::Ctx>: Send + Sync,
@@ -33,7 +35,7 @@ where
         .get_or_init(Mutex::default)
         .lock()
         .unwrap()
-        .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<G, G::Ctx>>>>(Id::null(), || {
+        .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<G>>>>(Id::null(), || {
             tracing::trace!("initialise shape cache");
             Arc::new(Mutex::new(LruCache::unbounded()))
         })
@@ -46,7 +48,6 @@ pub fn clear_shape_cache() {
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn generate_shapes<G>(
     graph: &G,
     expanded: &WeakMap<Thunk<G::Ctx>, bool>,
