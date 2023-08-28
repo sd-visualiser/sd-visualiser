@@ -62,20 +62,15 @@ where
 {
     /// Unselect all nodes.
     pub fn clear_selection(&mut self) {
-        self.0
-             .0
-            .values_mut()
-            .for_each(|selected| *selected = false);
+        self.0.values_mut().for_each(|selected| *selected = false);
     }
 
     /// Iterator of selected nodes.
     #[must_use]
     pub fn iter(&self) -> impl DoubleEndedIterator<Item = Node<T>> + Clone + '_ {
         self.0
-             .0
             .iter()
-            .filter_map(|(node, selected)| selected.then_some(node))
-            .cloned()
+            .filter_map(|(node, selected)| selected.then(|| node.clone()))
     }
 
     /// Number of selected nodes.
@@ -93,7 +88,7 @@ where
     /// Normalise the selection.
     pub fn normalize(&mut self) {
         let root_selection = normalise_selection(self);
-        for (k, v) in self.0 .0.iter_mut() {
+        for (k, v) in self.0.iter_mut() {
             *v = contains_transitively::<T>(&root_selection, k);
         }
     }

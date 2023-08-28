@@ -236,6 +236,8 @@ where
     }
 
     pub(crate) fn set_expanded_all(&mut self, expanded: bool) {
-        self.expanded.set_all(expanded);
+        for x in self.expanded.values_mut() {
+            *x = expanded;
+        }
     }
 }
