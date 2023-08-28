@@ -4,6 +4,7 @@ use std::{fmt::Debug, sync::Arc};
 
 use derivative::Derivative;
 use indexmap::IndexSet;
+use itertools::Either;
 
 use crate::{
     hypergraph::{
@@ -460,12 +461,12 @@ impl<G: Graph> WithWeight for InteractiveEdge<G> {
 }
 
 impl<G: Graph> WithWeight for InteractiveOperation<G> {
-    type Weight = Option<NodeWeight<G::Ctx>>;
+    type Weight = Either<NodeWeight<G::Ctx>, EdgeWeight<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
         match self {
-            Self::Internal { op, .. } => Some(op.weight()),
-            _ => None,
+            Self::Internal { op, .. } => Either::Left(op.weight()),
+            Self::Reuse { edge, .. } | Self::Store { edge, .. } => Either::Right(edge.weight()),
         }
     }
 }
