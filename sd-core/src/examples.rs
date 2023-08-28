@@ -10,22 +10,30 @@ use crate::{
     },
 };
 
+pub struct DummyGraph;
+
+impl Ctx for DummyGraph {
+    type Edge = DummyEdge;
+    type Operation = DummyOperation;
+    type Thunk = DummyThunk;
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct SyntaxEdge;
+pub struct DummyEdge;
 
-impl EdgeLike for SyntaxEdge {
-    type Ctx = Syntax;
+impl EdgeLike for DummyEdge {
+    type Ctx = DummyGraph;
 
-    fn source(&self) -> Option<Node<Syntax>> {
+    fn source(&self) -> Option<Node<DummyGraph>> {
         panic!("unsupported")
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Syntax>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<DummyGraph>>> + '_> {
         panic!("unsupported")
     }
 }
 
-impl WithWeight for SyntaxEdge {
+impl WithWeight for DummyEdge {
     type Weight = ();
 
     fn weight(&self) -> &Self::Weight {
@@ -34,23 +42,23 @@ impl WithWeight for SyntaxEdge {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct SyntaxOp {
+pub struct DummyOperation {
     op: Op,
     inputs: usize,
 }
 
-impl NodeLike for SyntaxOp {
-    type Ctx = Syntax;
+impl NodeLike for DummyOperation {
+    type Ctx = DummyGraph;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn backlink(&self) -> Option<SyntaxThunk> {
+    fn backlink(&self) -> Option<DummyThunk> {
         panic!("unsupported")
     }
 
@@ -63,7 +71,7 @@ impl NodeLike for SyntaxOp {
     }
 }
 
-impl WithWeight for SyntaxOp {
+impl WithWeight for DummyOperation {
     type Weight = Op;
 
     fn weight(&self) -> &Self::Weight {
@@ -72,22 +80,22 @@ impl WithWeight for SyntaxOp {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct SyntaxThunk {
+pub struct DummyThunk {
     inputs: usize,
 }
 
-impl NodeLike for SyntaxThunk {
-    type Ctx = Syntax;
+impl NodeLike for DummyThunk {
+    type Ctx = DummyGraph;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn backlink(&self) -> Option<SyntaxThunk> {
+    fn backlink(&self) -> Option<DummyThunk> {
         panic!("unsupported")
     }
 
@@ -100,118 +108,110 @@ impl NodeLike for SyntaxThunk {
     }
 }
 
-impl Graph for SyntaxThunk {
-    type Ctx = Syntax;
+impl Graph for DummyThunk {
+    type Ctx = DummyGraph;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SyntaxEdge> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Syntax>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<DummyGraph>> + '_> {
         panic!("unsupported")
     }
 
-    fn graph_backlink(&self) -> Option<SyntaxThunk> {
+    fn graph_backlink(&self) -> Option<DummyThunk> {
         panic!("unsupported")
     }
-}
-
-pub struct Syntax;
-
-impl Ctx for Syntax {
-    type Edge = SyntaxEdge;
-    type Thunk = SyntaxThunk;
-    type Operation = SyntaxOp;
 }
 
 /// Corrresponds to the program `bind x = 1 in x`.
 #[must_use]
-pub fn int() -> MonoidalGraph<Syntax> {
+pub fn int() -> MonoidalGraph<DummyGraph> {
     MonoidalGraph {
         free_inputs: vec![],
         bound_inputs: vec![],
         slices: vec![Slice {
             ops: vec![MonoidalOp::Operation {
-                addr: SyntaxOp {
+                addr: DummyOperation {
                     op: Op::Number(1),
                     inputs: 0,
                 },
             }],
         }],
-        outputs: vec![SyntaxEdge],
+        outputs: vec![DummyEdge],
     }
 }
 
 #[must_use]
-pub fn copy() -> MonoidalGraph<Syntax> {
+pub fn copy() -> MonoidalGraph<DummyGraph> {
     MonoidalGraph {
         free_inputs: vec![],
-        bound_inputs: vec![SyntaxEdge],
+        bound_inputs: vec![DummyEdge],
         slices: vec![
             Slice {
                 ops: vec![MonoidalOp::Copy {
-                    addr: SyntaxEdge,
+                    addr: DummyEdge,
                     copies: 2,
                 }],
             },
             Slice {
                 ops: vec![
                     MonoidalOp::Copy {
-                        addr: SyntaxEdge,
+                        addr: DummyEdge,
                         copies: 2,
                     },
                     MonoidalOp::Copy {
-                        addr: SyntaxEdge,
+                        addr: DummyEdge,
                         copies: 1,
                     },
                 ],
             },
         ],
-        outputs: vec![SyntaxEdge; 3],
+        outputs: vec![DummyEdge; 3],
     }
 }
 
 #[must_use]
-pub fn thunk() -> MonoidalGraph<Syntax> {
+pub fn thunk() -> MonoidalGraph<DummyGraph> {
     let plus = MonoidalGraph {
         free_inputs: vec![],
-        bound_inputs: vec![SyntaxEdge; 2],
+        bound_inputs: vec![DummyEdge; 2],
         slices: vec![Slice {
             ops: vec![MonoidalOp::Operation {
-                addr: SyntaxOp {
+                addr: DummyOperation {
                     op: Op::Plus,
                     inputs: 2,
                 },
             }],
         }],
-        outputs: vec![SyntaxEdge],
+        outputs: vec![DummyEdge],
     };
 
     MonoidalGraph {
         free_inputs: vec![],
-        bound_inputs: vec![SyntaxEdge; 3],
+        bound_inputs: vec![DummyEdge; 3],
         slices: vec![Slice {
             ops: vec![
                 MonoidalOp::Thunk {
-                    addr: SyntaxThunk { inputs: 1 },
+                    addr: DummyThunk { inputs: 1 },
                     body: plus,
                 },
                 MonoidalOp::Operation {
-                    addr: SyntaxOp {
+                    addr: DummyOperation {
                         op: Op::Plus,
                         inputs: 2,
                     },
                 },
             ],
         }],
-        outputs: vec![SyntaxEdge; 2],
+        outputs: vec![DummyEdge; 2],
     }
 }
