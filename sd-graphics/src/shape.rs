@@ -8,15 +8,14 @@ use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
-    hypergraph::{
-        generic::{Ctx, EdgeWeight, Node},
-        subgraph::ModifiableGraph,
-    },
-    selection::SelectionMap,
+    hypergraph::generic::{Ctx, EdgeWeight, Node},
     weak_map::WeakMap,
 };
 
-use crate::common::{to_coord2, TEXT_SIZE, TOLERANCE};
+use crate::{
+    common::{to_coord2, TEXT_SIZE, TOLERANCE},
+    renderable::RenderableGraph,
+};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""))]
@@ -102,9 +101,8 @@ impl<T: Ctx> Shape<T> {
         highlight_node: &mut Option<Node<T>>,
         highlight_edges: &mut IndexSet<T::Edge>,
         expanded: &mut WeakMap<T::Thunk, bool>,
-        selection: Option<&mut SelectionMap<T>>,
     ) where
-        G: ModifiableGraph<Ctx = T>,
+        G: RenderableGraph<Ctx = T>,
     {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
@@ -127,9 +125,7 @@ impl<T: Ctx> Shape<T> {
                 addr, fill, stroke, ..
             } => {
                 let addr: &_ = addr;
-                let selected = selection
-                    .as_ref()
-                    .map_or(false, |s| s[&Node::Thunk(addr.clone())]);
+                let selected = graph.selected(Node::Thunk(addr.clone()));
                 let thunk_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new((&graph, &addr)),
@@ -157,32 +153,20 @@ impl<T: Ctx> Shape<T> {
                     expanded[addr] = !expanded[addr];
                 }
                 if thunk_response.secondary_clicked() {
-                    let node = Node::Thunk(addr.clone());
-                    if let Some(s) = selection {
-                        s[&node] ^= true;
-                    } else {
-                        graph.remove(node);
-                    }
+                    graph.toggle(Node::Thunk(addr.clone()));
                 }
             }
             Shape::Operation {
                 addr, fill, stroke, ..
             } => {
-                let selected = selection
-                    .as_ref()
-                    .map_or(false, |s| s[&Node::Operation(addr.clone())]);
+                let selected = graph.selected(Node::Operation(addr.clone()));
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
                     Id::new((&graph, &addr)),
                     Sense::click(),
                 );
                 if op_response.clicked() {
-                    let node = Node::Operation(addr.clone());
-                    if let Some(s) = selection {
-                        s[&node] ^= true;
-                    } else {
-                        graph.remove(node);
-                    }
+                    graph.toggle(Node::Operation(addr.clone()));
                 }
                 *fill = Some(
                     ui.style()

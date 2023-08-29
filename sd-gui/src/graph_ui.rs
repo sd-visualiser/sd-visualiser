@@ -13,47 +13,43 @@ use sd_core::{
     graph::{Name, SyntaxHypergraph},
     hypergraph::{
         generic::{Edge, EdgeWeight, NodeWeight, Operation, Thunk},
-        subgraph::{ExtensibleEdge, ModifiableGraph},
+        subgraph::ExtensibleEdge,
         traits::{Graph, WithWeight},
-        utils::{create_expanded, create_selected},
+        utils::create_expanded,
     },
+    interactive::InteractiveGraph,
     language::{chil::Chil, spartan::Spartan, Expr, Language},
     prettyprinter::PrettyPrint,
-    selection::SelectionMap,
     weak_map::WeakMap,
 };
+use sd_graphics::renderable::RenderableGraph;
 
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub enum GraphUi {
-    Chil(
-        GraphUiInternal<SyntaxHypergraph<Chil>>,
-        SelectionMap<SyntaxHypergraph<Chil>>,
-    ),
-    Spartan(
-        GraphUiInternal<SyntaxHypergraph<Spartan>>,
-        SelectionMap<SyntaxHypergraph<Spartan>>,
-    ),
+    Chil(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Chil>>>),
+    Spartan(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Spartan>>>),
 }
 
 impl GraphUi {
     pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>) -> Self {
+        let graph = InteractiveGraph::new(graph);
         let expanded = create_expanded(&graph);
-        let selected = create_selected(&graph);
-        Self::Chil(GraphUiInternal::new(graph, expanded), selected)
+        Self::Chil(GraphUiInternal::new(graph, expanded))
     }
 
     pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>) -> Self {
+        let graph = InteractiveGraph::new(graph);
         let expanded = create_expanded(&graph);
-        let selected = create_selected(&graph);
-        Self::Spartan(GraphUiInternal::new(graph, expanded), selected)
+        Self::Spartan(GraphUiInternal::new(graph, expanded))
     }
 
     delegate! {
         to match self {
-            GraphUi::Chil(graph_ui, _) => graph_ui,
-            GraphUi::Spartan(graph_ui, _) => graph_ui,
+            GraphUi::Chil(graph_ui) => graph_ui,
+            GraphUi::Spartan(graph_ui) => graph_ui,
         } {
+            pub(crate) fn ui(&mut self, ui: &mut egui::Ui);
             pub(crate) const fn ready(&self) -> bool;
             pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
@@ -64,17 +60,10 @@ impl GraphUi {
         }
     }
 
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui) {
-        match self {
-            GraphUi::Chil(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
-            GraphUi::Spartan(graph_ui, selection) => graph_ui.ui(ui, Some(selection)),
-        }
-    }
-
     delegate! {
         to match self {
-            GraphUi::Chil(_, selection) => selection,
-            GraphUi::Spartan(_, selection) => selection,
+            GraphUi::Chil(graph_ui) => graph_ui.graph.selection,
+            GraphUi::Spartan(graph_ui) => graph_ui.graph.selection,
         } {
             pub(crate) fn clear_selection(&mut self);
             pub(crate) fn extend_selection(&mut self, direction: Option<(Direction, usize)>);
@@ -93,7 +82,7 @@ pub struct GraphUiInternal<G: Graph> {
 
 impl<G> GraphUiInternal<G>
 where
-    G: ModifiableGraph + Send + Sync + 'static,
+    G: RenderableGraph + Send + Sync + 'static,
 {
     pub(crate) fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
         Self {
@@ -105,7 +94,7 @@ where
         }
     }
 
-    pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui, selection: Option<&mut SelectionMap<G::Ctx>>)
+    pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui)
     where
         T: Language,
         T::Op: Display + PrettyPrint,
@@ -175,7 +164,6 @@ where
                 &shapes.shapes,
                 &response,
                 &mut self.expanded,
-                selection,
                 to_screen,
             ));
             self.ready = true;

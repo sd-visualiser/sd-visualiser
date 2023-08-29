@@ -43,12 +43,16 @@ impl Selection {
 
     pub fn from_graph(graph_ui: &GraphUi, name: String) -> Self {
         match graph_ui {
-            GraphUi::Chil(graph_ui, selection) => {
-                Self::Chil(SelectionInternal::new(selection, &graph_ui.expanded, name))
-            }
-            GraphUi::Spartan(graph_ui, selection) => {
-                Self::Spartan(SelectionInternal::new(selection, &graph_ui.expanded, name))
-            }
+            GraphUi::Chil(graph_ui) => Self::Chil(SelectionInternal::new(
+                &graph_ui.graph.selection,
+                &graph_ui.expanded,
+                name,
+            )),
+            GraphUi::Spartan(graph_ui) => Self::Spartan(SelectionInternal::new(
+                &graph_ui.graph.selection,
+                &graph_ui.expanded,
+                name,
+            )),
         }
     }
 }
@@ -125,7 +129,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
                         &mut self.code.as_str(),
                         UiLanguage::Spartan,
                     );
-                    self.graph_ui.ui(&mut columns[1], None);
+                    self.graph_ui.ui(&mut columns[1]);
                 });
             });
     }

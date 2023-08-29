@@ -8,19 +8,19 @@ use sd_core::{
     graph::Name,
     hypergraph::{
         generic::{Ctx, Edge, Node, NodeWeight, Operation, Thunk},
-        subgraph::{ExtensibleEdge, ModifiableGraph},
+        subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
     language::{Expr, Language},
     monoidal::graph::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
-    selection::SelectionMap,
     weak_map::WeakMap,
 };
 
 use crate::{
     common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     layout::Layout,
+    renderable::RenderableGraph,
     shape::Shape,
 };
 
@@ -31,7 +31,6 @@ pub fn render<T, G>(
     shapes: &[Shape<G::Ctx>],
     response: &Response,
     expanded: &mut WeakMap<Thunk<G::Ctx>, bool>,
-    mut selection: Option<&mut SelectionMap<G::Ctx>>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
@@ -41,7 +40,7 @@ where
     T::Addr: Display,
     T::VarDef: PrettyPrint,
     Expr<T>: PrettyPrint,
-    G: ModifiableGraph,
+    G: RenderableGraph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
     Operation<G::Ctx>: WithWeight<Weight = T::Op>,
 {
@@ -64,7 +63,6 @@ where
                 &mut highlight_node,
                 &mut highlight_edges,
                 expanded,
-                selection.as_deref_mut(),
             );
             s
         })

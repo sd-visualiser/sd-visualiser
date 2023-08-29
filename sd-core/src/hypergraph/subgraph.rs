@@ -29,6 +29,26 @@ impl<T: Ctx> Subgraph<T> {
             selection: Arc::new(selection),
         }
     }
+
+    /// Remove a node from the subgraph.
+    pub fn remove(&mut self, node: SubNode<T>) {
+        let mut selection = (*self.selection).clone();
+        selection[&node.inner()] = false;
+        selection.normalize();
+        self.selection = Arc::new(selection);
+    }
+
+    /// Extend the subgraph with the given nodes.
+    ///
+    /// The nodes will likely come from the methods in [`ExtensibleEdge`].
+    pub fn extend(&mut self, nodes: impl Iterator<Item = SubNode<T>>) {
+        let mut selection = (*self.selection).clone();
+        for node in nodes {
+            selection[&node.inner()] = true;
+        }
+        selection.normalize();
+        self.selection = Arc::new(selection);
+    }
 }
 
 pub type SubNode<T> = Node<Subgraph<T>>;
@@ -325,30 +345,5 @@ impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
                 .filter(|node| !self.selection[node])
                 .map(|node| Node::new(node, self.selection.clone())),
         )
-    }
-}
-
-pub trait ModifiableGraph: Graph {
-    fn remove(&mut self, _node: Node<Self::Ctx>) {}
-    fn extend(&mut self, _nodes: impl Iterator<Item = Node<Self::Ctx>>) {}
-}
-
-impl<V: Clone, E: Clone> ModifiableGraph for super::Hypergraph<V, E> {}
-
-impl<T: Ctx> ModifiableGraph for Subgraph<T> {
-    fn remove(&mut self, node: Node<Self::Ctx>) {
-        let mut extended = (*self.selection).clone();
-        extended[&node.inner()] = false;
-        extended.normalize();
-        self.selection = Arc::new(extended);
-    }
-
-    fn extend(&mut self, nodes: impl Iterator<Item = Node<Self::Ctx>>) {
-        let mut extended = (*self.selection).clone();
-        for node in nodes {
-            extended[&node.inner()] = true;
-        }
-        extended.normalize();
-        self.selection = Arc::new(extended);
     }
 }
