@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use indexmap::IndexMap;
 
 use super::{
-    generic::{Ctx, Node, Thunk},
+    generic::{Ctx, Edge, Node, Thunk},
     traits::{EdgeLike, Graph, NodeLike},
 };
 use crate::{selection::SelectionMap, weak_map::WeakMap};
@@ -46,6 +46,32 @@ pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::Ctx> {
     }
 
     SelectionMap::from(set)
+}
+
+pub fn create_hidden_edges<G: Graph>(graph: &G) -> WeakMap<Edge<G::Ctx>, bool> {
+    fn helper<G: Graph>(set: &mut IndexMap<Edge<G::Ctx>, bool>, graph: &G) {
+        for edge in graph.graph_outputs() {
+            set.insert(edge, false);
+        }
+        for node in graph.nodes() {
+            for edge in node.outputs() {
+                set.insert(edge, false);
+            }
+            for edge in node.inputs() {
+                set.insert(edge, false);
+            }
+            if let Node::Thunk(thunk) = &node {
+                helper(set, thunk);
+            }
+        }
+        for edge in graph.graph_inputs() {
+            set.insert(edge, false);
+        }
+    }
+
+    let mut set = IndexMap::new();
+    helper(&mut set, graph);
+    WeakMap::from(set)
 }
 
 /// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists

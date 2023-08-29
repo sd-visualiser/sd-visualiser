@@ -10,6 +10,7 @@ use crate::{
     hypergraph::{
         generic::{Ctx, Edge, EdgeWeight, Node, NodeWeight, Operation, Thunk},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        utils::create_hidden_edges,
     },
     weak_map::WeakMap,
 };
@@ -27,6 +28,16 @@ use crate::{
 pub struct InteractiveGraph<G: Graph> {
     graph: G,
     hidden_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+}
+
+impl<G: Graph> InteractiveGraph<G> {
+    pub fn new(graph: G) -> Self {
+        let hidden_edges = create_hidden_edges(&graph);
+        Self {
+            graph,
+            hidden_edges: Arc::new(hidden_edges),
+        }
+    }
 }
 
 #[derive(Derivative)]
@@ -49,6 +60,14 @@ pub enum InteractiveEdge<G: Graph> {
         #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
         hidden_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
     },
+}
+
+impl<G: Graph> InteractiveEdge<G> {
+    pub fn inner(&self) -> &Edge<G::Ctx> {
+        match self {
+            Self::Internal { edge, .. } | Self::Reuse { edge, .. } => edge,
+        }
+    }
 }
 
 #[derive(Derivative)]
@@ -78,6 +97,15 @@ pub enum InteractiveOperation<G: Graph> {
     },
 }
 
+impl<G: Graph> InteractiveOperation<G> {
+    pub fn inner(&self) -> Either<&Operation<G::Ctx>, &Edge<G::Ctx>> {
+        match self {
+            Self::Internal { op, .. } => Either::Left(op),
+            Self::Store { edge, .. } | Self::Reuse { edge, .. } => Either::Right(edge),
+        }
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
@@ -90,6 +118,12 @@ pub struct InteractiveThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
     #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
     hidden_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+}
+
+impl<G: Graph> InteractiveThunk<G> {
+    pub fn inner(&self) -> &Thunk<G::Ctx> {
+        &self.thunk
+    }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -123,6 +157,13 @@ impl<G: Graph> InteractiveNode<G> {
             target,
             hidden_edges,
         })
+    }
+
+    pub fn inner(&self) -> Either<Node<G::Ctx>, &Edge<G::Ctx>> {
+        match self {
+            Node::Operation(op) => op.inner().map_left(|op| Node::Operation(op.clone())),
+            Node::Thunk(thunk) => Either::Left(Node::Thunk(thunk.inner().clone())),
+        }
     }
 }
 
@@ -454,9 +495,7 @@ impl<G: Graph> WithWeight for InteractiveEdge<G> {
     type Weight = EdgeWeight<G::Ctx>;
 
     fn weight(&self) -> Self::Weight {
-        match &self {
-            Self::Internal { edge, .. } | Self::Reuse { edge, .. } => edge.weight(),
-        }
+        self.inner().weight()
     }
 }
 
@@ -464,9 +503,7 @@ impl<G: Graph> WithWeight for InteractiveOperation<G> {
     type Weight = Either<NodeWeight<G::Ctx>, EdgeWeight<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
-        match self {
-            Self::Internal { op, .. } => Either::Left(op.weight()),
-            Self::Reuse { edge, .. } | Self::Store { edge, .. } => Either::Right(edge.weight()),
-        }
+        self.inner()
+            .map_either(WithWeight::weight, WithWeight::weight)
     }
 }
