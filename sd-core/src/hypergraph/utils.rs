@@ -48,7 +48,7 @@ pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::Ctx> {
     SelectionMap::from(set)
 }
 
-pub fn create_hidden_edges<G: Graph>(graph: &G) -> WeakMap<Edge<G::Ctx>, bool> {
+pub fn create_cut_edges<G: Graph>(graph: &G) -> WeakMap<Edge<G::Ctx>, bool> {
     fn helper<G: Graph>(set: &mut IndexMap<Edge<G::Ctx>, bool>, graph: &G) {
         for edge in graph.graph_outputs() {
             set.insert(edge, false);

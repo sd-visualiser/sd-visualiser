@@ -7,8 +7,8 @@ use by_address::ByThinAddress;
 use derivative::Derivative;
 
 pub mod builder;
+pub mod cut;
 pub mod generic;
-pub mod interactive;
 mod internal;
 pub mod petgraph;
 pub mod reachability;
