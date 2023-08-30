@@ -63,7 +63,7 @@ pub struct Expr<T: Language> {
     Debug(bound = "")
 )]
 pub struct Bind<T: Language> {
-    pub def: Vec<T::VarDef>,
+    pub defs: Vec<T::VarDef>,
     pub value: Value<T>,
 }
 
@@ -149,7 +149,7 @@ impl<T: Language> Bind<T> {
         U::VarDef: From<T::VarDef>,
     {
         Bind {
-            def: self.def.into_iter().map(Into::into).collect(),
+            defs: self.defs.into_iter().map(Into::into).collect(),
             value: self.value.into(),
         }
     }
@@ -261,7 +261,7 @@ where
         }
         let mut inner = pair.into_inner();
         let bind = Bind {
-            def: FromPest::from_pest(&mut inner)?,
+            defs: FromPest::from_pest(&mut inner)?,
             value: FromPest::from_pest(&mut inner)?,
         };
         if inner.next().is_some() {

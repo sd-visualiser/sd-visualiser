@@ -24,10 +24,10 @@ impl PrettyPrint for Bind {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text("bind")
             .append(RcDoc::space())
-            .append(if self.def.len() == 1 {
-                self.def[0].to_doc()
+            .append(if self.defs.len() == 1 {
+                self.defs[0].to_doc()
             } else {
-                paran_list(&self.def)
+                paran_list(&self.defs)
             })
             .append(RcDoc::space())
             .append(RcDoc::text("="))

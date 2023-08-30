@@ -36,7 +36,7 @@ pub enum DecompilationError {
     #[error("corrupt hypergraph")]
     Corrupt,
 
-    #[error("multiple outputs not allowed")]
+    #[error("thunks cannot have multiple outputs")]
     MultipleOutputs,
 }
 
@@ -55,12 +55,6 @@ where
 
     let mut fresh_vars = 0;
     for node in graph.nodes().rev() {
-        // Check the node has a unique output.
-        let output = node
-            .outputs()
-            .exactly_one()
-            .map_err(|_err| DecompilationError::MultipleOutputs)?;
-
         match &node {
             Node::Operation(op) => {
                 let mut args = Vec::default();
@@ -91,17 +85,23 @@ where
                     args,
                 };
 
-                match output.weight() {
-                    Name::Nil => {
+                match op
+                    .outputs()
+                    .map(|edge| match edge.weight() {
+                        Name::Nil => Ok(None),
+                        Name::FreeVar(_) => Err(DecompilationError::Corrupt),
+                        Name::BoundVar(def) => Ok(Some(def)),
+                    })
+                    .collect::<Result<Option<Vec<_>>, _>>()?
+                {
+                    None => {
+                        // The node has a unique output which does not have a name.
                         node_to_syntax.insert(node, Arg::Value(value));
                     }
-                    Name::BoundVar(def) => {
-                        binds.push(Bind {
-                            def: vec![def.clone()],
-                            value,
-                        });
+                    Some(defs) => {
+                        // The node has any number of outputs which are all bound variables.
+                        binds.push(Bind { defs, value });
                     }
-                    Name::FreeVar(_) => return Err(DecompilationError::Corrupt),
                 }
             }
             Node::Thunk(thunk) => {
@@ -116,7 +116,22 @@ where
                         .collect::<Result<Vec<_>, _>>()?,
                     body: decompile(thunk)?,
                 };
-                node_to_syntax.insert(node, Arg::Thunk(thunk));
+
+                // Check the node has a unique output.
+                let output = node
+                    .outputs()
+                    .exactly_one()
+                    .map_err(|_err| DecompilationError::MultipleOutputs)?;
+
+                // Check the output does not have a name.
+                match output.weight() {
+                    Name::Nil => {
+                        node_to_syntax.insert(node, Arg::Thunk(thunk));
+                    }
+                    Name::FreeVar(_) | Name::BoundVar(_) => {
+                        return Err(DecompilationError::Corrupt)
+                    }
+                }
             }
         }
     }

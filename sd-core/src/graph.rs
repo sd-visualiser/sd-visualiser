@@ -249,7 +249,7 @@ where
         }
 
         for bind in expr.binds.iter().rev() {
-            self.process_value(&bind.value, ProcessInput::Variables(bind.def.clone()))?;
+            self.process_value(&bind.value, ProcessInput::Variables(bind.defs.clone()))?;
         }
         debug!("processed binds: {:?}", self.outputs);
 

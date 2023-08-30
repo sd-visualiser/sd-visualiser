@@ -14,8 +14,8 @@ impl<T: Language> Expr<T> {
             value.free_vars(&mut vars);
         }
 
-        for bind in self.binds.iter().flat_map(|x| &x.def) {
-            vars.remove(bind.as_var());
+        for def in self.binds.iter().flat_map(|bind| &bind.defs) {
+            vars.remove(def.as_var());
         }
 
         vars
