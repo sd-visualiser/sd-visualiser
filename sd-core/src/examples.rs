@@ -10,9 +10,9 @@ use crate::{
     },
 };
 
-pub struct DummyGraph;
+pub struct DummyCtx;
 
-impl Ctx for DummyGraph {
+impl Ctx for DummyCtx {
     type Edge = DummyEdge;
     type Operation = DummyOperation;
     type Thunk = DummyThunk;
@@ -22,13 +22,13 @@ impl Ctx for DummyGraph {
 pub struct DummyEdge;
 
 impl EdgeLike for DummyEdge {
-    type Ctx = DummyGraph;
+    type Ctx = DummyCtx;
 
-    fn source(&self) -> Option<Node<DummyGraph>> {
+    fn source(&self) -> Option<Node<DummyCtx>> {
         panic!("unsupported")
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<DummyGraph>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<DummyCtx>>> + '_> {
         panic!("unsupported")
     }
 }
@@ -46,7 +46,7 @@ pub struct DummyOperation {
 }
 
 impl NodeLike for DummyOperation {
-    type Ctx = DummyGraph;
+    type Ctx = DummyCtx;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
@@ -83,7 +83,7 @@ pub struct DummyThunk {
 }
 
 impl NodeLike for DummyThunk {
-    type Ctx = DummyGraph;
+    type Ctx = DummyCtx;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
@@ -107,7 +107,7 @@ impl NodeLike for DummyThunk {
 }
 
 impl Graph for DummyThunk {
-    type Ctx = DummyGraph;
+    type Ctx = DummyCtx;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
@@ -121,7 +121,7 @@ impl Graph for DummyThunk {
         panic!("unsupported")
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<DummyGraph>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<DummyCtx>> + '_> {
         panic!("unsupported")
     }
 
@@ -138,7 +138,7 @@ impl WithWeight for DummyThunk {
 
 /// Corrresponds to the program `bind x = 1 in x`.
 #[must_use]
-pub fn int() -> MonoidalGraph<DummyGraph> {
+pub fn int() -> MonoidalGraph<DummyCtx> {
     MonoidalGraph {
         free_inputs: vec![],
         bound_inputs: vec![],
@@ -155,7 +155,7 @@ pub fn int() -> MonoidalGraph<DummyGraph> {
 }
 
 #[must_use]
-pub fn copy() -> MonoidalGraph<DummyGraph> {
+pub fn copy() -> MonoidalGraph<DummyCtx> {
     MonoidalGraph {
         free_inputs: vec![],
         bound_inputs: vec![DummyEdge],
@@ -184,7 +184,7 @@ pub fn copy() -> MonoidalGraph<DummyGraph> {
 }
 
 #[must_use]
-pub fn thunk() -> MonoidalGraph<DummyGraph> {
+pub fn thunk() -> MonoidalGraph<DummyCtx> {
     let plus = MonoidalGraph {
         free_inputs: vec![],
         bound_inputs: vec![DummyEdge; 2],
