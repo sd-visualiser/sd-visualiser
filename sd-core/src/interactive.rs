@@ -1,12 +1,10 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use std::fmt::Debug;
-
 use derivative::Derivative;
 
 use crate::{
     hypergraph::{
-        generic::{Edge, Node, Operation, Thunk},
+        generic::{Edge, Node, Thunk},
         traits::Graph,
         utils::create_selected,
     },
@@ -21,7 +19,7 @@ use crate::{
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "G: Debug, Operation<G::Ctx>: Debug, Thunk<G::Ctx>: Debug")
+    Debug(bound = "")
 )]
 pub struct InteractiveGraph<G: Graph> {
     graph: G,

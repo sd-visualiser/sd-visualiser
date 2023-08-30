@@ -1,4 +1,4 @@
-use std::{fmt::Debug, sync::Arc};
+use std::sync::Arc;
 
 use derivative::Derivative;
 use indexmap::IndexSet;
@@ -16,7 +16,7 @@ use crate::{hypergraph::generic::Ctx, selection::SelectionMap};
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Operation: Debug, T::Thunk: Debug")
+    Debug(bound = "")
 )]
 pub struct Subgraph<T: Ctx> {
     pub selection: Arc<SelectionMap<T>>,
@@ -76,7 +76,7 @@ impl<T: Ctx> SubNode<T> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Edge: Debug")
+    Debug(bound = "")
 )]
 pub struct SubEdge<T: Ctx> {
     pub inner: T::Edge,
@@ -90,7 +90,7 @@ pub struct SubEdge<T: Ctx> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Operation: Debug")
+    Debug(bound = "")
 )]
 pub struct SubOperation<T: Ctx> {
     pub inner: T::Operation,
@@ -104,7 +104,7 @@ pub struct SubOperation<T: Ctx> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Thunk: Debug")
+    Debug(bound = "")
 )]
 pub struct SubThunk<T: Ctx> {
     pub inner: T::Thunk,

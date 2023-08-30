@@ -1,6 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds)]
 
-use std::{fmt::Debug, sync::Arc};
+use std::sync::Arc;
 
 use derivative::Derivative;
 use indexmap::IndexSet;
@@ -23,7 +23,7 @@ use crate::{
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "G: Debug, Edge<G::Ctx>: Debug")
+    Debug(bound = "")
 )]
 pub struct CutGraph<G: Graph> {
     graph: G,
@@ -46,7 +46,7 @@ impl<G: Graph> CutGraph<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "Edge<G::Ctx>: Debug, Operation<G::Ctx>: Debug, Thunk<G::Ctx>: Debug")
+    Debug(bound = "")
 )]
 pub enum CutEdge<G: Graph> {
     Internal {
@@ -76,7 +76,7 @@ impl<G: Graph> CutEdge<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "Edge<G::Ctx>: Debug, Operation<G::Ctx>: Debug, Thunk<G::Ctx>: Debug")
+    Debug(bound = "")
 )]
 pub enum CutOperation<G: Graph> {
     Internal {
@@ -112,7 +112,7 @@ impl<G: Graph> CutOperation<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "Thunk<G::Ctx>: Debug")
+    Debug(bound = "")
 )]
 pub struct CutThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,

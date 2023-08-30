@@ -1,5 +1,5 @@
 use std::{
-    fmt::{Debug, Display},
+    fmt::Display,
     sync::{Arc, Mutex, OnceLock},
 };
 
@@ -54,9 +54,9 @@ pub fn generate_shapes<G>(
 ) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
 where
     G: Graph + Send + Sync + 'static,
-    Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
-    Operation<G::Ctx>: Debug + Send + Sync,
-    Thunk<G::Ctx>: Debug + Send + Sync,
+    Edge<G::Ctx>: ExtensibleEdge + Send + Sync,
+    Operation<G::Ctx>: Send + Sync,
+    Thunk<G::Ctx>: Send + Sync,
     OperationWeight<G::Ctx>: Display,
 {
     let cache = shape_cache::<G>();

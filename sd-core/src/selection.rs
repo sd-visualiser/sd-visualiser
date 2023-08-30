@@ -1,7 +1,4 @@
-use std::{
-    fmt::Debug,
-    ops::{Index, IndexMut},
-};
+use std::ops::{Index, IndexMut};
 
 use derivative::Derivative;
 use indexmap::{IndexMap, IndexSet};
@@ -23,7 +20,7 @@ use crate::{
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Operation: Debug, T::Thunk: Debug")
+    Debug(bound = "")
 )]
 pub struct SelectionMap<T: Ctx>(WeakMap<Node<T>, bool>);
 

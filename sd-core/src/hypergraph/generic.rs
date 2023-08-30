@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use derivative::Derivative;
 
 use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
@@ -27,7 +25,7 @@ pub type ThunkWeight<T> = <Thunk<T> as WithWeight>::Weight;
     PartialEq(bound = ""),
     Eq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Operation: Debug, T::Thunk: Debug")
+    Debug(bound = "")
 )]
 pub enum Node<T: Ctx> {
     Operation(T::Operation),

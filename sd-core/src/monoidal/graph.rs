@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use derivative::Derivative;
 use itertools::Itertools;
 use tracing::debug;
@@ -14,22 +12,14 @@ use crate::{
     hypergraph::{generic::Ctx, traits::NodeLike},
 };
 
-impl<T: Ctx> Slice<MonoidalOp<T>>
-where
-    T::Operation: Debug,
-    T::Thunk: Debug,
-    T::Edge: Debug,
-{
+impl<T: Ctx> Slice<MonoidalOp<T>> {
     /// From iterators of starting edges and ending edges, create slices containing caps, cups, and deletes
     /// The `downwards` argument determines whether we should make cups and deletes (if it is true) or caps
     pub fn insert_caps_cups_deletes(
         start_edges: impl Iterator<Item = Link<T>>,
         end_edges: impl Iterator<Item = Link<T>>,
         downwards: bool,
-    ) -> Vec<Self>
-    where
-        T::Edge: Debug,
-    {
+    ) -> Vec<Self> {
         let mut permutation: Vec<Option<(Link<T>, PermutationOutput)>> =
             generate_permutation::<T>(start_edges, end_edges)
                 .into_iter()
@@ -176,7 +166,7 @@ pub type MonoidalGraph<T> = MonoidalTerm<T, MonoidalOp<T>>;
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Edge: Debug, T::Thunk: Debug, T::Operation: Debug")
+    Debug(bound = "")
 )]
 pub enum MonoidalOp<T: Ctx> {
     Copy {
@@ -320,12 +310,7 @@ impl<T: Ctx> InOutIter for MonoidalOp<T> {
     }
 }
 
-impl<T: Ctx> From<&WiredOp<T>> for MonoidalOp<T>
-where
-    T::Edge: Debug,
-    T::Operation: Debug,
-    T::Thunk: Debug,
-{
+impl<T: Ctx> From<&WiredOp<T>> for MonoidalOp<T> {
     fn from(op: &WiredOp<T>) -> Self {
         match op {
             WiredOp::Copy { addr, copies } => MonoidalOp::Copy {
@@ -367,12 +352,7 @@ impl<T: Ctx> Extend<Slice<MonoidalOp<T>>> for MonoidalGraphBuilder<T> {
     }
 }
 
-impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T>
-where
-    T::Edge: Debug,
-    T::Operation: Debug,
-    T::Thunk: Debug,
-{
+impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T> {
     fn from(graph: &MonoidalWiredGraph<T>) -> Self {
         debug!("Input graph {:#?}", graph);
         let graph_inputs: Vec<Link<T>> = graph
@@ -464,12 +444,7 @@ where
     }
 }
 
-impl<T: Ctx> MonoidalGraph<T>
-where
-    T::Operation: Debug,
-    T::Thunk: Debug,
-    T::Edge: Debug,
-{
+impl<T: Ctx> MonoidalGraph<T> {
     /// Perform local optimisations on a `MonoidalGraph` to try to shrink the number of layers
     fn squash_layers(&mut self) {
         self.slices = std::mem::take(&mut self.slices)
@@ -488,12 +463,7 @@ where
     }
 }
 
-impl<T: Ctx> Slice<MonoidalOp<T>>
-where
-    T::Operation: Debug,
-    T::Thunk: Debug,
-    T::Edge: Debug,
-{
+impl<T: Ctx> Slice<MonoidalOp<T>> {
     /// Check if two layers are canonically mergable into one layer
     fn check_mergeablity(&self, other: &Self) -> bool {
         let mut first_iter = self.ops.iter();

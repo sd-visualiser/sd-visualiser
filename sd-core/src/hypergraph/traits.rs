@@ -1,4 +1,4 @@
-use std::hash::Hash;
+use std::{fmt::Debug, hash::Hash};
 
 use super::generic::{Ctx, Edge, Node, Operation, Thunk};
 
@@ -7,7 +7,7 @@ pub trait WithWeight {
     fn weight(&self) -> Self::Weight;
 }
 
-pub trait NodeLike: Clone + Eq + PartialEq + Hash {
+pub trait NodeLike: Clone + Eq + PartialEq + Hash + Debug {
     type Ctx: Ctx;
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
@@ -22,13 +22,13 @@ pub trait NodeLike: Clone + Eq + PartialEq + Hash {
     }
 }
 
-pub trait EdgeLike: Clone + Eq + PartialEq + Hash {
+pub trait EdgeLike: Clone + Eq + PartialEq + Hash + Debug {
     type Ctx: Ctx;
     fn source(&self) -> Option<Node<Self::Ctx>>;
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_>;
 }
 
-pub trait Graph: Clone + Eq + PartialEq + Hash {
+pub trait Graph: Clone + Eq + PartialEq + Hash + Debug {
     type Ctx: Ctx;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;

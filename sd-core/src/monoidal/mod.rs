@@ -63,7 +63,7 @@ where
     Eq(bound = "O: Eq"),
     PartialEq(bound = "O: PartialEq"),
     Hash(bound = "O: Hash"),
-    Debug(bound = "T::Edge: Debug, O: Debug")
+    Debug(bound = "O: Debug")
 )]
 pub struct MonoidalTerm<T: Ctx, O> {
     /// Free inputs to the term

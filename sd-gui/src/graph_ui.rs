@@ -1,6 +1,6 @@
 #![allow(clippy::inline_always)]
 
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 
 use delegate::delegate;
 use eframe::{
@@ -99,9 +99,9 @@ where
         T: Language,
         T::Var: Fresh,
         Expr<T>: PrettyPrint,
-        Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
-        Operation<G::Ctx>: WithWeight<Weight = T::Op> + Debug + Send + Sync,
-        Thunk<G::Ctx>: WithWeight<Weight = T::Addr> + Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Send + Sync,
+        Operation<G::Ctx>: WithWeight<Weight = T::Op> + Send + Sync,
+        Thunk<G::Ctx>: WithWeight<Weight = T::Addr> + Send + Sync,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -181,9 +181,9 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
-        Operation<G::Ctx>: Debug + Send + Sync,
-        Thunk<G::Ctx>: Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + Send + Sync,
+        Operation<G::Ctx>: Send + Sync,
+        Thunk<G::Ctx>: Send + Sync,
         EdgeWeight<G::Ctx>: Matchable,
         OperationWeight<G::Ctx>: Display,
     {
@@ -209,9 +209,9 @@ where
 
     pub(crate) fn export_svg(&self) -> String
     where
-        Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
-        Operation<G::Ctx>: Debug + Send + Sync,
-        Thunk<G::Ctx>: Debug + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + Send + Sync,
+        Operation<G::Ctx>: Send + Sync,
+        Thunk<G::Ctx>: Send + Sync,
         OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);

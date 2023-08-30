@@ -1,4 +1,4 @@
-use std::{cmp::Reverse, collections::HashMap, fmt::Debug};
+use std::{cmp::Reverse, collections::HashMap};
 
 use derivative::Derivative;
 use good_lp::{variable, Expression, Solution, Variable};
@@ -10,7 +10,7 @@ use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Direction, InOut, InOutIter, Link},
     hypergraph::{
-        generic::{Ctx, Edge, Node, Operation, Thunk},
+        generic::{Ctx, Edge, Node},
         traits::{Graph, NodeLike},
         utils::{normalised_targets, number_of_normalised_targets},
     },
@@ -30,7 +30,7 @@ pub type MonoidalWiredGraph<T> = MonoidalTerm<T, WiredOp<T>>;
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "T::Edge: Debug, T::Thunk: Debug, T::Operation: Debug")
+    Debug(bound = "")
 )]
 pub enum WiredOp<T: Ctx> {
     Copy {
@@ -194,11 +194,7 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
 
     /// Inserts a node of a hypergraph into the builder
     /// This prepares all the inputs of the node and inserts relevant backlinks
-    fn insert_operation(&mut self, node: &Node<T>, node_layer: usize)
-    where
-        T::Operation: Debug,
-        T::Thunk: Debug,
-    {
+    fn insert_operation(&mut self, node: &Node<T>, node_layer: usize) {
         let wired_op = match node {
             Node::Operation(op) => WiredOp::Operation { addr: op.clone() },
             Node::Thunk(thunk) => WiredOp::Thunk {
@@ -246,12 +242,7 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
 }
 
 #[allow(clippy::fallible_impl_from)]
-impl<G> From<&G> for MonoidalWiredGraph<G::Ctx>
-where
-    G: Graph,
-    Operation<G::Ctx>: Debug,
-    Thunk<G::Ctx>: Debug,
-{
+impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
