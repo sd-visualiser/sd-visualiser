@@ -120,7 +120,17 @@ impl<T: Ctx> Shape<T> {
             }
         }
         match self {
-            Shape::Line { .. } | Shape::CubicBezier { .. } | Shape::CircleFilled { .. } => {}
+            Shape::Line { .. } | Shape::CubicBezier { .. } => {}
+            Shape::CircleFilled { addr, .. } => {
+                let circle_response = ui.interact(
+                    bounding_box.intersect(bounds),
+                    Id::new((&graph, &addr)),
+                    Sense::click(),
+                );
+                if circle_response.clicked() {
+                    graph.cut(addr.clone());
+                }
+            }
             Shape::Rectangle {
                 addr, fill, stroke, ..
             } => {

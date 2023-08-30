@@ -99,9 +99,13 @@ where
         T: Language,
         T::Var: Fresh,
         Expr<T>: PrettyPrint,
-        Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>>,
-        Operation<G::Ctx>: WithWeight<Weight = T::Op>,
-        Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
+        Edge<G::Ctx>: ExtensibleEdge,
+        // Needed for render
+        Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,
+        Operation<G::InnerCtx>: WithWeight<Weight = T::Op>,
+        Thunk<G::InnerCtx>: WithWeight<Weight = T::Addr>,
+        // Needed for generate_shapes
+        OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();

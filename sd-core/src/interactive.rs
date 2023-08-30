@@ -4,6 +4,7 @@ use derivative::Derivative;
 
 use crate::{
     hypergraph::{
+        cut::CutGraph,
         generic::{Edge, Node, Thunk},
         traits::Graph,
         utils::create_selected,
@@ -22,20 +23,22 @@ use crate::{
     Debug(bound = "")
 )]
 pub struct InteractiveGraph<G: Graph> {
-    graph: G,
+    pub graph: CutGraph<G>,
     #[derivative(PartialEq = "ignore", Hash = "ignore")]
     pub selection: SelectionMap<G::Ctx>,
 }
 
 impl<G: Graph> InteractiveGraph<G> {
     pub fn new(graph: G) -> Self {
-        let selection = create_selected(&graph);
-        Self { graph, selection }
+        Self {
+            selection: create_selected(&graph),
+            graph: CutGraph::new(graph),
+        }
     }
 }
 
 impl<G: Graph> Graph for InteractiveGraph<G> {
-    type Ctx = G::Ctx;
+    type Ctx = CutGraph<G>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         self.graph.free_graph_inputs()

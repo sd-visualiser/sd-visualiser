@@ -7,7 +7,7 @@ use sd_core::{
     decompile::{decompile, Fresh},
     graph::SyntaxHypergraph,
     hypergraph::{
-        generic::Thunk,
+        cut::CutThunk,
         subgraph::{SubThunk, Subgraph},
     },
     language::{chil::Chil, spartan::Spartan, Expr, Language},
@@ -65,7 +65,7 @@ pub struct SelectionInternal<T: Language> {
 impl<T: 'static + Language> SelectionInternal<T> {
     pub(crate) fn new(
         selection: &SelectionMap<SyntaxHypergraph<T>>,
-        expanded: &WeakMap<Thunk<SyntaxHypergraph<T>>, bool>,
+        expanded: &WeakMap<CutThunk<SyntaxHypergraph<T>>, bool>,
         name: String,
     ) -> Self
     where
@@ -79,7 +79,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
                 .map(|(thunk, &expanded)| {
                     (
                         SubThunk {
-                            inner: thunk.clone(),
+                            inner: thunk.inner().clone(),
                             selection: subgraph.selection.clone(),
                         },
                         expanded,

@@ -38,9 +38,9 @@ where
     T::Var: Fresh,
     Expr<T>: PrettyPrint,
     G: RenderableGraph,
-    Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    Operation<G::Ctx>: WithWeight<Weight = T::Op>,
-    Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
+    Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,
+    Operation<G::InnerCtx>: WithWeight<Weight = T::Op>,
+    Thunk<G::InnerCtx>: WithWeight<Weight = T::Addr>,
 {
     let viewport = *to_screen.from();
 
@@ -67,23 +67,26 @@ where
         .collect();
 
     // Show hover tooltips.
+    let pretty_edge = |edge| EdgeLabel::from_edge::<G::InnerCtx>(&edge).to_pretty();
     let labels = match highlight_node {
         Some(node) => {
             highlight_edges.extend(node.inputs().chain(node.outputs()));
             match &node {
                 Node::Operation(op) => {
-                    vec![op.weight().to_pretty()]
+                    vec![graph
+                        .inner_operation(op)
+                        .either(|op| op.weight().to_pretty(), pretty_edge)]
                 }
                 // TODO(@calintat): Pretty print the full thunk not just the body.
                 Node::Thunk(thunk) => {
-                    vec![decompile(thunk)
+                    vec![decompile(&graph.inner_thunk(thunk))
                         .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
                 }
             }
         }
         None => highlight_edges
             .iter()
-            .map(|edge| EdgeLabel::from_edge::<G::Ctx>(edge).to_pretty())
+            .map(|edge| pretty_edge(graph.inner_edge(edge)))
             .collect(),
     };
     for label in labels {

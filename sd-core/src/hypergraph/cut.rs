@@ -9,6 +9,7 @@ use itertools::Either;
 use crate::{
     hypergraph::{
         generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
+        subgraph::ExtensibleEdge,
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
         utils::create_cut_edges,
     },
@@ -37,6 +38,13 @@ impl<G: Graph> CutGraph<G> {
             graph,
             cut_edges: Arc::new(cut_edges),
         }
+    }
+
+    /// Cut or uncut the given edge.
+    pub fn set(&mut self, edge: &Edge<G::Ctx>, cut: bool) {
+        let mut cut_edges = (*self.cut_edges).clone();
+        cut_edges[edge] = cut;
+        self.cut_edges = Arc::new(cut_edges);
     }
 }
 
@@ -504,3 +512,5 @@ impl<G: Graph> WithWeight for CutThunk<G> {
         self.inner().weight()
     }
 }
+
+impl<G: Graph> ExtensibleEdge for CutEdge<G> {}

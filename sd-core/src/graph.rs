@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+};
 
 use derivative::Derivative;
 #[cfg(test)]
@@ -39,6 +42,19 @@ pub enum Name<T: Language> {
     Nil,
     FreeVar(T::Var),
     BoundVar(T::VarDef),
+}
+
+impl<T: Language> Display for Name<T>
+where
+    T::Var: Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Name::Nil => write!(f, ""),
+            Name::FreeVar(var) => write!(f, "{var}"),
+            Name::BoundVar(var_def) => write!(f, "{}", var_def.as_var()),
+        }
+    }
 }
 
 impl<T: Language> Matchable for Name<T>
