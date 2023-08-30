@@ -8,7 +8,7 @@ use itertools::Either;
 
 use crate::{
     hypergraph::{
-        generic::{Ctx, Edge, EdgeWeight, Node, NodeWeight, Operation, Thunk},
+        generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
         utils::create_cut_edges,
     },
@@ -489,10 +489,18 @@ impl<G: Graph> WithWeight for CutEdge<G> {
 }
 
 impl<G: Graph> WithWeight for CutOperation<G> {
-    type Weight = Either<NodeWeight<G::Ctx>, EdgeWeight<G::Ctx>>;
+    type Weight = Either<OperationWeight<G::Ctx>, EdgeWeight<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
         self.inner()
             .map_either(WithWeight::weight, WithWeight::weight)
+    }
+}
+
+impl<G: Graph> WithWeight for CutThunk<G> {
+    type Weight = ThunkWeight<G::Ctx>;
+
+    fn weight(&self) -> Self::Weight {
+        self.inner().weight()
     }
 }

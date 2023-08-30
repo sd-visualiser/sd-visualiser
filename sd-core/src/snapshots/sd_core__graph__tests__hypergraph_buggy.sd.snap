@@ -6,23 +6,23 @@ Graph(
   nodes: [
     Edge(FreeVar(Variable("a"))),
     Edge(FreeVar(Variable("b"))),
-    Operation(Lambda),
-    Edge(Thunk(Addr)),
-    Edge(Op),
+    Operation(Op(Lambda)),
+    Edge(Nil),
+    Edge(Nil),
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("a"))),
         Edge(FreeVar(Variable("b"))),
         Edge(BoundVar(Variable("x"))),
-        Operation(Lambda),
-        Edge(Thunk(Addr)),
-        Edge(Op),
+        Operation(Op(Lambda)),
+        Edge(Nil),
+        Edge(Nil),
         Thunk(Graph(
           nodes: [
             Edge(FreeVar(Variable("b"))),
             Edge(BoundVar(Variable("y"))),
-            Operation(Not),
-            Edge(Op),
+            Operation(Op(Not)),
+            Edge(Nil),
           ],
           node_holes: [],
           edge_property: directed,

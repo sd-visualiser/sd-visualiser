@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+};
 
 use derivative::Derivative;
 #[cfg(test)]
@@ -25,9 +28,47 @@ use crate::{
     Debug(bound = "")
 )]
 #[cfg_attr(test, derive(Serialize))]
-pub enum Name<T: Language> {
-    Op,
+pub enum Elem<T: Language> {
+    Op(T::Op),
     Thunk(T::Addr),
+}
+
+impl<T: Language> Elem<T> {
+    pub fn into_op(self) -> T::Op {
+        match self {
+            Self::Op(op) => op,
+            Self::Thunk(_addr) => panic!(),
+        }
+    }
+
+    pub fn into_addr(self) -> T::Addr {
+        match self {
+            Self::Op(_op) => panic!(),
+            Self::Thunk(addr) => addr,
+        }
+    }
+}
+
+impl<T: Language> Display for Elem<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Op(op) => write!(f, "{op}"),
+            Self::Thunk(addr) => write!(f, "{addr}"),
+        }
+    }
+}
+
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+#[cfg_attr(test, derive(Serialize))]
+pub enum Name<T: Language> {
+    Nil,
     FreeVar(T::Var),
     BoundVar(T::VarDef),
 }
@@ -39,8 +80,7 @@ where
 {
     fn is_match(&self, variable: &str) -> bool {
         match self {
-            Name::Op => false,
-            Name::Thunk(addr) => addr.is_match(variable),
+            Name::Nil => false,
             Name::FreeVar(var) => var.is_match(variable),
             Name::BoundVar(var_def) => var_def.as_var().is_match(variable),
         }
@@ -50,20 +90,20 @@ where
 impl<T: Language> Name<T> {
     pub fn into_var(self) -> Option<T::Var> {
         match self {
-            Name::Op | Name::Thunk(_) => None,
+            Name::Nil => None,
             Name::FreeVar(var) => Some(var),
             Name::BoundVar(def) => Some(def.as_var().clone()),
         }
     }
 }
 
-pub type SyntaxHypergraph<T> = Hypergraph<<T as Language>::Op, Name<T>>;
+pub type SyntaxHypergraph<T> = Hypergraph<Elem<T>, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
 pub enum ConvertError<T: Language> {
     #[error("Error constructing hypergraph")]
-    HypergraphError(#[from] HypergraphError<T::Op, Name<T>>),
+    HypergraphError(#[from] HypergraphError<Elem<T>, Name<T>>),
     #[error("Couldn't find location of variable `{}`", .0.to_pretty())]
     VariableError(T::Var),
     #[error("Attempted to alias `{}` to `{}`", .0.to_pretty(), .1.to_pretty())]
@@ -82,21 +122,21 @@ struct Environment<F, T: Language> {
     fragment: F,
     /// Hanging input ports of nodes, with the variable they should be connected to
     #[allow(clippy::type_complexity)]
-    inputs: Vec<(InPort<T::Op, Name<T>>, T::Var)>,
+    inputs: Vec<(InPort<Elem<T>, Name<T>>, T::Var)>,
 
     /// Mapping from variables to the output port that corresponds to them
-    outputs: HashMap<T::Var, OutPort<T::Op, Name<T>>>,
+    outputs: HashMap<T::Var, OutPort<Elem<T>, Name<T>>>,
 }
 
 enum ProcessInput<T: Language> {
     Variables(Vec<T::VarDef>),
-    InPort(InPort<T::Op, Name<T>>),
+    InPort(InPort<Elem<T>, Name<T>>),
 }
 
 impl<T, F> Environment<F, T>
 where
     T: Language + 'static,
-    F: Fragment<NodeWeight = T::Op, EdgeWeight = Name<T>>,
+    F: Fragment<NodeWeight = Elem<T>, EdgeWeight = Name<T>>,
 {
     /// Create a new empty environment from a given `fragment`
     fn new(fragment: F) -> Self {
@@ -136,12 +176,12 @@ where
                 let output_weights = if let ProcessInput::Variables(inputs) = &input {
                     inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
                 } else {
-                    vec![Name::Op]
+                    vec![Name::Nil]
                 };
 
                 let operation_node =
                     self.fragment
-                        .add_operation(args.len(), output_weights, op.clone());
+                        .add_operation(args.len(), output_weights, Elem::Op(op.clone()));
                 for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
                     match arg {
                         Arg::Value(value) => {
@@ -186,12 +226,13 @@ where
     fn process_thunk(
         &mut self,
         thunk: &Thunk<T>,
-        in_port: InPort<T::Op, Name<T>>,
+        in_port: InPort<Elem<T>, Name<T>>,
     ) -> Result<(), ConvertError<T>> {
         let thunk_node = self.fragment.add_thunk(
             thunk.args.iter().cloned().map(Name::BoundVar),
             thunk.body.values.len(),
-            [Name::Thunk(thunk.addr.clone())],
+            [Name::Nil],
+            Elem::Thunk(thunk.addr.clone()),
         );
 
         self.fragment

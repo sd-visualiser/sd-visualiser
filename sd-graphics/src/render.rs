@@ -5,9 +5,9 @@ use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter},
     decompile::{decompile, Fresh},
-    graph::Name,
+    graph::{Elem, Name},
     hypergraph::{
-        generic::{Ctx, Edge, Node, NodeWeight, Operation, Thunk},
+        generic::{Ctx, Edge, Node, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
@@ -39,7 +39,8 @@ where
     Expr<T>: PrettyPrint,
     G: RenderableGraph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    Operation<G::Ctx>: WithWeight<Weight = T::Op>,
+    Operation<G::Ctx>: WithWeight<Weight = Elem<T>>,
+    Thunk<G::Ctx>: WithWeight<Weight = Elem<T>>,
 {
     let viewport = *to_screen.from();
 
@@ -71,7 +72,7 @@ where
             highlight_edges.extend(node.inputs().chain(node.outputs()));
             match &node {
                 Node::Operation(op) => {
-                    vec![op.weight().to_pretty()]
+                    vec![op.weight().into_op().to_pretty()]
                 }
                 Node::Thunk(thunk) => {
                     vec![decompile(thunk)
@@ -107,7 +108,7 @@ pub fn generate_shapes<T>(
 ) where
     T: Ctx,
     T::Edge: ExtensibleEdge,
-    NodeWeight<T>: Display,
+    OperationWeight<T>: Display,
 {
     // Source
     for (&x, addr) in layout

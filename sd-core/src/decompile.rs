@@ -4,9 +4,9 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
-    graph::Name,
+    graph::{Elem, Name},
     hypergraph::{
-        generic::{Edge, Node, Operation},
+        generic::{Edge, Node, Operation as GraphOperation, Thunk as GraphThunk},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::{chil, spartan, Arg, Bind, Expr, Language, Thunk, Value},
@@ -44,7 +44,8 @@ pub fn decompile<G, T: Language>(graph: &G) -> Result<Expr<T>, DecompilationErro
 where
     G: Graph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    Operation<G::Ctx>: WithWeight<Weight = T::Op>,
+    GraphOperation<G::Ctx>: WithWeight<Weight = Elem<T>>,
+    GraphThunk<G::Ctx>: WithWeight<Weight = Elem<T>>,
     T::Var: Fresh,
 {
     let mut binds = Vec::default();
@@ -86,12 +87,12 @@ where
                 }
 
                 let value = Value::Op {
-                    op: op.weight(),
+                    op: op.weight().into_op(),
                     args,
                 };
 
                 match output.weight() {
-                    Name::Op => {
+                    Name::Nil => {
                         node_to_syntax.insert(node, Arg::Value(value));
                     }
                     Name::BoundVar(def) => {
@@ -100,14 +101,11 @@ where
                             value,
                         });
                     }
-                    Name::Thunk(_) | Name::FreeVar(_) => return Err(DecompilationError::Corrupt),
+                    Name::FreeVar(_) => return Err(DecompilationError::Corrupt),
                 }
             }
             Node::Thunk(thunk) => {
-                let addr = match output.weight() {
-                    Name::Thunk(addr) => addr.clone(),
-                    _ => return Err(DecompilationError::Corrupt),
-                };
+                let addr = thunk.weight().into_addr();
                 let thunk = Thunk {
                     addr,
                     args: thunk

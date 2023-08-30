@@ -27,6 +27,7 @@ pub trait Fragment {
         bound_inputs: impl IntoIterator<Item = Self::EdgeWeight>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = Self::EdgeWeight>,
+        weight: Self::NodeWeight,
     ) -> ThunkBuilder<Self::NodeWeight, Self::EdgeWeight>;
 
     fn graph_outputs(
@@ -91,8 +92,9 @@ impl<V, E> Fragment for HypergraphBuilder<V, E> {
         bound_inputs: impl IntoIterator<Item = E>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = E>,
+        weight: V,
     ) -> ThunkBuilder<V, E> {
-        let thunk = ThunkInternal::new(bound_inputs, inner_output_len, outer_outputs, None);
+        let thunk = ThunkInternal::new(bound_inputs, inner_output_len, outer_outputs, weight, None);
         self.0
             .nodes
             .push(NodeInternal::Thunk(ByThinAddress(thunk.clone())));
@@ -143,11 +145,13 @@ impl<V, E> Fragment for ThunkCursor<V, E> {
         bound_inputs: impl IntoIterator<Item = E>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = E>,
+        weight: V,
     ) -> ThunkBuilder<V, E> {
         let thunk = ThunkInternal::new(
             bound_inputs,
             inner_output_len,
             outer_outputs,
+            weight,
             Some(Arc::downgrade(&self.0 .0 .0)),
         );
         self.0

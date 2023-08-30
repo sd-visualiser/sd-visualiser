@@ -4,7 +4,7 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::{
-    generic::{EdgeWeight, Node, NodeWeight},
+    generic::{EdgeWeight, Node, OperationWeight, ThunkWeight},
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
 };
 use crate::{hypergraph::generic::Ctx, selection::SelectionMap};
@@ -310,7 +310,15 @@ impl<T: Ctx> WithWeight for SubEdge<T> {
 }
 
 impl<T: Ctx> WithWeight for SubOperation<T> {
-    type Weight = NodeWeight<T>;
+    type Weight = OperationWeight<T>;
+
+    fn weight(&self) -> Self::Weight {
+        self.inner.weight()
+    }
+}
+
+impl<T: Ctx> WithWeight for SubThunk<T> {
+    type Weight = ThunkWeight<T>;
 
     fn weight(&self) -> Self::Weight {
         self.inner.weight()

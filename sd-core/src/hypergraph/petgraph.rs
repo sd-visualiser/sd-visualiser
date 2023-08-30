@@ -5,7 +5,7 @@ use petgraph::graph::NodeIndex;
 use serde::Serialize;
 
 use super::{
-    generic::{Edge, EdgeWeight, Node, NodeWeight},
+    generic::{Edge, EdgeWeight, Node, OperationWeight},
     traits::{Graph, NodeLike, WithWeight},
 };
 
@@ -18,7 +18,7 @@ pub enum PetNode<V, E> {
     Thunk(PetGraph<V, E>),
 }
 
-pub fn to_pet<G>(hypergraph: &G) -> PetGraph<NodeWeight<G::Ctx>, EdgeWeight<G::Ctx>>
+pub fn to_pet<G>(hypergraph: &G) -> PetGraph<OperationWeight<G::Ctx>, EdgeWeight<G::Ctx>>
 where
     G: Graph,
 {

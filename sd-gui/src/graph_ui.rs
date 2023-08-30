@@ -10,9 +10,9 @@ use eframe::{
 use sd_core::{
     common::{Direction, Matchable},
     decompile::Fresh,
-    graph::{Name, SyntaxHypergraph},
+    graph::{Elem, Name, SyntaxHypergraph},
     hypergraph::{
-        generic::{Edge, EdgeWeight, NodeWeight, Operation, Thunk},
+        generic::{Edge, EdgeWeight, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::{Graph, WithWeight},
         utils::create_expanded,
@@ -100,8 +100,8 @@ where
         T::Var: Fresh,
         Expr<T>: PrettyPrint,
         Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
-        Operation<G::Ctx>: WithWeight<Weight = T::Op> + Debug + Send + Sync,
-        Thunk<G::Ctx>: Debug + Send + Sync,
+        Operation<G::Ctx>: WithWeight<Weight = Elem<T>> + Debug + Send + Sync,
+        Thunk<G::Ctx>: WithWeight<Weight = Elem<T>> + Debug + Send + Sync,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -185,7 +185,7 @@ where
         Operation<G::Ctx>: Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
         EdgeWeight<G::Ctx>: Matchable,
-        NodeWeight<G::Ctx>: Display,
+        OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -212,7 +212,7 @@ where
         Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
         Operation<G::Ctx>: Debug + Send + Sync,
         Thunk<G::Ctx>: Debug + Send + Sync,
-        NodeWeight<G::Ctx>: Display,
+        OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here

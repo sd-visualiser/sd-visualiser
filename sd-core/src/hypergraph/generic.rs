@@ -10,7 +10,7 @@ use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
 pub trait Ctx {
     type Edge: EdgeLike<Ctx = Self> + WithWeight;
     type Operation: NodeLike<Ctx = Self> + WithWeight;
-    type Thunk: NodeLike<Ctx = Self> + Graph<Ctx = Self>;
+    type Thunk: NodeLike<Ctx = Self> + Graph<Ctx = Self> + WithWeight;
 }
 
 pub type Edge<T> = <T as Ctx>::Edge;
@@ -18,7 +18,8 @@ pub type Operation<T> = <T as Ctx>::Operation;
 pub type Thunk<T> = <T as Ctx>::Thunk;
 
 pub type EdgeWeight<T> = <Edge<T> as WithWeight>::Weight;
-pub type NodeWeight<T> = <Operation<T> as WithWeight>::Weight;
+pub type OperationWeight<T> = <Operation<T> as WithWeight>::Weight;
+pub type ThunkWeight<T> = <Thunk<T> as WithWeight>::Weight;
 
 #[derive(Derivative)]
 #[derivative(

@@ -110,6 +110,7 @@ impl<V, E> OperationInternal<V, E> {
 
 #[derive(Debug)]
 pub(super) struct ThunkInternal<V, E> {
+    pub(super) weight: V,
     pub(super) nodes: RwLock<Vec<NodeInternal<V, E>>>,
     #[allow(clippy::type_complexity)]
     pub(super) free_inputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
@@ -124,6 +125,7 @@ impl<V, E> ThunkInternal<V, E> {
         bound_inputs: impl IntoIterator<Item = E>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = E>,
+        weight: V,
         backlink: Option<Weak<ThunkInternal<V, E>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
@@ -151,6 +153,7 @@ impl<V, E> ThunkInternal<V, E> {
                 .collect();
 
             ThunkInternal {
+                weight,
                 nodes: RwLock::new(Vec::default()),
                 free_inputs: OnceLock::new(),
                 bound_inputs,

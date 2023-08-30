@@ -4,7 +4,7 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Operation(Number(1)),
+    Operation(Op(Number(1))),
     Edge(BoundVar(Variable("x"))),
   ],
   node_holes: [],

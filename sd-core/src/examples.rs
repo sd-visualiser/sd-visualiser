@@ -130,6 +130,12 @@ impl Graph for DummyThunk {
     }
 }
 
+impl WithWeight for DummyThunk {
+    type Weight = ();
+
+    fn weight(&self) -> Self::Weight {}
+}
+
 /// Corrresponds to the program `bind x = 1 in x`.
 #[must_use]
 pub fn int() -> MonoidalGraph<DummyGraph> {

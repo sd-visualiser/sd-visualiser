@@ -4,24 +4,24 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Operation(Lambda),
-    Edge(Thunk(Addr)),
+    Operation(Op(Lambda)),
+    Edge(Nil),
     Edge(BoundVar(Variable("f"))),
     Thunk(Graph(
       nodes: [
         Edge(BoundVar(Variable("f"))),
         Edge(BoundVar(Variable("x"))),
-        Operation(App),
+        Operation(Op(App)),
         Edge(BoundVar(Variable("g"))),
-        Edge(Op),
-        Operation(Lambda),
-        Edge(Thunk(Addr)),
+        Edge(Nil),
+        Operation(Op(Lambda)),
+        Edge(Nil),
         Thunk(Graph(
           nodes: [
             Edge(BoundVar(Variable("f"))),
             Edge(BoundVar(Variable("y"))),
-            Operation(App),
-            Edge(Op),
+            Operation(Op(App)),
+            Edge(Nil),
           ],
           node_holes: [],
           edge_property: directed,

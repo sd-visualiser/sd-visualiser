@@ -6,7 +6,7 @@ use itertools::Itertools;
 use sd_core::{
     common::InOut,
     hypergraph::{
-        generic::{Ctx, NodeWeight},
+        generic::{Ctx, OperationWeight},
         traits::WithWeight,
     },
     lp::LpProblem,
@@ -256,7 +256,7 @@ fn layout_internal<T: Ctx>(
     problem: &mut LpProblem,
 ) -> LayoutInternal<Variable>
 where
-    NodeWeight<T>: Display,
+    OperationWeight<T>: Display,
 {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
@@ -477,7 +477,7 @@ pub fn layout<T: Ctx>(
     expanded: &WeakMap<T::Thunk, bool>,
 ) -> Result<Layout, LayoutError>
 where
-    NodeWeight<T>: Display,
+    OperationWeight<T>: Display,
 {
     let mut problem = LpProblem::default();
 

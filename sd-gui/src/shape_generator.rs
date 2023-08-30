@@ -8,7 +8,7 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     hypergraph::{
-        generic::{Edge, NodeWeight, Operation, Thunk},
+        generic::{Edge, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
@@ -57,7 +57,7 @@ where
     Edge<G::Ctx>: ExtensibleEdge + Debug + Send + Sync,
     Operation<G::Ctx>: Debug + Send + Sync,
     Thunk<G::Ctx>: Debug + Send + Sync,
-    NodeWeight<G::Ctx>: Display,
+    OperationWeight<G::Ctx>: Display,
 {
     let cache = shape_cache::<G>();
     let mut guard = cache.lock().unwrap();

@@ -3,9 +3,9 @@ use egui::{vec2, Pos2, Vec2};
 use flo_curves::Coord2;
 use pretty::RcDoc;
 use sd_core::{
-    graph::Name,
+    graph::{Elem, Name},
     hypergraph::{
-        generic::Ctx,
+        generic::{Ctx, Node},
         traits::{EdgeLike, NodeLike, WithWeight},
     },
     language::Language,
@@ -41,22 +41,20 @@ impl<T: Language> EdgeLabel<T> {
     where
         U: Ctx,
         U::Edge: WithWeight<Weight = Name<T>>,
-        U::Operation: WithWeight<Weight = T::Op>,
+        U::Operation: WithWeight<Weight = Elem<T>>,
+        U::Thunk: WithWeight<Weight = Elem<T>>,
     {
         match edge.weight() {
-            Name::Op => match edge.source() {
+            Name::Nil => match edge.source() {
                 None => Self::Fresh,
-                Some(node) => {
-                    let op = node.into_operation().unwrap();
-                    Self::Operation(
-                        op.weight(),
-                        op.inputs()
-                            .map(|edge| Self::from_edge::<U>(&edge))
-                            .collect(),
-                    )
-                }
+                Some(Node::Operation(op)) => Self::Operation(
+                    op.weight().into_op(),
+                    op.inputs()
+                        .map(|edge| Self::from_edge::<U>(&edge))
+                        .collect(),
+                ),
+                Some(Node::Thunk(thunk)) => Self::Thunk(thunk.weight().into_addr()),
             },
-            Name::Thunk(addr) => Self::Thunk(addr),
             Name::FreeVar(var) => Self::FreeVar(var),
             Name::BoundVar(def) => Self::BoundVar(def),
         }

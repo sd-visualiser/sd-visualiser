@@ -336,3 +336,11 @@ impl<V: Clone, E: Clone> NodeLike for Thunk<V, E> {
         self.0.outer_outputs.len()
     }
 }
+
+impl<V: Clone, E> WithWeight for Thunk<V, E> {
+    type Weight = V;
+
+    fn weight(&self) -> Self::Weight {
+        self.0.weight.clone()
+    }
+}
