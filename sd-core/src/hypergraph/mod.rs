@@ -28,9 +28,9 @@ use self::{
 };
 
 pub trait Weight {
-    type EdgeWeight: Clone + Debug;
-    type OperationWeight: Clone + Debug;
-    type ThunkWeight: Clone + Debug;
+    type EdgeWeight: Clone + Debug + Send + Sync;
+    type OperationWeight: Clone + Debug + Send + Sync;
+    type ThunkWeight: Clone + Debug + Send + Sync;
 }
 
 #[derive(Derivative)]

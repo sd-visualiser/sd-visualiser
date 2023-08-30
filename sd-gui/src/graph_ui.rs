@@ -82,7 +82,7 @@ pub struct GraphUiInternal<G: Graph> {
 
 impl<G> GraphUiInternal<G>
 where
-    G: RenderableGraph + Send + Sync + 'static,
+    G: RenderableGraph + 'static,
 {
     pub(crate) fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
         Self {
@@ -99,9 +99,9 @@ where
         T: Language,
         T::Var: Fresh,
         Expr<T>: PrettyPrint,
-        Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Send + Sync,
-        Operation<G::Ctx>: WithWeight<Weight = T::Op> + Send + Sync,
-        Thunk<G::Ctx>: WithWeight<Weight = T::Addr> + Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>>,
+        Operation<G::Ctx>: WithWeight<Weight = T::Op>,
+        Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
         let guard = shapes.lock().unwrap();
@@ -181,9 +181,7 @@ where
     /// Searches through the shapes by variable name and pans to the operation which generates the variable
     pub(crate) fn find_variable(&mut self, variable: &str)
     where
-        Edge<G::Ctx>: ExtensibleEdge + Send + Sync,
-        Operation<G::Ctx>: Send + Sync,
-        Thunk<G::Ctx>: Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge,
         EdgeWeight<G::Ctx>: Matchable,
         OperationWeight<G::Ctx>: Display,
     {
@@ -209,9 +207,7 @@ where
 
     pub(crate) fn export_svg(&self) -> String
     where
-        Edge<G::Ctx>: ExtensibleEdge + Send + Sync,
-        Operation<G::Ctx>: Send + Sync,
-        Thunk<G::Ctx>: Send + Sync,
+        Edge<G::Ctx>: ExtensibleEdge,
         OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);

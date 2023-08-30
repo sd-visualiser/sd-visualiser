@@ -8,7 +8,7 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     hypergraph::{
-        generic::{Edge, Operation, OperationWeight, Thunk},
+        generic::{Edge, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
@@ -26,10 +26,7 @@ type Cache<G> = LruCache<
 
 fn shape_cache<G>() -> Arc<Mutex<Cache<G>>>
 where
-    G: Graph + Send + Sync + 'static,
-    Edge<G::Ctx>: Send + Sync,
-    Operation<G::Ctx>: Send + Sync,
-    Thunk<G::Ctx>: Send + Sync,
+    G: Graph + 'static,
 {
     CACHE
         .get_or_init(Mutex::default)
@@ -53,10 +50,8 @@ pub fn generate_shapes<G>(
     expanded: &WeakMap<Thunk<G::Ctx>, bool>,
 ) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
 where
-    G: Graph + Send + Sync + 'static,
-    Edge<G::Ctx>: ExtensibleEdge + Send + Sync,
-    Operation<G::Ctx>: Send + Sync,
-    Thunk<G::Ctx>: Send + Sync,
+    G: Graph + 'static,
+    Edge<G::Ctx>: ExtensibleEdge,
     OperationWeight<G::Ctx>: Display,
 {
     let cache = shape_cache::<G>();
