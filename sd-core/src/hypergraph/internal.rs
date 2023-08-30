@@ -1,49 +1,48 @@
-use std::{
-    fmt::Debug,
-    sync::{Arc, OnceLock, RwLock, Weak},
-};
+use std::sync::{Arc, OnceLock, RwLock, Weak};
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
 use indexmap::IndexSet;
 
-use super::weakbyaddress::WeakByAddress;
+use super::{weakbyaddress::WeakByAddress, Weight};
 
-#[derive(Derivative, Debug)]
-#[derivative(Clone(bound = ""))]
-pub(super) enum WeakNodeInternal<V, E> {
-    Operation(Weak<OperationInternal<V, E>>),
-    Thunk(Weak<ThunkInternal<V, E>>),
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
+pub(super) enum WeakNodeInternal<W: Weight> {
+    Operation(Weak<OperationInternal<W>>),
+    Thunk(Weak<ThunkInternal<W>>),
 }
 
-#[derive(Debug)]
-pub(super) struct InPortInternal<V, E> {
-    pub(super) node: Option<WeakNodeInternal<V, E>>,
-    pub(super) link: RwLock<Weak<OutPortInternal<V, E>>>,
+#[derive(Derivative)]
+#[derivative(Debug(bound = ""))]
+pub(super) struct InPortInternal<W: Weight> {
+    pub(super) node: Option<WeakNodeInternal<W>>,
+    pub(super) link: RwLock<Weak<OutPortInternal<W>>>,
 }
 
-impl<V, E> InPortInternal<V, E> {
-    pub(super) fn new(node: Option<WeakNodeInternal<V, E>>) -> Self {
+impl<W: Weight> InPortInternal<W> {
+    pub(super) fn new(node: Option<WeakNodeInternal<W>>) -> Self {
         Self {
             node,
             link: RwLock::new(Weak::default()),
         }
     }
 
-    pub(super) fn link(&self) -> Arc<OutPortInternal<V, E>> {
+    pub(super) fn link(&self) -> Arc<OutPortInternal<W>> {
         self.link.read().unwrap().upgrade().unwrap()
     }
 }
 
-#[derive(Debug)]
-pub(super) struct OutPortInternal<V, E> {
-    pub(super) node: Option<WeakNodeInternal<V, E>>,
-    pub(super) links: RwLock<IndexSet<WeakByAddress<InPortInternal<V, E>>>>,
-    pub(super) weight: E,
+#[derive(Derivative)]
+#[derivative(Debug(bound = ""))]
+pub(super) struct OutPortInternal<W: Weight> {
+    pub(super) node: Option<WeakNodeInternal<W>>,
+    pub(super) links: RwLock<IndexSet<WeakByAddress<InPortInternal<W>>>>,
+    pub(super) weight: W::EdgeWeight,
 }
 
-impl<V, E> OutPortInternal<V, E> {
-    pub(super) fn new(node: Option<WeakNodeInternal<V, E>>, weight: E) -> Self {
+impl<W: Weight> OutPortInternal<W> {
+    pub(super) fn new(node: Option<WeakNodeInternal<W>>, weight: W::EdgeWeight) -> Self {
         Self {
             node,
             links: RwLock::new(IndexSet::default()),
@@ -52,32 +51,34 @@ impl<V, E> OutPortInternal<V, E> {
     }
 }
 
-#[derive(Derivative, Debug)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     Eq(bound = ""),
     PartialEq(bound = ""),
-    Hash(bound = "")
+    Hash(bound = ""),
+    Debug(bound = "")
 )]
-pub(super) enum NodeInternal<V, E> {
-    Operation(ByThinAddress<Arc<OperationInternal<V, E>>>),
-    Thunk(ByThinAddress<Arc<ThunkInternal<V, E>>>),
+pub(super) enum NodeInternal<W: Weight> {
+    Operation(ByThinAddress<Arc<OperationInternal<W>>>),
+    Thunk(ByThinAddress<Arc<ThunkInternal<W>>>),
 }
 
-#[derive(Debug)]
-pub(super) struct OperationInternal<V, E> {
-    pub(super) weight: V,
-    pub(super) inputs: Vec<Arc<InPortInternal<V, E>>>,
-    pub(super) outputs: Vec<Arc<OutPortInternal<V, E>>>,
-    pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
+#[derive(Derivative)]
+#[derivative(Debug(bound = ""))]
+pub(super) struct OperationInternal<W: Weight> {
+    pub(super) weight: W::NodeWeight,
+    pub(super) inputs: Vec<Arc<InPortInternal<W>>>,
+    pub(super) outputs: Vec<Arc<OutPortInternal<W>>>,
+    pub(super) backlink: Option<Weak<ThunkInternal<W>>>,
 }
 
-impl<V, E> OperationInternal<V, E> {
+impl<W: Weight> OperationInternal<W> {
     pub(super) fn new(
         input_len: usize,
-        outputs: impl IntoIterator<Item = E>,
-        weight: V,
-        backlink: Option<Weak<ThunkInternal<V, E>>>,
+        outputs: impl IntoIterator<Item = W::EdgeWeight>,
+        weight: W::NodeWeight,
+        backlink: Option<Weak<ThunkInternal<W>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let inputs = (0..input_len)
@@ -108,25 +109,25 @@ impl<V, E> OperationInternal<V, E> {
     }
 }
 
-#[derive(Debug)]
-pub(super) struct ThunkInternal<V, E> {
-    pub(super) weight: V,
-    pub(super) nodes: RwLock<Vec<NodeInternal<V, E>>>,
-    #[allow(clippy::type_complexity)]
-    pub(super) free_inputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>>>,
-    pub(super) bound_inputs: Vec<Arc<OutPortInternal<V, E>>>,
-    pub(super) inner_outputs: Vec<Arc<InPortInternal<V, E>>>,
-    pub(super) outer_outputs: Vec<Arc<OutPortInternal<V, E>>>,
-    pub(super) backlink: Option<Weak<ThunkInternal<V, E>>>,
+#[derive(Derivative)]
+#[derivative(Debug(bound = ""))]
+pub(super) struct ThunkInternal<W: Weight> {
+    pub(super) weight: W::NodeWeight,
+    pub(super) nodes: RwLock<Vec<NodeInternal<W>>>,
+    pub(super) free_inputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>>>,
+    pub(super) bound_inputs: Vec<Arc<OutPortInternal<W>>>,
+    pub(super) inner_outputs: Vec<Arc<InPortInternal<W>>>,
+    pub(super) outer_outputs: Vec<Arc<OutPortInternal<W>>>,
+    pub(super) backlink: Option<Weak<ThunkInternal<W>>>,
 }
 
-impl<V, E> ThunkInternal<V, E> {
+impl<W: Weight> ThunkInternal<W> {
     pub(super) fn new(
-        bound_inputs: impl IntoIterator<Item = E>,
+        bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
         inner_output_len: usize,
-        outer_outputs: impl IntoIterator<Item = E>,
-        weight: V,
-        backlink: Option<Weak<ThunkInternal<V, E>>>,
+        outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
+        weight: W::NodeWeight,
+        backlink: Option<Weak<ThunkInternal<W>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let bound_inputs = bound_inputs

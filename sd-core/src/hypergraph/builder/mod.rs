@@ -9,38 +9,32 @@ use thiserror::Error;
 use super::{
     internal::{InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal},
     traits::{EdgeLike, Graph, NodeLike},
-    Hypergraph, Node, Operation, Thunk,
+    Hypergraph, Node, Operation, Thunk, Weight,
 };
 
 pub mod fragment;
 pub use self::fragment::Fragment;
 
-pub(super) type Result<T, V, E> = core::result::Result<T, HypergraphError<V, E>>;
+pub(super) type Result<T, W> = core::result::Result<T, HypergraphError<W>>;
 
-#[derive(Debug, Error, Clone)]
-pub enum HypergraphError<V, E>
-where
-    V: Debug,
-    E: Debug,
-{
+#[derive(Derivative, Error)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
+pub enum HypergraphError<W: Weight> {
     #[error("Output port already linked to specified input: {0:#?}")]
-    OutputLinkError(OutPort<V, E>),
+    OutputLinkError(OutPort<W>),
     #[error("Tried to link {0:#?} to {1:#?} which does not live in the same thunk")]
-    ThunkLinkError(OutPort<V, E>, InPort<V, E>),
+    ThunkLinkError(OutPort<W>, InPort<W>),
     #[error("Building hypergraph failed: {0:#?}")]
-    BuildError(HypergraphBuildError<V, E>),
+    BuildError(HypergraphBuildError<W>),
 }
 
-#[derive(Debug, Error, Clone)]
-pub enum HypergraphBuildError<V, E>
-where
-    V: Debug,
-    E: Debug,
-{
+#[derive(Derivative, Error)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
+pub enum HypergraphBuildError<W: Weight> {
     #[error("InPort has uninitialised OutPort: {0:#?}")]
-    UninitializedInPort(InPort<V, E>),
+    UninitializedInPort(InPort<W>),
     #[error("OutPort has uninitialised InPort: {0:#?}")]
-    UninitializedOutPort(OutPort<V, E>),
+    UninitializedOutPort(OutPort<W>),
     #[error("Strong cycle of linked ports detected")]
     StrongCycle,
 }
@@ -52,9 +46,9 @@ where
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct InPort<V, E>(ByThinAddress<Arc<InPortInternal<V, E>>>);
+pub struct InPort<W: Weight>(ByThinAddress<Arc<InPortInternal<W>>>);
 
-impl<V, E> Debug for InPort<V, E> {
+impl<W: Weight> Debug for InPort<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut x = f.debug_struct("InPort");
         if let Some(out_port) = self
@@ -65,7 +59,7 @@ impl<V, E> Debug for InPort<V, E> {
             .expect("lock unexpectedly taken")
             .upgrade()
         {
-            x.field("output", &OutPort::<V, E>(ByThinAddress(out_port)));
+            x.field("output", &OutPort::<W>(ByThinAddress(out_port)));
         }
         x.field("ptr", &Arc::as_ptr(&self.0)).finish()
     }
@@ -78,9 +72,9 @@ impl<V, E> Debug for InPort<V, E> {
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct OutPort<V, E>(ByThinAddress<Arc<OutPortInternal<V, E>>>);
+pub struct OutPort<W: Weight>(ByThinAddress<Arc<OutPortInternal<W>>>);
 
-impl<V, E> Debug for OutPort<V, E> {
+impl<W: Weight> Debug for OutPort<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("OutPort")
             .field(&Arc::as_ptr(&self.0))
@@ -95,11 +89,11 @@ impl<V, E> Debug for OutPort<V, E> {
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct OperationBuilder<V, E>(ByThinAddress<Arc<OperationInternal<V, E>>>);
+pub struct OperationBuilder<W: Weight>(ByThinAddress<Arc<OperationInternal<W>>>);
 
-impl<V, E> OperationBuilder<V, E> {
+impl<W: Weight> OperationBuilder<W> {
     #[must_use]
-    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = InPort<V, E>> + '_ {
+    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = InPort<W>> + '_ {
         self.0
             .inputs
             .iter()
@@ -108,7 +102,7 @@ impl<V, E> OperationBuilder<V, E> {
     }
 
     #[must_use]
-    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
+    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<W>> + '_ {
         self.0
             .outputs
             .iter()
@@ -124,11 +118,11 @@ impl<V, E> OperationBuilder<V, E> {
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct ThunkBuilder<V, E>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
+pub struct ThunkBuilder<W: Weight>(ByThinAddress<Arc<ThunkInternal<W>>>);
 
-impl<V, E> ThunkBuilder<V, E> {
+impl<W: Weight> ThunkBuilder<W> {
     #[must_use]
-    pub fn bound_inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
+    pub fn bound_inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<W>> + '_ {
         self.0
             .bound_inputs
             .iter()
@@ -136,7 +130,7 @@ impl<V, E> ThunkBuilder<V, E> {
     }
 
     #[must_use]
-    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
+    pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<W>> + '_ {
         self.0
             .outer_outputs
             .iter()
@@ -144,7 +138,7 @@ impl<V, E> ThunkBuilder<V, E> {
     }
 
     #[must_use]
-    pub fn graph_outputs(&self) -> impl DoubleEndedIterator<Item = InPort<V, E>> + '_ {
+    pub fn graph_outputs(&self) -> impl DoubleEndedIterator<Item = InPort<W>> + '_ {
         self.0
             .inner_outputs
             .iter()
@@ -153,10 +147,10 @@ impl<V, E> ThunkBuilder<V, E> {
 
     fn fold<Err>(
         &self,
-        on_operation: impl Fn(OperationBuilder<V, E>) -> std::result::Result<(), Err> + Copy,
-        on_thunk: impl Fn(ThunkBuilder<V, E>) -> std::result::Result<(), Err> + Copy,
+        on_operation: impl Fn(OperationBuilder<W>) -> std::result::Result<(), Err> + Copy,
+        on_thunk: impl Fn(ThunkBuilder<W>) -> std::result::Result<(), Err> + Copy,
     ) -> std::result::Result<(), Err> {
-        let nodes: &Vec<NodeInternal<V, E>> = &self.0.nodes.read().unwrap();
+        let nodes: &Vec<NodeInternal<W>> = &self.0.nodes.read().unwrap();
         for node in nodes {
             match node {
                 NodeInternal::Operation(op) => {
@@ -173,18 +167,14 @@ impl<V, E> ThunkBuilder<V, E> {
     }
 }
 
-#[derive(Debug, Derivative)]
-#[derivative(Clone(bound = ""), Default(bound = ""))]
-pub struct HypergraphBuilder<V, E>(Hypergraph<V, E>);
+#[derive(Derivative)]
+#[derivative(Clone(bound = ""), Debug(bound = ""), Default(bound = ""))]
+pub struct HypergraphBuilder<W: Weight>(Hypergraph<W>);
 
-impl<V, E> HypergraphBuilder<V, E>
-where
-    V: Clone + Debug,
-    E: Clone + Debug,
-{
+impl<W: Weight> HypergraphBuilder<W> {
     #[must_use]
     #[tracing::instrument]
-    pub fn new(input_weights: Vec<E>, number_of_outputs: usize) -> Self {
+    pub fn new(input_weights: Vec<W::EdgeWeight>, number_of_outputs: usize) -> Self {
         let graph_inputs = input_weights
             .into_iter()
             .map(|weight| ByThinAddress(Arc::new(OutPortInternal::new(None, weight))))
@@ -202,7 +192,7 @@ where
     }
 
     #[must_use]
-    pub fn graph_inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<V, E>> + '_ {
+    pub fn graph_inputs(&self) -> impl DoubleEndedIterator<Item = OutPort<W>> + '_ {
         self.0
             .graph_inputs
             .iter()
@@ -211,8 +201,8 @@ where
 
     fn fold<Err>(
         &self,
-        on_operation: impl Fn(OperationBuilder<V, E>) -> std::result::Result<(), Err>,
-        on_thunk: impl Fn(ThunkBuilder<V, E>) -> std::result::Result<(), Err>,
+        on_operation: impl Fn(OperationBuilder<W>) -> std::result::Result<(), Err>,
+        on_thunk: impl Fn(ThunkBuilder<W>) -> std::result::Result<(), Err>,
     ) -> std::result::Result<(), Err> {
         for node in &self.0.nodes {
             match node {
@@ -230,16 +220,12 @@ where
     }
 
     #[allow(clippy::too_many_lines)]
-    pub fn build(mut self) -> Result<Hypergraph<V, E>, V, E> {
+    pub fn build(mut self) -> Result<Hypergraph<W>, W> {
         // check validity of hypergraph:
         // all in_ports linked to exactly one out_port
-        fn check_in_ports_initialized<V, E>(
-            out_port: &OutPort<V, E>,
-        ) -> std::result::Result<(), HypergraphBuildError<V, E>>
-        where
-            V: Debug,
-            E: Debug,
-        {
+        fn check_in_ports_initialized<W: Weight>(
+            out_port: &OutPort<W>,
+        ) -> std::result::Result<(), HypergraphBuildError<W>> {
             out_port
                 .0
                 .links
@@ -251,13 +237,9 @@ where
                 .ok_or_else(|| HypergraphBuildError::UninitializedOutPort(out_port.clone()))
         }
 
-        fn check_out_port_initialized<V, E>(
-            in_port: &InPort<V, E>,
-        ) -> std::result::Result<(), HypergraphBuildError<V, E>>
-        where
-            V: Debug,
-            E: Debug,
-        {
+        fn check_out_port_initialized<W: Weight>(
+            in_port: &InPort<W>,
+        ) -> std::result::Result<(), HypergraphBuildError<W>> {
             (in_port
                 .0
                 .link
@@ -269,15 +251,10 @@ where
             .ok_or_else(|| HypergraphBuildError::UninitializedInPort(in_port.clone()))
         }
 
-        fn build_thunk_inputs<V, E>(thunk: Thunk<V, E>)
-        where
-            V: Clone + Debug,
-            E: Clone + Debug,
-        {
-            let built_nodes: IndexSet<Node<V, E>> = thunk.nodes().collect();
+        fn build_thunk_inputs<W: Weight>(thunk: Thunk<W>) {
+            let built_nodes: IndexSet<Node<W>> = thunk.nodes().collect();
 
-            let mut inputs: IndexSet<ByThinAddress<Arc<OutPortInternal<V, E>>>> =
-                IndexSet::default();
+            let mut inputs: IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>> = IndexSet::default();
 
             let thunk = Thunk(thunk.0);
 
@@ -303,15 +280,12 @@ where
             thunk.0.free_inputs.set(inputs).unwrap();
         }
 
-        fn strongconnect<V, E>(
-            stack: &mut IndexSet<Node<V, E>>,
-            visited: &mut HashMap<Node<V, E>, usize>,
-            output: &mut Vec<Vec<Node<V, E>>>,
-            node: &Node<V, E>,
-        ) where
-            V: Clone + Debug,
-            E: Clone + Debug,
-        {
+        fn strongconnect<W: Weight>(
+            stack: &mut IndexSet<Node<W>>,
+            visited: &mut HashMap<Node<W>, usize>,
+            output: &mut Vec<Vec<Node<W>>>,
+            node: &Node<W>,
+        ) {
             let index = stack.insert_full(node.clone()).0;
             visited.insert(node.clone(), index);
 
@@ -333,17 +307,13 @@ where
             }
         }
 
-        fn tarjans<V, E>(xs: Vec<Node<V, E>>) -> Vec<Node<V, E>>
-        where
-            V: Clone + Debug,
-            E: Clone + Debug,
-        {
-            let original_ord: IndexSet<Node<V, E>> = xs.into_iter().collect();
-            let mut output: Vec<Vec<Node<V, E>>> = Vec::default();
+        fn tarjans<W: Weight>(xs: Vec<Node<W>>) -> Vec<Node<W>> {
+            let original_ord: IndexSet<Node<W>> = xs.into_iter().collect();
+            let mut output: Vec<Vec<Node<W>>> = Vec::default();
 
-            let mut stack: IndexSet<Node<V, E>> = IndexSet::default();
+            let mut stack: IndexSet<Node<W>> = IndexSet::default();
 
-            let mut visited: HashMap<Node<V, E>, usize> = HashMap::default();
+            let mut visited: HashMap<Node<W>, usize> = HashMap::default();
 
             for x in &original_ord {
                 if !visited.contains_key(x) {
@@ -361,11 +331,7 @@ where
         }
 
         // proxy from NodeInternal to Node to get Hash impl
-        fn topsort_node_internals<V, E>(internals: &mut Vec<NodeInternal<V, E>>)
-        where
-            V: Clone + Debug,
-            E: Clone + Debug,
-        {
+        fn topsort_node_internals<W: Weight>(internals: &mut Vec<NodeInternal<W>>) {
             let mut nodes: Vec<_> = internals
                 .iter()
                 .map(|ni| match ni {

@@ -6,6 +6,7 @@ use indexmap::IndexSet;
 use super::{
     generic::{EdgeWeight, Node, OperationWeight, ThunkWeight},
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    Weight,
 };
 use crate::{hypergraph::generic::Ctx, selection::SelectionMap};
 
@@ -335,7 +336,7 @@ pub trait ExtensibleEdge: EdgeLike {
     }
 }
 
-impl<V: Clone, E: Clone> ExtensibleEdge for super::Edge<V, E> {}
+impl<W: Weight> ExtensibleEdge for super::Edge<W> {}
 
 impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
     fn extend_source(&self) -> Option<Node<Self::Ctx>> {

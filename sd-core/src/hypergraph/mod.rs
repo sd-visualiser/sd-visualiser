@@ -27,6 +27,11 @@ use self::{
     weakbyaddress::WeakByAddress,
 };
 
+pub trait Weight {
+    type NodeWeight: Clone + Debug;
+    type EdgeWeight: Clone + Debug;
+}
+
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
@@ -34,9 +39,9 @@ use self::{
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct Edge<V, E>(ByThinAddress<Arc<OutPortInternal<V, E>>>);
+pub struct Edge<W: Weight>(ByThinAddress<Arc<OutPortInternal<W>>>);
 
-impl<V, E: Clone + Debug> Debug for Edge<V, E> {
+impl<W: Weight> Debug for Edge<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Edge")
             .field("weight", &self.weight())
@@ -45,24 +50,25 @@ impl<V, E: Clone + Debug> Debug for Edge<V, E> {
     }
 }
 
-#[derive(Debug, Derivative)]
+#[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),
     PartialEq(bound = ""),
     Eq(bound = ""),
     Hash(bound = ""),
+    Debug(bound = ""),
     Default(bound = "")
 )]
-pub struct Hypergraph<V, E> {
-    nodes: Vec<NodeInternal<V, E>>,
-    graph_inputs: Vec<ByThinAddress<Arc<OutPortInternal<V, E>>>>,
-    graph_outputs: Vec<ByThinAddress<Arc<InPortInternal<V, E>>>>,
+pub struct Hypergraph<W: Weight> {
+    nodes: Vec<NodeInternal<W>>,
+    graph_inputs: Vec<ByThinAddress<Arc<OutPortInternal<W>>>>,
+    graph_outputs: Vec<ByThinAddress<Arc<InPortInternal<W>>>>,
 }
 
-impl<V: Clone, E: Clone> Ctx for Hypergraph<V, E> {
-    type Edge = Edge<V, E>;
-    type Thunk = Thunk<V, E>;
-    type Operation = Operation<V, E>;
+impl<W: Weight> Ctx for Hypergraph<W> {
+    type Edge = Edge<W>;
+    type Thunk = Thunk<W>;
+    type Operation = Operation<W>;
 }
 
 #[derive(Derivative)]
@@ -72,9 +78,9 @@ impl<V: Clone, E: Clone> Ctx for Hypergraph<V, E> {
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct Operation<V, E>(ByThinAddress<Arc<OperationInternal<V, E>>>);
+pub struct Operation<W: Weight>(ByThinAddress<Arc<OperationInternal<W>>>);
 
-impl<V: Clone + Debug, E: Clone + Debug> Debug for Operation<V, E> {
+impl<W: Weight> Debug for Operation<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Operation")
             .field("weight", &self.weight())
@@ -91,9 +97,9 @@ impl<V: Clone + Debug, E: Clone + Debug> Debug for Operation<V, E> {
     Eq(bound = ""),
     Hash(bound = "")
 )]
-pub struct Thunk<V, E>(ByThinAddress<Arc<ThunkInternal<V, E>>>);
+pub struct Thunk<W: Weight>(ByThinAddress<Arc<ThunkInternal<W>>>);
 
-impl<V: Clone + Debug, E: Clone + Debug> Debug for Thunk<V, E> {
+impl<W: Weight> Debug for Thunk<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
             .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
@@ -110,10 +116,10 @@ impl<V: Clone + Debug, E: Clone + Debug> Debug for Thunk<V, E> {
     }
 }
 
-pub type Node<V, E> = generic::Node<Hypergraph<V, E>>;
+pub type Node<W> = generic::Node<Hypergraph<W>>;
 
-impl<V: Clone, E: Clone> WeakNodeInternal<V, E> {
-    pub(super) fn unwrap_node(&self) -> Node<V, E> {
+impl<W: Weight> WeakNodeInternal<W> {
+    pub(super) fn unwrap_node(&self) -> Node<W> {
         match self {
             WeakNodeInternal::Operation(op_weak) => {
                 Node::Operation(Operation(ByThinAddress(op_weak.upgrade().unwrap())))
@@ -125,22 +131,22 @@ impl<V: Clone, E: Clone> WeakNodeInternal<V, E> {
     }
 }
 
-impl<V, E: Clone> WithWeight for Edge<V, E> {
-    type Weight = E;
+impl<W: Weight> WithWeight for Edge<W> {
+    type Weight = W::EdgeWeight;
 
     fn weight(&self) -> Self::Weight {
         self.0.weight.clone()
     }
 }
 
-impl<V: Clone, E: Clone> EdgeLike for Edge<V, E> {
-    type Ctx = Hypergraph<V, E>;
+impl<W: Weight> EdgeLike for Edge<W> {
+    type Ctx = Hypergraph<W>;
 
-    fn source(&self) -> Option<Node<V, E>> {
+    fn source(&self) -> Option<Node<W>> {
         self.0.node.as_ref().map(WeakNodeInternal::unwrap_node)
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<V, E>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<W>>> + '_> {
         Box::new(
             self.0
                 .links
@@ -159,18 +165,18 @@ impl<V: Clone, E: Clone> EdgeLike for Edge<V, E> {
     }
 }
 
-impl<V: Clone, E: Clone> Graph for Hypergraph<V, E> {
-    type Ctx = Hypergraph<V, E>;
+impl<W: Weight> Graph for Hypergraph<W> {
+    type Ctx = Hypergraph<W>;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(self.graph_inputs.iter().cloned().map(Edge))
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.graph_outputs
                 .iter()
@@ -179,22 +185,22 @@ impl<V: Clone, E: Clone> Graph for Hypergraph<V, E> {
         )
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<W>> + '_> {
         Box::new(self.nodes.iter().cloned().map(|node| match node {
             NodeInternal::Operation(operation) => Node::Operation(Operation(operation)),
             NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(thunk)),
         }))
     }
 
-    fn graph_backlink(&self) -> Option<Thunk<V, E>> {
+    fn graph_backlink(&self) -> Option<Thunk<W>> {
         None
     }
 }
 
-impl<V: Clone, E: Clone> Graph for Thunk<V, E> {
-    type Ctx = Hypergraph<V, E>;
+impl<W: Weight> Graph for Thunk<W> {
+    type Ctx = Hypergraph<W>;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .free_inputs
@@ -206,7 +212,7 @@ impl<V: Clone, E: Clone> Graph for Thunk<V, E> {
         )
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .bound_inputs
@@ -215,7 +221,7 @@ impl<V: Clone, E: Clone> Graph for Thunk<V, E> {
         )
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .inner_outputs
@@ -224,7 +230,7 @@ impl<V: Clone, E: Clone> Graph for Thunk<V, E> {
         )
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<V, E>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<W>> + '_> {
         Box::new(
             self.0
                 .nodes
@@ -241,23 +247,23 @@ impl<V: Clone, E: Clone> Graph for Thunk<V, E> {
         )
     }
 
-    fn graph_backlink(&self) -> Option<Thunk<V, E>> {
+    fn graph_backlink(&self) -> Option<Thunk<W>> {
         Some(self.clone())
     }
 }
 
-impl<V: Clone, E> WithWeight for Operation<V, E> {
-    type Weight = V;
+impl<W: Weight> WithWeight for Operation<W> {
+    type Weight = W::NodeWeight;
 
     fn weight(&self) -> Self::Weight {
         self.0.weight.clone()
     }
 }
 
-impl<V: Clone, E: Clone> NodeLike for Operation<V, E> {
-    type Ctx = Hypergraph<V, E>;
+impl<W: Weight> NodeLike for Operation<W> {
+    type Ctx = Hypergraph<W>;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .inputs
@@ -266,7 +272,7 @@ impl<V: Clone, E: Clone> NodeLike for Operation<V, E> {
         )
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .outputs
@@ -275,7 +281,7 @@ impl<V: Clone, E: Clone> NodeLike for Operation<V, E> {
         )
     }
 
-    fn backlink(&self) -> Option<Thunk<V, E>> {
+    fn backlink(&self) -> Option<Thunk<W>> {
         self.0
             .backlink
             .as_ref()
@@ -294,10 +300,10 @@ impl<V: Clone, E: Clone> NodeLike for Operation<V, E> {
     }
 }
 
-impl<V: Clone, E: Clone> NodeLike for Thunk<V, E> {
-    type Ctx = Hypergraph<V, E>;
+impl<W: Weight> NodeLike for Thunk<W> {
+    type Ctx = Hypergraph<W>;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .free_inputs
@@ -309,7 +315,7 @@ impl<V: Clone, E: Clone> NodeLike for Thunk<V, E> {
         )
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<V, E>> + '_> {
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
                 .outer_outputs
@@ -318,7 +324,7 @@ impl<V: Clone, E: Clone> NodeLike for Thunk<V, E> {
         )
     }
 
-    fn backlink(&self) -> Option<Thunk<V, E>> {
+    fn backlink(&self) -> Option<Thunk<W>> {
         self.0
             .backlink
             .as_ref()
@@ -337,8 +343,8 @@ impl<V: Clone, E: Clone> NodeLike for Thunk<V, E> {
     }
 }
 
-impl<V: Clone, E> WithWeight for Thunk<V, E> {
-    type Weight = V;
+impl<W: Weight> WithWeight for Thunk<W> {
+    type Weight = W::NodeWeight;
 
     fn weight(&self) -> Self::Weight {
         self.0.weight.clone()

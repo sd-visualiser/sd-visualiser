@@ -13,11 +13,20 @@ use crate::{
     common::Matchable,
     hypergraph::{
         builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
-        Hypergraph,
+        Hypergraph, Weight,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
     prettyprinter::PrettyPrint,
 };
+
+pub struct Syntax<T: Language> {
+    _phantom: std::marker::PhantomData<T>,
+}
+
+impl<T: Language> Weight for Syntax<T> {
+    type NodeWeight = Elem<T>;
+    type EdgeWeight = Name<T>;
+}
 
 #[derive(Derivative)]
 #[derivative(
@@ -97,13 +106,13 @@ impl<T: Language> Name<T> {
     }
 }
 
-pub type SyntaxHypergraph<T> = Hypergraph<Elem<T>, Name<T>>;
+pub type SyntaxHypergraph<T> = Hypergraph<Syntax<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
 pub enum ConvertError<T: Language> {
     #[error("Error constructing hypergraph")]
-    HypergraphError(#[from] HypergraphError<Elem<T>, Name<T>>),
+    HypergraphError(#[from] HypergraphError<Syntax<T>>),
     #[error("Couldn't find location of variable `{}`", .0.to_pretty())]
     VariableError(T::Var),
     #[error("Attempted to alias `{}` to `{}`", .0.to_pretty(), .1.to_pretty())]
@@ -121,22 +130,21 @@ struct Environment<F, T: Language> {
     /// The fragment of the hypergraph we are building in
     fragment: F,
     /// Hanging input ports of nodes, with the variable they should be connected to
-    #[allow(clippy::type_complexity)]
-    inputs: Vec<(InPort<Elem<T>, Name<T>>, T::Var)>,
+    inputs: Vec<(InPort<Syntax<T>>, T::Var)>,
 
     /// Mapping from variables to the output port that corresponds to them
-    outputs: HashMap<T::Var, OutPort<Elem<T>, Name<T>>>,
+    outputs: HashMap<T::Var, OutPort<Syntax<T>>>,
 }
 
 enum ProcessInput<T: Language> {
     Variables(Vec<T::VarDef>),
-    InPort(InPort<Elem<T>, Name<T>>),
+    InPort(InPort<Syntax<T>>),
 }
 
 impl<T, F> Environment<F, T>
 where
     T: Language + 'static,
-    F: Fragment<NodeWeight = Elem<T>, EdgeWeight = Name<T>>,
+    F: Fragment<Weight = Syntax<T>>,
 {
     /// Create a new empty environment from a given `fragment`
     fn new(fragment: F) -> Self {
@@ -226,7 +234,7 @@ where
     fn process_thunk(
         &mut self,
         thunk: &Thunk<T>,
-        in_port: InPort<Elem<T>, Name<T>>,
+        in_port: InPort<Syntax<T>>,
     ) -> Result<(), ConvertError<T>> {
         let thunk_node = self.fragment.add_thunk(
             thunk.args.iter().cloned().map(Name::BoundVar),
