@@ -67,7 +67,7 @@ pub(super) enum NodeInternal<W: Weight> {
 #[derive(Derivative)]
 #[derivative(Debug(bound = ""))]
 pub(super) struct OperationInternal<W: Weight> {
-    pub(super) weight: W::NodeWeight,
+    pub(super) weight: W::OperationWeight,
     pub(super) inputs: Vec<Arc<InPortInternal<W>>>,
     pub(super) outputs: Vec<Arc<OutPortInternal<W>>>,
     pub(super) backlink: Option<Weak<ThunkInternal<W>>>,
@@ -77,7 +77,7 @@ impl<W: Weight> OperationInternal<W> {
     pub(super) fn new(
         input_len: usize,
         outputs: impl IntoIterator<Item = W::EdgeWeight>,
-        weight: W::NodeWeight,
+        weight: W::OperationWeight,
         backlink: Option<Weak<ThunkInternal<W>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
@@ -112,7 +112,7 @@ impl<W: Weight> OperationInternal<W> {
 #[derive(Derivative)]
 #[derivative(Debug(bound = ""))]
 pub(super) struct ThunkInternal<W: Weight> {
-    pub(super) weight: W::NodeWeight,
+    pub(super) weight: W::ThunkWeight,
     pub(super) nodes: RwLock<Vec<NodeInternal<W>>>,
     pub(super) free_inputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>>>,
     pub(super) bound_inputs: Vec<Arc<OutPortInternal<W>>>,
@@ -126,7 +126,7 @@ impl<W: Weight> ThunkInternal<W> {
         bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
-        weight: W::NodeWeight,
+        weight: W::ThunkWeight,
         backlink: Option<Weak<ThunkInternal<W>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {

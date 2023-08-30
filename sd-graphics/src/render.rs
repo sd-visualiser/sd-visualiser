@@ -5,7 +5,7 @@ use indexmap::IndexSet;
 use sd_core::{
     common::{InOut, InOutIter},
     decompile::{decompile, Fresh},
-    graph::{Elem, Name},
+    graph::Name,
     hypergraph::{
         generic::{Ctx, Edge, Node, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
@@ -39,8 +39,8 @@ where
     Expr<T>: PrettyPrint,
     G: RenderableGraph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    Operation<G::Ctx>: WithWeight<Weight = Elem<T>>,
-    Thunk<G::Ctx>: WithWeight<Weight = Elem<T>>,
+    Operation<G::Ctx>: WithWeight<Weight = T::Op>,
+    Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
 {
     let viewport = *to_screen.from();
 
@@ -72,8 +72,9 @@ where
             highlight_edges.extend(node.inputs().chain(node.outputs()));
             match &node {
                 Node::Operation(op) => {
-                    vec![op.weight().into_op().to_pretty()]
+                    vec![op.weight().to_pretty()]
                 }
+                // TODO(@calintat): Pretty print the full thunk not just the body.
                 Node::Thunk(thunk) => {
                     vec![decompile(thunk)
                         .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]

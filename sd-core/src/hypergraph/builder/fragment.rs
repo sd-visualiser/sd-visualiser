@@ -18,7 +18,7 @@ pub trait Fragment {
         &mut self,
         input_len: usize,
         outputs: impl IntoIterator<Item = <Self::Weight as Weight>::EdgeWeight>,
-        weight: <Self::Weight as Weight>::NodeWeight,
+        weight: <Self::Weight as Weight>::OperationWeight,
     ) -> OperationBuilder<Self::Weight>;
 
     fn add_thunk(
@@ -26,7 +26,7 @@ pub trait Fragment {
         bound_inputs: impl IntoIterator<Item = <Self::Weight as Weight>::EdgeWeight>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = <Self::Weight as Weight>::EdgeWeight>,
-        weight: <Self::Weight as Weight>::NodeWeight,
+        weight: <Self::Weight as Weight>::ThunkWeight,
     ) -> ThunkBuilder<Self::Weight>;
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = InPort<Self::Weight>> + '_>;
@@ -70,7 +70,7 @@ impl<W: Weight> Fragment for HypergraphBuilder<W> {
         &mut self,
         input_len: usize,
         outputs: impl IntoIterator<Item = W::EdgeWeight>,
-        weight: W::NodeWeight,
+        weight: W::OperationWeight,
     ) -> OperationBuilder<W> {
         let op = OperationInternal::new(input_len, outputs, weight, None);
         self.0
@@ -84,7 +84,7 @@ impl<W: Weight> Fragment for HypergraphBuilder<W> {
         bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
-        weight: W::NodeWeight,
+        weight: W::ThunkWeight,
     ) -> ThunkBuilder<W> {
         let thunk = ThunkInternal::new(bound_inputs, inner_output_len, outer_outputs, weight, None);
         self.0
@@ -112,7 +112,7 @@ impl<W: Weight> Fragment for ThunkCursor<W> {
         &mut self,
         input_len: usize,
         outputs: impl IntoIterator<Item = W::EdgeWeight>,
-        weight: W::NodeWeight,
+        weight: W::OperationWeight,
     ) -> OperationBuilder<W> {
         let op = OperationInternal::new(
             input_len,
@@ -134,7 +134,7 @@ impl<W: Weight> Fragment for ThunkCursor<W> {
         bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
         inner_output_len: usize,
         outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
-        weight: W::NodeWeight,
+        weight: W::ThunkWeight,
     ) -> ThunkBuilder<W> {
         let thunk = ThunkInternal::new(
             bound_inputs,

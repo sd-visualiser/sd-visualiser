@@ -4,7 +4,7 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{
-    graph::{Elem, Name},
+    graph::Name,
     hypergraph::{
         generic::{Edge, Node, Operation as GraphOperation, Thunk as GraphThunk},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
@@ -44,8 +44,8 @@ pub fn decompile<G, T: Language>(graph: &G) -> Result<Expr<T>, DecompilationErro
 where
     G: Graph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
-    GraphOperation<G::Ctx>: WithWeight<Weight = Elem<T>>,
-    GraphThunk<G::Ctx>: WithWeight<Weight = Elem<T>>,
+    GraphOperation<G::Ctx>: WithWeight<Weight = T::Op>,
+    GraphThunk<G::Ctx>: WithWeight<Weight = T::Addr>,
     T::Var: Fresh,
 {
     let mut binds = Vec::default();
@@ -87,7 +87,7 @@ where
                 }
 
                 let value = Value::Op {
-                    op: op.weight().into_op(),
+                    op: op.weight(),
                     args,
                 };
 
@@ -105,9 +105,8 @@ where
                 }
             }
             Node::Thunk(thunk) => {
-                let addr = thunk.weight().into_addr();
                 let thunk = Thunk {
-                    addr,
+                    addr: thunk.weight(),
                     args: thunk
                         .bound_graph_inputs()
                         .map(|edge| match edge.weight() {

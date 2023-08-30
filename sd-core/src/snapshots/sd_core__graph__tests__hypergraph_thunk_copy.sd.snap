@@ -5,13 +5,13 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Edge(FreeVar(Variable("y"))),
-    Operation(Op(Lambda)),
+    Operation(Lambda),
     Edge(Nil),
     Edge(BoundVar(Variable("x"))),
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("y"))),
-        Operation(Op(Plus)),
+        Operation(Plus),
         Edge(Nil),
       ],
       node_holes: [],

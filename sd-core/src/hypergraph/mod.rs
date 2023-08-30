@@ -28,8 +28,9 @@ use self::{
 };
 
 pub trait Weight {
-    type NodeWeight: Clone + Debug;
     type EdgeWeight: Clone + Debug;
+    type OperationWeight: Clone + Debug;
+    type ThunkWeight: Clone + Debug;
 }
 
 #[derive(Derivative)]
@@ -253,7 +254,7 @@ impl<W: Weight> Graph for Thunk<W> {
 }
 
 impl<W: Weight> WithWeight for Operation<W> {
-    type Weight = W::NodeWeight;
+    type Weight = W::OperationWeight;
 
     fn weight(&self) -> Self::Weight {
         self.0.weight.clone()
@@ -344,7 +345,7 @@ impl<W: Weight> NodeLike for Thunk<W> {
 }
 
 impl<W: Weight> WithWeight for Thunk<W> {
-    type Weight = W::NodeWeight;
+    type Weight = W::ThunkWeight;
 
     fn weight(&self) -> Self::Weight {
         self.0.weight.clone()

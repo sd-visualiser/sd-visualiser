@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-};
+use std::{collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
 #[cfg(test)]
@@ -24,47 +21,9 @@ pub struct Syntax<T: Language> {
 }
 
 impl<T: Language> Weight for Syntax<T> {
-    type NodeWeight = Elem<T>;
     type EdgeWeight = Name<T>;
-}
-
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
-#[cfg_attr(test, derive(Serialize))]
-pub enum Elem<T: Language> {
-    Op(T::Op),
-    Thunk(T::Addr),
-}
-
-impl<T: Language> Elem<T> {
-    pub fn into_op(self) -> T::Op {
-        match self {
-            Self::Op(op) => op,
-            Self::Thunk(_addr) => panic!(),
-        }
-    }
-
-    pub fn into_addr(self) -> T::Addr {
-        match self {
-            Self::Op(_op) => panic!(),
-            Self::Thunk(addr) => addr,
-        }
-    }
-}
-
-impl<T: Language> Display for Elem<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Op(op) => write!(f, "{op}"),
-            Self::Thunk(addr) => write!(f, "{addr}"),
-        }
-    }
+    type OperationWeight = T::Op;
+    type ThunkWeight = T::Addr;
 }
 
 #[derive(Derivative)]
@@ -189,7 +148,7 @@ where
 
                 let operation_node =
                     self.fragment
-                        .add_operation(args.len(), output_weights, Elem::Op(op.clone()));
+                        .add_operation(args.len(), output_weights, op.clone());
                 for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
                     match arg {
                         Arg::Value(value) => {
@@ -240,7 +199,7 @@ where
             thunk.args.iter().cloned().map(Name::BoundVar),
             thunk.body.values.len(),
             [Name::Nil],
-            Elem::Thunk(thunk.addr.clone()),
+            thunk.addr.clone(),
         );
 
         self.fragment
