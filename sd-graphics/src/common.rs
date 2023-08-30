@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use derivative::Derivative;
 use egui::{vec2, Pos2, Vec2};
 use flo_curves::Coord2;
@@ -65,13 +63,7 @@ impl<T: Language> EdgeLabel<T> {
     }
 }
 
-impl<T: Language> PrettyPrint for EdgeLabel<T>
-where
-    T::Op: PrettyPrint,
-    T::Var: PrettyPrint,
-    T::Addr: Display,
-    T::VarDef: PrettyPrint,
-{
+impl<T: Language> PrettyPrint for EdgeLabel<T> {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Fresh => RcDoc::text("?"),

@@ -1,7 +1,4 @@
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-};
+use std::{collections::HashMap, fmt::Debug};
 
 use derivative::Derivative;
 #[cfg(test)]
@@ -16,6 +13,7 @@ use crate::{
         Hypergraph,
     },
     language::{Arg, AsVar, Expr, Language, Thunk, Value},
+    prettyprinter::PrettyPrint,
 };
 
 #[derive(Derivative)]
@@ -63,17 +61,14 @@ pub type SyntaxHypergraph<T> = Hypergraph<<T as Language>::Op, Name<T>>;
 
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
-pub enum ConvertError<T: Language>
-where
-    T::Var: Display,
-{
+pub enum ConvertError<T: Language> {
     #[error("Error constructing hypergraph")]
     HypergraphError(#[from] HypergraphError<T::Op, Name<T>>),
-    #[error("Couldn't find location of variable `{0}`")]
+    #[error("Couldn't find location of variable `{}`", .0.to_pretty())]
     VariableError(T::Var),
-    #[error("Attempted to alias `{0:?}` to `{1}`")]
+    #[error("Attempted to alias `{}` to `{}`", .0.to_pretty(), .1.to_pretty())]
     Aliased(Vec<T::Var>, T::Var),
-    #[error("Attempted to shadow `{0}`")]
+    #[error("Attempted to shadow `{}`", .0.to_pretty())]
     Shadowed(T::Var),
     #[error("Fragment did not have output")]
     NoOutputError,
@@ -101,7 +96,6 @@ enum ProcessInput<T: Language> {
 impl<T, F> Environment<F, T>
 where
     T: Language + 'static,
-    T::Var: Display,
     F: Fragment<NodeWeight = T::Op, EdgeWeight = Name<T>>,
 {
     /// Create a new empty environment from a given `fragment`
@@ -270,7 +264,6 @@ where
 impl<T> TryFrom<&Expr<T>> for SyntaxHypergraph<T>
 where
     T: Language + 'static,
-    T::Var: Display,
 {
     type Error = ConvertError<T>;
 

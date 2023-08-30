@@ -1,8 +1,13 @@
-use std::{fmt::Debug, hash::Hash};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 use derivative::Derivative;
 use from_pest::{ConversionError, FromPest, Void};
 use pest::{iterators::Pairs, RuleType};
+
+use crate::prettyprinter::PrettyPrint;
 
 pub mod chil;
 pub mod spartan;
@@ -21,11 +26,13 @@ impl<V> AsVar<V> for V {
     }
 }
 
+/// `Display` should give the symbolic representation (e.g. "+").
+/// `PrettyPrint` should give the textual representation (e.g. "plus").
 pub trait Language {
-    type Op: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
-    type Var: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
-    type Addr: Clone + Eq + PartialEq + Hash + Debug + Send + Sync;
-    type VarDef: Clone + Eq + PartialEq + Hash + Debug + Send + Sync + AsVar<Self::Var>;
+    type Op: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint;
+    type Var: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint;
+    type Addr: Clone + Eq + Hash + Debug + Send + Sync + Display;
+    type VarDef: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + AsVar<Self::Var>;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;

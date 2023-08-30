@@ -1,7 +1,5 @@
 #![allow(clippy::inline_always)]
 
-use std::fmt::Display;
-
 use delegate::delegate;
 use eframe::egui;
 use indexmap::IndexMap;
@@ -71,7 +69,6 @@ impl<T: 'static + Language> SelectionInternal<T> {
         name: String,
     ) -> Self
     where
-        T::Op: Display,
         T::Var: Fresh,
         Expr<T>: PrettyPrint,
     {
@@ -114,10 +111,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
     where
-        T::Op: Display + PrettyPrint,
-        T::Var: PrettyPrint + Fresh,
-        T::Addr: Display,
-        T::VarDef: PrettyPrint,
+        T::Var: Fresh,
         Expr<T>: PrettyPrint,
     {
         egui::Window::new(self.name.clone())

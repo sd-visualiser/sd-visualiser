@@ -97,10 +97,7 @@ where
     pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui)
     where
         T: Language,
-        T::Op: Display + PrettyPrint,
-        T::Var: PrettyPrint + Fresh,
-        T::Addr: Display,
-        T::VarDef: PrettyPrint,
+        T::Var: Fresh,
         Expr<T>: PrettyPrint,
         Edge<G::Ctx>: ExtensibleEdge + WithWeight<Weight = Name<T>> + Debug + Send + Sync,
         Operation<G::Ctx>: WithWeight<Weight = T::Op> + Debug + Send + Sync,

@@ -35,10 +35,7 @@ pub fn render<T, G>(
 ) -> Vec<egui::Shape>
 where
     T: Language,
-    T::Op: PrettyPrint,
-    T::Var: PrettyPrint + Fresh,
-    T::Addr: Display,
-    T::VarDef: PrettyPrint,
+    T::Var: Fresh,
     Expr<T>: PrettyPrint,
     G: RenderableGraph,
     Edge<G::Ctx>: WithWeight<Weight = Name<T>>,

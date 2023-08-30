@@ -25,3 +25,9 @@ pub fn list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) -> RcD
 pub fn paran_list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) -> RcDoc<'a, ()> {
     RcDoc::text("(").append(list(ts)).append(RcDoc::text(")"))
 }
+
+impl<T: PrettyPrint> PrettyPrint for Vec<T> {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        list(self)
+    }
+}
