@@ -39,6 +39,7 @@ pub enum Shape<T: Ctx> {
         center: Pos2,
         radius: f32,
         addr: T::Edge,
+        id: [usize; 2],
     },
     Operation {
         center: Pos2,
@@ -121,10 +122,10 @@ impl<T: Ctx> Shape<T> {
         }
         match self {
             Shape::Line { .. } | Shape::CubicBezier { .. } => {}
-            Shape::CircleFilled { addr, .. } => {
+            Shape::CircleFilled { addr, id, .. } => {
                 let circle_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph, &addr)),
+                    Id::new((&graph, &addr, id)),
                     Sense::click(),
                 );
                 if circle_response.clicked() {
@@ -259,6 +260,7 @@ impl<T: Ctx> Shape<T> {
                 center,
                 radius,
                 addr,
+                ..
             } => {
                 let stroke = if highlight_edges.contains(&addr) {
                     ui.style().visuals.widgets.hovered.fg_stroke

@@ -217,6 +217,7 @@ pub fn generate_shapes<T>(
                             center,
                             radius: RADIUS_ARG,
                             addr: edge,
+                            id: [j, i],
                         });
                     }
                     generate_shapes(shapes, y_min, x_op, body, expanded, false);
@@ -299,6 +300,7 @@ pub fn generate_shapes<T>(
                                 center,
                                 radius: RADIUS_COPY,
                                 addr: addr.clone(),
+                                id: [j, i],
                             });
                         }
                         MonoidalOp::Operation { addr } => {
