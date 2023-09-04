@@ -3,13 +3,16 @@ source: sd-graphics/src/layout.rs
 expression: "layout(&examples::int(), &WeakMap::default()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
-  min: 0.0,
-  max: 1.0,
+  h_min: 0.0,
+  h_max: 1.0,
+  v_min: (),
+  v_max: (),
   nodes: [
     [
       NodeOffset(
         node: Atom(
-          pos: 0.5,
+          h_pos: 0.5,
+          v_pos: (),
           extra_size: 0.0,
           atype: Other,
         ),
@@ -23,7 +26,11 @@ LayoutInternal(
   wires: [
     [],
     [
-      0.5,
+      WireData(
+        h: 0.5,
+        v_top: (),
+        v_bot: (),
+      ),
     ],
   ],
 )

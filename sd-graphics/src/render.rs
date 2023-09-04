@@ -19,7 +19,7 @@ use sd_core::{
 
 use crate::{
     common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
-    layout::Layout,
+    layout::HLayout,
     renderable::RenderableGraph,
     shape::Shape,
 };
@@ -105,7 +105,7 @@ where
 pub fn generate_shapes<T>(
     shapes: &mut Vec<Shape<T>>,
     mut y_offset: f32,
-    layout: &Layout,
+    layout: &HLayout,
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
     arrows: bool,
@@ -117,7 +117,6 @@ pub fn generate_shapes<T>(
     // Source
     for (&x, addr) in layout
         .inputs()
-        .iter()
         .zip(graph.free_inputs.iter().chain(graph.bound_inputs.iter()))
     {
         let start = Pos2::new(x, y_offset);
@@ -164,8 +163,8 @@ pub fn generate_shapes<T>(
             match op {
                 MonoidalOp::Swap { addrs, out_to_in } => {
                     for (out_idx, in_idx) in out_to_in.iter().enumerate() {
-                        let in_wire = Pos2::new(x_ins[*in_idx], y_input);
-                        let out_wire = Pos2::new(x_outs[out_idx], y_output);
+                        let in_wire = Pos2::new(x_ins[*in_idx].h, y_input);
+                        let out_wire = Pos2::new(x_outs[out_idx].h, y_output);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_vertical_in(in_wire, out_wire),
                             addr: addrs[*in_idx].0.clone(),
@@ -177,12 +176,10 @@ pub fn generate_shapes<T>(
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
-                    for ((&x, &x_body), edge) in x_ins
-                        .iter()
-                        .zip(x_op.inputs().iter())
-                        .zip(&body.free_inputs)
+                    for ((&x, &x_body), edge) in
+                        x_ins.iter().zip(x_op.inputs()).zip(&body.free_inputs)
                     {
-                        let start = Pos2::new(x, y_input);
+                        let start = Pos2::new(x.h, y_input);
                         let end = Pos2::new(x_body, y_min);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_vertical_in(start, end),
@@ -190,28 +187,26 @@ pub fn generate_shapes<T>(
                         });
                     }
                     for ((&x, &x_body), edge) in
-                        x_outs.iter().zip(x_op.outputs().iter()).zip(addr.outputs())
+                        x_outs.iter().zip(x_op.outputs()).zip(addr.outputs())
                     {
                         let start = Pos2::new(x_body, y_max);
-                        let end = Pos2::new(x, y_output);
+                        let end = Pos2::new(x.h, y_output);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_vertical_in(start, end),
                             addr: edge,
                         });
                     }
-                    let thunk_rect =
-                        Rect::from_min_max(Pos2::new(x_op.min, y_min), Pos2::new(x_op.max, y_max));
+                    let thunk_rect = Rect::from_min_max(
+                        Pos2::new(x_op.h_min, y_min),
+                        Pos2::new(x_op.h_max, y_max),
+                    );
                     shapes.push(Shape::Rectangle {
                         rect: thunk_rect,
                         addr: addr.clone(),
                         fill: None,
                         stroke: None,
                     });
-                    for (edge, &x) in addr
-                        .bound_graph_inputs()
-                        .rev()
-                        .zip(x_op.inputs().iter().rev())
-                    {
+                    for (edge, &x) in addr.bound_graph_inputs().rev().zip(x_op.inputs().rev()) {
                         let center = Pos2::new(x, y_min);
                         shapes.push(Shape::CircleFilled {
                             center,
@@ -230,8 +225,8 @@ pub fn generate_shapes<T>(
                     let (x_ins_rem, x_outs_rem) = match op {
                         MonoidalOp::Cap { addr, intermediate } => {
                             for (&x, (edge, _)) in x_ins.iter().zip(intermediate) {
-                                let start = Pos2::new(x, y_input);
-                                let end = Pos2::new(x, y_output);
+                                let start = Pos2::new(x.h, y_input);
+                                let end = Pos2::new(x.h, y_output);
                                 shapes.push(Shape::Line {
                                     start,
                                     end,
@@ -248,8 +243,8 @@ pub fn generate_shapes<T>(
                         }
                         MonoidalOp::Cup { addr, intermediate } => {
                             for (&x, (edge, _)) in x_outs.iter().zip(intermediate) {
-                                let start = Pos2::new(x, y_input);
-                                let end = Pos2::new(x, y_output);
+                                let start = Pos2::new(x.h, y_input);
+                                let end = Pos2::new(x.h, y_output);
                                 shapes.push(Shape::Line {
                                     start,
                                     end,
@@ -279,7 +274,7 @@ pub fn generate_shapes<T>(
                     };
 
                     for (x, edge) in x_ins_rem {
-                        let input = Pos2::new(x, y_input);
+                        let input = Pos2::new(x.h, y_input);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_horizontal_in(input, center),
                             addr: edge,
@@ -287,7 +282,7 @@ pub fn generate_shapes<T>(
                     }
 
                     for (x, edge) in x_outs_rem {
-                        let output = Pos2::new(x, y_output);
+                        let output = Pos2::new(x.h, y_output);
                         shapes.push(Shape::CubicBezier {
                             points: horizontal_out_vertical_in(center, output),
                             addr: edge,
@@ -333,7 +328,7 @@ pub fn generate_shapes<T>(
     }
 
     // Target
-    for (&x, edge) in layout.outputs().iter().zip(&graph.outputs) {
+    for (&x, edge) in layout.outputs().zip(&graph.outputs) {
         let start = Pos2::new(x, y_offset);
         let end = Pos2::new(x, y_offset + 0.5);
         shapes.push(Shape::Line {
