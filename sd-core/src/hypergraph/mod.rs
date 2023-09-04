@@ -57,13 +57,22 @@ impl<W: Weight> Debug for Edge<W> {
     PartialEq(bound = ""),
     Eq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = ""),
     Default(bound = "")
 )]
 pub struct Hypergraph<W: Weight> {
     nodes: Vec<NodeInternal<W>>,
     graph_inputs: Vec<ByThinAddress<Arc<OutPortInternal<W>>>>,
     graph_outputs: Vec<ByThinAddress<Arc<InPortInternal<W>>>>,
+}
+
+impl<W: Weight> Debug for Hypergraph<W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Hypergraph")
+            .field("nodes", &self.nodes().collect::<Vec<_>>())
+            .field("graph_inputs", &self.graph_inputs().collect::<Vec<_>>())
+            .field("graph_outputs", &self.graph_outputs().collect::<Vec<_>>())
+            .finish()
+    }
 }
 
 impl<W: Weight> Ctx for Hypergraph<W> {
@@ -103,16 +112,15 @@ pub struct Thunk<W: Weight>(ByThinAddress<Arc<ThunkInternal<W>>>);
 impl<W: Weight> Debug for Thunk<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
+            .field("weight", &self.weight())
             .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
             .field(
                 "bound_inputs",
                 &self.bound_graph_inputs().collect::<Vec<_>>(),
             )
             .field("nodes", &self.nodes().collect::<Vec<_>>())
-            .field(
-                "outputs",
-                &self.graph_outputs().zip(self.outputs()).collect::<Vec<_>>(),
-            )
+            .field("inner_outputs", &self.graph_outputs().collect::<Vec<_>>())
+            .field("outer_outputs", &self.outputs().collect::<Vec<_>>())
             .finish()
     }
 }
