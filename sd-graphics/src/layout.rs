@@ -1,8 +1,12 @@
-use std::fmt::{Debug, Display};
+use std::{
+    fmt::{Debug, Display},
+    ops::Bound,
+};
 
 use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
+use ordered_float::OrderedFloat;
 use sd_core::{
     common::InOut,
     hypergraph::{
@@ -15,6 +19,7 @@ use sd_core::{
 };
 #[cfg(test)]
 use serde::Serialize;
+use store_interval_tree::{Interval, IntervalTree};
 use thiserror::Error;
 
 use crate::common::RADIUS_OPERATION;
@@ -54,7 +59,8 @@ pub enum Node<H, V> {
     },
     Swap {
         h_pos: H,
-        v_pos: V,
+        v_top: V,
+        v_bot: V,
         out_to_in: Vec<usize>,
     },
     Thunk {
@@ -155,9 +161,10 @@ impl<H, V> LayoutInternal<H, V> {
     }
 }
 
-pub type HLayout = LayoutInternal<f32, ()>;
+pub type HLayout<T> = LayoutInternal<f32, T>;
+pub type Layout = LayoutInternal<f32, f32>;
 
-impl HLayout {
+impl<T> HLayout<T> {
     #[must_use]
     pub fn width(&self) -> f32 {
         self.h_max - self.h_min
@@ -231,7 +238,7 @@ impl HLayout {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn from_solution(layout: LayoutInternal<Variable, ()>, solution: &impl Solution) -> Self {
+    fn from_solution_h(layout: LayoutInternal<Variable, T>, solution: &impl Solution) -> Self {
         HLayout {
             h_min: solution.value(layout.h_min) as f32,
             h_max: solution.value(layout.h_max) as f32,
@@ -257,15 +264,17 @@ impl HLayout {
                                 },
                                 Node::Swap {
                                     h_pos,
-                                    v_pos,
+                                    v_top,
+                                    v_bot,
                                     out_to_in,
                                 } => Node::Swap {
                                     h_pos: solution.value(h_pos) as f32,
-                                    v_pos,
+                                    v_top,
+                                    v_bot,
                                     out_to_in,
                                 },
                                 Node::Thunk { layout } => Node::Thunk {
-                                    layout: Self::from_solution(layout, solution),
+                                    layout: Self::from_solution_h(layout, solution),
                                 },
                             },
                             input_offset: n.input_offset,
@@ -285,6 +294,72 @@ impl HLayout {
                             h: solution.value(h) as f32,
                             v_top,
                             v_bot,
+                        })
+                        .collect()
+                })
+                .collect(),
+        }
+    }
+}
+
+impl Layout {
+    #[allow(clippy::cast_possible_truncation)]
+    fn from_solution_v(layout: LayoutInternal<f32, Variable>, solution: &impl Solution) -> Self {
+        Layout {
+            h_min: layout.h_min,
+            h_max: layout.h_max,
+            v_min: solution.value(layout.v_min) as f32,
+            v_max: solution.value(layout.v_max) as f32,
+            nodes: layout
+                .nodes
+                .into_iter()
+                .map(|ns| {
+                    ns.into_iter()
+                        .map(|n| NodeOffset {
+                            node: match n.node {
+                                Node::Atom {
+                                    h_pos,
+                                    v_pos,
+                                    extra_size,
+                                    atype,
+                                } => Node::Atom {
+                                    h_pos,
+                                    v_pos: solution.value(v_pos) as f32,
+                                    extra_size,
+                                    atype,
+                                },
+                                Node::Swap {
+                                    h_pos,
+                                    v_top,
+                                    v_bot,
+                                    out_to_in,
+                                } => Node::Swap {
+                                    h_pos,
+                                    v_top: solution.value(v_top) as f32,
+                                    v_bot: solution.value(v_bot) as f32,
+                                    out_to_in,
+                                },
+                                Node::Thunk { layout } => Node::Thunk {
+                                    layout: Layout::from_solution_v(layout, solution),
+                                },
+                            },
+                            input_offset: n.input_offset,
+                            inputs: n.inputs,
+                            output_offset: n.output_offset,
+                            outputs: n.outputs,
+                        })
+                        .collect()
+                })
+                .collect(),
+            wires: layout
+                .wires
+                .into_iter()
+                .map(|vs| {
+                    vs.into_iter()
+                        .map(|WireData { h, v_top, v_bot }| WireData {
+                            h,
+                            v_top: solution.value(v_top) as f32,
+                            v_bot: solution.value(v_bot) as f32,
                         })
                         .collect()
                 })
@@ -357,7 +432,8 @@ where
                     },
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         h_pos: problem.add_variable(variable().min(0.0)),
-                        v_pos: (),
+                        v_top: (),
+                        v_bot: (),
                         out_to_in: out_to_in.clone(),
                     },
                     MonoidalOp::Cup { .. } => Node::Atom {
@@ -535,10 +611,212 @@ where
     }
 }
 
+#[allow(clippy::too_many_lines)]
+fn v_layout_internal(
+    problem: &mut LpProblem,
+    h_layout: HLayout<()>,
+) -> LayoutInternal<f32, Variable> {
+    // Set up wires
+
+    let wires: Vec<Vec<WireData<f32, Variable>>> = h_layout
+        .wires
+        .into_iter()
+        .map(|vs| {
+            vs.into_iter()
+                .map(|v| {
+                    let v_top = problem.add_variable(variable().min(0.0));
+                    let v_bot = problem.add_variable(variable().min(0.0));
+
+                    problem.add_constraint(Expression::leq(v_top.into(), v_bot));
+                    problem.add_objective(v_bot - v_top);
+
+                    WireData {
+                        h: v.h,
+                        v_top,
+                        v_bot,
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    // Set up min
+
+    let v_min = problem.add_variable(variable().min(0.0));
+
+    for x in wires.first().unwrap() {
+        problem.add_constraint(Expression::eq(v_min.into(), x.v_top));
+    }
+
+    // Set up max
+
+    let v_max = problem.add_variable(variable().min(0.0));
+
+    for x in wires.last().unwrap() {
+        problem.add_constraint(Expression::eq(v_max.into(), x.v_bot));
+    }
+
+    // Set up nodes
+
+    let mut interval_tree: IntervalTree<OrderedFloat<f32>, Variable> = IntervalTree::new();
+
+    let nodes = h_layout
+        .nodes
+        .into_iter()
+        .zip(wires.iter().tuple_windows())
+        .map(|(ns, (before, after))| {
+            ns.into_iter()
+                .map(|n| {
+                    let (node, top, bottom, interval) = match n.node {
+                        Node::Atom {
+                            h_pos,
+                            extra_size,
+                            atype,
+                            ..
+                        } => {
+                            let v_pos = problem.add_variable(variable().min(0.0));
+
+                            let in_gap = if n.inputs < 2 {
+                                1.0
+                            } else {
+                                f32::sqrt(
+                                    before[n.input_offset + n.inputs - 1].h
+                                        - before[n.input_offset].h,
+                                )
+                            };
+
+                            let interval = Interval::new(
+                                Bound::Included(OrderedFloat(h_pos - extra_size)),
+                                Bound::Included(OrderedFloat(h_pos + extra_size)),
+                            );
+
+                            let out_gap = if n.outputs < 2 {
+                                1.0
+                            } else {
+                                after[n.output_offset + n.outputs - 1].h - after[n.output_offset].h
+                            };
+
+                            let start = problem.add_variable(variable().min(0.0));
+                            problem.add_constraint(Expression::eq(v_pos - in_gap, start));
+                            let end = problem.add_variable(variable().min(0.0));
+                            problem.add_constraint(Expression::eq(v_pos + out_gap, end));
+
+                            (
+                                Node::Atom {
+                                    h_pos,
+                                    v_pos,
+                                    extra_size,
+                                    atype,
+                                },
+                                start,
+                                end,
+                                interval,
+                            )
+                        }
+                        Node::Swap {
+                            h_pos, out_to_in, ..
+                        } => {
+                            let height = out_to_in
+                                .iter()
+                                .enumerate()
+                                .map(|(i, x)| f32::sqrt((after[i].h - before[*x].h).abs()))
+                                .max_by(|x, y| x.partial_cmp(y).unwrap())
+                                .unwrap_or_default();
+                            let v_top = problem.add_variable(variable().min(0.0));
+                            let v_bot = problem.add_variable(variable().min(0.0));
+
+                            problem.add_constraint(Expression::eq(v_top + height, v_bot));
+
+                            let interval = Interval::point(OrderedFloat(h_pos));
+
+                            (
+                                Node::Swap {
+                                    h_pos,
+                                    v_top,
+                                    v_bot,
+                                    out_to_in,
+                                },
+                                v_top,
+                                v_bot,
+                                interval,
+                            )
+                        }
+                        Node::Thunk { layout } => {
+                            let layout = v_layout_internal(problem, layout);
+
+                            let height_above = before[n.input_offset..]
+                                .iter()
+                                .zip(layout.inputs())
+                                .map(|(x, y)| f32::sqrt((x.h - y).abs()))
+                                .max_by(|x, y| x.partial_cmp(y).unwrap())
+                                .unwrap_or_default();
+
+                            let height_below = after[n.output_offset..]
+                                .iter()
+                                .zip(layout.outputs())
+                                .map(|(x, y)| f32::sqrt((x.h - y).abs()))
+                                .max_by(|x, y| x.partial_cmp(y).unwrap())
+                                .unwrap_or_default();
+
+                            let start = problem.add_variable(variable().min(0.0));
+                            problem
+                                .add_constraint(Expression::eq(layout.v_min - height_above, start));
+                            let end = problem.add_variable(variable().min(0.0));
+                            problem
+                                .add_constraint(Expression::eq(layout.v_max - height_below, end));
+
+                            let interval = Interval::new(
+                                Bound::Included(OrderedFloat(layout.h_min)),
+                                Bound::Included(OrderedFloat(layout.h_max)),
+                            );
+
+                            (Node::Thunk { layout }, start, end, interval)
+                        }
+                    };
+
+                    for x in &before[n.input_offset..n.input_offset + n.inputs] {
+                        problem.add_constraint(Expression::eq(top.into(), x.v_bot));
+                    }
+
+                    for x in &after[n.output_offset..n.output_offset + n.outputs] {
+                        problem.add_constraint(Expression::eq(bottom.into(), x.v_top));
+                    }
+
+                    for x in interval_tree.query(&interval) {
+                        problem.add_constraint(Expression::leq((*x.value()).into(), top));
+                    }
+
+                    interval_tree.insert(interval, bottom);
+
+                    NodeOffset {
+                        node,
+                        input_offset: n.input_offset,
+                        inputs: n.inputs,
+                        output_offset: n.output_offset,
+                        outputs: n.outputs,
+                    }
+                })
+                .collect()
+        })
+        .collect();
+
+    // Minimise entire graph
+    // problem.add_objective((v_max - v_min) * 5.0);
+
+    LayoutInternal {
+        h_min: h_layout.h_min,
+        h_max: h_layout.h_max,
+        v_min,
+        v_max,
+        nodes,
+        wires,
+    }
+}
+
 pub fn layout<T: Ctx>(
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
-) -> Result<HLayout, LayoutError>
+) -> Result<Layout, LayoutError>
 where
     OperationWeight<T>: Display,
 {
@@ -546,9 +824,15 @@ where
 
     let layout = h_layout_internal(graph, expanded, &mut problem);
     problem.add_objective(layout.h_max);
-    let solution = problem.minimise(good_lp::default_solver)?;
+    let h_solution = problem.minimise(good_lp::default_solver)?;
 
-    Ok(HLayout::from_solution(layout, &solution))
+    problem = LpProblem::default();
+
+    let v_layout = v_layout_internal(&mut problem, HLayout::from_solution_h(layout, &h_solution));
+
+    let v_solution = problem.minimise(good_lp::default_solver)?;
+
+    Ok(Layout::from_solution_v(v_layout, &v_solution))
 }
 
 #[cfg(test)]

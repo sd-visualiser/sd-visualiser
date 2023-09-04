@@ -19,7 +19,7 @@ use sd_core::{
 
 use crate::{
     common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
-    layout::HLayout,
+    layout::Layout,
     renderable::RenderableGraph,
     shape::Shape,
 };
@@ -105,7 +105,7 @@ where
 pub fn generate_shapes<T>(
     shapes: &mut Vec<Shape<T>>,
     mut y_offset: f32,
-    layout: &HLayout,
+    layout: &Layout,
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
     arrows: bool,

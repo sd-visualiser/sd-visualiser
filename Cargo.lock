@@ -2373,6 +2373,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ordered-float"
+version = "3.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a54938017eacd63036332b4ae5c8a49fc8c0c1d6d629893057e4f13609edd06"
+dependencies = [
+ "num-traits 0.2.16",
+]
+
+[[package]]
 name = "ordered-stream"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2978,9 +2987,11 @@ dependencies = [
  "indexmap 2.0.0",
  "insta",
  "itertools 0.11.0",
+ "ordered-float",
  "pretty",
  "sd-core",
  "serde",
+ "store-interval-tree",
  "svg",
  "thiserror",
  "tracing",
@@ -3219,6 +3230,15 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "store-interval-tree"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f40780f8452040f3dee73af3e68abe8ca7220bde70e210d7fede894391cc6902"
+dependencies = [
+ "num",
+]
 
 [[package]]
 name = "str-buf"
