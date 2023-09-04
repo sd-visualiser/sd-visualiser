@@ -236,8 +236,12 @@ impl<G: Graph> Graph for CutGraph<G> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(self.graph.graph_outputs().map(|edge| {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(std::iter::empty())
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.graph.bound_graph_outputs().map(|edge| {
             if self.cut_edges[&edge.key()] {
                 CutEdge::Reuse {
                     edge,
@@ -452,8 +456,20 @@ impl<G: Graph> Graph for CutThunk<G> {
         }))
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(self.thunk.graph_outputs().map(|edge| {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(
+            self.thunk
+                .free_graph_outputs()
+                .filter(|edge| !self.cut_edges[&edge.key()])
+                .map(|edge| CutEdge::Inner {
+                    edge,
+                    cut_edges: self.cut_edges.clone(),
+                }),
+        )
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.bound_graph_outputs().map(|edge| {
             if self.cut_edges[&edge.key()] {
                 CutEdge::Reuse {
                     edge,

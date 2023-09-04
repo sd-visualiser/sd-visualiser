@@ -113,14 +113,22 @@ impl<W: Weight> Debug for Thunk<W> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Thunk")
             .field("weight", &self.weight())
-            .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
+            .field("inputs", &self.inputs().collect::<Vec<_>>())
             .field(
                 "bound_inputs",
                 &self.bound_graph_inputs().collect::<Vec<_>>(),
             )
+            .field("free_inputs", &self.free_graph_inputs().collect::<Vec<_>>())
             .field("nodes", &self.nodes().collect::<Vec<_>>())
-            .field("inner_outputs", &self.graph_outputs().collect::<Vec<_>>())
-            .field("outer_outputs", &self.outputs().collect::<Vec<_>>())
+            .field("outputs", &self.outputs().collect::<Vec<_>>())
+            .field(
+                "bound_outputs",
+                &self.bound_graph_outputs().collect::<Vec<_>>(),
+            )
+            .field(
+                "free_outputs",
+                &self.free_graph_outputs().collect::<Vec<_>>(),
+            )
             .finish()
     }
 }
@@ -199,7 +207,11 @@ impl<W: Weight> Graph for Hypergraph<W> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
+        Box::new(std::iter::empty())
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.graph_outputs
                 .iter()
@@ -243,10 +255,22 @@ impl<W: Weight> Graph for Thunk<W> {
         )
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
-                .inner_outputs
+                .free_outputs
+                .get()
+                .expect("Could not lock")
+                .iter()
+                .cloned()
+                .map(Edge),
+        )
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
+        Box::new(
+            self.0
+                .bound_outputs
                 .iter()
                 .map(|in_port| Edge(ByThinAddress(in_port.link()))),
         )
@@ -341,6 +365,12 @@ impl<W: Weight> NodeLike for Thunk<W> {
                 .expect("Failed to unlock")
                 .iter()
                 .cloned()
+                .chain(
+                    self.0
+                        .inputs
+                        .iter()
+                        .map(|in_port| ByThinAddress(in_port.link())),
+                )
                 .map(Edge),
         )
     }
@@ -348,9 +378,13 @@ impl<W: Weight> NodeLike for Thunk<W> {
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<W>> + '_> {
         Box::new(
             self.0
-                .outer_outputs
+                .free_outputs
+                .get()
+                .expect("Failed to unlock")
                 .iter()
-                .map(|out_port| Edge(ByThinAddress(out_port.clone()))),
+                .cloned()
+                .chain(self.0.outputs.iter().cloned().map(ByThinAddress))
+                .map(Edge),
         )
     }
 
@@ -364,12 +398,12 @@ impl<W: Weight> NodeLike for Thunk<W> {
 
     #[must_use]
     fn number_of_inputs(&self) -> usize {
-        self.0.free_inputs.get().expect("Failed to unlock").len()
+        self.0.free_inputs.get().expect("Failed to unlock").len() + self.0.inputs.len()
     }
 
     #[must_use]
     fn number_of_outputs(&self) -> usize {
-        self.0.outer_outputs.len()
+        self.0.free_outputs.get().expect("Failed to unlock").len() + self.0.outputs.len()
     }
 }
 

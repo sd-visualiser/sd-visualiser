@@ -205,6 +205,7 @@ where
         in_port: InPort<Syntax<T>>,
     ) -> Result<(), ConvertError<T>> {
         let thunk_node = self.fragment.add_thunk(
+            0,
             thunk.args.iter().cloned().map(Name::BoundVar),
             thunk.body.values.len(),
             [Name::Nil],

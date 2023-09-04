@@ -23,9 +23,10 @@ pub trait Fragment {
 
     fn add_thunk(
         &mut self,
+        inputs_len: usize,
         bound_inputs: impl IntoIterator<Item = <Self::Weight as Weight>::EdgeWeight>,
-        inner_output_len: usize,
-        outer_outputs: impl IntoIterator<Item = <Self::Weight as Weight>::EdgeWeight>,
+        bound_outputs_len: usize,
+        outputs: impl IntoIterator<Item = <Self::Weight as Weight>::EdgeWeight>,
         weight: <Self::Weight as Weight>::ThunkWeight,
     ) -> ThunkBuilder<Self::Weight>;
 
@@ -81,12 +82,20 @@ impl<W: Weight> Fragment for HypergraphBuilder<W> {
 
     fn add_thunk(
         &mut self,
+        inputs_len: usize,
         bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
-        inner_output_len: usize,
-        outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
+        bound_output_len: usize,
+        outputs: impl IntoIterator<Item = W::EdgeWeight>,
         weight: W::ThunkWeight,
     ) -> ThunkBuilder<W> {
-        let thunk = ThunkInternal::new(bound_inputs, inner_output_len, outer_outputs, weight, None);
+        let thunk = ThunkInternal::new(
+            weight,
+            inputs_len,
+            bound_inputs,
+            bound_output_len,
+            outputs,
+            None,
+        );
         self.0
             .nodes
             .push(NodeInternal::Thunk(ByThinAddress(thunk.clone())));
@@ -131,16 +140,18 @@ impl<W: Weight> Fragment for ThunkCursor<W> {
 
     fn add_thunk(
         &mut self,
+        inputs_len: usize,
         bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
-        inner_output_len: usize,
-        outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
+        bound_outputs_len: usize,
+        outputs: impl IntoIterator<Item = W::EdgeWeight>,
         weight: W::ThunkWeight,
     ) -> ThunkBuilder<W> {
         let thunk = ThunkInternal::new(
-            bound_inputs,
-            inner_output_len,
-            outer_outputs,
             weight,
+            inputs_len,
+            bound_inputs,
+            bound_outputs_len,
+            outputs,
             Some(Arc::downgrade(&self.0 .0 .0)),
         );
         self.0

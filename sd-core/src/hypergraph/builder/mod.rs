@@ -3,7 +3,6 @@ use std::{cmp::min, collections::HashMap, fmt::Debug, sync::Arc};
 use by_address::ByThinAddress;
 use derivative::Derivative;
 use indexmap::IndexSet;
-use itertools::Itertools;
 use thiserror::Error;
 
 use super::{
@@ -14,7 +13,7 @@ use super::{
     traits::{EdgeLike, Graph, NodeLike},
     Hypergraph, Node, Operation, Thunk, Weight,
 };
-use crate::hypergraph::EndPoint;
+use crate::hypergraph::{utils::find_ancestor, EndPoint};
 
 pub mod fragment;
 pub use self::fragment::Fragment;
@@ -120,7 +119,8 @@ impl<W: Weight> OperationBuilder<W> {
     Clone(bound = ""),
     PartialEq(bound = ""),
     Eq(bound = ""),
-    Hash(bound = "")
+    Hash(bound = ""),
+    Debug(bound = "")
 )]
 pub struct ThunkBuilder<W: Weight>(ByThinAddress<Arc<ThunkInternal<W>>>);
 
@@ -136,7 +136,7 @@ impl<W: Weight> ThunkBuilder<W> {
     #[must_use]
     pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<W>> + '_ {
         self.0
-            .outer_outputs
+            .outputs
             .iter()
             .map(|out_port| OutPort(ByThinAddress(out_port.clone())))
     }
@@ -144,7 +144,7 @@ impl<W: Weight> ThunkBuilder<W> {
     #[must_use]
     pub fn graph_outputs(&self) -> impl DoubleEndedIterator<Item = InPort<W>> + '_ {
         self.0
-            .inner_outputs
+            .bound_outputs
             .iter()
             .map(|in_port| InPort(ByThinAddress(in_port.clone())))
     }
@@ -264,33 +264,53 @@ impl<W: Weight> HypergraphBuilder<W> {
             .ok_or_else(|| HypergraphBuildError::UninitializedInPort(in_port.clone()))
         }
 
-        fn build_thunk_inputs<W: Weight>(thunk: Thunk<W>) {
+        fn build_thunk_free_edges<W: Weight>(thunk: Thunk<W>) {
             let built_nodes: IndexSet<Node<W>> = thunk.nodes().collect();
 
             let mut inputs: IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>> = IndexSet::default();
+
+            let mut outputs: IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>> = IndexSet::default();
 
             let thunk = Thunk(thunk.0);
 
             for edge in built_nodes
                 .iter()
                 .flat_map(Node::inputs)
-                .chain(thunk.graph_outputs())
+                .chain(thunk.bound_graph_outputs())
             {
                 match edge.source() {
                     EndPoint::Node(node) => {
-                        if !built_nodes.contains(&node) {
+                        if find_ancestor(Some(&thunk), node).is_none() {
                             inputs.insert(edge.0);
                         }
                     }
-                    EndPoint::Boundary(_) => {
-                        if !thunk.bound_graph_inputs().contains(&edge) {
+                    EndPoint::Boundary(graph) => {
+                        if graph.map_or(true, |t| {
+                            t != thunk && find_ancestor(Some(&thunk), Node::Thunk(t)).is_none()
+                        }) {
                             inputs.insert(edge.0);
                         }
                     }
                 }
             }
 
+            for edge in built_nodes
+                .iter()
+                .flat_map(Node::outputs)
+                .chain(thunk.bound_graph_inputs())
+            {
+                if edge.targets().any(|target| match target {
+                    EndPoint::Node(node) => find_ancestor(Some(&thunk), node).is_none(),
+                    EndPoint::Boundary(graph) => graph.map_or(true, |t| {
+                        t != thunk && find_ancestor(Some(&thunk), Node::Thunk(t)).is_none()
+                    }),
+                }) {
+                    outputs.insert(edge.0);
+                }
+            }
+
             thunk.0.free_inputs.set(inputs).unwrap();
+            thunk.0.free_outputs.set(outputs).unwrap();
         }
 
         fn strongconnect<W: Weight>(
@@ -402,7 +422,7 @@ impl<W: Weight> HypergraphBuilder<W> {
         self.fold(
             |_| Ok(()),
             |thunk| {
-                build_thunk_inputs(Thunk(thunk.0));
+                build_thunk_free_edges(Thunk(thunk.0));
                 Ok(())
             },
         )?;

@@ -69,8 +69,12 @@ impl<G: Graph> Graph for SelectableGraph<G> {
         self.graph.bound_graph_inputs()
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.graph.graph_outputs()
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        self.graph.free_graph_outputs()
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        self.graph.bound_graph_outputs()
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {

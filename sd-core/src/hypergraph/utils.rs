@@ -6,8 +6,8 @@ use super::{
 };
 
 /// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
-pub fn find_ancestor<T: Ctx>(containing: &Option<T::Thunk>, mut node: Node<T>) -> Option<Node<T>> {
-    while &node.backlink() != containing {
+pub fn find_ancestor<T: Ctx>(containing: Option<&T::Thunk>, mut node: Node<T>) -> Option<Node<T>> {
+    while node.backlink().as_ref() != containing {
         node = Node::Thunk(node.backlink()?);
     }
     Some(node)
@@ -15,13 +15,15 @@ pub fn find_ancestor<T: Ctx>(containing: &Option<T::Thunk>, mut node: Node<T>) -
 
 pub fn normalised_targets<T: Ctx>(
     edge: &T::Edge,
-    containing: &Option<T::Thunk>,
+    containing: Option<&T::Thunk>,
 ) -> Vec<Endpoint<T>> {
     let targets = edge
         .targets()
         .filter_map(|x| match x {
             Endpoint::Node(node) => find_ancestor(containing, node).map(Endpoint::Node),
-            Endpoint::Boundary(graph) if &graph == containing => Some(Endpoint::Boundary(graph)),
+            Endpoint::Boundary(graph) if graph.as_ref() == containing => {
+                Some(Endpoint::Boundary(graph))
+            }
             Endpoint::Boundary(Some(thunk)) => {
                 find_ancestor(containing, Node::Thunk(thunk)).map(Endpoint::Node)
             }
@@ -49,18 +51,19 @@ pub fn normalised_targets<T: Ctx>(
     outputs
 }
 
-pub fn number_of_normalised_targets<T: Ctx>(edge: &T::Edge) -> usize {
-    let containing = match edge.source() {
-        Endpoint::Node(node) => node.backlink(),
-        Endpoint::Boundary(graph) => graph,
-    };
+pub fn number_of_normalised_targets<T: Ctx>(
+    edge: &T::Edge,
+    containing: Option<&T::Thunk>,
+) -> usize {
     let targets = edge
         .targets()
         .filter_map(|x| match x {
-            Endpoint::Node(node) => find_ancestor(&containing, node).map(Endpoint::Node),
-            Endpoint::Boundary(graph) if graph == containing => Some(Endpoint::Boundary(graph)),
+            Endpoint::Node(node) => find_ancestor(containing, node).map(Endpoint::Node),
+            Endpoint::Boundary(graph) if graph.as_ref() == containing => {
+                Some(Endpoint::Boundary(graph))
+            }
             Endpoint::Boundary(Some(thunk)) => {
-                find_ancestor(&containing, Node::Thunk(thunk)).map(Endpoint::Node)
+                find_ancestor(containing, Node::Thunk(thunk)).map(Endpoint::Node)
             }
             Endpoint::Boundary(_) => None,
         })

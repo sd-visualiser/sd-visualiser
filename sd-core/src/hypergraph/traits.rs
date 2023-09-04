@@ -47,7 +47,13 @@ pub trait Graph: Clone + Debug + Send + Sync + Keyable {
         Box::new(self.free_graph_inputs().chain(self.bound_graph_inputs()))
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.free_graph_outputs().chain(self.bound_graph_outputs()))
+    }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_>;
 

@@ -69,8 +69,12 @@ impl<G: Graph> Graph for InteractiveGraph<G> {
         self.0.bound_graph_inputs()
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.graph_outputs()
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        self.0.free_graph_outputs()
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        self.0.bound_graph_outputs()
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
@@ -114,8 +118,12 @@ impl<T: Ctx> Graph for InteractiveSubgraph<T> {
         self.0.bound_graph_inputs()
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.graph_outputs()
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        self.0.free_graph_outputs()
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        self.0.bound_graph_outputs()
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {

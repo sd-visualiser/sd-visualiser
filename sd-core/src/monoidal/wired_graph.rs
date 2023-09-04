@@ -207,7 +207,7 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
         node.outputs().for_each(|edge| {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
-            if open_edges < number_of_normalised_targets::<T>(&edge) {
+            if open_edges < number_of_normalised_targets::<T>(&edge, node.backlink().as_ref()) {
                 // We need to backlink the edge as it is not done
                 if open_edges == 0 {
                     // Only backlink without copying
@@ -257,7 +257,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
         for (i, (node, var)) in nodes.iter().enumerate() {
             problem.add_constraint(Expression::leq((*var).into(), max));
             for edge in node.outputs() {
-                let targets = normalised_targets::<G::Ctx>(&edge, &node.backlink());
+                let targets = normalised_targets::<G::Ctx>(&edge, node.backlink().as_ref());
                 let bottom = problem.add_variable(variable().min(0.0));
                 let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
                 problem.add_constraint(Expression::leq(bottom + offset, var));
@@ -287,7 +287,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
         }
 
         for edge in graph.graph_inputs() {
-            let targets = normalised_targets::<G::Ctx>(&edge, &graph.graph_backlink());
+            let targets = normalised_targets::<G::Ctx>(&edge, graph.graph_backlink().as_ref());
             let bottom = problem.add_variable(variable().min(0.0));
             let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
             problem.add_constraint(Expression::leq(bottom + offset, max));
@@ -314,7 +314,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
         }
 
         for (node, var) in nodes {
-            debug!("Node recieved: {node:?}");
+            debug!("Node recieved: {node:#?}");
             // Use topsorted graph here
             builder.insert_operation(&node, soln.value(var).floor() as usize);
         }

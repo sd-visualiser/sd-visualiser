@@ -134,7 +134,11 @@ impl Graph for DummyThunk {
         panic!("unsupported")
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
+        panic!("unsupported")
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
         panic!("unsupported")
     }
 

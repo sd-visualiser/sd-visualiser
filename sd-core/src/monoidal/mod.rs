@@ -83,7 +83,7 @@ impl<T: Ctx, O: InOut + Debug> MonoidalTerm<T, O> {
         for slice in &self.slices {
             assert!(
                 input_count == slice.number_of_inputs(),
-                "{slice:?} has the wrong number of inputs"
+                "Input slice has the wrong number of inputs"
             );
 
             input_count = slice.number_of_outputs();

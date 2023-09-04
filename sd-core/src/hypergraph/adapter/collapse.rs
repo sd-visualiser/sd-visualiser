@@ -233,11 +233,15 @@ impl<G: Graph> Graph for CollapseGraph<G> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(self.graph.graph_outputs().map(|edge| CollapseEdge {
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.graph.bound_graph_outputs().map(|edge| CollapseEdge {
             edge,
             expanded: self.expanded.clone(),
         }))
+    }
+
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(std::iter::empty())
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
@@ -319,8 +323,15 @@ impl<G: Graph> Graph for CollapseThunk<G> {
         }))
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(self.thunk.graph_outputs().map(|edge| CollapseEdge {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.free_graph_outputs().map(|edge| CollapseEdge {
+            edge,
+            expanded: self.expanded.clone(),
+        }))
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.bound_graph_outputs().map(|edge| CollapseEdge {
             edge,
             expanded: self.expanded.clone(),
         }))

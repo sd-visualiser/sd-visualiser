@@ -188,7 +188,11 @@ impl<T: Ctx> Graph for Subgraph<T> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(std::iter::empty())
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         let mut outputs: Vec<T::Edge> = Vec::default();
         for node in self.selection.roots() {
             for edge in node.outputs() {
@@ -238,8 +242,15 @@ impl<T: Ctx> Graph for SubThunk<T> {
         }))
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(self.thunk.graph_outputs().map(|edge| SubEdge {
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.free_graph_outputs().map(|edge| SubEdge {
+            edge,
+            selection: self.selection.clone(),
+        }))
+    }
+
+    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
+        Box::new(self.thunk.bound_graph_outputs().map(|edge| SubEdge {
             edge,
             selection: self.selection.clone(),
         }))

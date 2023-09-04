@@ -121,19 +121,24 @@ impl<W: Weight> OperationInternal<W> {
 pub(super) struct ThunkInternal<W: Weight> {
     pub(super) weight: W::ThunkWeight,
     pub(super) nodes: RwLock<Vec<NodeInternal<W>>>,
+    #[allow(clippy::type_complexity)]
     pub(super) free_inputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>>>,
+    #[allow(clippy::type_complexity)]
+    pub(super) free_outputs: OnceLock<IndexSet<ByThinAddress<Arc<OutPortInternal<W>>>>>,
     pub(super) bound_inputs: Vec<Arc<OutPortInternal<W>>>,
-    pub(super) inner_outputs: Vec<Arc<InPortInternal<W>>>,
-    pub(super) outer_outputs: Vec<Arc<OutPortInternal<W>>>,
+    pub(super) bound_outputs: Vec<Arc<InPortInternal<W>>>,
+    pub(super) inputs: Vec<Arc<InPortInternal<W>>>,
+    pub(super) outputs: Vec<Arc<OutPortInternal<W>>>,
     pub(super) backlink: Option<Weak<ThunkInternal<W>>>,
 }
 
 impl<W: Weight> ThunkInternal<W> {
     pub(super) fn new(
-        bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
-        inner_output_len: usize,
-        outer_outputs: impl IntoIterator<Item = W::EdgeWeight>,
         weight: W::ThunkWeight,
+        inputs_len: usize,
+        bound_inputs: impl IntoIterator<Item = W::EdgeWeight>,
+        bound_output_len: usize,
+        outputs: impl IntoIterator<Item = W::EdgeWeight>,
         backlink: Option<Weak<ThunkInternal<W>>>,
     ) -> Arc<Self> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
@@ -147,7 +152,7 @@ impl<W: Weight> ThunkInternal<W> {
                 })
                 .collect();
 
-            let inner_outputs = (0..inner_output_len)
+            let bound_outputs = (0..bound_output_len)
                 .map(|_| {
                     Arc::new(InPortInternal::new(EndPointInternal::GraphBoundary(Some(
                         weak.clone(),
@@ -155,7 +160,11 @@ impl<W: Weight> ThunkInternal<W> {
                 })
                 .collect();
 
-            let outer_outputs = outer_outputs
+            let inputs = (0..inputs_len)
+                .map(|_| Arc::new(InPortInternal::new(EndPointInternal::Thunk(weak.clone()))))
+                .collect();
+
+            let outputs = outputs
                 .into_iter()
                 .map(|weight| {
                     Arc::new(OutPortInternal::new(
@@ -169,10 +178,12 @@ impl<W: Weight> ThunkInternal<W> {
                 weight,
                 nodes: RwLock::new(Vec::default()),
                 free_inputs: OnceLock::new(),
+                free_outputs: OnceLock::new(),
                 bound_inputs,
-                inner_outputs,
-                outer_outputs,
+                bound_outputs,
+                outputs,
                 backlink,
+                inputs,
             }
         })
     }
