@@ -646,6 +646,7 @@ fn v_layout_internal(
 
     for x in wires.first().unwrap() {
         problem.add_constraint(Expression::eq(v_min.into(), x.v_top));
+        problem.add_constraint(Expression::leq(x.v_top + 0.5, x.v_bot));
     }
 
     // Set up max
@@ -654,6 +655,7 @@ fn v_layout_internal(
 
     for x in wires.last().unwrap() {
         problem.add_constraint(Expression::eq(v_max.into(), x.v_bot));
+        problem.add_constraint(Expression::leq(x.v_top + 0.5, x.v_bot));
     }
 
     // Set up nodes
