@@ -6,13 +6,13 @@ LayoutInternal(
   h_min: 0.0,
   h_max: 3.0,
   v_min: 0.0,
-  v_max: 5.5,
+  v_max: 3.1123724,
   nodes: [
     [
       NodeOffset(
         node: Atom(
           h_pos: 1.75,
-          v_pos: 1.5,
+          v_pos: 1.0,
           extra_size: 0.0,
         ),
         input_offset: 0,
@@ -25,7 +25,7 @@ LayoutInternal(
       NodeOffset(
         node: Atom(
           h_pos: 1.0,
-          v_pos: 4.0,
+          v_pos: 2.1123724,
           extra_size: 0.0,
         ),
         input_offset: 0,
@@ -36,7 +36,7 @@ LayoutInternal(
       NodeOffset(
         node: Atom(
           h_pos: 2.5,
-          v_pos: 4.0,
+          v_pos: 2.1123724,
           extra_size: 0.0,
         ),
         input_offset: 1,
@@ -57,30 +57,30 @@ LayoutInternal(
     [
       WireData(
         h: 1.0,
-        v_top: 3.0,
-        v_bot: 3.0,
+        v_top: 1.6123724,
+        v_bot: 1.6123724,
       ),
       WireData(
         h: 2.5,
-        v_top: 3.0,
-        v_bot: 3.0,
+        v_top: 1.6123724,
+        v_bot: 1.6123724,
       ),
     ],
     [
       WireData(
         h: 0.5,
-        v_top: 5.0,
-        v_bot: 5.5,
+        v_top: 2.6123724,
+        v_bot: 3.1123724,
       ),
       WireData(
         h: 1.5,
-        v_top: 5.0,
-        v_bot: 5.5,
+        v_top: 2.6123724,
+        v_bot: 3.1123724,
       ),
       WireData(
         h: 2.5,
-        v_top: 5.0,
-        v_bot: 5.5,
+        v_top: 2.6123724,
+        v_bot: 3.1123724,
       ),
     ],
   ],

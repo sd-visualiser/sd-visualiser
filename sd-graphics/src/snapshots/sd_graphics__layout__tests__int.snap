@@ -6,7 +6,7 @@ LayoutInternal(
   h_min: 0.0,
   h_max: 1.0,
   v_min: 0.0,
-  v_max: 2.5,
+  v_max: 2.0,
   nodes: [
     [
       NodeOffset(
@@ -27,8 +27,8 @@ LayoutInternal(
     [
       WireData(
         h: 0.5,
-        v_top: 2.0,
-        v_bot: 2.5,
+        v_top: 1.5,
+        v_bot: 2.0,
       ),
     ],
   ],

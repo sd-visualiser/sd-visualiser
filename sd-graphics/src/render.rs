@@ -2,6 +2,7 @@ use std::fmt::Display;
 
 use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
+use itertools::Itertools;
 use sd_core::{
     common::{InOut, InOutIter},
     decompile::{decompile, Fresh},
@@ -19,7 +20,7 @@ use sd_core::{
 
 use crate::{
     common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
-    layout::Layout,
+    layout::{AtomType, Layout, NodeOffset},
     renderable::RenderableGraph,
     shape::Shape,
 };
@@ -99,6 +100,224 @@ where
         .into_iter()
         .map(|shape| shape.into_egui_shape(ui, &to_screen, &highlight_edges))
         .collect()
+}
+
+#[allow(clippy::too_many_lines)]
+pub fn generate_shapes2<T>(shapes: &mut Vec<Shape<T>>, layout: &Layout<T>, arrows: bool)
+where
+    T: Ctx,
+    T::Edge: ExtensibleEdge,
+    OperationWeight<T>: Display,
+{
+    if arrows {
+        // Source
+        for wire in layout.input_wires() {
+            if let Some(node) = wire.addr.extend_source() {
+                shapes.push(Shape::Arrow {
+                    addr: wire.addr.clone(),
+                    to_add: vec![node],
+                    center: Pos2::new(wire.h, layout.v_min - 0.5),
+                    upwards: true,
+                    stroke: None,
+                    height: 0.1,
+                });
+            }
+        }
+
+        // Target
+        for wire in layout.output_wires() {
+            let targets = wire.addr.extend_targets().collect::<Vec<_>>();
+            if !targets.is_empty() {
+                shapes.push(Shape::Arrow {
+                    addr: wire.addr.clone(),
+                    to_add: targets,
+                    center: Pos2::new(wire.h, layout.v_max + 0.5),
+                    upwards: false,
+                    stroke: None,
+                    height: 0.1,
+                });
+            }
+        }
+    }
+
+    // Wires
+    for wire in layout.wires.iter().flat_map(|x| x.iter()) {
+        shapes.push(Shape::Line {
+            start: Pos2::new(wire.h, wire.v_top),
+            end: Pos2::new(wire.h, wire.v_bot),
+            addr: wire.addr.clone(),
+        });
+    }
+
+    // Nodes
+    for (i, (slice, (before, after))) in layout
+        .nodes
+        .iter()
+        .zip(layout.wires.iter().tuple_windows())
+        .enumerate()
+    {
+        for (
+            j,
+            NodeOffset {
+                node,
+                input_offset,
+                inputs,
+                output_offset,
+                outputs,
+            },
+        ) in slice.iter().enumerate()
+        {
+            let x_ins = &before[*input_offset..*input_offset + *inputs];
+            let x_outs = &after[*output_offset..*output_offset + *outputs];
+
+            match node {
+                crate::layout::Node::Atom {
+                    h_pos,
+                    v_pos,
+                    atype,
+                    ..
+                } => {
+                    let center = Pos2::new(*h_pos, *v_pos);
+                    let (x_ins_rem, x_outs_rem) = match atype {
+                        AtomType::Cap => {
+                            for (wire_in, wire_out) in x_ins.iter().zip(&x_outs[1..]) {
+                                let start = Pos2::new(wire_in.h, wire_in.v_bot);
+                                let end = Pos2::new(wire_out.h, wire_out.v_top);
+                                shapes.push(Shape::Line {
+                                    start,
+                                    end,
+                                    addr: wire_in.addr.clone(),
+                                });
+                            }
+                            (
+                                vec![],
+                                vec![x_outs[0].clone(), x_outs.last().unwrap().clone()],
+                            )
+                        }
+                        AtomType::Cup => {
+                            for (wire_out, wire_in) in x_outs.iter().zip(&x_ins[1..]) {
+                                let start = Pos2::new(wire_in.h, wire_in.v_bot);
+                                let end = Pos2::new(wire_out.h, wire_out.v_top);
+                                shapes.push(Shape::Line {
+                                    start,
+                                    end,
+                                    addr: wire_in.addr.clone(),
+                                });
+                            }
+                            (
+                                vec![x_ins[0].clone(), x_ins.last().unwrap().clone()],
+                                vec![],
+                            )
+                        }
+                        _ => (x_ins.to_vec(), x_outs.to_vec()),
+                    };
+
+                    for wire in x_ins_rem {
+                        let input = Pos2::new(wire.h, wire.v_bot);
+                        shapes.push(Shape::CubicBezier {
+                            points: vertical_out_horizontal_in(input, center),
+                            addr: wire.addr.clone(),
+                        });
+                    }
+
+                    for wire in x_outs_rem {
+                        let output = Pos2::new(wire.h, wire.v_top);
+                        shapes.push(Shape::CubicBezier {
+                            points: horizontal_out_vertical_in(center, output),
+                            addr: wire.addr.clone(),
+                        });
+                    }
+
+                    match atype {
+                        AtomType::Copy => {
+                            shapes.push(Shape::CircleFilled {
+                                center,
+                                radius: RADIUS_COPY,
+                                addr: x_ins[0].addr.clone(),
+                                id: [j, i],
+                            });
+                        }
+                        AtomType::Op(addr) => {
+                            shapes.push(Shape::Operation {
+                                center,
+                                addr: addr.clone(),
+                                label: addr.weight().to_string(),
+                                radius: RADIUS_OPERATION,
+                                fill: None,
+                                stroke: None,
+                            });
+                        }
+                        AtomType::Thunk(addr) => {
+                            let thunk_rect = Rect::from_center_size(center, BOX_SIZE);
+                            shapes.push(Shape::Rectangle {
+                                rect: thunk_rect,
+                                addr: addr.clone(),
+                                fill: None,
+                                stroke: None,
+                            });
+                        }
+                        _ => (),
+                    }
+                }
+                crate::layout::Node::Swap {
+                    v_top,
+                    v_bot,
+                    out_to_in,
+                    ..
+                } => {
+                    for (out_idx, in_idx) in out_to_in.iter().enumerate() {
+                        let in_wire = Pos2::new(x_ins[*in_idx].h, *v_top);
+                        let out_wire = Pos2::new(x_outs[out_idx].h, *v_bot);
+                        shapes.push(Shape::CubicBezier {
+                            points: vertical_out_vertical_in(in_wire, out_wire),
+                            addr: x_ins[*in_idx].addr.clone(),
+                        });
+                    }
+                }
+                crate::layout::Node::Thunk { addr, layout } => {
+                    for (x, x_body) in x_ins.iter().zip(layout.input_wires()) {
+                        let start = Pos2::new(x.h, x.v_bot);
+                        let end = Pos2::new(x_body.h, x_body.v_top);
+                        shapes.push(Shape::CubicBezier {
+                            points: vertical_out_vertical_in(start, end),
+                            addr: x.addr.clone(),
+                        });
+                    }
+
+                    for (x, x_body) in x_outs.iter().zip(layout.output_wires()) {
+                        let start = Pos2::new(x_body.h, x_body.v_bot);
+                        let end = Pos2::new(x.h, x.v_top);
+                        shapes.push(Shape::CubicBezier {
+                            points: vertical_out_vertical_in(start, end),
+                            addr: x.addr.clone(),
+                        });
+                    }
+
+                    let thunk_rect = Rect::from_min_max(
+                        Pos2::new(layout.h_min, layout.v_min),
+                        Pos2::new(layout.h_max, layout.v_max),
+                    );
+                    shapes.push(Shape::Rectangle {
+                        rect: thunk_rect,
+                        addr: addr.clone(),
+                        fill: None,
+                        stroke: None,
+                    });
+
+                    for (edge, &x) in addr.bound_graph_inputs().rev().zip(layout.inputs().rev()) {
+                        let center = Pos2::new(x, layout.v_min);
+                        shapes.push(Shape::CircleFilled {
+                            center,
+                            radius: RADIUS_ARG,
+                            addr: edge,
+                            id: [j, i],
+                        });
+                    }
+                    generate_shapes2(shapes, layout, false);
+                }
+            }
+        }
+    }
 }
 
 #[allow(clippy::too_many_lines)]

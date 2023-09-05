@@ -35,10 +35,10 @@ pub enum LayoutError {
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct NodeOffset<T: Ctx, H, V> {
     pub(crate) node: Node<T, H, V>,
-    input_offset: usize,
-    inputs: usize,
-    output_offset: usize,
-    outputs: usize,
+    pub(crate) input_offset: usize,
+    pub(crate) inputs: usize,
+    pub(crate) output_offset: usize,
+    pub(crate) outputs: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -47,7 +47,8 @@ pub enum AtomType<T: Ctx> {
     Cap,
     Op(T::Operation),
     Thunk(T::Thunk),
-    Other,
+    Copy,
+    Id,
 }
 
 #[derive(Clone, Debug)]
@@ -150,12 +151,20 @@ pub struct LayoutInternal<T: Ctx, H, V> {
 }
 
 impl<T: Ctx, H, V> LayoutInternal<T, H, V> {
+    pub fn input_wires(&self) -> impl DoubleEndedIterator<Item = &WireData<T, H, V>> {
+        self.wires.first().unwrap().iter()
+    }
+
+    pub fn output_wires(&self) -> impl DoubleEndedIterator<Item = &WireData<T, H, V>> {
+        self.wires.last().unwrap().iter()
+    }
+
     pub fn inputs(&self) -> impl DoubleEndedIterator<Item = &H> {
-        self.wires.first().unwrap().iter().map(|x| &x.h)
+        self.input_wires().map(|x| &x.h)
     }
 
     pub fn outputs(&self) -> impl DoubleEndedIterator<Item = &H> {
-        self.wires.last().unwrap().iter().map(|x| &x.h)
+        self.output_wires().map(|x| &x.h)
     }
 }
 
@@ -502,11 +511,17 @@ where
                         extra_size: 0.0,
                         atype: AtomType::Thunk(addr.clone()),
                     },
+                    MonoidalOp::Copy { copies, .. } if *copies != 1 => Node::Atom {
+                        h_pos: problem.add_variable(variable().min(0.0)),
+                        v_pos: (),
+                        extra_size: 0.0,
+                        atype: AtomType::Copy,
+                    },
                     _ => Node::Atom {
                         h_pos: problem.add_variable(variable().min(0.0)),
                         v_pos: (),
                         extra_size: 0.0,
-                        atype: AtomType::Other,
+                        atype: AtomType::Id,
                     },
                 };
                 let node_offset = NodeOffset {
@@ -725,7 +740,7 @@ fn v_layout_internal<T: Ctx>(
                                     before[n.input_offset + n.inputs - 1].h
                                         - before[n.input_offset].h,
                                 )
-                            };
+                            } / 2.0;
 
                             let interval = Interval::new(
                                 Bound::Included(OrderedFloat(h_pos - extra_size)),
@@ -735,8 +750,11 @@ fn v_layout_internal<T: Ctx>(
                             let out_gap = if n.outputs < 2 {
                                 1.0
                             } else {
-                                after[n.output_offset + n.outputs - 1].h - after[n.output_offset].h
-                            };
+                                f32::sqrt(
+                                    after[n.output_offset + n.outputs - 1].h
+                                        - after[n.output_offset].h,
+                                )
+                            } / 2.0;
 
                             let start = problem.add_variable(variable().min(0.0));
                             problem.add_constraint(Expression::eq(v_pos - in_gap, start));
@@ -786,14 +804,14 @@ fn v_layout_internal<T: Ctx>(
                         Node::Thunk { addr, layout } => {
                             let layout = v_layout_internal(problem, layout);
 
-                            let height_above = before[n.input_offset..]
+                            let height_above = before[n.input_offset..n.input_offset + n.inputs]
                                 .iter()
                                 .zip(layout.inputs())
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
 
-                            let height_below = after[n.output_offset..]
+                            let height_below = after[n.output_offset..n.output_offset + n.outputs]
                                 .iter()
                                 .zip(layout.outputs())
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
@@ -805,7 +823,7 @@ fn v_layout_internal<T: Ctx>(
                                 .add_constraint(Expression::eq(layout.v_min - height_above, start));
                             let end = problem.add_variable(variable().min(0.0));
                             problem
-                                .add_constraint(Expression::eq(layout.v_max - height_below, end));
+                                .add_constraint(Expression::eq(layout.v_max + height_below, end));
 
                             let interval = Interval::new(
                                 Bound::Included(OrderedFloat(layout.h_min)),
@@ -815,6 +833,9 @@ fn v_layout_internal<T: Ctx>(
                             (Node::Thunk { addr, layout }, start, end, interval)
                         }
                     };
+
+                    problem.add_constraint(Expression::leq(v_min + 0.5, top));
+                    problem.add_constraint(Expression::leq(top + 0.5, v_max));
 
                     for x in &before[n.input_offset..n.input_offset + n.inputs] {
                         problem.add_constraint(Expression::eq(top.into(), x.v_bot));
@@ -843,7 +864,8 @@ fn v_layout_internal<T: Ctx>(
         .collect();
 
     // Minimise entire graph
-    // problem.add_objective((v_max - v_min) * 5.0);
+    problem.add_constraint(Expression::leq(v_min + 1.0, v_max));
+    problem.add_objective((v_max - v_min) * 5.0);
 
     LayoutInternal {
         h_min: h_layout.h_min,
