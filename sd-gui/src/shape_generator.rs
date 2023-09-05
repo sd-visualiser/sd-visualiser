@@ -73,7 +73,7 @@ where
                 let layout = layout(&monoidal_graph, &expanded).unwrap();
                 tracing::debug!("Calculating shapes...");
                 let mut shapes = Vec::new();
-                render::generate_shapes2(&mut shapes, &layout, true);
+                render::generate_shapes(&mut shapes, &layout, true);
                 tracing::debug!("Generated {} shapes...", shapes.len());
                 Shapes {
                     shapes,

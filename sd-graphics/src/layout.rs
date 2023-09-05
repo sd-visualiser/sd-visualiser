@@ -177,73 +177,6 @@ impl<T: Ctx, S> HLayout<T, S> {
         self.h_max - self.h_min
     }
 
-    #[must_use]
-    pub fn height(&self) -> f32 {
-        (0..self.nodes.len())
-            .map(|j| self.slice_height(j))
-            .sum::<f32>()
-            + 1.0
-    }
-
-    #[must_use]
-    pub fn size(&self) -> Vec2 {
-        Vec2::new(self.width(), self.height())
-    }
-
-    #[must_use]
-    pub fn slice_height(&self, j: usize) -> f32 {
-        self.nodes[j]
-            .iter()
-            .map(|n| match &n.node {
-                Node::Atom { .. } => {
-                    let in_width = if n.inputs < 2 {
-                        1.0
-                    } else {
-                        self.wires[j][n.input_offset + n.inputs - 1].h
-                            - self.wires[j][n.input_offset].h
-                    };
-
-                    let out_width = if n.outputs < 2 {
-                        1.0
-                    } else {
-                        self.wires[j + 1][n.output_offset + n.outputs - 1].h
-                            - self.wires[j + 1][n.output_offset].h
-                    };
-
-                    f32::sqrt((in_width + out_width) / 2.0) - 1.0
-                }
-                Node::Swap { out_to_in, .. } => out_to_in
-                    .iter()
-                    .enumerate()
-                    .map(|(i, x)| {
-                        (f32::sqrt((self.wires[j + 1][i].h - self.wires[j][*x].h).abs()) - 1.0)
-                            .clamp(0.0, f32::INFINITY)
-                    })
-                    .max_by(|x, y| x.partial_cmp(y).unwrap())
-                    .unwrap_or_default(),
-                Node::Thunk { layout, .. } => {
-                    let height_above = self.wires[j][n.input_offset..]
-                        .iter()
-                        .zip(layout.inputs())
-                        .map(|(x, y)| (f32::sqrt((x.h - y).abs()) - 1.0).clamp(0.0, f32::INFINITY))
-                        .max_by(|x, y| x.partial_cmp(y).unwrap())
-                        .unwrap_or_default();
-
-                    let height_below = self.wires[j + 1][n.output_offset..]
-                        .iter()
-                        .zip(layout.outputs())
-                        .map(|(x, y)| (f32::sqrt((x.h - y).abs()) - 1.0).clamp(0.0, f32::INFINITY))
-                        .max_by(|x, y| x.partial_cmp(y).unwrap())
-                        .unwrap_or_default();
-
-                    layout.height() + height_above + height_below
-                }
-            })
-            .max_by(|x, y| x.partial_cmp(y).unwrap())
-            .unwrap_or_default()
-            + 1.0
-    }
-
     #[allow(clippy::cast_possible_truncation)]
     fn from_solution_h(layout: LayoutInternal<T, Variable, S>, solution: &impl Solution) -> Self {
         HLayout {
@@ -319,6 +252,16 @@ impl<T: Ctx, S> HLayout<T, S> {
 }
 
 impl<T: Ctx> Layout<T> {
+    #[must_use]
+    pub fn height(&self) -> f32 {
+        self.v_max - self.v_min
+    }
+
+    #[must_use]
+    pub fn size(&self) -> Vec2 {
+        Vec2::new(self.width(), self.height())
+    }
+
     #[allow(clippy::cast_possible_truncation)]
     fn from_solution_v(layout: LayoutInternal<T, f32, Variable>, solution: &impl Solution) -> Self {
         Layout {

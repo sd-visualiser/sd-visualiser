@@ -4,7 +4,6 @@ use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
-    common::{InOut, InOutIter},
     decompile::{decompile, Fresh},
     graph::Name,
     hypergraph::{
@@ -13,7 +12,6 @@ use sd_core::{
         traits::{Graph, NodeLike, WithWeight},
     },
     language::{Expr, Language},
-    monoidal::graph::{MonoidalGraph, MonoidalOp},
     prettyprinter::PrettyPrint,
     weak_map::WeakMap,
 };
@@ -103,7 +101,7 @@ where
 }
 
 #[allow(clippy::too_many_lines)]
-pub fn generate_shapes2<T>(shapes: &mut Vec<Shape<T>>, layout: &Layout<T>, arrows: bool)
+pub fn generate_shapes<T>(shapes: &mut Vec<Shape<T>>, layout: &Layout<T>, arrows: bool)
 where
     T: Ctx,
     T::Edge: ExtensibleEdge,
@@ -313,260 +311,8 @@ where
                             id: [j, i],
                         });
                     }
-                    generate_shapes2(shapes, layout, false);
+                    generate_shapes(shapes, layout, false);
                 }
-            }
-        }
-    }
-}
-
-#[allow(clippy::too_many_lines)]
-pub fn generate_shapes<T>(
-    shapes: &mut Vec<Shape<T>>,
-    mut y_offset: f32,
-    layout: &Layout<T>,
-    graph: &MonoidalGraph<T>,
-    expanded: &WeakMap<T::Thunk, bool>,
-    arrows: bool,
-) where
-    T: Ctx,
-    T::Edge: ExtensibleEdge,
-    OperationWeight<T>: Display,
-{
-    // Source
-    for (&x, addr) in layout
-        .inputs()
-        .zip(graph.free_inputs.iter().chain(graph.bound_inputs.iter()))
-    {
-        let start = Pos2::new(x, y_offset);
-        let end = Pos2::new(x, y_offset + 0.5);
-        shapes.push(Shape::Line {
-            start,
-            end,
-            addr: addr.clone(),
-        });
-
-        if arrows {
-            if let Some(node) = addr.extend_source() {
-                shapes.push(Shape::Arrow {
-                    addr: addr.clone(),
-                    to_add: vec![node],
-                    center: Pos2::new(x, y_offset - 0.5),
-                    upwards: true,
-                    stroke: None,
-                    height: 0.1,
-                });
-            }
-        }
-    }
-
-    y_offset += 0.5;
-
-    for (j, slice) in graph.slices.iter().enumerate() {
-        let slice_height = layout.slice_height(j);
-        let y_input = y_offset;
-        let y_output = y_offset + slice_height;
-
-        y_offset = y_output;
-
-        let mut offset_i = 0;
-        let mut offset_o = 0;
-        for (i, op) in slice.ops.iter().enumerate() {
-            let ni = op.number_of_inputs();
-            let no = op.number_of_outputs();
-
-            let x_op = &layout.nodes[j][i];
-            let x_ins = &layout.wires[j][offset_i..offset_i + ni];
-            let x_outs = &layout.wires[j + 1][offset_o..offset_o + no];
-
-            match op {
-                MonoidalOp::Swap { addrs, out_to_in } => {
-                    for (out_idx, in_idx) in out_to_in.iter().enumerate() {
-                        let in_wire = Pos2::new(x_ins[*in_idx].h, y_input);
-                        let out_wire = Pos2::new(x_outs[out_idx].h, y_output);
-                        shapes.push(Shape::CubicBezier {
-                            points: vertical_out_vertical_in(in_wire, out_wire),
-                            addr: addrs[*in_idx].0.clone(),
-                        });
-                    }
-                }
-                MonoidalOp::Thunk { addr, body, .. } if expanded[addr] => {
-                    let x_op = x_op.node.unwrap_thunk();
-                    let diff = (slice_height - x_op.height()) / 2.0;
-                    let y_min = y_input + diff;
-                    let y_max = y_output - diff;
-                    for ((x, &x_body), edge) in
-                        x_ins.iter().zip(x_op.inputs()).zip(&body.free_inputs)
-                    {
-                        let start = Pos2::new(x.h, y_input);
-                        let end = Pos2::new(x_body, y_min);
-                        shapes.push(Shape::CubicBezier {
-                            points: vertical_out_vertical_in(start, end),
-                            addr: edge.clone(),
-                        });
-                    }
-                    for ((x, &x_body), edge) in
-                        x_outs.iter().zip(x_op.outputs()).zip(addr.outputs())
-                    {
-                        let start = Pos2::new(x_body, y_max);
-                        let end = Pos2::new(x.h, y_output);
-                        shapes.push(Shape::CubicBezier {
-                            points: vertical_out_vertical_in(start, end),
-                            addr: edge,
-                        });
-                    }
-                    let thunk_rect = Rect::from_min_max(
-                        Pos2::new(x_op.h_min, y_min),
-                        Pos2::new(x_op.h_max, y_max),
-                    );
-                    shapes.push(Shape::Rectangle {
-                        rect: thunk_rect,
-                        addr: addr.clone(),
-                        fill: None,
-                        stroke: None,
-                    });
-                    for (edge, &x) in addr.bound_graph_inputs().rev().zip(x_op.inputs().rev()) {
-                        let center = Pos2::new(x, y_min);
-                        shapes.push(Shape::CircleFilled {
-                            center,
-                            radius: RADIUS_ARG,
-                            addr: edge,
-                            id: [j, i],
-                        });
-                    }
-                    generate_shapes(shapes, y_min, x_op, body, expanded, false);
-                }
-                _ => {
-                    let x_op = *x_op.node.unwrap_atom();
-                    let y_op = (y_input + y_output) / 2.0;
-                    let center = Pos2::new(x_op, y_op);
-
-                    let (x_ins_rem, x_outs_rem) = match op {
-                        MonoidalOp::Cap { addr, intermediate } => {
-                            for (x, (edge, _)) in x_ins.iter().zip(intermediate) {
-                                let start = Pos2::new(x.h, y_input);
-                                let end = Pos2::new(x.h, y_output);
-                                shapes.push(Shape::Line {
-                                    start,
-                                    end,
-                                    addr: edge.clone(),
-                                });
-                            }
-                            (
-                                vec![],
-                                vec![
-                                    (x_outs[0].clone(), addr.0.clone()),
-                                    (x_outs.last().unwrap().clone(), addr.0.clone()),
-                                ],
-                            )
-                        }
-                        MonoidalOp::Cup { addr, intermediate } => {
-                            for (x, (edge, _)) in x_outs.iter().zip(intermediate) {
-                                let start = Pos2::new(x.h, y_input);
-                                let end = Pos2::new(x.h, y_output);
-                                shapes.push(Shape::Line {
-                                    start,
-                                    end,
-                                    addr: edge.clone(),
-                                });
-                            }
-                            (
-                                vec![
-                                    (x_ins[0].clone(), addr.0.clone()),
-                                    (x_ins.last().unwrap().clone(), addr.0.clone()),
-                                ],
-                                vec![],
-                            )
-                        }
-                        _ => (
-                            x_ins
-                                .iter()
-                                .cloned()
-                                .zip(op.input_links().map(|(edge, _)| edge))
-                                .collect::<Vec<_>>(),
-                            x_outs
-                                .iter()
-                                .cloned()
-                                .zip(op.output_links().map(|(edge, _)| edge))
-                                .collect::<Vec<_>>(),
-                        ),
-                    };
-
-                    for (x, edge) in x_ins_rem {
-                        let input = Pos2::new(x.h, y_input);
-                        shapes.push(Shape::CubicBezier {
-                            points: vertical_out_horizontal_in(input, center),
-                            addr: edge,
-                        });
-                    }
-
-                    for (x, edge) in x_outs_rem {
-                        let output = Pos2::new(x.h, y_output);
-                        shapes.push(Shape::CubicBezier {
-                            points: horizontal_out_vertical_in(center, output),
-                            addr: edge,
-                        });
-                    }
-
-                    match op {
-                        MonoidalOp::Copy { copies, addr, .. } if *copies != 1 => {
-                            shapes.push(Shape::CircleFilled {
-                                center,
-                                radius: RADIUS_COPY,
-                                addr: addr.clone(),
-                                id: [j, i],
-                            });
-                        }
-                        MonoidalOp::Operation { addr } => {
-                            shapes.push(Shape::Operation {
-                                center,
-                                addr: addr.clone(),
-                                label: addr.weight().to_string(),
-                                radius: RADIUS_OPERATION,
-                                fill: None,
-                                stroke: None,
-                            });
-                        }
-                        MonoidalOp::Thunk { addr, .. } => {
-                            let thunk_rect = Rect::from_center_size(center, BOX_SIZE);
-                            shapes.push(Shape::Rectangle {
-                                rect: thunk_rect,
-                                addr: addr.clone(),
-                                fill: None,
-                                stroke: None,
-                            });
-                        }
-                        _ => (),
-                    }
-                }
-            }
-
-            offset_i += ni;
-            offset_o += no;
-        }
-    }
-
-    // Target
-    for (&x, edge) in layout.outputs().zip(&graph.outputs) {
-        let start = Pos2::new(x, y_offset);
-        let end = Pos2::new(x, y_offset + 0.5);
-        shapes.push(Shape::Line {
-            start,
-            end,
-            addr: edge.clone(),
-        });
-
-        if arrows {
-            let targets = edge.extend_targets().collect::<Vec<_>>();
-            if !targets.is_empty() {
-                shapes.push(Shape::Arrow {
-                    addr: edge.clone(),
-                    to_add: targets,
-                    center: Pos2::new(x, y_offset + 1.0),
-                    upwards: false,
-                    stroke: None,
-                    height: 0.1,
-                });
             }
         }
     }
