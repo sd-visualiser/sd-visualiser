@@ -105,7 +105,7 @@ where
 pub fn generate_shapes<T>(
     shapes: &mut Vec<Shape<T>>,
     mut y_offset: f32,
-    layout: &Layout,
+    layout: &Layout<T>,
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
     arrows: bool,
@@ -176,7 +176,7 @@ pub fn generate_shapes<T>(
                     let diff = (slice_height - x_op.height()) / 2.0;
                     let y_min = y_input + diff;
                     let y_max = y_output - diff;
-                    for ((&x, &x_body), edge) in
+                    for ((x, &x_body), edge) in
                         x_ins.iter().zip(x_op.inputs()).zip(&body.free_inputs)
                     {
                         let start = Pos2::new(x.h, y_input);
@@ -186,7 +186,7 @@ pub fn generate_shapes<T>(
                             addr: edge.clone(),
                         });
                     }
-                    for ((&x, &x_body), edge) in
+                    for ((x, &x_body), edge) in
                         x_outs.iter().zip(x_op.outputs()).zip(addr.outputs())
                     {
                         let start = Pos2::new(x_body, y_max);
@@ -224,7 +224,7 @@ pub fn generate_shapes<T>(
 
                     let (x_ins_rem, x_outs_rem) = match op {
                         MonoidalOp::Cap { addr, intermediate } => {
-                            for (&x, (edge, _)) in x_ins.iter().zip(intermediate) {
+                            for (x, (edge, _)) in x_ins.iter().zip(intermediate) {
                                 let start = Pos2::new(x.h, y_input);
                                 let end = Pos2::new(x.h, y_output);
                                 shapes.push(Shape::Line {
@@ -236,13 +236,13 @@ pub fn generate_shapes<T>(
                             (
                                 vec![],
                                 vec![
-                                    (x_outs[0], addr.0.clone()),
-                                    (*x_outs.last().unwrap(), addr.0.clone()),
+                                    (x_outs[0].clone(), addr.0.clone()),
+                                    (x_outs.last().unwrap().clone(), addr.0.clone()),
                                 ],
                             )
                         }
                         MonoidalOp::Cup { addr, intermediate } => {
-                            for (&x, (edge, _)) in x_outs.iter().zip(intermediate) {
+                            for (x, (edge, _)) in x_outs.iter().zip(intermediate) {
                                 let start = Pos2::new(x.h, y_input);
                                 let end = Pos2::new(x.h, y_output);
                                 shapes.push(Shape::Line {
@@ -253,8 +253,8 @@ pub fn generate_shapes<T>(
                             }
                             (
                                 vec![
-                                    (x_ins[0], addr.0.clone()),
-                                    (*x_ins.last().unwrap(), addr.0.clone()),
+                                    (x_ins[0].clone(), addr.0.clone()),
+                                    (x_ins.last().unwrap().clone(), addr.0.clone()),
                                 ],
                                 vec![],
                             )
@@ -262,12 +262,12 @@ pub fn generate_shapes<T>(
                         _ => (
                             x_ins
                                 .iter()
-                                .copied()
+                                .cloned()
                                 .zip(op.input_links().map(|(edge, _)| edge))
                                 .collect::<Vec<_>>(),
                             x_outs
                                 .iter()
-                                .copied()
+                                .cloned()
                                 .zip(op.output_links().map(|(edge, _)| edge))
                                 .collect::<Vec<_>>(),
                         ),

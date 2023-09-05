@@ -3,12 +3,13 @@ use std::{
     ops::Bound,
 };
 
+use derivative::Derivative;
 use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use sd_core::{
-    common::InOut,
+    common::{InOut, InOutIter},
     hypergraph::{
         generic::{Ctx, OperationWeight},
         traits::WithWeight,
@@ -31,9 +32,9 @@ pub enum LayoutError {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct NodeOffset<H, V> {
-    pub(crate) node: Node<H, V>,
+#[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
+pub struct NodeOffset<T: Ctx, H, V> {
+    pub(crate) node: Node<T, H, V>,
     input_offset: usize,
     inputs: usize,
     output_offset: usize,
@@ -41,21 +42,23 @@ pub struct NodeOffset<H, V> {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(test, derive(Serialize))]
-pub enum AtomType {
+pub enum AtomType<T: Ctx> {
     Cup,
     Cap,
+    Op(T::Operation),
+    Thunk(T::Thunk),
     Other,
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(test, derive(Serialize))]
-pub enum Node<H, V> {
+#[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
+pub enum Node<T: Ctx, H, V> {
     Atom {
         h_pos: H,
         v_pos: V,
         extra_size: f32,
-        atype: AtomType,
+        #[cfg_attr(test, serde(skip_serializing))]
+        atype: AtomType<T>,
     },
     Swap {
         h_pos: H,
@@ -64,11 +67,13 @@ pub enum Node<H, V> {
         out_to_in: Vec<usize>,
     },
     Thunk {
-        layout: LayoutInternal<H, V>,
+        #[cfg_attr(test, serde(skip_serializing))]
+        addr: T::Thunk,
+        layout: LayoutInternal<T, H, V>,
     },
 }
 
-impl<V> Node<Variable, V> {
+impl<T: Ctx, V> Node<T, Variable, V> {
     #[must_use]
     pub fn h_min(&self) -> Expression {
         match self {
@@ -96,7 +101,7 @@ impl<V> Node<Variable, V> {
     }
 }
 
-impl<H, V> Node<H, V> {
+impl<T: Ctx, H, V> Node<T, H, V> {
     pub fn unwrap_atom(&self) -> &H {
         match self {
             Self::Atom { h_pos, .. } | Self::Swap { h_pos, .. } => h_pos,
@@ -104,7 +109,7 @@ impl<H, V> Node<H, V> {
         }
     }
 
-    pub fn unwrap_thunk(&self) -> &LayoutInternal<H, V> {
+    pub fn unwrap_thunk(&self) -> &LayoutInternal<T, H, V> {
         match self {
             Self::Atom { .. } | Self::Swap { .. } => panic!(),
             Self::Thunk { layout, .. } => layout,
@@ -112,7 +117,7 @@ impl<H, V> Node<H, V> {
     }
 }
 
-impl<H, V> InOut for NodeOffset<H, V> {
+impl<T: Ctx, H, V> InOut for NodeOffset<T, H, V> {
     fn number_of_inputs(&self) -> usize {
         self.inputs
     }
@@ -122,36 +127,29 @@ impl<H, V> InOut for NodeOffset<H, V> {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct WireData<H, V> {
+#[derive(Debug, Derivative)]
+#[derivative(Clone(bound = "H: Clone, V: Clone"))]
+#[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
+pub struct WireData<T: Ctx, H, V> {
     pub h: H,
     pub v_top: V,
     pub v_bot: V,
-}
-
-impl<H, V: Default> From<H> for WireData<H, V> {
-    fn from(value: H) -> Self {
-        WireData {
-            h: value,
-            v_top: Default::default(),
-            v_bot: Default::default(),
-        }
-    }
+    #[cfg_attr(test, serde(skip_serializing))]
+    pub addr: T::Edge,
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct LayoutInternal<H, V> {
+#[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
+pub struct LayoutInternal<T: Ctx, H, V> {
     pub h_min: H,
     pub h_max: H,
     pub v_min: V,
     pub v_max: V,
-    pub nodes: Vec<Vec<NodeOffset<H, V>>>,
-    pub wires: Vec<Vec<WireData<H, V>>>,
+    pub nodes: Vec<Vec<NodeOffset<T, H, V>>>,
+    pub wires: Vec<Vec<WireData<T, H, V>>>,
 }
 
-impl<H, V> LayoutInternal<H, V> {
+impl<T: Ctx, H, V> LayoutInternal<T, H, V> {
     pub fn inputs(&self) -> impl DoubleEndedIterator<Item = &H> {
         self.wires.first().unwrap().iter().map(|x| &x.h)
     }
@@ -161,10 +159,10 @@ impl<H, V> LayoutInternal<H, V> {
     }
 }
 
-pub type HLayout<T> = LayoutInternal<f32, T>;
-pub type Layout = LayoutInternal<f32, f32>;
+pub type HLayout<T, S> = LayoutInternal<T, f32, S>;
+pub type Layout<T> = LayoutInternal<T, f32, f32>;
 
-impl<T> HLayout<T> {
+impl<T: Ctx, S> HLayout<T, S> {
     #[must_use]
     pub fn width(&self) -> f32 {
         self.h_max - self.h_min
@@ -214,7 +212,7 @@ impl<T> HLayout<T> {
                     })
                     .max_by(|x, y| x.partial_cmp(y).unwrap())
                     .unwrap_or_default(),
-                Node::Thunk { layout } => {
+                Node::Thunk { layout, .. } => {
                     let height_above = self.wires[j][n.input_offset..]
                         .iter()
                         .zip(layout.inputs())
@@ -238,7 +236,7 @@ impl<T> HLayout<T> {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn from_solution_h(layout: LayoutInternal<Variable, T>, solution: &impl Solution) -> Self {
+    fn from_solution_h(layout: LayoutInternal<T, Variable, S>, solution: &impl Solution) -> Self {
         HLayout {
             h_min: solution.value(layout.h_min) as f32,
             h_max: solution.value(layout.h_max) as f32,
@@ -273,7 +271,8 @@ impl<T> HLayout<T> {
                                     v_bot,
                                     out_to_in,
                                 },
-                                Node::Thunk { layout } => Node::Thunk {
+                                Node::Thunk { addr, layout } => Node::Thunk {
+                                    addr,
                                     layout: Self::from_solution_h(layout, solution),
                                 },
                             },
@@ -290,11 +289,19 @@ impl<T> HLayout<T> {
                 .into_iter()
                 .map(|vs| {
                     vs.into_iter()
-                        .map(|WireData { h, v_top, v_bot }| WireData {
-                            h: solution.value(h) as f32,
-                            v_top,
-                            v_bot,
-                        })
+                        .map(
+                            |WireData {
+                                 h,
+                                 v_top,
+                                 v_bot,
+                                 addr,
+                             }| WireData {
+                                h: solution.value(h) as f32,
+                                v_top,
+                                v_bot,
+                                addr,
+                            },
+                        )
                         .collect()
                 })
                 .collect(),
@@ -302,9 +309,9 @@ impl<T> HLayout<T> {
     }
 }
 
-impl Layout {
+impl<T: Ctx> Layout<T> {
     #[allow(clippy::cast_possible_truncation)]
-    fn from_solution_v(layout: LayoutInternal<f32, Variable>, solution: &impl Solution) -> Self {
+    fn from_solution_v(layout: LayoutInternal<T, f32, Variable>, solution: &impl Solution) -> Self {
         Layout {
             h_min: layout.h_min,
             h_max: layout.h_max,
@@ -339,7 +346,8 @@ impl Layout {
                                     v_bot: solution.value(v_bot) as f32,
                                     out_to_in,
                                 },
-                                Node::Thunk { layout } => Node::Thunk {
+                                Node::Thunk { addr, layout } => Node::Thunk {
+                                    addr,
                                     layout: Layout::from_solution_v(layout, solution),
                                 },
                             },
@@ -356,11 +364,19 @@ impl Layout {
                 .into_iter()
                 .map(|vs| {
                     vs.into_iter()
-                        .map(|WireData { h, v_top, v_bot }| WireData {
-                            h,
-                            v_top: solution.value(v_top) as f32,
-                            v_bot: solution.value(v_bot) as f32,
-                        })
+                        .map(
+                            |WireData {
+                                 h,
+                                 v_top,
+                                 v_bot,
+                                 addr,
+                             }| WireData {
+                                h,
+                                v_top: solution.value(v_top) as f32,
+                                v_bot: solution.value(v_bot) as f32,
+                                addr,
+                            },
+                        )
                         .collect()
                 })
                 .collect(),
@@ -373,7 +389,7 @@ fn h_layout_internal<T: Ctx>(
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
     problem: &mut LpProblem,
-) -> LayoutInternal<Variable, ()>
+) -> LayoutInternal<T, Variable, ()>
 where
     OperationWeight<T>: Display,
 {
@@ -382,7 +398,7 @@ where
     let max = problem.add_variable(variable().min(0.0));
 
     let mut nodes = Vec::default();
-    let mut wires: Vec<Vec<WireData<Variable, ()>>> = Vec::default();
+    let mut wires: Vec<Vec<WireData<T, Variable, ()>>> = Vec::default();
 
     let add_constraints_wires = |problem: &mut LpProblem, vs: &Vec<Variable>| {
         if let Some(x) = vs.first().copied() {
@@ -396,7 +412,7 @@ where
         }
     };
 
-    let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<NodeOffset<Variable, ()>>| {
+    let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<NodeOffset<T, Variable, ()>>| {
         if let Some(x) = ns.first() {
             problem.add_constraint((x.node.h_min() - min).geq(0.5));
         }
@@ -413,11 +429,33 @@ where
         graph.free_inputs.len() + graph.bound_inputs.len(),
     );
     add_constraints_wires(problem, &inputs);
-    wires.push(inputs.into_iter().map(Into::into).collect());
+    wires.push(
+        inputs
+            .into_iter()
+            .zip(graph.free_inputs.iter().chain(&graph.bound_inputs))
+            .map(|(h, addr)| WireData {
+                h,
+                v_top: (),
+                v_bot: (),
+                addr: addr.clone(),
+            })
+            .collect(),
+    );
     for slice in &graph.slices {
         let outputs = problem.add_variables(variable().min(0.0), slice.number_of_outputs());
         add_constraints_wires(problem, &outputs);
-        wires.push(outputs.into_iter().map(Into::into).collect());
+        wires.push(
+            outputs
+                .into_iter()
+                .zip(slice.output_links())
+                .map(|(h, link)| WireData {
+                    h,
+                    v_top: (),
+                    v_bot: (),
+                    addr: link.0,
+                })
+                .collect(),
+        );
 
         let mut input_offset = 0;
         let mut output_offset = 0;
@@ -428,6 +466,7 @@ where
             .map(|op| {
                 let node = match op {
                     MonoidalOp::Thunk { body, addr, .. } if expanded[addr] => Node::Thunk {
+                        addr: addr.clone(),
                         layout: h_layout_internal(body, expanded, problem),
                     },
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
@@ -455,7 +494,13 @@ where
                             as f32
                             / 2.0)
                             * RADIUS_OPERATION,
-                        atype: AtomType::Other,
+                        atype: AtomType::Op(addr.clone()),
+                    },
+                    MonoidalOp::Thunk { addr, .. } => Node::Atom {
+                        h_pos: problem.add_variable(variable().min(0.0)),
+                        v_pos: (),
+                        extra_size: 0.0,
+                        atype: AtomType::Thunk(addr.clone()),
                     },
                     _ => Node::Atom {
                         h_pos: problem.add_variable(variable().min(0.0)),
@@ -495,28 +540,22 @@ where
             let prev_in: Option<Expression> = if node.input_offset == 0 {
                 None
             } else {
-                wires_i
-                    .get(node.input_offset - 1)
-                    .copied()
-                    .map(|x| x.h.into())
+                wires_i.get(node.input_offset - 1).map(|x| x.h.into())
             };
             let prev_out: Option<Expression> = if node.output_offset == 0 {
                 None
             } else {
-                wires_o
-                    .get(node.output_offset - 1)
-                    .copied()
-                    .map(|x| x.h.into())
+                wires_o.get(node.output_offset - 1).map(|x| x.h.into())
             };
 
             // Distance constraints
             let constraints = [
                 (prev_in.clone(), Some(node.node.h_min())),
                 (prev_out.clone(), Some(node.node.h_min())),
-                (prev_op.clone(), ins.first().copied().map(|x| x.h.into())),
-                (prev_op, outs.first().copied().map(|x| x.h.into())),
-                (prev_in, outs.first().copied().map(|x| x.h.into())),
-                (prev_out, ins.first().copied().map(|x| x.h.into())),
+                (prev_op.clone(), ins.first().map(|x| x.h.into())),
+                (prev_op, outs.first().map(|x| x.h.into())),
+                (prev_in, outs.first().map(|x| x.h.into())),
+                (prev_out, ins.first().map(|x| x.h.into())),
             ];
             for (x, y) in constraints.into_iter().filter_map(|(x, y)| x.zip(y)) {
                 problem.add_constraint((y - x).geq(1.0));
@@ -528,20 +567,20 @@ where
                 } => {
                     match atype {
                         AtomType::Cup => {
-                            for (x, y) in ins[1..].iter().copied().zip(outs) {
+                            for (x, y) in ins[1..].iter().zip(outs) {
                                 problem.add_constraint(Expression::eq(x.h.into(), y.h));
                             }
                             problem.add_constraint((*pos * 2.0).eq(ins[ni - 1].h + ins[0].h));
                             problem.add_objective(ins[ni - 1].h - ins[0].h);
                         }
                         AtomType::Cap => {
-                            for (x, y) in outs[1..].iter().copied().zip(ins) {
+                            for (x, y) in outs[1..].iter().zip(ins) {
                                 problem.add_constraint(Expression::eq(x.h.into(), y.h));
                             }
                             problem.add_constraint((*pos * 2.0).eq(outs[no - 1].h + outs[0].h));
                             problem.add_objective(outs[no - 1].h - outs[0].h);
                         }
-                        AtomType::Other => {
+                        _ => {
                             // Try to "squish" inputs and outputs
                             if ni >= 2 {
                                 problem.add_objective((ins[ni - 1].h - ins[0].h) * ni as f32);
@@ -580,13 +619,13 @@ where
                 }
                 Node::Thunk { layout, .. } => {
                     // Align internal wires with the external ones.
-                    for (&x, &y) in ins.iter().zip(layout.inputs()) {
+                    for (x, &y) in ins.iter().zip(layout.inputs()) {
                         let distance = problem.add_variable(variable().min(0.0));
                         problem.add_constraint((x.h - y).leq(distance));
                         problem.add_constraint((y - x.h).leq(distance));
                         problem.add_objective(distance * 1.5);
                     }
-                    for (&x, &y) in outs.iter().zip(layout.outputs()) {
+                    for (x, &y) in outs.iter().zip(layout.outputs()) {
                         let distance = problem.add_variable(variable().min(0.0));
                         problem.add_constraint((x.h - y).leq(distance));
                         problem.add_constraint((y - x.h).leq(distance));
@@ -612,13 +651,13 @@ where
 }
 
 #[allow(clippy::too_many_lines)]
-fn v_layout_internal(
+fn v_layout_internal<T: Ctx>(
     problem: &mut LpProblem,
-    h_layout: HLayout<()>,
-) -> LayoutInternal<f32, Variable> {
+    h_layout: HLayout<T, ()>,
+) -> LayoutInternal<T, f32, Variable> {
     // Set up wires
 
-    let wires: Vec<Vec<WireData<f32, Variable>>> = h_layout
+    let wires: Vec<Vec<WireData<T, f32, Variable>>> = h_layout
         .wires
         .into_iter()
         .map(|vs| {
@@ -634,6 +673,7 @@ fn v_layout_internal(
                         h: v.h,
                         v_top,
                         v_bot,
+                        addr: v.addr,
                     }
                 })
                 .collect()
@@ -743,7 +783,7 @@ fn v_layout_internal(
                                 interval,
                             )
                         }
-                        Node::Thunk { layout } => {
+                        Node::Thunk { addr, layout } => {
                             let layout = v_layout_internal(problem, layout);
 
                             let height_above = before[n.input_offset..]
@@ -772,7 +812,7 @@ fn v_layout_internal(
                                 Bound::Included(OrderedFloat(layout.h_max)),
                             );
 
-                            (Node::Thunk { layout }, start, end, interval)
+                            (Node::Thunk { addr, layout }, start, end, interval)
                         }
                     };
 
@@ -818,7 +858,7 @@ fn v_layout_internal(
 pub fn layout<T: Ctx>(
     graph: &MonoidalGraph<T>,
     expanded: &WeakMap<T::Thunk, bool>,
-) -> Result<Layout, LayoutError>
+) -> Result<Layout<T>, LayoutError>
 where
     OperationWeight<T>: Display,
 {

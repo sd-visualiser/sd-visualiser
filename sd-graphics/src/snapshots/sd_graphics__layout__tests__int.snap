@@ -14,7 +14,6 @@ LayoutInternal(
           h_pos: 0.5,
           v_pos: 1.0,
           extra_size: 0.0,
-          atype: Other,
         ),
         input_offset: 0,
         inputs: 0,

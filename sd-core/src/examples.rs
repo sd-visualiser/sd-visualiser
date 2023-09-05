@@ -49,11 +49,11 @@ impl NodeLike for DummyOperation {
     type Ctx = DummyCtx;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new(vec![DummyEdge; self.inputs].into_iter())
     }
 
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new(std::iter::once(DummyEdge))
     }
 
     fn backlink(&self) -> Option<DummyThunk> {
