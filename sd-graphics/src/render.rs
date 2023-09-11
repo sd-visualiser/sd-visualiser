@@ -158,15 +158,13 @@ where
             j,
             NodeOffset {
                 node,
-                input_offset,
                 inputs,
-                output_offset,
                 outputs,
             },
         ) in slice.iter().enumerate()
         {
-            let x_ins = &before[*input_offset..*input_offset + *inputs];
-            let x_outs = &after[*output_offset..*output_offset + *outputs];
+            let x_ins = &before[inputs.clone()];
+            let x_outs = &after[outputs.clone()];
 
             match node {
                 crate::layout::Node::Atom {

@@ -15,10 +15,14 @@ LayoutInternal(
           v_pos: 1.0,
           extra_size: 0.0,
         ),
-        input_offset: 0,
-        inputs: 0,
-        output_offset: 0,
-        outputs: 1,
+        inputs: Range(
+          start: 0,
+          end: 0,
+        ),
+        outputs: Range(
+          start: 0,
+          end: 1,
+        ),
       ),
     ],
   ],

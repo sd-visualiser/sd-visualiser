@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display},
-    ops::Bound,
+    ops::{Bound, Range},
 };
 
 use derivative::Derivative;
@@ -35,10 +35,8 @@ pub enum LayoutError {
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct NodeOffset<T: Ctx, H, V> {
     pub(crate) node: Node<T, H, V>,
-    pub(crate) input_offset: usize,
-    pub(crate) inputs: usize,
-    pub(crate) output_offset: usize,
-    pub(crate) outputs: usize,
+    pub(crate) inputs: Range<usize>,
+    pub(crate) outputs: Range<usize>,
 }
 
 #[derive(Clone, Debug)]
@@ -120,11 +118,11 @@ impl<T: Ctx, H, V> Node<T, H, V> {
 
 impl<T: Ctx, H, V> InOut for NodeOffset<T, H, V> {
     fn number_of_inputs(&self) -> usize {
-        self.inputs
+        self.inputs.len()
     }
 
     fn number_of_outputs(&self) -> usize {
-        self.outputs
+        self.outputs.len()
     }
 }
 
@@ -218,9 +216,7 @@ impl<T: Ctx, S> HLayout<T, S> {
                                     layout: Self::from_solution_h(layout, solution),
                                 },
                             },
-                            input_offset: n.input_offset,
                             inputs: n.inputs,
-                            output_offset: n.output_offset,
                             outputs: n.outputs,
                         })
                         .collect()
@@ -303,9 +299,7 @@ impl<T: Ctx> Layout<T> {
                                     layout: Layout::from_solution_v(layout, solution),
                                 },
                             },
-                            input_offset: n.input_offset,
                             inputs: n.inputs,
-                            output_offset: n.output_offset,
                             outputs: n.outputs,
                         })
                         .collect()
@@ -469,10 +463,8 @@ where
                 };
                 let node_offset = NodeOffset {
                     node,
-                    input_offset,
-                    output_offset,
-                    inputs: op.number_of_inputs(),
-                    outputs: op.number_of_outputs(),
+                    inputs: input_offset..input_offset + op.number_of_inputs(),
+                    outputs: output_offset..output_offset + op.number_of_outputs(),
                 };
                 input_offset += op.number_of_inputs();
                 output_offset += op.number_of_outputs();
@@ -492,18 +484,18 @@ where
 
             assert_ne!(ni + no, 0, "Scalars are not allowed!");
 
-            let ins = &wires_i[node.input_offset..node.input_offset + ni];
-            let outs = &wires_o[node.output_offset..node.output_offset + no];
+            let ins = &wires_i[node.inputs.clone()];
+            let outs = &wires_o[node.outputs.clone()];
 
-            let prev_in: Option<Expression> = if node.input_offset == 0 {
+            let prev_in: Option<Expression> = if node.inputs.start == 0 {
                 None
             } else {
-                wires_i.get(node.input_offset - 1).map(|x| x.h.into())
+                wires_i.get(node.inputs.start - 1).map(|x| x.h.into())
             };
-            let prev_out: Option<Expression> = if node.output_offset == 0 {
+            let prev_out: Option<Expression> = if node.outputs.start == 0 {
                 None
             } else {
-                wires_o.get(node.output_offset - 1).map(|x| x.h.into())
+                wires_o.get(node.outputs.start - 1).map(|x| x.h.into())
             };
 
             // Distance constraints
@@ -676,13 +668,10 @@ fn v_layout_internal<T: Ctx>(
                         } => {
                             let v_pos = problem.add_variable(variable().min(0.0));
 
-                            let in_gap = if n.inputs < 2 {
+                            let in_gap = if n.inputs.len() < 2 {
                                 1.0
                             } else {
-                                f32::sqrt(
-                                    before[n.input_offset + n.inputs - 1].h
-                                        - before[n.input_offset].h,
-                                )
+                                f32::sqrt(before[n.inputs.end - 1].h - before[n.inputs.start].h)
                             } / 2.0;
 
                             let interval = Interval::new(
@@ -690,13 +679,10 @@ fn v_layout_internal<T: Ctx>(
                                 Bound::Included(OrderedFloat(h_pos + extra_size)),
                             );
 
-                            let out_gap = if n.outputs < 2 {
+                            let out_gap = if n.outputs.len() < 2 {
                                 1.0
                             } else {
-                                f32::sqrt(
-                                    after[n.output_offset + n.outputs - 1].h
-                                        - after[n.output_offset].h,
-                                )
+                                f32::sqrt(after[n.outputs.end - 1].h - after[n.outputs.start].h)
                             } / 2.0;
 
                             let start = problem.add_variable(variable().min(0.0));
@@ -747,14 +733,14 @@ fn v_layout_internal<T: Ctx>(
                         Node::Thunk { addr, layout } => {
                             let layout = v_layout_internal(problem, layout);
 
-                            let height_above = before[n.input_offset..n.input_offset + n.inputs]
+                            let height_above = before[n.inputs.clone()]
                                 .iter()
                                 .zip(layout.inputs())
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
 
-                            let height_below = after[n.output_offset..n.output_offset + n.outputs]
+                            let height_below = after[n.outputs.clone()]
                                 .iter()
                                 .zip(layout.outputs())
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
@@ -780,11 +766,11 @@ fn v_layout_internal<T: Ctx>(
                     problem.add_constraint(Expression::leq(v_min + 0.5, top));
                     problem.add_constraint(Expression::leq(top + 0.5, v_max));
 
-                    for x in &before[n.input_offset..n.input_offset + n.inputs] {
+                    for x in &before[n.inputs.clone()] {
                         problem.add_constraint(Expression::eq(top.into(), x.v_bot));
                     }
 
-                    for x in &after[n.output_offset..n.output_offset + n.outputs] {
+                    for x in &after[n.outputs.clone()] {
                         problem.add_constraint(Expression::eq(bottom.into(), x.v_top));
                     }
 
@@ -796,9 +782,7 @@ fn v_layout_internal<T: Ctx>(
 
                     NodeOffset {
                         node,
-                        input_offset: n.input_offset,
                         inputs: n.inputs,
-                        output_offset: n.output_offset,
                         outputs: n.outputs,
                     }
                 })
