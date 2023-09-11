@@ -667,6 +667,7 @@ fn v_layout_internal<T: Ctx>(
         .into_iter()
         .zip(wires.iter().tuple_windows())
         .map(|(ns, (before, after))| {
+            let thunk_height = problem.add_variable(variable().min(0.0));
             ns.into_iter()
                 .map(|n| {
                     let (node, top, bottom, interval) = match n.node {
@@ -742,6 +743,8 @@ fn v_layout_internal<T: Ctx>(
                         }
                         Node::Thunk { addr, layout } => {
                             let layout = v_layout_internal(problem, layout);
+
+                            problem.add_constraint((layout.v_min + layout.v_max).eq(thunk_height));
 
                             let height_above = before[n.inputs.clone()]
                                 .iter()
