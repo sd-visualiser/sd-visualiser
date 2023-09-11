@@ -189,7 +189,6 @@ impl<W: Weight> Graph for Hypergraph<W> {
         Box::new(
             self.graph_outputs
                 .iter()
-                .cloned()
                 .map(|in_port| Edge(ByThinAddress(in_port.link()))),
         )
     }

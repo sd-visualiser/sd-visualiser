@@ -22,11 +22,7 @@ fn lines_contained(line_col: &LineColLocation) -> Vec<usize> {
     }
 }
 
-pub fn show_parse_error(
-    ui: &mut egui::Ui,
-    err: &Error<impl RuleType>,
-    text_edit_out: &TextEditOutput,
-) {
+pub fn show_parse_error(ui: &egui::Ui, err: &Error<impl RuleType>, text_edit_out: &TextEditOutput) {
     let painter = ui.painter();
     for l in lines_contained(&err.line_col) {
         if let Some(row) = text_edit_out.galley.rows.get(l) {
