@@ -22,6 +22,7 @@ use sd_core::{
 use serde::Serialize;
 use store_interval_tree::{Interval, IntervalTree};
 use thiserror::Error;
+use tracing::debug;
 
 use crate::common::RADIUS_OPERATION;
 
@@ -31,7 +32,8 @@ pub enum LayoutError {
     ResolutionError(#[from] ResolutionError),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug(bound = "T::Operation: Debug, T::Thunk: Debug, H: Debug, V: Debug"))]
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct NodeOffset<T: Ctx, H, V> {
     pub(crate) node: Node<T, H, V>,
@@ -39,7 +41,8 @@ pub struct NodeOffset<T: Ctx, H, V> {
     pub(crate) outputs: Range<usize>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug(bound = "T::Operation: Debug, T::Thunk: Debug"))]
 pub enum AtomType<T: Ctx> {
     Cup,
     Cap,
@@ -49,7 +52,8 @@ pub enum AtomType<T: Ctx> {
     Id,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug(bound = "T::Operation: Debug, T::Thunk: Debug, H: Debug, V: Debug"))]
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub enum Node<T: Ctx, H, V> {
     Atom {
@@ -126,8 +130,11 @@ impl<T: Ctx, H, V> InOut for NodeOffset<T, H, V> {
     }
 }
 
-#[derive(Debug, Derivative)]
-#[derivative(Clone(bound = "H: Clone, V: Clone"))]
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = "H: Clone, V: Clone"),
+    Debug(bound = "T::Edge: Debug, H: Debug, V: Debug")
+)]
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct WireData<T: Ctx, H, V> {
     pub h: H,
@@ -137,7 +144,10 @@ pub struct WireData<T: Ctx, H, V> {
     pub addr: T::Edge,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug(
+    bound = "T::Operation: Debug, T::Thunk: Debug, T::Edge: Debug, H: Debug, V: Debug"
+))]
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct LayoutInternal<T: Ctx, H, V> {
     pub h_min: H,
@@ -823,7 +833,9 @@ where
 
     let v_solution = problem.minimise(good_lp::default_solver)?;
 
-    Ok(Layout::from_solution_v(v_layout, &v_solution))
+    let layout_complete = Layout::from_solution_v(v_layout, &v_solution);
+    debug!("Layout complete: {:?}", layout_complete);
+    Ok(layout_complete)
 }
 
 #[cfg(test)]
