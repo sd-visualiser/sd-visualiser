@@ -168,8 +168,18 @@ impl<W: Weight> ThunkBuilder<W> {
 }
 
 #[derive(Derivative)]
-#[derivative(Clone(bound = ""), Debug(bound = ""), Default(bound = ""))]
+#[derivative(Clone(bound = ""), Default(bound = ""))]
 pub struct HypergraphBuilder<W: Weight>(Hypergraph<W>);
+
+impl<W: Weight> Debug for HypergraphBuilder<W> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("HypergraphBuilder")
+            .field("Node count", &self.0.nodes.len())
+            .field("Input count", &self.0.graph_inputs.len())
+            .field("Output count", &self.0.graph_outputs.len())
+            .finish()
+    }
+}
 
 impl<W: Weight> HypergraphBuilder<W> {
     #[must_use]
