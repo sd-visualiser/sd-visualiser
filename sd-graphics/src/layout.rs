@@ -830,7 +830,7 @@ where
     problem = LpProblem::default();
 
     let v_layout = v_layout_internal(&mut problem, HLayout::from_solution_h(layout, &h_solution));
-
+    problem.add_objective(v_layout.v_max);
     let v_solution = problem.minimise(good_lp::default_solver)?;
 
     let layout_complete = Layout::from_solution_v(v_layout, &v_solution);
