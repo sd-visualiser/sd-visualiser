@@ -122,7 +122,7 @@ impl<T: Ctx> Shape<T> {
             Shape::CircleFilled { addr, id, .. } => {
                 let circle_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph, &addr, id)),
+                    Id::new((&graph.key(), &addr, id)),
                     Sense::click(),
                 );
                 if circle_response.clicked() {
@@ -134,7 +134,7 @@ impl<T: Ctx> Shape<T> {
                 let selected = graph.selected(Node::Thunk(addr.clone()));
                 let thunk_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph, &addr)),
+                    Id::new((&graph.key(), &addr)),
                     Sense::click(),
                 );
                 let mut new_stroke = ui
@@ -158,7 +158,7 @@ impl<T: Ctx> Shape<T> {
                 let selected = graph.selected(Node::Operation(addr.clone()));
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph, &addr)),
+                    Id::new((&graph.key(), &addr)),
                     Sense::click(),
                 );
                 if op_response.clicked() {
@@ -189,7 +189,7 @@ impl<T: Ctx> Shape<T> {
             } => {
                 let arrow_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph, &addr)),
+                    Id::new((&graph.key(), &addr)),
                     Sense::click(),
                 );
 

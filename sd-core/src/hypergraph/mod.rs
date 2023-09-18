@@ -73,6 +73,14 @@ impl<W: Weight> Ctx for Hypergraph<W> {
     type Operation = Operation<W>;
 }
 
+impl<W: Weight> Keyable for Hypergraph<W> {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
+    }
+}
+
 #[derive(Derivative)]
 #[derivative(
     Clone(bound = ""),

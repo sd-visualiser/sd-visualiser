@@ -332,6 +332,14 @@ impl<T: Ctx> EdgeLike for SubEdge<T> {
     }
 }
 
+impl<T: Ctx> Keyable for Subgraph<T> {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
+    }
+}
+
 impl<T: Ctx> Keyable for SubEdge<T> {
     type Key = Key<T::Edge>;
 

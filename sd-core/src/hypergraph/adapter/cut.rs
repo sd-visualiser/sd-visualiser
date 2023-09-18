@@ -20,13 +20,7 @@ use crate::{
 ////////////////////////////////////////////////////////////////
 
 #[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub struct CutGraph<G: Graph> {
     graph: G,
     cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
@@ -509,6 +503,14 @@ impl<G: Graph> NodeLike for CutThunk<G> {
 
     fn number_of_outputs(&self) -> usize {
         self.thunk.number_of_outputs()
+    }
+}
+
+impl<G: Graph> Keyable for CutGraph<G> {
+    type Key = (Key<G>, Arc<EdgeMap<G::Ctx, bool>>);
+
+    fn key(&self) -> Self::Key {
+        (self.graph.key(), self.cut_edges.clone())
     }
 }
 

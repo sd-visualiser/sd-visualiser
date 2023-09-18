@@ -8,7 +8,7 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     hypergraph::{
-        generic::{Edge, Operation, OperationWeight},
+        generic::{Edge, Key, Operation, OperationWeight},
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
@@ -18,7 +18,7 @@ use sd_graphics::{common::Shapeable, layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
-type Cache<G> = LruCache<G, Arc<Mutex<Promise<Shapes<<G as Graph>::Ctx>>>>>;
+type Cache<G> = LruCache<Key<G>, Arc<Mutex<Promise<Shapes<<G as Graph>::Ctx>>>>>;
 
 fn shape_cache<G>() -> Arc<Mutex<Cache<G>>>
 where
@@ -51,7 +51,7 @@ where
     let cache = shape_cache::<G>();
     let mut guard = cache.lock().unwrap();
     guard
-        .get_or_insert(graph.clone(), || {
+        .get_or_insert(graph.key(), || {
             let graph = graph.clone();
             Arc::new(Mutex::new(crate::spawn!("shape", {
                 tracing::debug!("Converting to monoidal term");

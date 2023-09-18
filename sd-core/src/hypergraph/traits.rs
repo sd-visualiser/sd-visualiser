@@ -33,7 +33,7 @@ pub trait EdgeLike: Clone + Eq + Hash + Debug + Send + Sync {
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_>;
 }
 
-pub trait Graph: Clone + Eq + Hash + Debug + Send + Sync {
+pub trait Graph: Clone + Debug + Send + Sync + Keyable {
     type Ctx: Ctx;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;

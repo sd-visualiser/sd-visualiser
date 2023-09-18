@@ -19,13 +19,7 @@ use crate::{
 ////////////////////////////////////////////////////////////////
 
 #[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub struct CollapseGraph<G: Graph> {
     graph: G,
     expanded: Arc<ThunkMap<G::Ctx, bool>>,
@@ -405,6 +399,14 @@ where
 {
     fn is_match(&self, query: &str) -> bool {
         self.thunk.is_match(query)
+    }
+}
+
+impl<G: Graph> Keyable for CollapseGraph<G> {
+    type Key = (Key<G>, Arc<ThunkMap<G::Ctx, bool>>);
+
+    fn key(&self) -> Self::Key {
+        (self.graph.key(), self.expanded.clone())
     }
 }
 

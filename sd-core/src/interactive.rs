@@ -8,26 +8,19 @@ use crate::{
     common::Direction,
     hypergraph::{
         adapter::{collapse::CollapseGraph, cut::CutGraph},
-        generic::{Ctx, Edge, Node, Thunk},
+        generic::{Ctx, Edge, Key, Node, Thunk},
         mapping::{edge_map, thunk_map},
         subgraph::Subgraph,
-        traits::Graph,
+        traits::{Graph, Keyable},
     },
     selection::SelectionMap,
 };
 
 /// An interactive graph is a graph with cut edges, collapsible thunks, and selectable nodes.
 #[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub struct InteractiveGraph<G: Graph> {
     pub graph: CutGraph<CollapseGraph<G>>,
-    #[derivative(PartialEq = "ignore", Hash = "ignore")]
     pub selection: SelectionMap<G::Ctx>,
 }
 
@@ -90,15 +83,17 @@ impl<G: Graph> Graph for InteractiveGraph<G> {
     }
 }
 
+impl<G: Graph> Keyable for InteractiveGraph<G> {
+    type Key = Key<CutGraph<CollapseGraph<G>>>;
+
+    fn key(&self) -> Self::Key {
+        self.graph.key()
+    }
+}
+
 /// An interactive subgraph is a subgraph with collapsible thunks.
 #[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
+#[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub struct InteractiveSubgraph<T: Ctx>(pub CollapseGraph<Subgraph<T>>);
 
 impl<T: Ctx> Graph for InteractiveSubgraph<T> {
@@ -133,5 +128,13 @@ where
 
     fn code(&self) -> Self::Code {
         self.0.code()
+    }
+}
+
+impl<T: Ctx> Keyable for InteractiveSubgraph<T> {
+    type Key = Key<CollapseGraph<Subgraph<T>>>;
+
+    fn key(&self) -> Self::Key {
+        self.0.key()
     }
 }
