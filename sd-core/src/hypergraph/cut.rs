@@ -7,6 +7,7 @@ use indexmap::IndexSet;
 use itertools::Either;
 
 use crate::{
+    common::Matchable,
     hypergraph::{
         generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
         subgraph::ExtensibleEdge,
@@ -510,6 +511,35 @@ impl<G: Graph> WithWeight for CutThunk<G> {
 
     fn weight(&self) -> Self::Weight {
         self.inner().weight()
+    }
+}
+
+impl<G: Graph> Matchable for CutEdge<G>
+where
+    Edge<G::Ctx>: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.inner().is_match(query)
+    }
+}
+
+impl<G: Graph> Matchable for CutOperation<G>
+where
+    Edge<G::Ctx>: Matchable,
+    Operation<G::Ctx>: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.inner()
+            .either(|op| op.is_match(query), |edge| edge.is_match(query))
+    }
+}
+
+impl<G: Graph> Matchable for CutThunk<G>
+where
+    Thunk<G::Ctx>: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.inner().is_match(query)
     }
 }
 

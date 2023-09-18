@@ -8,7 +8,7 @@ use super::{
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
     Weight,
 };
-use crate::{hypergraph::generic::Ctx, selection::SelectionMap};
+use crate::{common::Matchable, hypergraph::generic::Ctx, selection::SelectionMap};
 
 #[derive(Derivative)]
 #[derivative(
@@ -323,6 +323,33 @@ impl<T: Ctx> WithWeight for SubThunk<T> {
 
     fn weight(&self) -> Self::Weight {
         self.inner.weight()
+    }
+}
+
+impl<T: Ctx> Matchable for SubEdge<T>
+where
+    T::Edge: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.inner.is_match(query)
+    }
+}
+
+impl<T: Ctx> Matchable for SubOperation<T>
+where
+    T::Operation: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.inner.is_match(query)
+    }
+}
+
+impl<T: Ctx> Matchable for SubThunk<T>
+where
+    T::Thunk: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.inner.is_match(query)
     }
 }
 

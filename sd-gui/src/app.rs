@@ -473,20 +473,20 @@ impl eframe::App for App {
         });
 
         let mut clear_find = false;
-        if let Some((find, graph_ui)) = self.find.as_mut().zip(finished_mut(&mut self.graph_ui)) {
+        if let Some((query, graph_ui)) = self.find.as_mut().zip(finished_mut(&mut self.graph_ui)) {
             egui::Window::new("find_panel")
                 .movable(false)
                 .resizable(false)
                 .anchor(Align2::RIGHT_TOP, Vec2::default())
                 .title_bar(false)
                 .show(ctx, |ui| {
-                    let response = ui.text_edit_singleline(find);
+                    let response = ui.text_edit_singleline(query);
                     if find_request_focus {
                         response.request_focus();
                     }
                     ui.horizontal(|ui| {
                         if ui.button("Find").clicked() {
-                            graph_ui.find_variable(find);
+                            graph_ui.find(query);
                             clear_find = true;
                         }
                         if ui.button("Cancel").clicked() {

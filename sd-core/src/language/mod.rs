@@ -7,7 +7,7 @@ use derivative::Derivative;
 use from_pest::{ConversionError, FromPest, Void};
 use pest::{iterators::Pairs, RuleType};
 
-use crate::prettyprinter::PrettyPrint;
+use crate::{common::Matchable, prettyprinter::PrettyPrint};
 
 pub mod chil;
 pub mod spartan;
@@ -34,8 +34,8 @@ pub trait Fresh {
 /// `PrettyPrint` should give the textual representation (e.g. "plus").
 pub trait Language {
     type Op: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint;
-    type Var: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + Fresh;
-    type Addr: Clone + Eq + Hash + Debug + Send + Sync + Display;
+    type Var: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + Fresh + Matchable;
+    type Addr: Clone + Eq + Hash + Debug + Send + Sync + Display + Matchable;
     type VarDef: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + AsVar<Self::Var>;
 
     type Rule: RuleType;

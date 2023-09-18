@@ -11,7 +11,7 @@ use sd_core::{
     common::{Direction, Matchable},
     graph::{Name, SyntaxHypergraph},
     hypergraph::{
-        generic::{Edge, EdgeWeight, Operation, OperationWeight, Thunk},
+        generic::{Edge, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::{Graph, WithWeight},
         utils::create_expanded,
@@ -53,7 +53,7 @@ impl GraphUi {
             pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
-            pub(crate) fn find_variable(&mut self, variable: &str);
+            pub(crate) fn find(&mut self, query: &str);
             pub(crate) fn export_svg(&self) -> String;
             pub(crate) fn set_expanded_all(&mut self, expanded: bool);
         }
@@ -180,11 +180,12 @@ where
         self.reset_requested = true;
     }
 
-    /// Searches through the shapes by variable name and pans to the operation which generates the variable
-    pub(crate) fn find_variable(&mut self, variable: &str)
+    /// Searches through the shapes and pans to the one which matches the query
+    pub(crate) fn find(&mut self, query: &str)
     where
         Edge<G::Ctx>: ExtensibleEdge,
-        EdgeWeight<G::Ctx>: Matchable,
+        Operation<G::Ctx>: Matchable,
+        Thunk<G::Ctx>: Matchable,
         OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
@@ -192,8 +193,8 @@ where
 
         if let Some(shapes) = guard.ready() {
             for shape in &shapes.shapes {
-                if let Some(center) = shape.find_variable(variable) {
-                    self.panzoom.set_pan(center);
+                if shape.is_match(query) {
+                    self.panzoom.set_pan(shape.center());
                     break;
                 }
             }

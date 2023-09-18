@@ -169,8 +169,8 @@ impl<'pest> FromPest<'pest> for Op {
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
 impl Matchable for Variable {
-    fn is_match(&self, variable: &str) -> bool {
-        self.0 == variable
+    fn is_match(&self, query: &str) -> bool {
+        self.0 == query
     }
 }
 

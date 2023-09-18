@@ -1,8 +1,10 @@
 use std::{fmt::Debug, hash::Hash};
 
 use crate::hypergraph::{
-    generic::{Ctx, Edge, EdgeWeight},
+    self,
+    generic::{Ctx, Edge},
     traits::{NodeLike, WithWeight},
+    Weight,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -35,17 +37,31 @@ pub trait InOutIter: InOut {
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<Self::T>> + 'a>;
 }
 
-/// Check if an object matches a variable name
+/// Check if an object matches a query.
 pub trait Matchable {
-    fn is_match(&self, variable: &str) -> bool;
+    fn is_match(&self, query: &str) -> bool;
 }
 
-impl<V> Matchable for &V
+impl<W: Weight> Matchable for hypergraph::Edge<W> {
+    fn is_match(&self, _query: &str) -> bool {
+        false
+    }
+}
+
+impl<W: Weight> Matchable for hypergraph::Operation<W>
 where
-    V: NodeLike,
-    EdgeWeight<V::Ctx>: Matchable,
+    W::EdgeWeight: Matchable,
 {
-    fn is_match(&self, variable: &str) -> bool {
-        self.outputs().any(|edge| edge.weight().is_match(variable))
+    fn is_match(&self, query: &str) -> bool {
+        self.outputs().any(|edge| edge.weight().is_match(query))
+    }
+}
+
+impl<W: Weight> Matchable for hypergraph::Thunk<W>
+where
+    W::ThunkWeight: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.weight().is_match(query)
     }
 }

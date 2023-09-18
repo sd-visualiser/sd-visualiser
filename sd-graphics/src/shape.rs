@@ -8,7 +8,7 @@ use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
-    hypergraph::generic::{Ctx, EdgeWeight, Node},
+    hypergraph::generic::{Ctx, Node},
     weak_map::WeakMap,
 };
 
@@ -335,6 +335,17 @@ impl<T: Ctx> Shape<T> {
         }
     }
 
+    pub fn center(&self) -> Pos2 {
+        match self {
+            Shape::Line { start, end, .. } => *start + (*end - *start) / 2.0,
+            Shape::CubicBezier { points, .. } => points[0] + (points[3] - points[0]) / 2.0,
+            Shape::Rectangle { rect, .. } => rect.center(),
+            Shape::CircleFilled { center, .. }
+            | Shape::Operation { center, .. }
+            | Shape::Arrow { center, .. } => *center,
+        }
+    }
+
     pub(crate) fn bounding_box(&self) -> Rect {
         match self {
             Shape::Line { start, end, .. } => Rect::from_two_pos(*start, *end),
@@ -355,17 +366,6 @@ impl<T: Ctx> Shape<T> {
             Shape::Arrow { center, height, .. } => {
                 Rect::from_center_size(*center, Vec2::splat(*height * 5.0))
             }
-        }
-    }
-
-    pub fn find_variable(&self, variable: &str) -> Option<Pos2>
-    where
-        EdgeWeight<T>: Matchable,
-    {
-        match self {
-            Shape::Rectangle { rect, addr, .. } => addr.is_match(variable).then_some(rect.center()),
-            Shape::Operation { center, addr, .. } => addr.is_match(variable).then_some(*center),
-            _ => None,
         }
     }
 
@@ -395,6 +395,20 @@ impl<T: Ctx> Shape<T> {
                 f64::from(tolerance),
             )
             .is_some(),
+            _ => false,
+        }
+    }
+}
+
+impl<T: Ctx> Matchable for Shape<T>
+where
+    T::Operation: Matchable,
+    T::Thunk: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        match self {
+            Self::Operation { addr, .. } => addr.is_match(query),
+            Self::Rectangle { addr, .. } => addr.is_match(query),
             _ => false,
         }
     }

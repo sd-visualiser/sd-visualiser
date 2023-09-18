@@ -129,12 +129,11 @@ pub struct Variable {
 }
 
 impl Matchable for Variable {
-    fn is_match(&self, variable: &str) -> bool {
-        self.name
-            .as_ref()
-            .map(|id| id.0 == variable)
-            .unwrap_or_default()
-            || self.addr.is_match(variable)
+    fn is_match(&self, query: &str) -> bool {
+        // If a variable is "foo(id: %0)", then we match "foo(id: %0)", "foo", and "%0".
+        self.to_string() == query
+            || self.name.as_ref().map_or(false, |id| id.0 == query)
+            || self.addr.is_match(query)
     }
 }
 
@@ -164,8 +163,8 @@ pub struct Addr(
 );
 
 impl Matchable for Addr {
-    fn is_match(&self, variable: &str) -> bool {
-        self.1.to_string() == variable
+    fn is_match(&self, query: &str) -> bool {
+        self.to_string() == query
     }
 }
 

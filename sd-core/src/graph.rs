@@ -57,16 +57,12 @@ where
     }
 }
 
-impl<T: Language> Matchable for Name<T>
-where
-    T::Addr: Matchable,
-    T::Var: Matchable,
-{
-    fn is_match(&self, variable: &str) -> bool {
+impl<T: Language> Matchable for Name<T> {
+    fn is_match(&self, query: &str) -> bool {
         match self {
             Name::Nil => false,
-            Name::FreeVar(var) => var.is_match(variable),
-            Name::BoundVar(var_def) => var_def.as_var().is_match(variable),
+            Name::FreeVar(var) => var.is_match(query),
+            Name::BoundVar(var_def) => var_def.as_var().is_match(query),
         }
     }
 }
