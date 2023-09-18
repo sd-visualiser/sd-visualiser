@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
+use derivative::Derivative;
 use itertools::Itertools;
+use pretty::RcDoc;
 use thiserror::Error;
 
 use crate::{
@@ -10,6 +12,7 @@ use crate::{
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::{Arg, Bind, Expr, Fresh, Language, Thunk as SThunk, Value},
+    prettyprinter::{paran_list, PrettyPrint},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -149,5 +152,72 @@ impl<T: Language> SThunk<T> {
                 .collect::<Result<Vec<_>, _>>()?,
             body: Expr::decompile(thunk)?,
         })
+    }
+}
+
+/// Similar to `Value` but contains fresh variables, thunk addresses, and variable definitions.
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+pub enum FakeValue<T: Language> {
+    Fresh,
+    Thunk(T::Addr),
+    FreeVar(T::Var),
+    BoundVar(T::VarDef),
+    Operation(T::Op, Vec<FakeValue<T>>),
+}
+
+impl<T: Language> FakeValue<T> {
+    pub fn decompile<E>(edge: &E) -> Self
+    where
+        E: EdgeLike + WithWeight<Weight = Name<T>>,
+        Edge<E::Ctx>: WithWeight<Weight = Name<T>>,
+        Operation<E::Ctx>: WithWeight<Weight = T::Op>,
+        Thunk<E::Ctx>: WithWeight<Weight = T::Addr>,
+    {
+        match edge.weight() {
+            Name::Nil => match edge.source() {
+                None => Self::Fresh,
+                Some(Node::Operation(op)) => Self::Operation(
+                    op.weight(),
+                    op.inputs().map(|edge| Self::decompile(&edge)).collect(),
+                ),
+                Some(Node::Thunk(thunk)) => Self::Thunk(thunk.weight()),
+            },
+            Name::FreeVar(var) => Self::FreeVar(var),
+            Name::BoundVar(def) => Self::BoundVar(def),
+        }
+    }
+}
+
+impl<T: Language> PrettyPrint for FakeValue<T> {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        match self {
+            Self::Fresh => RcDoc::text("?"),
+            Self::Thunk(addr) => {
+                let addr = addr.to_string();
+                if addr.is_empty() {
+                    RcDoc::text("thunk")
+                } else {
+                    RcDoc::text("thunk")
+                        .append(RcDoc::space())
+                        .append(RcDoc::text(addr))
+                }
+            }
+            Self::FreeVar(var) => var.to_doc(),
+            Self::BoundVar(def) => def.to_doc(),
+            Self::Operation(op, vs) => {
+                if vs.is_empty() {
+                    op.to_doc()
+                } else {
+                    op.to_doc().append(paran_list(vs))
+                }
+            }
+        }
     }
 }

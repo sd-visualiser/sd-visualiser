@@ -4,6 +4,7 @@ use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
+    decompile::FakeValue,
     graph::Name,
     hypergraph::{
         generic::{Ctx, Edge, Node, Operation, OperationWeight, Thunk},
@@ -16,7 +17,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{EdgeLabel, BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     layout::{AtomType, Layout, NodeOffset},
     renderable::RenderableGraph,
     shape::Shape,
@@ -64,7 +65,7 @@ where
         .collect();
 
     // Show hover tooltips.
-    let pretty_edge = |edge| EdgeLabel::from_edge::<G::InnerCtx>(&edge).to_pretty();
+    let pretty_edge = |edge| FakeValue::decompile(&edge).to_pretty();
     let labels = match highlight_node {
         Some(node) => {
             highlight_edges.extend(node.inputs().chain(node.outputs()));
