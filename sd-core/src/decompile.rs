@@ -200,7 +200,7 @@ impl<T: Language> PrettyPrint for FakeValue<T> {
         match self {
             Self::Fresh => RcDoc::text("?"),
             Self::Thunk(addr) => {
-                let addr = addr.to_string();
+                let addr = addr.to_pretty();
                 if addr.is_empty() {
                     RcDoc::text("thunk")
                 } else {

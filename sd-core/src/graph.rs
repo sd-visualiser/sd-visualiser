@@ -15,7 +15,7 @@ use crate::{
         builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
         Hypergraph, Weight,
     },
-    language::{Arg, AsVar, Expr, Language, Thunk, Value},
+    language::{Arg, Expr, GetVar, Language, Thunk, Value},
     prettyprinter::PrettyPrint,
 };
 
@@ -44,15 +44,12 @@ pub enum Name<T: Language> {
     BoundVar(T::VarDef),
 }
 
-impl<T: Language> Display for Name<T>
-where
-    T::Var: Display,
-{
+impl<T: Language> Display for Name<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Name::Nil => write!(f, ""),
             Name::FreeVar(var) => write!(f, "{var}"),
-            Name::BoundVar(var_def) => write!(f, "{}", var_def.as_var()),
+            Name::BoundVar(def) => write!(f, "{def}"),
         }
     }
 }
@@ -62,7 +59,7 @@ impl<T: Language> Matchable for Name<T> {
         match self {
             Name::Nil => false,
             Name::FreeVar(var) => var.is_match(query),
-            Name::BoundVar(var_def) => var_def.as_var().is_match(query),
+            Name::BoundVar(def) => def.is_match(query),
         }
     }
 }
@@ -72,7 +69,7 @@ impl<T: Language> Name<T> {
         match self {
             Name::Nil => None,
             Name::FreeVar(var) => Some(var),
-            Name::BoundVar(def) => Some(def.as_var().clone()),
+            Name::BoundVar(def) => Some(def.into_var()),
         }
     }
 }
@@ -143,7 +140,7 @@ where
             (Value::Variable(var), ProcessInput::Variables(inputs)) => {
                 // We have tried to assign a variable to another variable
                 Err(ConvertError::Aliased(
-                    inputs.into_iter().map(|x| x.as_var().clone()).collect(),
+                    inputs.into_iter().map(|x| x.into_var()).collect(),
                     var.clone(),
                 ))
             }
@@ -177,7 +174,7 @@ where
                 match input {
                     ProcessInput::Variables(inputs) => {
                         for (input, out_port) in inputs.into_iter().zip(out_ports) {
-                            let var = input.as_var();
+                            let var = input.var();
                             self.outputs
                                 .insert(var.clone(), out_port)
                                 .is_none()
@@ -220,7 +217,7 @@ where
 
                 // Add bound inputs of the thunk to the environment
                 for (def, out_port) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
-                    let var = def.as_var();
+                    let var = def.var();
                     thunk_env
                         .outputs
                         .insert(var.clone(), out_port)

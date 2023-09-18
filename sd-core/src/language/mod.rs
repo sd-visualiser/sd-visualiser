@@ -16,12 +16,17 @@ pub(crate) fn span_into_str(span: pest::Span) -> &str {
     span.as_str()
 }
 
-pub trait AsVar<V> {
-    fn as_var(&self) -> &V;
+pub trait GetVar<V> {
+    fn var(&self) -> &V;
+    fn into_var(self) -> V;
 }
 
-impl<V> AsVar<V> for V {
-    fn as_var(&self) -> &V {
+impl<V> GetVar<V> for V {
+    fn var(&self) -> &V {
+        self
+    }
+
+    fn into_var(self) -> V {
         self
     }
 }
@@ -32,11 +37,14 @@ pub trait Fresh {
 
 /// `Display` should give the symbolic representation (e.g. "+").
 /// `PrettyPrint` should give the textual representation (e.g. "plus").
+pub trait Syntax: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint {}
+impl<T: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint> Syntax for T {}
+
 pub trait Language {
-    type Op: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint;
-    type Var: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + Fresh + Matchable;
-    type Addr: Clone + Eq + Hash + Debug + Send + Sync + Display + Matchable;
-    type VarDef: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + AsVar<Self::Var>;
+    type Op: Syntax;
+    type Var: Syntax + Matchable + Fresh;
+    type Addr: Syntax + Matchable;
+    type VarDef: Syntax + Matchable + GetVar<Self::Var>;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;

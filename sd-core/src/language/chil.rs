@@ -10,7 +10,7 @@ use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
-use super::{span_into_str, AsVar, Fresh};
+use super::{span_into_str, Fresh, GetVar};
 use crate::common::Matchable;
 
 pub struct Chil;
@@ -219,9 +219,25 @@ pub struct VariableDef {
     pub r#type: Option<Type>,
 }
 
-impl AsVar<Variable> for VariableDef {
-    fn as_var(&self) -> &Variable {
+impl Display for VariableDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.var)
+    }
+}
+
+impl Matchable for VariableDef {
+    fn is_match(&self, query: &str) -> bool {
+        self.var.is_match(query)
+    }
+}
+
+impl GetVar<Variable> for VariableDef {
+    fn var(&self) -> &Variable {
         &self.var
+    }
+
+    fn into_var(self) -> Variable {
+        self.var
     }
 }
 

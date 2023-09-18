@@ -1,6 +1,6 @@
 use indexmap::IndexSet;
 
-use crate::language::{Arg, AsVar, Expr, Language, Thunk, Value};
+use crate::language::{Arg, Expr, GetVar, Language, Thunk, Value};
 
 impl<T: Language> Expr<T> {
     pub(crate) fn free_vars(&self) -> IndexSet<T::Var> {
@@ -15,7 +15,7 @@ impl<T: Language> Expr<T> {
         }
 
         for def in self.binds.iter().flat_map(|bind| &bind.defs) {
-            vars.remove(def.as_var());
+            vars.remove(def.var());
         }
 
         vars
@@ -43,7 +43,7 @@ impl<T: Language> Value<T> {
 impl<T: Language> Thunk<T> {
     pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>) {
         let body_vars = self.body.free_vars();
-        let arg_set: IndexSet<T::Var> = self.args.iter().map(AsVar::as_var).cloned().collect();
+        let arg_set: IndexSet<T::Var> = self.args.iter().map(GetVar::var).cloned().collect();
         vars.extend(body_vars.difference(&arg_set).cloned());
     }
 }
