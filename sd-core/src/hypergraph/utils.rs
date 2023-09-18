@@ -6,7 +6,7 @@ use super::{
     generic::{Ctx, Edge, Node, Thunk},
     traits::{EdgeLike, Graph, NodeLike},
 };
-use crate::{selection::SelectionMap, weak_map::WeakMap};
+use crate::weak_map::WeakMap;
 
 pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<Thunk<G::Ctx>, bool> {
     fn helper<T: Ctx>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk) {
@@ -23,29 +23,6 @@ pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<Thunk<G::Ctx>, bool> {
     }
 
     WeakMap::from(set)
-}
-
-#[must_use]
-pub fn create_selected<G: Graph>(graph: &G) -> SelectionMap<G::Ctx> {
-    fn helper<T: Ctx>(set: &mut IndexMap<Node<T>, bool>, thunk: &T::Thunk) {
-        for node in thunk.nodes() {
-            if let Node::Thunk(thunk) = &node {
-                helper::<T>(set, thunk);
-            }
-            set.insert(node, false);
-        }
-    }
-
-    let mut set = IndexMap::new();
-
-    for node in graph.nodes() {
-        if let Node::Thunk(thunk) = &node {
-            helper::<G::Ctx>(&mut set, thunk);
-        }
-        set.insert(node, false);
-    }
-
-    SelectionMap::from(set)
 }
 
 pub fn create_cut_edges<G: Graph>(graph: &G) -> WeakMap<Edge<G::Ctx>, bool> {

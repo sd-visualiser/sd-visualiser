@@ -11,7 +11,7 @@ use crate::{
         generic::{Ctx, Edge, Node, Thunk},
         subgraph::Subgraph,
         traits::Graph,
-        utils::{create_cut_edges, create_expanded, create_selected},
+        utils::{create_cut_edges, create_expanded},
     },
     selection::SelectionMap,
 };
@@ -33,7 +33,7 @@ pub struct InteractiveGraph<G: Graph> {
 
 impl<G: Graph> InteractiveGraph<G> {
     pub fn new(graph: G) -> Self {
-        let selection = create_selected(&graph);
+        let selection = SelectionMap::new(&graph);
 
         let expanded = create_expanded(&graph);
         let graph = CollapseGraph::new(graph, expanded);

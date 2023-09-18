@@ -8,7 +8,7 @@ use crate::{
     hypergraph::{
         generic::{Ctx, Node},
         reachability::NReachable,
-        traits::NodeLike,
+        traits::{Graph, NodeLike},
         utils::find_ancestor,
     },
     weak_map::WeakMap,
@@ -23,15 +23,6 @@ use crate::{
     Debug(bound = "")
 )]
 pub struct SelectionMap<T: Ctx>(WeakMap<Node<T>, bool>);
-
-impl<T> From<IndexMap<Node<T>, bool>> for SelectionMap<T>
-where
-    T: Ctx,
-{
-    fn from(map: IndexMap<Node<T>, bool>) -> Self {
-        Self(WeakMap::from(map))
-    }
-}
 
 impl<T> Index<&Node<T>> for SelectionMap<T>
 where
@@ -57,6 +48,22 @@ impl<T> SelectionMap<T>
 where
     T: Ctx,
 {
+    /// Construct a selection map for the given graph.
+    pub fn new(graph: &impl Graph<Ctx = T>) -> Self {
+        fn helper<T: Ctx>(selection: &mut IndexMap<Node<T>, bool>, graph: &impl Graph<Ctx = T>) {
+            for node in graph.nodes() {
+                if let Node::Thunk(thunk) = &node {
+                    helper(selection, thunk);
+                }
+                selection.insert(node, false);
+            }
+        }
+
+        let mut selection = IndexMap::new();
+        helper(&mut selection, graph);
+        Self(WeakMap::from(selection))
+    }
+
     /// Unselect all nodes.
     pub fn clear_selection(&mut self) {
         self.0.values_mut().for_each(|selected| *selected = false);
