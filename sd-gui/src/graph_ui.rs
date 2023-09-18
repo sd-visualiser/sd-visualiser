@@ -19,7 +19,7 @@ use sd_core::{
     interactive::InteractiveGraph,
     language::{chil::Chil, spartan::Spartan},
 };
-use sd_graphics::renderable::RenderableGraph;
+use sd_graphics::{common::Shapeable, renderable::RenderableGraph};
 
 use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
@@ -94,6 +94,7 @@ where
         Thunk<G::Ctx>: Codeable,
         // Needed for generate_shapes
         Edge<G::Ctx>: ExtensibleEdge,
+        Operation<G::Ctx>: Shapeable,
         OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph);
@@ -174,7 +175,7 @@ where
     pub(crate) fn find(&mut self, query: &str)
     where
         Edge<G::Ctx>: ExtensibleEdge,
-        Operation<G::Ctx>: Matchable,
+        Operation<G::Ctx>: Matchable + Shapeable,
         Thunk<G::Ctx>: Matchable,
         OperationWeight<G::Ctx>: Display,
     {
@@ -201,6 +202,7 @@ where
     pub(crate) fn export_svg(&self) -> String
     where
         Edge<G::Ctx>: ExtensibleEdge,
+        Operation<G::Ctx>: Shapeable,
         OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph);

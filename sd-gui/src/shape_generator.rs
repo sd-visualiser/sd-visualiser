@@ -8,13 +8,13 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     hypergraph::{
-        generic::{Edge, OperationWeight},
+        generic::{Edge, Operation, OperationWeight},
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
     monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
 };
-use sd_graphics::{layout::layout, render, shape::Shapes};
+use sd_graphics::{common::Shapeable, layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
@@ -45,6 +45,7 @@ pub fn generate_shapes<G>(graph: &G) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
 where
     G: Graph + 'static,
     Edge<G::Ctx>: ExtensibleEdge,
+    Operation<G::Ctx>: Shapeable,
     OperationWeight<G::Ctx>: Display,
 {
     let cache = shape_cache::<G>();

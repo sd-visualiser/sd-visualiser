@@ -14,7 +14,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{Shapeable, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     layout::{AtomType, Layout, NodeOffset},
     renderable::RenderableGraph,
     shape::Shape,
@@ -84,6 +84,7 @@ pub fn generate_shapes<T>(shapes: &mut Vec<Shape<T>>, layout: &Layout<T>, arrows
 where
     T: Ctx,
     T::Edge: ExtensibleEdge,
+    T::Operation: Shapeable,
     OperationWeight<T>: Display,
 {
     if arrows {
@@ -217,6 +218,7 @@ where
                                 center,
                                 addr: addr.clone(),
                                 label: addr.weight().to_string(),
+                                kind: addr.to_shape(),
                                 radius: RADIUS_OPERATION,
                                 fill: None,
                                 stroke: None,

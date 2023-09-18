@@ -12,7 +12,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{to_coord2, TEXT_SIZE, TOLERANCE},
+    common::{to_coord2, ShapeKind, TEXT_SIZE, TOLERANCE},
     renderable::RenderableGraph,
 };
 
@@ -44,6 +44,7 @@ pub enum Shape<T: Ctx> {
         radius: f32,
         addr: T::Operation,
         label: String,
+        kind: ShapeKind,
         fill: Option<Color32>,
         stroke: Option<Stroke>,
     },
@@ -258,6 +259,7 @@ impl<T: Ctx> Shape<T> {
                 center,
                 radius,
                 label,
+                kind,
                 fill,
                 stroke,
                 ..
@@ -265,9 +267,9 @@ impl<T: Ctx> Shape<T> {
                 let rect = egui::Shape::Rect(RectShape {
                     rect: Rect::from_center_size(
                         center,
-                        radius * vec2(label.chars().count() as f32 + 1.0, 2.0),
+                        radius * vec2(label.chars().count().max(1) as f32 + 1.0, 2.0),
                     ),
-                    rounding: Rounding::same(radius),
+                    rounding: kind.into_rounding(radius),
                     fill: fill.unwrap_or_default(),
                     stroke: stroke.unwrap_or(default_stroke),
                 });
