@@ -2,3 +2,4 @@
 
 pub mod collapse;
 pub mod cut;
+pub mod selectable;

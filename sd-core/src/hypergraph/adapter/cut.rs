@@ -563,6 +563,14 @@ impl<G: Graph> WithWeight for CutThunk<G> {
     }
 }
 
+impl<G: Graph + Codeable> Codeable for CutGraph<G> {
+    type Code = Code<G>;
+
+    fn code(&self) -> Self::Code {
+        self.inner().code()
+    }
+}
+
 impl<G: Graph> Codeable for CutEdge<G>
 where
     Edge<G::Ctx>: Codeable,

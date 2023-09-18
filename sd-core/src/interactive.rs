@@ -7,26 +7,22 @@ use crate::{
     codeable::{Code, Codeable},
     common::Direction,
     hypergraph::{
-        adapter::{collapse::CollapseGraph, cut::CutGraph},
+        adapter::{collapse::CollapseGraph, cut::CutGraph, selectable::SelectableGraph},
         generic::{Ctx, Edge, Key, Node, Thunk},
         mapping::{edge_map, thunk_map},
         subgraph::Subgraph,
         traits::{Graph, Keyable},
     },
-    selection::SelectionMap,
 };
 
 /// An interactive graph is a graph with cut edges, collapsible thunks, and selectable nodes.
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
-pub struct InteractiveGraph<G: Graph> {
-    pub graph: CutGraph<CollapseGraph<G>>,
-    pub selection: SelectionMap<G::Ctx>,
-}
+pub struct InteractiveGraph<G: Graph>(pub CutGraph<CollapseGraph<SelectableGraph<G>>>);
 
 impl<G: Graph> InteractiveGraph<G> {
     pub fn new(graph: G) -> Self {
-        let selection = SelectionMap::new(&graph);
+        let graph = SelectableGraph::new(graph);
 
         let expanded = thunk_map(&graph, true);
         let graph = CollapseGraph::new(graph, expanded);
@@ -34,60 +30,71 @@ impl<G: Graph> InteractiveGraph<G> {
         let cut_edges = edge_map(&graph, false);
         let graph = CutGraph::new(graph, cut_edges);
 
-        Self { graph, selection }
+        Self(graph)
     }
 
     delegate! {
-        to self.selection {
+        to self.0.inner().inner() {
             pub fn is_empty(&self) -> bool;
+        }
+
+        to self.0.inner_mut().inner_mut() {
             pub fn clear_selection(&mut self);
             pub fn extend_selection(&mut self, direction: Option<(Direction, usize)>);
         }
     }
 
     delegate! {
-        to self.graph.inner_mut() {
+        to self.0.inner_mut() {
             #[call(set_all)]
             pub fn set_expanded_all(&mut self, value: bool);
         }
     }
 
     pub fn to_subgraph(&self) -> InteractiveSubgraph<G::Ctx> {
-        let subgraph = Subgraph::new(self.selection.clone());
-        let expanded = self.graph.inner().expanded().clone();
+        let subgraph = self.0.inner().inner().to_subgraph();
+        let expanded = self.0.inner().expanded().clone();
         InteractiveSubgraph(CollapseGraph::new(subgraph, expanded))
     }
 }
 
 impl<G: Graph> Graph for InteractiveGraph<G> {
-    type Ctx = CutGraph<CollapseGraph<G>>;
+    type Ctx = CutGraph<CollapseGraph<SelectableGraph<G>>>;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.graph.free_graph_inputs()
+        self.0.free_graph_inputs()
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.graph.bound_graph_inputs()
+        self.0.bound_graph_inputs()
     }
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.graph.graph_outputs()
+        self.0.graph_outputs()
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
-        self.graph.nodes()
+        self.0.nodes()
     }
 
     fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
-        self.graph.graph_backlink()
+        self.0.graph_backlink()
+    }
+}
+
+impl<G: Graph + Codeable> Codeable for InteractiveGraph<G> {
+    type Code = Code<CutGraph<CollapseGraph<SelectableGraph<G>>>>;
+
+    fn code(&self) -> Self::Code {
+        self.0.code()
     }
 }
 
 impl<G: Graph> Keyable for InteractiveGraph<G> {
-    type Key = Key<CutGraph<CollapseGraph<G>>>;
+    type Key = Key<CutGraph<CollapseGraph<SelectableGraph<G>>>>;
 
     fn key(&self) -> Self::Key {
-        self.graph.key()
+        self.0.key()
     }
 }
 
