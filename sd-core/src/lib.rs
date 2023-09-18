@@ -1,3 +1,4 @@
+pub mod codeable;
 pub mod common;
 pub mod decompile;
 pub mod examples;

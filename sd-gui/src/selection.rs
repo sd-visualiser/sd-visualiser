@@ -4,6 +4,7 @@ use delegate::delegate;
 use eframe::egui;
 use indexmap::IndexMap;
 use sd_core::{
+    codeable::Codeable,
     graph::SyntaxHypergraph,
     hypergraph::{
         cut::CutThunk,
@@ -88,8 +89,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
         let graph_ui = GraphUiInternal::new(subgraph, expanded);
 
-        let code = Expr::decompile(&graph_ui.graph)
-            .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
+        let code = graph_ui.graph.code().to_pretty();
 
         Self {
             code,

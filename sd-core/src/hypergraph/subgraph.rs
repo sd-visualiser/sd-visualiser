@@ -8,7 +8,12 @@ use super::{
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
     Weight,
 };
-use crate::{common::Matchable, hypergraph::generic::Ctx, selection::SelectionMap};
+use crate::{
+    codeable::{Code, Codeable},
+    common::Matchable,
+    hypergraph::generic::Ctx,
+    selection::SelectionMap,
+};
 
 #[derive(Derivative)]
 #[derivative(
@@ -323,6 +328,39 @@ impl<T: Ctx> WithWeight for SubThunk<T> {
 
     fn weight(&self) -> Self::Weight {
         self.inner.weight()
+    }
+}
+
+impl<T: Ctx> Codeable for SubEdge<T>
+where
+    T::Edge: Codeable,
+{
+    type Code = Code<T::Edge>;
+
+    fn code(&self) -> Self::Code {
+        self.inner.code()
+    }
+}
+
+impl<T: Ctx> Codeable for SubOperation<T>
+where
+    T::Operation: Codeable,
+{
+    type Code = Code<T::Operation>;
+
+    fn code(&self) -> Self::Code {
+        self.inner.code()
+    }
+}
+
+impl<T: Ctx> Codeable for SubThunk<T>
+where
+    T::Thunk: Codeable,
+{
+    type Code = Code<T::Thunk>;
+
+    fn code(&self) -> Self::Code {
+        self.inner.code()
     }
 }
 

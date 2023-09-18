@@ -4,14 +4,12 @@ use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
-    decompile::FakeValue,
-    graph::Name,
+    codeable::Codeable,
     hypergraph::{
         generic::{Ctx, Edge, Node, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
-    language::{Language, Thunk as SThunk},
     prettyprinter::PrettyPrint,
     weak_map::WeakMap,
 };
@@ -24,7 +22,7 @@ use crate::{
 };
 
 #[allow(clippy::needless_collect)]
-pub fn render<T, G>(
+pub fn render<G>(
     graph: &mut G,
     ui: &egui::Ui,
     shapes: &[Shape<G::Ctx>],
@@ -33,12 +31,10 @@ pub fn render<T, G>(
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
-    T: Language,
-    SThunk<T>: PrettyPrint,
     G: RenderableGraph,
-    Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,
-    Operation<G::InnerCtx>: WithWeight<Weight = T::Op>,
-    Thunk<G::InnerCtx>: WithWeight<Weight = T::Addr>,
+    Edge<G::Ctx>: Codeable,
+    Operation<G::Ctx>: Codeable,
+    Thunk<G::Ctx>: Codeable,
 {
     let viewport = *to_screen.from();
 
@@ -65,25 +61,21 @@ where
         .collect();
 
     // Show hover tooltips.
-    let pretty_edge = |edge| FakeValue::decompile(&edge).to_pretty();
     let labels = match highlight_node {
         Some(node) => {
             highlight_edges.extend(node.inputs().chain(node.outputs()));
             match &node {
                 Node::Operation(op) => {
-                    vec![graph
-                        .inner_operation(op)
-                        .either(|op| op.weight().to_pretty(), pretty_edge)]
+                    vec![op.code().to_pretty()]
                 }
                 Node::Thunk(thunk) => {
-                    vec![SThunk::decompile(&graph.inner_thunk(thunk))
-                        .map_or_else(|_| "thunk".to_owned(), |thunk| thunk.to_pretty())]
+                    vec![thunk.code().to_pretty()]
                 }
             }
         }
         None => highlight_edges
             .iter()
-            .map(|edge| pretty_edge(graph.inner_edge(edge)))
+            .map(|edge| edge.code().to_pretty())
             .collect(),
     };
     for label in labels {

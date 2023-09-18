@@ -7,6 +7,7 @@ use indexmap::IndexSet;
 use itertools::Either;
 
 use crate::{
+    codeable::{Code, Codeable},
     common::Matchable,
     hypergraph::{
         generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
@@ -511,6 +512,40 @@ impl<G: Graph> WithWeight for CutThunk<G> {
 
     fn weight(&self) -> Self::Weight {
         self.inner().weight()
+    }
+}
+
+impl<G: Graph> Codeable for CutEdge<G>
+where
+    Edge<G::Ctx>: Codeable,
+{
+    type Code = Code<Edge<G::Ctx>>;
+
+    fn code(&self) -> Self::Code {
+        self.inner().code()
+    }
+}
+
+impl<G: Graph> Codeable for CutOperation<G>
+where
+    Edge<G::Ctx>: Codeable,
+    Operation<G::Ctx>: Codeable,
+{
+    type Code = Either<Code<Operation<G::Ctx>>, Code<Edge<G::Ctx>>>;
+
+    fn code(&self) -> Self::Code {
+        self.inner().map_either(Codeable::code, Codeable::code)
+    }
+}
+
+impl<G: Graph> Codeable for CutThunk<G>
+where
+    Thunk<G::Ctx>: Codeable,
+{
+    type Code = Code<Thunk<G::Ctx>>;
+
+    fn code(&self) -> Self::Code {
+        self.inner().code()
     }
 }
 

@@ -1,7 +1,6 @@
-use itertools::Either;
 use sd_core::{
     hypergraph::{
-        generic::{Ctx, Edge, Node, Operation, Thunk},
+        generic::{Ctx, Edge, Node},
         subgraph::Subgraph,
         traits::Graph,
     },
@@ -14,15 +13,6 @@ pub trait RenderableGraph: Graph {
     fn toggle(&mut self, node: Node<Self::Ctx>);
     fn cut(&mut self, edge: Edge<Self::Ctx>);
     fn extend(&mut self, nodes: impl Iterator<Item = Node<Self::Ctx>>);
-
-    // This is a bit of a hack.
-    type InnerCtx: Ctx;
-    fn inner_edge(&self, edge: &Edge<Self::Ctx>) -> Edge<Self::InnerCtx>;
-    fn inner_operation(
-        &self,
-        op: &Operation<Self::Ctx>,
-    ) -> Either<Operation<Self::InnerCtx>, Edge<Self::InnerCtx>>;
-    fn inner_thunk(&self, thunk: &Thunk<Self::Ctx>) -> Thunk<Self::InnerCtx>;
 }
 
 /// For interactive graphs, we just delegate to the selection map.
@@ -46,23 +36,6 @@ impl<G: Graph> RenderableGraph for InteractiveGraph<G> {
     fn extend(&mut self, _nodes: impl Iterator<Item = Node<Self::Ctx>>) {
         panic!("Graph cannot be extended")
     }
-
-    type InnerCtx = G::Ctx;
-
-    fn inner_edge(&self, edge: &Edge<Self::Ctx>) -> Edge<Self::InnerCtx> {
-        edge.inner().clone()
-    }
-
-    fn inner_operation(
-        &self,
-        op: &Operation<Self::Ctx>,
-    ) -> Either<Operation<Self::InnerCtx>, Edge<Self::InnerCtx>> {
-        op.inner().map_either(Clone::clone, Clone::clone)
-    }
-
-    fn inner_thunk(&self, thunk: &Thunk<Self::Ctx>) -> Thunk<Self::InnerCtx> {
-        thunk.inner().clone()
-    }
 }
 
 /// For subgraphs, nodes are never selected and toggling them actually removes them.
@@ -79,22 +52,5 @@ impl<T: Ctx> RenderableGraph for Subgraph<T> {
 
     fn extend(&mut self, nodes: impl Iterator<Item = Node<Self::Ctx>>) {
         self.extend(nodes);
-    }
-
-    type InnerCtx = Self::Ctx;
-
-    fn inner_edge(&self, edge: &Edge<Self::Ctx>) -> Edge<Self::InnerCtx> {
-        edge.clone()
-    }
-
-    fn inner_operation(
-        &self,
-        op: &Operation<Self::Ctx>,
-    ) -> Either<Operation<Self::InnerCtx>, Edge<Self::InnerCtx>> {
-        Either::Left(op.clone())
-    }
-
-    fn inner_thunk(&self, thunk: &Thunk<Self::Ctx>) -> Thunk<Self::InnerCtx> {
-        thunk.clone()
     }
 }

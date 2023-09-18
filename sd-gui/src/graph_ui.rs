@@ -8,17 +8,17 @@ use eframe::{
     epaint::{Rounding, Shape},
 };
 use sd_core::{
+    codeable::Codeable,
     common::{Direction, Matchable},
-    graph::{Name, SyntaxHypergraph},
+    graph::SyntaxHypergraph,
     hypergraph::{
         generic::{Edge, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
-        traits::{Graph, WithWeight},
+        traits::Graph,
         utils::create_expanded,
     },
     interactive::InteractiveGraph,
-    language::{chil::Chil, spartan::Spartan, Language, Thunk as SThunk},
-    prettyprinter::PrettyPrint,
+    language::{chil::Chil, spartan::Spartan},
     weak_map::WeakMap,
 };
 use sd_graphics::renderable::RenderableGraph;
@@ -81,7 +81,7 @@ pub struct GraphUiInternal<G: Graph> {
 
 impl<G> GraphUiInternal<G>
 where
-    G: RenderableGraph + 'static,
+    G: Graph + 'static,
 {
     pub(crate) fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
         Self {
@@ -93,16 +93,15 @@ where
         }
     }
 
-    pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui)
+    pub(crate) fn ui(&mut self, ui: &mut egui::Ui)
     where
-        T: Language,
-        SThunk<T>: PrettyPrint,
-        Edge<G::Ctx>: ExtensibleEdge,
         // Needed for render
-        Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,
-        Operation<G::InnerCtx>: WithWeight<Weight = T::Op>,
-        Thunk<G::InnerCtx>: WithWeight<Weight = T::Addr>,
+        G: RenderableGraph,
+        Edge<G::Ctx>: Codeable,
+        Operation<G::Ctx>: Codeable,
+        Thunk<G::Ctx>: Codeable,
         // Needed for generate_shapes
+        Edge<G::Ctx>: ExtensibleEdge,
         OperationWeight<G::Ctx>: Display,
     {
         let shapes = generate_shapes(&self.graph, &self.expanded);
