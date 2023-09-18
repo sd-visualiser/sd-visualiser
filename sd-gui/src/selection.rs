@@ -9,7 +9,7 @@ use sd_core::{
         cut::CutThunk,
         subgraph::{SubThunk, Subgraph},
     },
-    language::{chil::Chil, spartan::Spartan, Expr, Language},
+    language::{chil::Chil, spartan::Spartan, Expr, Language, Thunk},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,
     weak_map::WeakMap,
@@ -109,7 +109,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
     where
-        Expr<T>: PrettyPrint,
+        Thunk<T>: PrettyPrint,
     {
         egui::Window::new(self.name.clone())
             .open(&mut self.displayed)

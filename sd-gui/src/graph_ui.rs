@@ -17,7 +17,7 @@ use sd_core::{
         utils::create_expanded,
     },
     interactive::InteractiveGraph,
-    language::{chil::Chil, spartan::Spartan, Expr, Language},
+    language::{chil::Chil, spartan::Spartan, Language, Thunk as SThunk},
     prettyprinter::PrettyPrint,
     weak_map::WeakMap,
 };
@@ -96,7 +96,7 @@ where
     pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui)
     where
         T: Language,
-        Expr<T>: PrettyPrint,
+        SThunk<T>: PrettyPrint,
         Edge<G::Ctx>: ExtensibleEdge,
         // Needed for render
         Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,

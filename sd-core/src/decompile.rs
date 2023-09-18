@@ -91,17 +91,7 @@ impl<T: Language> Expr<T> {
                     }
                 }
                 Node::Thunk(thunk) => {
-                    let thunk = SThunk {
-                        addr: thunk.weight(),
-                        args: thunk
-                            .bound_graph_inputs()
-                            .map(|edge| match edge.weight() {
-                                Name::BoundVar(arg) => Ok(arg),
-                                _ => Err(DecompileError::Corrupt),
-                            })
-                            .collect::<Result<Vec<_>, _>>()?,
-                        body: Self::decompile(thunk)?,
-                    };
+                    let thunk = SThunk::decompile(thunk)?;
 
                     // Check the node has a unique output.
                     let output = node
@@ -137,5 +127,27 @@ impl<T: Language> Expr<T> {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Expr { binds, values })
+    }
+}
+
+impl<T: Language> SThunk<T> {
+    pub fn decompile<G>(thunk: &G) -> Result<Self, DecompileError>
+    where
+        G: Graph + WithWeight<Weight = T::Addr>,
+        Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
+        Operation<G::Ctx>: WithWeight<Weight = T::Op>,
+        Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
+    {
+        Ok(SThunk {
+            addr: thunk.weight(),
+            args: thunk
+                .bound_graph_inputs()
+                .map(|edge| match edge.weight() {
+                    Name::BoundVar(arg) => Ok(arg),
+                    _ => Err(DecompileError::Corrupt),
+                })
+                .collect::<Result<Vec<_>, _>>()?,
+            body: Expr::decompile(thunk)?,
+        })
     }
 }

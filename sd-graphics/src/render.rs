@@ -10,7 +10,7 @@ use sd_core::{
         subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
-    language::{Expr, Language},
+    language::{Language, Thunk as SThunk},
     prettyprinter::PrettyPrint,
     weak_map::WeakMap,
 };
@@ -33,7 +33,7 @@ pub fn render<T, G>(
 ) -> Vec<egui::Shape>
 where
     T: Language,
-    Expr<T>: PrettyPrint,
+    SThunk<T>: PrettyPrint,
     G: RenderableGraph,
     Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,
     Operation<G::InnerCtx>: WithWeight<Weight = T::Op>,
@@ -74,10 +74,9 @@ where
                         .inner_operation(op)
                         .either(|op| op.weight().to_pretty(), pretty_edge)]
                 }
-                // TODO(@calintat): Pretty print the full thunk not just the body.
                 Node::Thunk(thunk) => {
-                    vec![Expr::decompile(&graph.inner_thunk(thunk))
-                        .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
+                    vec![SThunk::decompile(&graph.inner_thunk(thunk))
+                        .map_or_else(|_| "thunk".to_owned(), |thunk| thunk.to_pretty())]
                 }
             }
         }
