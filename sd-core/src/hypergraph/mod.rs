@@ -6,8 +6,8 @@ use std::{
 use by_address::ByThinAddress;
 use derivative::Derivative;
 
+pub mod adapter;
 pub mod builder;
-pub mod cut;
 pub mod generic;
 mod internal;
 pub mod petgraph;

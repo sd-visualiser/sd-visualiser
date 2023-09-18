@@ -6,7 +6,7 @@ use indexmap::IndexMap;
 use sd_core::{
     codeable::Codeable,
     graph::SyntaxHypergraph,
-    hypergraph::{cut::CutThunk, subgraph::Subgraph},
+    hypergraph::{adapter::cut::CutThunk, subgraph::Subgraph},
     language::{chil::Chil, spartan::Spartan, Expr, Language, Thunk},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,

@@ -4,7 +4,7 @@ use derivative::Derivative;
 
 use crate::{
     hypergraph::{
-        cut::CutGraph,
+        adapter::cut::CutGraph,
         generic::{Edge, Node, Thunk},
         traits::Graph,
         utils::create_selected,
