@@ -848,4 +848,11 @@ mod tests {
             insta::assert_ron_snapshot!(layout(&examples::copy()).expect("Layout failed"));
         });
     }
+
+    #[test]
+    fn thunk() {
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_ron_snapshot!(layout(&examples::thunk()).expect("Layout failed"));
+        });
+    }
 }

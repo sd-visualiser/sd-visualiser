@@ -1,0 +1,118 @@
+---
+source: sd-graphics/src/layout.rs
+expression: "layout(&examples::thunk()).expect(\"Layout failed\")"
+---
+LayoutInternal(
+  h_min: 0.0,
+  h_max: 5.0,
+  v_min: 0.0,
+  v_max: 3.0,
+  nodes: [
+    [
+      NodeOffset(
+        node: Thunk(
+          layout: LayoutInternal(
+            h_min: 0.5,
+            h_max: 2.5,
+            v_min: 0.5,
+            v_max: 2.5,
+            nodes: [
+              [
+                NodeOffset(
+                  node: Atom(
+                    h_pos: 1.5,
+                    v_pos: 1.5,
+                    extra_size: 0.0,
+                  ),
+                  inputs: Range(
+                    start: 0,
+                    end: 2,
+                  ),
+                  outputs: Range(
+                    start: 0,
+                    end: 1,
+                  ),
+                ),
+              ],
+            ],
+            wires: [
+              [
+                WireData(
+                  h: 1.0,
+                  v_top: 0.5,
+                  v_bot: 1.0,
+                ),
+                WireData(
+                  h: 2.0,
+                  v_top: 0.5,
+                  v_bot: 1.0,
+                ),
+              ],
+              [
+                WireData(
+                  h: 1.5,
+                  v_top: 2.0,
+                  v_bot: 2.5,
+                ),
+              ],
+            ],
+          ),
+        ),
+        inputs: Range(
+          start: 0,
+          end: 1,
+        ),
+        outputs: Range(
+          start: 0,
+          end: 1,
+        ),
+      ),
+      NodeOffset(
+        node: Atom(
+          h_pos: 4.0,
+          v_pos: 1.0,
+          extra_size: 0.0,
+        ),
+        inputs: Range(
+          start: 1,
+          end: 3,
+        ),
+        outputs: Range(
+          start: 1,
+          end: 2,
+        ),
+      ),
+    ],
+  ],
+  wires: [
+    [
+      WireData(
+        h: 1.0,
+        v_top: 0.0,
+        v_bot: 0.5,
+      ),
+      WireData(
+        h: 3.5,
+        v_top: 0.0,
+        v_bot: 0.5,
+      ),
+      WireData(
+        h: 4.5,
+        v_top: 0.0,
+        v_bot: 0.5,
+      ),
+    ],
+    [
+      WireData(
+        h: 1.5,
+        v_top: 2.5,
+        v_bot: 3.0,
+      ),
+      WireData(
+        h: 4.0,
+        v_top: 1.5,
+        v_bot: 3.0,
+      ),
+    ],
+  ],
+)

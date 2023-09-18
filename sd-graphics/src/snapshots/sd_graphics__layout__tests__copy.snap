@@ -1,6 +1,6 @@
 ---
 source: sd-graphics/src/layout.rs
-expression: "layout(&examples::copy(), &WeakMap::default()).expect(\"Layout failed\")"
+expression: "layout(&examples::copy()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
   h_min: 0.0,

@@ -43,17 +43,18 @@ impl WithWeight for DummyEdge {
 pub struct DummyOperation {
     op: Op,
     inputs: usize,
+    outputs: usize,
 }
 
 impl NodeLike for DummyOperation {
     type Ctx = DummyCtx;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        Box::new(vec![DummyEdge; self.inputs].into_iter())
+        Box::new((0..self.inputs).map(|_| DummyEdge))
     }
 
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        Box::new(std::iter::once(DummyEdge))
+        Box::new((0..self.outputs).map(|_| DummyEdge))
     }
 
     fn backlink(&self) -> Option<DummyThunk> {
@@ -65,7 +66,7 @@ impl NodeLike for DummyOperation {
     }
 
     fn number_of_outputs(&self) -> usize {
-        1
+        self.outputs
     }
 }
 
@@ -86,11 +87,11 @@ impl NodeLike for DummyThunk {
     type Ctx = DummyCtx;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new((0..self.inputs).map(|_| DummyEdge))
     }
 
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new(std::iter::once(DummyEdge))
     }
 
     fn backlink(&self) -> Option<DummyThunk> {
@@ -147,6 +148,7 @@ pub fn int() -> MonoidalGraph<DummyCtx> {
                 addr: DummyOperation {
                     op: Op::Number(1),
                     inputs: 0,
+                    outputs: 1,
                 },
             }],
         }],
@@ -193,6 +195,7 @@ pub fn thunk() -> MonoidalGraph<DummyCtx> {
                 addr: DummyOperation {
                     op: Op::Plus,
                     inputs: 2,
+                    outputs: 1,
                 },
             }],
         }],
@@ -212,6 +215,7 @@ pub fn thunk() -> MonoidalGraph<DummyCtx> {
                     addr: DummyOperation {
                         op: Op::Plus,
                         inputs: 2,
+                        outputs: 1,
                     },
                 },
             ],
