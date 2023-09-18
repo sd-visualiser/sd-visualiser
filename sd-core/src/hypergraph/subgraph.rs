@@ -4,7 +4,7 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::{
-    generic::{EdgeWeight, Node, OperationWeight, ThunkWeight},
+    generic::{Edge, EdgeWeight, Node, OperationWeight, Thunk, ThunkWeight},
     traits::{EdgeLike, Graph, NodeLike, WithWeight},
     Weight,
 };
@@ -37,40 +37,68 @@ impl<T: Ctx> Subgraph<T> {
     }
 
     /// Remove a node from the subgraph.
-    pub fn remove(&mut self, node: SubNode<T>) {
+    pub fn remove(&mut self, node: &Node<T>) {
         let mut selection = (*self.selection).clone();
-        selection[&node.inner()] = false;
+        selection[node] = false;
         selection.normalize();
         self.selection = Arc::new(selection);
     }
 
     /// Extend the subgraph with the given nodes.
-    ///
-    /// The nodes will likely come from the methods in [`ExtensibleEdge`].
-    pub fn extend(&mut self, nodes: impl Iterator<Item = SubNode<T>>) {
+    pub fn extend(&mut self, nodes: impl Iterator<Item = Node<T>>) {
         let mut selection = (*self.selection).clone();
         for node in nodes {
-            selection[&node.inner()] = true;
+            selection[&node] = true;
         }
         selection.normalize();
         self.selection = Arc::new(selection);
+    }
+
+    /// Convert an edge in the original graph to one in the subgraph.
+    ///
+    /// Note: this will not check if the edge is actually in the subgraph.
+    pub fn convert_edge(&self, edge: T::Edge) -> SubEdge<T> {
+        SubEdge {
+            edge,
+            selection: self.selection.clone(),
+        }
+    }
+
+    /// Convert an operation in the original graph to one in the subgraph.
+    ///
+    /// Note: this will not check if the operation is actually in the subgraph.
+    pub fn convert_op(&self, op: T::Operation) -> SubOperation<T> {
+        SubOperation {
+            op,
+            selection: self.selection.clone(),
+        }
+    }
+
+    /// Convert a thunk in the original graph to one in the subgraph.
+    ///
+    /// Note: this will not check if the thunk is actually in the subgraph.
+    pub fn convert_thunk(&self, thunk: T::Thunk) -> SubThunk<T> {
+        SubThunk {
+            thunk,
+            selection: self.selection.clone(),
+        }
     }
 }
 
 pub type SubNode<T> = Node<Subgraph<T>>;
 
 impl<T: Ctx> SubNode<T> {
-    fn new(inner: Node<T>, selection: Arc<SelectionMap<T>>) -> Self {
-        match inner {
-            Node::Operation(inner) => Node::Operation(SubOperation { inner, selection }),
-            Node::Thunk(inner) => Node::Thunk(SubThunk { inner, selection }),
+    fn new(node: Node<T>, selection: Arc<SelectionMap<T>>) -> Self {
+        match node {
+            Node::Operation(op) => Node::Operation(SubOperation { op, selection }),
+            Node::Thunk(thunk) => Node::Thunk(SubThunk { thunk, selection }),
         }
     }
 
-    fn inner(self) -> Node<T> {
+    pub fn into_inner(self) -> Node<T> {
         match self {
-            Node::Operation(SubOperation { inner, .. }) => Node::Operation(inner),
-            Node::Thunk(SubThunk { inner, .. }) => Node::Thunk(inner),
+            Node::Operation(SubOperation { op, .. }) => Node::Operation(op),
+            Node::Thunk(SubThunk { thunk, .. }) => Node::Thunk(thunk),
         }
     }
 }
@@ -84,9 +112,19 @@ impl<T: Ctx> SubNode<T> {
     Debug(bound = "")
 )]
 pub struct SubEdge<T: Ctx> {
-    pub inner: T::Edge,
+    edge: T::Edge,
     #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    pub selection: Arc<SelectionMap<T>>,
+    selection: Arc<SelectionMap<T>>,
+}
+
+impl<T: Ctx> SubEdge<T> {
+    pub fn inner(&self) -> &T::Edge {
+        &self.edge
+    }
+
+    pub fn into_inner(self) -> T::Edge {
+        self.edge
+    }
 }
 
 #[derive(Derivative)]
@@ -98,9 +136,19 @@ pub struct SubEdge<T: Ctx> {
     Debug(bound = "")
 )]
 pub struct SubOperation<T: Ctx> {
-    pub inner: T::Operation,
+    op: T::Operation,
     #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    pub selection: Arc<SelectionMap<T>>,
+    selection: Arc<SelectionMap<T>>,
+}
+
+impl<T: Ctx> SubOperation<T> {
+    pub fn inner(&self) -> &T::Operation {
+        &self.op
+    }
+
+    pub fn into_inner(self) -> T::Operation {
+        self.op
+    }
 }
 
 #[derive(Derivative)]
@@ -112,9 +160,19 @@ pub struct SubOperation<T: Ctx> {
     Debug(bound = "")
 )]
 pub struct SubThunk<T: Ctx> {
-    pub inner: T::Thunk,
+    thunk: T::Thunk,
     #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    pub selection: Arc<SelectionMap<T>>,
+    selection: Arc<SelectionMap<T>>,
+}
+
+impl<T: Ctx> SubThunk<T> {
+    pub fn inner(&self) -> &T::Thunk {
+        &self.thunk
+    }
+
+    pub fn into_inner(self) -> T::Thunk {
+        self.thunk
+    }
 }
 
 impl<T: Ctx> Ctx for Subgraph<T> {
@@ -126,7 +184,7 @@ impl<T: Ctx> Ctx for Subgraph<T> {
 impl<T: Ctx> Graph for Subgraph<T> {
     type Ctx = Subgraph<T>;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         let mut inputs: IndexSet<T::Edge> = IndexSet::default();
         for node in self.selection.roots() {
             for edge in node.inputs() {
@@ -140,16 +198,16 @@ impl<T: Ctx> Graph for Subgraph<T> {
             }
         }
         Box::new(inputs.into_iter().map(|edge| SubEdge {
-            inner: edge,
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         Box::new(std::iter::empty())
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         let mut outputs: Vec<T::Edge> = Vec::default();
         for node in self.selection.roots() {
             for edge in node.outputs() {
@@ -161,12 +219,12 @@ impl<T: Ctx> Graph for Subgraph<T> {
             }
         }
         Box::new(outputs.into_iter().map(|edge| SubEdge {
-            inner: edge,
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = SubNode<T>> + '_> {
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
         Box::new(
             self.selection
                 .roots()
@@ -174,7 +232,7 @@ impl<T: Ctx> Graph for Subgraph<T> {
         )
     }
 
-    fn graph_backlink(&self) -> Option<SubThunk<T>> {
+    fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
         None
     }
 }
@@ -182,36 +240,36 @@ impl<T: Ctx> Graph for Subgraph<T> {
 impl<T: Ctx> Graph for SubThunk<T> {
     type Ctx = Subgraph<T>;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.free_graph_inputs().map(|edge| SubEdge {
-            inner: edge,
+    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.free_graph_inputs().map(|edge| SubEdge {
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.bound_graph_inputs().map(|edge| SubEdge {
-            inner: edge,
+    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.bound_graph_inputs().map(|edge| SubEdge {
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = SubNode<T>> + '_> {
+    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.graph_outputs().map(|edge| SubEdge {
+            edge,
+            selection: self.selection.clone(),
+        }))
+    }
+
+    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
         Box::new(
-            self.inner
+            self.thunk
                 .nodes()
                 .map(|node| Node::new(node, self.selection.clone())),
         )
     }
 
-    fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.graph_outputs().map(|edge| SubEdge {
-            inner: edge,
-            selection: self.selection.clone(),
-        }))
-    }
-
-    fn graph_backlink(&self) -> Option<SubThunk<T>> {
+    fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
         Some(self.clone())
     }
 }
@@ -219,87 +277,87 @@ impl<T: Ctx> Graph for SubThunk<T> {
 impl<T: Ctx> NodeLike for SubOperation<T> {
     type Ctx = Subgraph<T>;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.inputs().map(|edge| SubEdge {
-            inner: edge,
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.op.inputs().map(|edge| SubEdge {
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.outputs().map(|edge| SubEdge {
-            inner: edge,
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.op.outputs().map(|edge| SubEdge {
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn backlink(&self) -> Option<SubThunk<T>> {
-        self.inner
+    fn backlink(&self) -> Option<Thunk<Self::Ctx>> {
+        self.op
             .backlink()
             .filter(|thunk| self.selection[&Node::Thunk(thunk.clone())])
             .map(|thunk| SubThunk {
-                inner: thunk,
+                thunk,
                 selection: self.selection.clone(),
             })
     }
 
     fn number_of_inputs(&self) -> usize {
-        self.inner.number_of_inputs()
+        self.op.number_of_inputs()
     }
 
     fn number_of_outputs(&self) -> usize {
-        self.inner.number_of_outputs()
+        self.op.number_of_outputs()
     }
 }
 
 impl<T: Ctx> NodeLike for SubThunk<T> {
     type Ctx = Subgraph<T>;
 
-    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.inputs().map(|edge| SubEdge {
-            inner: edge,
+    fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.inputs().map(|edge| SubEdge {
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = SubEdge<T>> + '_> {
-        Box::new(self.inner.outputs().map(|edge| SubEdge {
-            inner: edge,
+    fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(self.thunk.outputs().map(|edge| SubEdge {
+            edge,
             selection: self.selection.clone(),
         }))
     }
 
-    fn backlink(&self) -> Option<SubThunk<T>> {
-        self.inner
+    fn backlink(&self) -> Option<Thunk<Self::Ctx>> {
+        self.thunk
             .backlink()
             .filter(|thunk| self.selection[&Node::Thunk(thunk.clone())])
             .map(|thunk| SubThunk {
-                inner: thunk,
+                thunk,
                 selection: self.selection.clone(),
             })
     }
 
     fn number_of_inputs(&self) -> usize {
-        self.inner.number_of_inputs()
+        self.thunk.number_of_inputs()
     }
 
     fn number_of_outputs(&self) -> usize {
-        self.inner.number_of_outputs()
+        self.thunk.number_of_outputs()
     }
 }
 
 impl<T: Ctx> EdgeLike for SubEdge<T> {
     type Ctx = Subgraph<T>;
 
-    fn source(&self) -> Option<SubNode<T>> {
-        self.inner
+    fn source(&self) -> Option<Node<Self::Ctx>> {
+        self.edge
             .source()
             .filter(|node| self.selection[node])
             .map(|node| Node::new(node, self.selection.clone()))
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<SubNode<T>>> + '_> {
-        Box::new(self.inner.targets().map(|target| {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_> {
+        Box::new(self.edge.targets().map(|target| {
             target
                 .filter(|node| self.selection[node])
                 .map(|node| Node::new(node, self.selection.clone()))
@@ -311,7 +369,7 @@ impl<T: Ctx> WithWeight for SubEdge<T> {
     type Weight = EdgeWeight<T>;
 
     fn weight(&self) -> Self::Weight {
-        self.inner.weight()
+        self.edge.weight()
     }
 }
 
@@ -319,7 +377,7 @@ impl<T: Ctx> WithWeight for SubOperation<T> {
     type Weight = OperationWeight<T>;
 
     fn weight(&self) -> Self::Weight {
-        self.inner.weight()
+        self.op.weight()
     }
 }
 
@@ -327,7 +385,7 @@ impl<T: Ctx> WithWeight for SubThunk<T> {
     type Weight = ThunkWeight<T>;
 
     fn weight(&self) -> Self::Weight {
-        self.inner.weight()
+        self.thunk.weight()
     }
 }
 
@@ -338,7 +396,7 @@ where
     type Code = Code<T::Edge>;
 
     fn code(&self) -> Self::Code {
-        self.inner.code()
+        self.edge.code()
     }
 }
 
@@ -349,7 +407,7 @@ where
     type Code = Code<T::Operation>;
 
     fn code(&self) -> Self::Code {
-        self.inner.code()
+        self.op.code()
     }
 }
 
@@ -360,7 +418,7 @@ where
     type Code = Code<T::Thunk>;
 
     fn code(&self) -> Self::Code {
-        self.inner.code()
+        self.thunk.code()
     }
 }
 
@@ -369,7 +427,7 @@ where
     T::Edge: Matchable,
 {
     fn is_match(&self, query: &str) -> bool {
-        self.inner.is_match(query)
+        self.edge.is_match(query)
     }
 }
 
@@ -378,7 +436,7 @@ where
     T::Operation: Matchable,
 {
     fn is_match(&self, query: &str) -> bool {
-        self.inner.is_match(query)
+        self.op.is_match(query)
     }
 }
 
@@ -387,7 +445,7 @@ where
     T::Thunk: Matchable,
 {
     fn is_match(&self, query: &str) -> bool {
-        self.inner.is_match(query)
+        self.thunk.is_match(query)
     }
 }
 
@@ -405,7 +463,7 @@ impl<W: Weight> ExtensibleEdge for super::Edge<W> {}
 
 impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
     fn extend_source(&self) -> Option<Node<Self::Ctx>> {
-        self.inner
+        self.edge
             .source()
             .filter(|node| !self.selection[node])
             .map(|node| Node::new(node, self.selection.clone()))
@@ -413,7 +471,7 @@ impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
 
     fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
         Box::new(
-            self.inner
+            self.edge
                 .targets()
                 .flatten()
                 .filter(|node| !self.selection[node])

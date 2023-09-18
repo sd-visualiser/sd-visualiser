@@ -1,7 +1,8 @@
+use itertools::Either;
 use sd_core::{
     hypergraph::{
-        generic::{Ctx, Edge, Node},
-        subgraph::Subgraph,
+        generic::{Ctx, Edge, Node, Operation, Thunk},
+        subgraph::{SubNode, Subgraph},
         traits::Graph,
     },
     interactive::InteractiveGraph,
@@ -10,27 +11,36 @@ use sd_core::{
 /// Abstraction over a graph that can be rendered.
 pub trait RenderableGraph: Graph {
     fn selected(&self, node: Node<Self::Ctx>) -> bool;
-    fn toggle(&mut self, node: Node<Self::Ctx>);
-    fn cut(&mut self, edge: Edge<Self::Ctx>);
+    fn clicked_edge(&mut self, edge: Edge<Self::Ctx>);
+    fn clicked_operation(&mut self, op: Operation<Self::Ctx>);
+    fn clicked_thunk(&mut self, thunk: Thunk<Self::Ctx>);
     fn extend(&mut self, nodes: impl Iterator<Item = Node<Self::Ctx>>);
 }
 
-/// For interactive graphs, we just delegate to the selection map.
 impl<G: Graph> RenderableGraph for InteractiveGraph<G> {
     fn selected(&self, node: Node<Self::Ctx>) -> bool {
-        node.inner()
+        node.into_inner()
             .either(|node| self.selection[&node], |_edge| false)
     }
 
-    fn toggle(&mut self, node: Node<Self::Ctx>) {
-        node.inner().either(
-            |node| self.selection[&node] ^= true,
-            |edge| self.graph.set(edge, false),
-        );
+    fn clicked_edge(&mut self, edge: Edge<Self::Ctx>) {
+        self.graph.toggle(edge.inner());
     }
 
-    fn cut(&mut self, edge: Edge<Self::Ctx>) {
-        self.graph.set(edge.inner(), true);
+    fn clicked_operation(&mut self, op: Operation<Self::Ctx>) {
+        match op.into_inner() {
+            Either::Left(op) => {
+                self.selection[&Node::Operation(op)] ^= true;
+            }
+            Either::Right(edge) => {
+                self.graph.toggle(&edge);
+            }
+        }
+    }
+
+    fn clicked_thunk(&mut self, thunk: Thunk<Self::Ctx>) {
+        let thunk = thunk.into_inner();
+        self.selection[&Node::Thunk(thunk)] ^= true;
     }
 
     fn extend(&mut self, _nodes: impl Iterator<Item = Node<Self::Ctx>>) {
@@ -38,19 +48,22 @@ impl<G: Graph> RenderableGraph for InteractiveGraph<G> {
     }
 }
 
-/// For subgraphs, nodes are never selected and toggling them actually removes them.
 impl<T: Ctx> RenderableGraph for Subgraph<T> {
     fn selected(&self, _node: Node<Self::Ctx>) -> bool {
         false
     }
 
-    fn toggle(&mut self, node: Node<Self::Ctx>) {
-        self.remove(node);
+    fn clicked_edge(&mut self, _edge: Edge<Self::Ctx>) {}
+
+    fn clicked_operation(&mut self, op: Operation<Self::Ctx>) {
+        self.remove(&Node::Operation(op.into_inner()));
     }
 
-    fn cut(&mut self, _edge: Edge<Self::Ctx>) {}
+    fn clicked_thunk(&mut self, thunk: Thunk<Self::Ctx>) {
+        self.remove(&Node::Thunk(thunk.into_inner()));
+    }
 
     fn extend(&mut self, nodes: impl Iterator<Item = Node<Self::Ctx>>) {
-        self.extend(nodes);
+        self.extend(nodes.map(SubNode::into_inner));
     }
 }

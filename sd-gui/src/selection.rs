@@ -6,10 +6,7 @@ use indexmap::IndexMap;
 use sd_core::{
     codeable::Codeable,
     graph::SyntaxHypergraph,
-    hypergraph::{
-        cut::CutThunk,
-        subgraph::{SubThunk, Subgraph},
-    },
+    hypergraph::{cut::CutThunk, subgraph::Subgraph},
     language::{chil::Chil, spartan::Spartan, Expr, Language, Thunk},
     prettyprinter::PrettyPrint,
     selection::SelectionMap,
@@ -75,15 +72,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
         let expanded = WeakMap::from(
             expanded
                 .iter()
-                .map(|(thunk, &expanded)| {
-                    (
-                        SubThunk {
-                            inner: thunk.inner().clone(),
-                            selection: subgraph.selection.clone(),
-                        },
-                        expanded,
-                    )
-                })
+                .map(|(thunk, &expanded)| (subgraph.convert_thunk(thunk.inner().clone()), expanded))
                 .collect::<IndexMap<_, _>>(),
         );
 

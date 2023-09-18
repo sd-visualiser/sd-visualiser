@@ -129,7 +129,7 @@ impl<T: Ctx> Shape<T> {
                     Sense::click(),
                 );
                 if circle_response.clicked() {
-                    graph.cut(addr.clone());
+                    graph.clicked_edge(addr.clone());
                 }
             }
             Shape::Rectangle {
@@ -164,7 +164,7 @@ impl<T: Ctx> Shape<T> {
                     expanded[addr] = !expanded[addr];
                 }
                 if thunk_response.secondary_clicked() {
-                    graph.toggle(Node::Thunk(addr.clone()));
+                    graph.clicked_thunk(addr.clone());
                 }
             }
             Shape::Operation {
@@ -177,7 +177,7 @@ impl<T: Ctx> Shape<T> {
                     Sense::click(),
                 );
                 if op_response.clicked() {
-                    graph.toggle(Node::Operation(addr.clone()));
+                    graph.clicked_operation(addr.clone());
                 }
                 *fill = Some(
                     ui.style()
