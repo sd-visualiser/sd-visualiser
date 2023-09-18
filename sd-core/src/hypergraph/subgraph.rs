@@ -4,8 +4,8 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::{
-    generic::{Edge, EdgeWeight, Node, OperationWeight, Thunk, ThunkWeight},
-    traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    generic::{Edge, EdgeWeight, Key, Node, OperationWeight, Thunk, ThunkWeight},
+    traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     Weight,
 };
 use crate::{
@@ -53,36 +53,6 @@ impl<T: Ctx> Subgraph<T> {
         selection.normalize();
         self.selection = Arc::new(selection);
     }
-
-    /// Convert an edge in the original graph to one in the subgraph.
-    ///
-    /// Note: this will not check if the edge is actually in the subgraph.
-    pub fn convert_edge(&self, edge: T::Edge) -> SubEdge<T> {
-        SubEdge {
-            edge,
-            selection: self.selection.clone(),
-        }
-    }
-
-    /// Convert an operation in the original graph to one in the subgraph.
-    ///
-    /// Note: this will not check if the operation is actually in the subgraph.
-    pub fn convert_op(&self, op: T::Operation) -> SubOperation<T> {
-        SubOperation {
-            op,
-            selection: self.selection.clone(),
-        }
-    }
-
-    /// Convert a thunk in the original graph to one in the subgraph.
-    ///
-    /// Note: this will not check if the thunk is actually in the subgraph.
-    pub fn convert_thunk(&self, thunk: T::Thunk) -> SubThunk<T> {
-        SubThunk {
-            thunk,
-            selection: self.selection.clone(),
-        }
-    }
 }
 
 pub type SubNode<T> = Node<Subgraph<T>>;
@@ -113,7 +83,6 @@ impl<T: Ctx> SubNode<T> {
 )]
 pub struct SubEdge<T: Ctx> {
     edge: T::Edge,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
     selection: Arc<SelectionMap<T>>,
 }
 
@@ -137,7 +106,6 @@ impl<T: Ctx> SubEdge<T> {
 )]
 pub struct SubOperation<T: Ctx> {
     op: T::Operation,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
     selection: Arc<SelectionMap<T>>,
 }
 
@@ -161,7 +129,6 @@ impl<T: Ctx> SubOperation<T> {
 )]
 pub struct SubThunk<T: Ctx> {
     thunk: T::Thunk,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
     selection: Arc<SelectionMap<T>>,
 }
 
@@ -362,6 +329,30 @@ impl<T: Ctx> EdgeLike for SubEdge<T> {
                 .filter(|node| self.selection[node])
                 .map(|node| Node::new(node, self.selection.clone()))
         }))
+    }
+}
+
+impl<T: Ctx> Keyable for SubEdge<T> {
+    type Key = Key<T::Edge>;
+
+    fn key(&self) -> Self::Key {
+        self.edge.key()
+    }
+}
+
+impl<T: Ctx> Keyable for SubOperation<T> {
+    type Key = Key<T::Operation>;
+
+    fn key(&self) -> Self::Key {
+        self.op.key()
+    }
+}
+
+impl<T: Ctx> Keyable for SubThunk<T> {
+    type Key = Key<T::Thunk>;
+
+    fn key(&self) -> Self::Key {
+        self.thunk.key()
     }
 }
 

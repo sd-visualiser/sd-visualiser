@@ -1,55 +1,9 @@
 use std::collections::HashSet;
 
-use indexmap::IndexMap;
-
 use super::{
-    generic::{Ctx, Edge, Node, Thunk},
-    traits::{EdgeLike, Graph, NodeLike},
+    generic::{Ctx, Node},
+    traits::{EdgeLike, NodeLike},
 };
-use crate::weak_map::WeakMap;
-
-pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<Thunk<G::Ctx>, bool> {
-    fn helper<T: Ctx>(set: &mut IndexMap<T::Thunk, bool>, thunk: T::Thunk) {
-        for t in thunk.thunks() {
-            helper::<T>(set, t);
-        }
-        set.insert(thunk, true);
-    }
-
-    let mut set = IndexMap::new();
-
-    for thunk in graph.thunks() {
-        helper::<G::Ctx>(&mut set, thunk);
-    }
-
-    WeakMap::from(set)
-}
-
-pub fn create_cut_edges<G: Graph>(graph: &G) -> WeakMap<Edge<G::Ctx>, bool> {
-    fn helper<G: Graph>(set: &mut IndexMap<Edge<G::Ctx>, bool>, graph: &G) {
-        for edge in graph.graph_outputs() {
-            set.insert(edge, false);
-        }
-        for node in graph.nodes() {
-            for edge in node.outputs() {
-                set.insert(edge, false);
-            }
-            for edge in node.inputs() {
-                set.insert(edge, false);
-            }
-            if let Node::Thunk(thunk) = &node {
-                helper(set, thunk);
-            }
-        }
-        for edge in graph.graph_inputs() {
-            set.insert(edge, false);
-        }
-    }
-
-    let mut set = IndexMap::new();
-    helper(&mut set, graph);
-    WeakMap::from(set)
-}
 
 /// Finds the ancestor of given node which is contained in containing, returning none if no such ancestor exists
 pub fn find_ancestor<T: Ctx>(containing: &Option<T::Thunk>, mut node: Node<T>) -> Option<Node<T>> {

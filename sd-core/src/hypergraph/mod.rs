@@ -10,6 +10,7 @@ pub mod adapter;
 pub mod builder;
 pub mod generic;
 mod internal;
+pub mod mapping;
 pub mod petgraph;
 pub mod reachability;
 pub mod subgraph;
@@ -23,7 +24,7 @@ use self::{
         InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
         WeakNodeInternal,
     },
-    traits::{EdgeLike, Graph, NodeLike, WithWeight},
+    traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     weakbyaddress::WeakByAddress,
 };
 
@@ -128,6 +129,14 @@ impl<W: Weight> WeakNodeInternal<W> {
                 Node::Thunk(Thunk(ByThinAddress(thunk_weak.upgrade().unwrap())))
             }
         }
+    }
+}
+
+impl<W: Weight> Keyable for Edge<W> {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
     }
 }
 
@@ -251,6 +260,14 @@ impl<W: Weight> Graph for Thunk<W> {
     }
 }
 
+impl<W: Weight> Keyable for Operation<W> {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
+    }
+}
+
 impl<W: Weight> WithWeight for Operation<W> {
     type Weight = W::OperationWeight;
 
@@ -339,6 +356,14 @@ impl<W: Weight> NodeLike for Thunk<W> {
     #[must_use]
     fn number_of_outputs(&self) -> usize {
         self.0.outer_outputs.len()
+    }
+}
+
+impl<W: Weight> Keyable for Thunk<W> {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
     }
 }
 

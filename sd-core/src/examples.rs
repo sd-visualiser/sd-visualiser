@@ -1,7 +1,7 @@
 use crate::{
     hypergraph::{
         generic::{Ctx, Node},
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     },
     language::spartan::Op,
     monoidal::{
@@ -30,6 +30,14 @@ impl EdgeLike for DummyEdge {
 
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<DummyCtx>>> + '_> {
         panic!("unsupported")
+    }
+}
+
+impl Keyable for DummyEdge {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
     }
 }
 
@@ -67,6 +75,14 @@ impl NodeLike for DummyOperation {
 
     fn number_of_outputs(&self) -> usize {
         self.outputs
+    }
+}
+
+impl Keyable for DummyOperation {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
     }
 }
 
@@ -128,6 +144,14 @@ impl Graph for DummyThunk {
 
     fn graph_backlink(&self) -> Option<DummyThunk> {
         panic!("unsupported")
+    }
+}
+
+impl Keyable for DummyThunk {
+    type Key = Self;
+
+    fn key(&self) -> Self::Key {
+        self.clone()
     }
 }
 

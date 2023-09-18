@@ -1,15 +1,17 @@
 use derivative::Derivative;
 
-use super::traits::{EdgeLike, Graph, NodeLike, WithWeight};
+use super::traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight};
 
 /// A context records which type of graph we are working with.
 ///
 /// Normally the type implement `Ctx` will also implement `GraphLike` (see `Hypergraph`).
 pub trait Ctx {
-    type Edge: EdgeLike<Ctx = Self> + WithWeight;
-    type Operation: NodeLike<Ctx = Self> + WithWeight;
-    type Thunk: NodeLike<Ctx = Self> + Graph<Ctx = Self> + WithWeight;
+    type Edge: EdgeLike<Ctx = Self> + Keyable + WithWeight;
+    type Operation: NodeLike<Ctx = Self> + Keyable + WithWeight;
+    type Thunk: NodeLike<Ctx = Self> + Graph<Ctx = Self> + Keyable + WithWeight;
 }
+
+pub type Key<T> = <T as Keyable>::Key;
 
 pub type Edge<T> = <T as Ctx>::Edge;
 pub type Operation<T> = <T as Ctx>::Operation;

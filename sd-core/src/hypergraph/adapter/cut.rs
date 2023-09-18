@@ -8,11 +8,13 @@ use crate::{
     codeable::{Code, Codeable},
     common::Matchable,
     hypergraph::{
-        generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
+        generic::{
+            Ctx, Edge, EdgeWeight, Key, Node, Operation, OperationWeight, Thunk, ThunkWeight,
+        },
+        mapping::EdgeMap,
         subgraph::ExtensibleEdge,
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     },
-    weak_map::WeakMap,
 };
 
 ////////////////////////////////////////////////////////////////
@@ -27,11 +29,11 @@ use crate::{
 )]
 pub struct CutGraph<G: Graph> {
     graph: G,
-    cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+    cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
 }
 
 impl<G: Graph> CutGraph<G> {
-    pub fn new(graph: G, cut_edges: WeakMap<Edge<G::Ctx>, bool>) -> Self {
+    pub fn new(graph: G, cut_edges: EdgeMap<G::Ctx, bool>) -> Self {
         Self {
             graph,
             cut_edges: Arc::new(cut_edges),
@@ -48,7 +50,7 @@ impl<G: Graph> CutGraph<G> {
 
     pub fn toggle(&mut self, edge: &Edge<G::Ctx>) {
         let mut cut_edges = (*self.cut_edges).clone();
-        cut_edges[edge] ^= true;
+        cut_edges[&edge.key()] ^= true;
         self.cut_edges = Arc::new(cut_edges);
     }
 }
@@ -64,14 +66,12 @@ impl<G: Graph> CutGraph<G> {
 pub enum CutEdge<G: Graph> {
     Inner {
         edge: Edge<G::Ctx>,
-        #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-        cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
     },
     Reuse {
         edge: Edge<G::Ctx>,
         target: Option<Node<G::Ctx>>,
-        #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-        cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
     },
 }
 
@@ -100,19 +100,16 @@ impl<G: Graph> CutEdge<G> {
 pub enum CutOperation<G: Graph> {
     Inner {
         op: Operation<G::Ctx>,
-        #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-        cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
     },
     Store {
         edge: Edge<G::Ctx>,
-        #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-        cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
     },
     Reuse {
         edge: Edge<G::Ctx>,
         target: Option<Node<G::Ctx>>,
-        #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-        cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
     },
 }
 
@@ -142,8 +139,7 @@ impl<G: Graph> CutOperation<G> {
 )]
 pub struct CutThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+    cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
 }
 
 impl<G: Graph> CutThunk<G> {
@@ -161,21 +157,21 @@ impl<G: Graph> CutThunk<G> {
 pub type CutNode<G> = Node<CutGraph<G>>;
 
 impl<G: Graph> CutNode<G> {
-    fn new(node: Node<G::Ctx>, cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>) -> Self {
+    fn new(node: Node<G::Ctx>, cut_edges: Arc<EdgeMap<G::Ctx, bool>>) -> Self {
         match node {
             Node::Operation(op) => Node::Operation(CutOperation::Inner { op, cut_edges }),
             Node::Thunk(thunk) => Node::Thunk(CutThunk { thunk, cut_edges }),
         }
     }
 
-    fn store(edge: Edge<G::Ctx>, cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>) -> Self {
+    fn store(edge: Edge<G::Ctx>, cut_edges: Arc<EdgeMap<G::Ctx, bool>>) -> Self {
         Node::Operation(CutOperation::Store { edge, cut_edges })
     }
 
     fn reuse(
         edge: Edge<G::Ctx>,
         target: Option<Node<G::Ctx>>,
-        cut_edges: Arc<WeakMap<Edge<G::Ctx>, bool>>,
+        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
     ) -> Self {
         Node::Operation(CutOperation::Reuse {
             edge,
@@ -216,7 +212,7 @@ impl<G: Graph> Graph for CutGraph<G> {
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         Box::new(self.graph.graph_outputs().map(|edge| {
-            if self.cut_edges[&edge] {
+            if self.cut_edges[&edge.key()] {
                 CutEdge::Reuse {
                     edge,
                     target: None,
@@ -234,19 +230,19 @@ impl<G: Graph> Graph for CutGraph<G> {
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
         let mut nodes: IndexSet<CutNode<G>> = IndexSet::default();
         for edge in self.graph.graph_outputs() {
-            if self.cut_edges[&edge] {
+            if self.cut_edges[&edge.key()] {
                 nodes.insert(Node::reuse(edge, None, self.cut_edges.clone()));
             }
         }
         for node in self.graph.nodes() {
-            for edge in node.outputs().filter(|edge| self.cut_edges[edge]) {
+            for edge in node.outputs().filter(|edge| self.cut_edges[&edge.key()]) {
                 nodes.insert(Node::store(edge, self.cut_edges.clone()));
             }
 
             nodes.insert(Node::new(node.clone(), self.cut_edges.clone()));
 
             if let Node::Operation(_) = &node {
-                for edge in node.inputs().filter(|edge| self.cut_edges[edge]) {
+                for edge in node.inputs().filter(|edge| self.cut_edges[&edge.key()]) {
                     nodes.insert(Node::reuse(
                         edge,
                         Some(node.clone()),
@@ -256,7 +252,7 @@ impl<G: Graph> Graph for CutGraph<G> {
             }
         }
         for edge in self.graph.graph_inputs() {
-            if self.cut_edges[&edge] {
+            if self.cut_edges[&edge.key()] {
                 nodes.insert(Node::store(edge, self.cut_edges.clone()));
             }
         }
@@ -287,7 +283,7 @@ impl<G: Graph> EdgeLike for CutEdge<G> {
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_> {
         match self {
             Self::Inner { edge, cut_edges } => {
-                if cut_edges[edge] {
+                if cut_edges[&edge.key()] {
                     Box::new(std::iter::once(Some(Node::store(
                         edge.clone(),
                         cut_edges.clone(),
@@ -322,7 +318,7 @@ impl<G: Graph> NodeLike for CutOperation<G> {
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         match self {
             Self::Inner { op, cut_edges } => Box::new(op.inputs().map(|edge| {
-                if cut_edges[&edge] {
+                if cut_edges[&edge.key()] {
                     CutEdge::Reuse {
                         edge,
                         target: Some(Node::Operation(op.clone())),
@@ -409,7 +405,7 @@ impl<G: Graph> Graph for CutThunk<G> {
         Box::new(
             self.thunk
                 .free_graph_inputs()
-                .filter(|edge| !self.cut_edges[edge])
+                .filter(|edge| !self.cut_edges[&edge.key()])
                 .map(|edge| CutEdge::Inner {
                     edge,
                     cut_edges: self.cut_edges.clone(),
@@ -426,7 +422,7 @@ impl<G: Graph> Graph for CutThunk<G> {
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         Box::new(self.thunk.graph_outputs().map(|edge| {
-            if self.cut_edges[&edge] {
+            if self.cut_edges[&edge.key()] {
                 CutEdge::Reuse {
                     edge,
                     target: Some(Node::Thunk(self.thunk.clone())),
@@ -444,7 +440,7 @@ impl<G: Graph> Graph for CutThunk<G> {
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
         let mut nodes: IndexSet<CutNode<G>> = IndexSet::default();
         for edge in self.thunk.graph_outputs() {
-            if self.cut_edges[&edge] {
+            if self.cut_edges[&edge.key()] {
                 nodes.insert(Node::reuse(
                     edge,
                     Some(Node::Thunk(self.thunk.clone())),
@@ -453,14 +449,14 @@ impl<G: Graph> Graph for CutThunk<G> {
             }
         }
         for node in self.thunk.nodes() {
-            for edge in node.outputs().filter(|edge| self.cut_edges[edge]) {
+            for edge in node.outputs().filter(|edge| self.cut_edges[&edge.key()]) {
                 nodes.insert(Node::store(edge, self.cut_edges.clone()));
             }
 
             nodes.insert(Node::new(node.clone(), self.cut_edges.clone()));
 
             if let Node::Operation(_) = &node {
-                for edge in node.inputs().filter(|edge| self.cut_edges[edge]) {
+                for edge in node.inputs().filter(|edge| self.cut_edges[&edge.key()]) {
                     nodes.insert(Node::reuse(
                         edge,
                         Some(node.clone()),
@@ -470,7 +466,7 @@ impl<G: Graph> Graph for CutThunk<G> {
             }
         }
         for edge in self.thunk.bound_graph_inputs() {
-            if self.cut_edges[&edge] {
+            if self.cut_edges[&edge.key()] {
                 nodes.insert(Node::store(edge, self.cut_edges.clone()));
             }
         }
@@ -489,7 +485,7 @@ impl<G: Graph> NodeLike for CutThunk<G> {
         Box::new(
             self.thunk
                 .inputs()
-                .filter(|edge| !self.cut_edges[edge])
+                .filter(|edge| !self.cut_edges[&edge.key()])
                 .map(|edge| CutEdge::Inner {
                     edge,
                     cut_edges: self.cut_edges.clone(),
@@ -513,6 +509,30 @@ impl<G: Graph> NodeLike for CutThunk<G> {
 
     fn number_of_outputs(&self) -> usize {
         self.thunk.number_of_outputs()
+    }
+}
+
+impl<G: Graph> Keyable for CutEdge<G> {
+    type Key = Key<Edge<G::Ctx>>;
+
+    fn key(&self) -> Self::Key {
+        self.inner().key()
+    }
+}
+
+impl<G: Graph> Keyable for CutOperation<G> {
+    type Key = Either<Key<Operation<G::Ctx>>, Key<Edge<G::Ctx>>>;
+
+    fn key(&self) -> Self::Key {
+        self.inner().map_either(Keyable::key, Keyable::key)
+    }
+}
+
+impl<G: Graph> Keyable for CutThunk<G> {
+    type Key = Key<Thunk<G::Ctx>>;
+
+    fn key(&self) -> Self::Key {
+        self.inner().key()
     }
 }
 

@@ -7,11 +7,13 @@ use crate::{
     codeable::{Code, Codeable},
     common::Matchable,
     hypergraph::{
-        generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
+        generic::{
+            Ctx, Edge, EdgeWeight, Key, Node, Operation, OperationWeight, Thunk, ThunkWeight,
+        },
+        mapping::ThunkMap,
         subgraph::ExtensibleEdge,
-        traits::{EdgeLike, Graph, NodeLike, WithWeight},
+        traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     },
-    weak_map::WeakMap,
 };
 
 ////////////////////////////////////////////////////////////////
@@ -26,11 +28,11 @@ use crate::{
 )]
 pub struct CollapseGraph<G: Graph> {
     graph: G,
-    expanded: Arc<WeakMap<Thunk<G::Ctx>, bool>>,
+    expanded: Arc<ThunkMap<G::Ctx, bool>>,
 }
 
 impl<G: Graph> CollapseGraph<G> {
-    pub fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
+    pub fn new(graph: G, expanded: ThunkMap<G::Ctx, bool>) -> Self {
         Self {
             graph,
             expanded: Arc::new(expanded),
@@ -45,13 +47,13 @@ impl<G: Graph> CollapseGraph<G> {
         &mut self.graph
     }
 
-    pub fn expanded(&self) -> &WeakMap<Thunk<G::Ctx>, bool> {
+    pub fn expanded(&self) -> &ThunkMap<G::Ctx, bool> {
         &self.expanded
     }
 
     pub fn toggle(&mut self, thunk: &Thunk<G::Ctx>) {
         let mut expanded = (*self.expanded).clone();
-        expanded[thunk] ^= true;
+        expanded[&thunk.key()] ^= true;
         self.expanded = Arc::new(expanded);
     }
 
@@ -72,8 +74,7 @@ impl<G: Graph> CollapseGraph<G> {
 )]
 pub struct CollapseEdge<G: Graph> {
     edge: Edge<G::Ctx>,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    expanded: Arc<WeakMap<Thunk<G::Ctx>, bool>>,
+    expanded: Arc<ThunkMap<G::Ctx, bool>>,
 }
 
 impl<G: Graph> CollapseEdge<G> {
@@ -96,8 +97,7 @@ impl<G: Graph> CollapseEdge<G> {
 )]
 pub struct CollapseOperation<G: Graph> {
     node: Node<G::Ctx>,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    expanded: Arc<WeakMap<Thunk<G::Ctx>, bool>>,
+    expanded: Arc<ThunkMap<G::Ctx, bool>>,
 }
 
 impl<G: Graph> CollapseOperation<G> {
@@ -120,8 +120,7 @@ impl<G: Graph> CollapseOperation<G> {
 )]
 pub struct CollapseThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
-    #[derivative(PartialEq = "ignore", Hash = "ignore", Debug = "ignore")]
-    expanded: Arc<WeakMap<Thunk<G::Ctx>, bool>>,
+    expanded: Arc<ThunkMap<G::Ctx, bool>>,
 }
 
 impl<G: Graph> CollapseThunk<G> {
@@ -139,14 +138,14 @@ impl<G: Graph> CollapseThunk<G> {
 pub type CollapseNode<G> = Node<CollapseGraph<G>>;
 
 impl<G: Graph> CollapseNode<G> {
-    fn new(node: Node<G::Ctx>, expanded: Arc<WeakMap<Thunk<G::Ctx>, bool>>) -> Self {
+    fn new(node: Node<G::Ctx>, expanded: Arc<ThunkMap<G::Ctx, bool>>) -> Self {
         match node {
             Node::Operation(op) => Node::Operation(CollapseOperation {
                 node: Node::Operation(op),
                 expanded,
             }),
             Node::Thunk(thunk) => {
-                if expanded[&thunk] {
+                if expanded[&thunk.key()] {
                     Node::Thunk(CollapseThunk { thunk, expanded })
                 } else {
                     Node::Operation(CollapseOperation {
@@ -221,7 +220,7 @@ impl<G: Graph> EdgeLike for CollapseEdge<G> {
         Box::new(self.edge.targets().map(|target| {
             target.map(|mut node| {
                 // If the node is transitively contained in a collapsed thunk, replace it with the thunk.
-                if let Some(thunk) = find_ancestor(&node, |thunk| !self.expanded[thunk]) {
+                if let Some(thunk) = find_ancestor(&node, |thunk| !self.expanded[&thunk.key()]) {
                     node = Node::Thunk(thunk);
                 }
                 Node::new(node, self.expanded.clone())
@@ -406,6 +405,33 @@ where
 {
     fn is_match(&self, query: &str) -> bool {
         self.thunk.is_match(query)
+    }
+}
+
+impl<G: Graph> Keyable for CollapseEdge<G> {
+    type Key = Key<Edge<G::Ctx>>;
+
+    fn key(&self) -> Self::Key {
+        self.edge.key()
+    }
+}
+
+impl<G: Graph> Keyable for CollapseOperation<G> {
+    type Key = Either<Key<Operation<G::Ctx>>, Key<Thunk<G::Ctx>>>;
+
+    fn key(&self) -> Self::Key {
+        match &self.node {
+            Node::Operation(op) => Either::Left(op.key()),
+            Node::Thunk(thunk) => Either::Right(thunk.key()),
+        }
+    }
+}
+
+impl<G: Graph> Keyable for CollapseThunk<G> {
+    type Key = Key<Thunk<G::Ctx>>;
+
+    fn key(&self) -> Self::Key {
+        self.thunk.key()
     }
 }
 

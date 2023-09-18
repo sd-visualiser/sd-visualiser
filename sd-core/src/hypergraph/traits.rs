@@ -2,8 +2,13 @@ use std::{fmt::Debug, hash::Hash};
 
 use super::generic::{Ctx, Edge, Node, Operation, Thunk};
 
+pub trait Keyable {
+    type Key: Clone + Eq + Hash + Debug + Send + Sync;
+    fn key(&self) -> Self::Key;
+}
+
 pub trait WithWeight {
-    type Weight: Clone;
+    type Weight;
     fn weight(&self) -> Self::Weight;
 }
 

@@ -9,9 +9,9 @@ use crate::{
     hypergraph::{
         adapter::{collapse::CollapseGraph, cut::CutGraph},
         generic::{Ctx, Edge, Node, Thunk},
+        mapping::{edge_map, thunk_map},
         subgraph::Subgraph,
         traits::Graph,
-        utils::{create_cut_edges, create_expanded},
     },
     selection::SelectionMap,
 };
@@ -35,10 +35,10 @@ impl<G: Graph> InteractiveGraph<G> {
     pub fn new(graph: G) -> Self {
         let selection = SelectionMap::new(&graph);
 
-        let expanded = create_expanded(&graph);
+        let expanded = thunk_map(&graph, true);
         let graph = CollapseGraph::new(graph, expanded);
 
-        let cut_edges = create_cut_edges(&graph);
+        let cut_edges = edge_map(&graph, false);
         let graph = CutGraph::new(graph, cut_edges);
 
         Self { graph, selection }
@@ -61,16 +61,7 @@ impl<G: Graph> InteractiveGraph<G> {
 
     pub fn to_subgraph(&self) -> InteractiveSubgraph<G::Ctx> {
         let subgraph = Subgraph::new(self.selection.clone());
-
-        // Reindex the thunk mapping.
-        let expanded = self
-            .graph
-            .inner()
-            .expanded()
-            .iter()
-            .map(|(thunk, value)| (subgraph.convert_thunk(thunk.clone()), *value))
-            .collect();
-
+        let expanded = self.graph.inner().expanded().clone();
         InteractiveSubgraph(CollapseGraph::new(subgraph, expanded))
     }
 }
