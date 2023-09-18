@@ -15,11 +15,9 @@ use sd_core::{
         generic::{Edge, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::Graph,
-        utils::create_expanded,
     },
     interactive::InteractiveGraph,
     language::{chil::Chil, spartan::Spartan},
-    weak_map::WeakMap,
 };
 use sd_graphics::renderable::RenderableGraph;
 
@@ -32,15 +30,11 @@ pub enum GraphUi {
 
 impl GraphUi {
     pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>) -> Self {
-        let graph = InteractiveGraph::new(graph);
-        let expanded = create_expanded(&graph);
-        Self::Chil(GraphUiInternal::new(graph, expanded))
+        Self::Chil(GraphUiInternal::new(InteractiveGraph::new(graph)))
     }
 
     pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>) -> Self {
-        let graph = InteractiveGraph::new(graph);
-        let expanded = create_expanded(&graph);
-        Self::Spartan(GraphUiInternal::new(graph, expanded))
+        Self::Spartan(GraphUiInternal::new(InteractiveGraph::new(graph)))
     }
 
     delegate! {
@@ -55,25 +49,24 @@ impl GraphUi {
             pub(crate) fn zoom_out(&mut self);
             pub(crate) fn find(&mut self, query: &str);
             pub(crate) fn export_svg(&self) -> String;
-            pub(crate) fn set_expanded_all(&mut self, expanded: bool);
         }
     }
 
     delegate! {
         to match self {
-            GraphUi::Chil(graph_ui) => graph_ui.graph.selection,
-            GraphUi::Spartan(graph_ui) => graph_ui.graph.selection,
+            GraphUi::Chil(graph_ui) => graph_ui.graph,
+            GraphUi::Spartan(graph_ui) => graph_ui.graph,
         } {
+            pub(crate) fn is_empty(&self) -> bool;
             pub(crate) fn clear_selection(&mut self);
             pub(crate) fn extend_selection(&mut self, direction: Option<(Direction, usize)>);
-            pub(crate) fn is_empty(&self) -> bool;
+            pub(crate) fn set_expanded_all(&mut self, expanded: bool);
         }
     }
 }
 
 pub struct GraphUiInternal<G: Graph> {
     pub(crate) graph: G,
-    pub(crate) expanded: WeakMap<Thunk<G::Ctx>, bool>,
     panzoom: Panzoom,
     ready: bool,
     reset_requested: bool,
@@ -83,10 +76,9 @@ impl<G> GraphUiInternal<G>
 where
     G: Graph + 'static,
 {
-    pub(crate) fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
+    pub(crate) fn new(graph: G) -> Self {
         Self {
             graph,
-            expanded,
             panzoom: Panzoom::default(),
             ready: false,
             reset_requested: true,
@@ -104,7 +96,7 @@ where
         Edge<G::Ctx>: ExtensibleEdge,
         OperationWeight<G::Ctx>: Display,
     {
-        let shapes = generate_shapes(&self.graph, &self.expanded);
+        let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
@@ -161,7 +153,6 @@ where
                 ui,
                 &shapes.shapes,
                 &response,
-                &mut self.expanded,
                 to_screen,
             ));
             self.ready = true;
@@ -187,7 +178,7 @@ where
         Thunk<G::Ctx>: Matchable,
         OperationWeight<G::Ctx>: Display,
     {
-        let shapes = generate_shapes(&self.graph, &self.expanded);
+        let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap();
 
         if let Some(shapes) = guard.ready() {
@@ -212,15 +203,9 @@ where
         Edge<G::Ctx>: ExtensibleEdge,
         OperationWeight<G::Ctx>: Display,
     {
-        let shapes = generate_shapes(&self.graph, &self.expanded);
+        let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here
                                             // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()
-    }
-
-    pub(crate) fn set_expanded_all(&mut self, expanded: bool) {
-        for x in self.expanded.values_mut() {
-            *x = expanded;
-        }
     }
 }

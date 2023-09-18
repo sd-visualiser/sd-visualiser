@@ -6,16 +6,15 @@ use itertools::Itertools;
 use sd_core::{
     codeable::Codeable,
     hypergraph::{
-        generic::{Ctx, Edge, Node, Operation, OperationWeight, Thunk},
+        generic::{Ctx, Edge, Operation, OperationWeight},
         subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
     prettyprinter::PrettyPrint,
-    weak_map::WeakMap,
 };
 
 use crate::{
-    common::{BOX_SIZE, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
     layout::{AtomType, Layout, NodeOffset},
     renderable::RenderableGraph,
     shape::Shape,
@@ -27,18 +26,16 @@ pub fn render<G>(
     ui: &egui::Ui,
     shapes: &[Shape<G::Ctx>],
     response: &Response,
-    expanded: &mut WeakMap<Thunk<G::Ctx>, bool>,
     to_screen: RectTransform,
 ) -> Vec<egui::Shape>
 where
     G: RenderableGraph,
     Edge<G::Ctx>: Codeable,
     Operation<G::Ctx>: Codeable,
-    Thunk<G::Ctx>: Codeable,
 {
     let viewport = *to_screen.from();
 
-    let mut highlight_node = None;
+    let mut highlight_op = None;
     let mut highlight_edges = IndexSet::default();
 
     let shapes_vec: Vec<_> = shapes
@@ -52,26 +49,18 @@ where
                 ui,
                 response,
                 &to_screen,
-                &mut highlight_node,
+                &mut highlight_op,
                 &mut highlight_edges,
-                expanded,
             );
             s
         })
         .collect();
 
     // Show hover tooltips.
-    let labels = match highlight_node {
-        Some(node) => {
-            highlight_edges.extend(node.inputs().chain(node.outputs()));
-            match &node {
-                Node::Operation(op) => {
-                    vec![op.code().to_pretty()]
-                }
-                Node::Thunk(thunk) => {
-                    vec![thunk.code().to_pretty()]
-                }
-            }
+    let labels = match highlight_op {
+        Some(op) => {
+            highlight_edges.extend(op.inputs().chain(op.outputs()));
+            vec![op.code().to_pretty()]
         }
         None => highlight_edges
             .iter()
@@ -233,15 +222,6 @@ where
                                 stroke: None,
                             });
                         }
-                        AtomType::Thunk(addr) => {
-                            let thunk_rect = Rect::from_center_size(center, BOX_SIZE);
-                            shapes.push(Shape::Rectangle {
-                                rect: thunk_rect,
-                                addr: addr.clone(),
-                                fill: None,
-                                stroke: None,
-                            });
-                        }
                         _ => (),
                     }
                 }
@@ -286,7 +266,6 @@ where
                     shapes.push(Shape::Rectangle {
                         rect: thunk_rect,
                         addr: addr.clone(),
-                        fill: None,
                         stroke: None,
                     });
 

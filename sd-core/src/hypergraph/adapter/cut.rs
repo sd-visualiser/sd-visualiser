@@ -11,7 +11,6 @@ use crate::{
         generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
         subgraph::ExtensibleEdge,
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
-        utils::create_cut_edges,
     },
     weak_map::WeakMap,
 };
@@ -32,11 +31,19 @@ pub struct CutGraph<G: Graph> {
 }
 
 impl<G: Graph> CutGraph<G> {
-    pub fn new(graph: G) -> Self {
+    pub fn new(graph: G, cut_edges: WeakMap<Edge<G::Ctx>, bool>) -> Self {
         Self {
-            cut_edges: Arc::new(create_cut_edges(&graph)),
             graph,
+            cut_edges: Arc::new(cut_edges),
         }
+    }
+
+    pub fn inner(&self) -> &G {
+        &self.graph
+    }
+
+    pub fn inner_mut(&mut self) -> &mut G {
+        &mut self.graph
     }
 
     pub fn toggle(&mut self, edge: &Edge<G::Ctx>) {

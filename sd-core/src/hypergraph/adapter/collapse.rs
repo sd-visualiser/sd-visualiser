@@ -4,10 +4,12 @@ use derivative::Derivative;
 use itertools::Either;
 
 use crate::{
+    codeable::{Code, Codeable},
+    common::Matchable,
     hypergraph::{
-        generic::{Ctx, Edge, EdgeWeight, Node, OperationWeight, Thunk, ThunkWeight},
+        generic::{Ctx, Edge, EdgeWeight, Node, Operation, OperationWeight, Thunk, ThunkWeight},
+        subgraph::ExtensibleEdge,
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
-        utils::create_expanded,
     },
     weak_map::WeakMap,
 };
@@ -28,11 +30,35 @@ pub struct CollapseGraph<G: Graph> {
 }
 
 impl<G: Graph> CollapseGraph<G> {
-    pub fn new(graph: G) -> Self {
+    pub fn new(graph: G, expanded: WeakMap<Thunk<G::Ctx>, bool>) -> Self {
         Self {
-            expanded: Arc::new(create_expanded(&graph)),
             graph,
+            expanded: Arc::new(expanded),
         }
+    }
+
+    pub fn inner(&self) -> &G {
+        &self.graph
+    }
+
+    pub fn inner_mut(&mut self) -> &mut G {
+        &mut self.graph
+    }
+
+    pub fn expanded(&self) -> &WeakMap<Thunk<G::Ctx>, bool> {
+        &self.expanded
+    }
+
+    pub fn toggle(&mut self, thunk: &Thunk<G::Ctx>) {
+        let mut expanded = (*self.expanded).clone();
+        expanded[thunk] ^= true;
+        self.expanded = Arc::new(expanded);
+    }
+
+    pub fn set_all(&mut self, value: bool) {
+        let mut expanded = (*self.expanded).clone();
+        expanded.values_mut().for_each(|x| *x = value);
+        self.expanded = Arc::new(expanded);
     }
 }
 
@@ -307,6 +333,82 @@ impl<G: Graph> NodeLike for CollapseThunk<G> {
     }
 }
 
+impl<G: Graph + Codeable> Codeable for CollapseGraph<G> {
+    type Code = Code<G>;
+
+    fn code(&self) -> Self::Code {
+        self.graph.code()
+    }
+}
+
+impl<G: Graph> Codeable for CollapseEdge<G>
+where
+    Edge<G::Ctx>: Codeable,
+{
+    type Code = Code<Edge<G::Ctx>>;
+
+    fn code(&self) -> Self::Code {
+        self.edge.code()
+    }
+}
+
+impl<G: Graph> Codeable for CollapseOperation<G>
+where
+    Operation<G::Ctx>: Codeable,
+    Thunk<G::Ctx>: Codeable,
+{
+    type Code = Either<Code<Operation<G::Ctx>>, Code<Thunk<G::Ctx>>>;
+
+    fn code(&self) -> Self::Code {
+        match &self.node {
+            Node::Operation(op) => Either::Left(op.code()),
+            Node::Thunk(thunk) => Either::Right(thunk.code()),
+        }
+    }
+}
+
+impl<G: Graph> Codeable for CollapseThunk<G>
+where
+    Thunk<G::Ctx>: Codeable,
+{
+    type Code = Code<Thunk<G::Ctx>>;
+
+    fn code(&self) -> Self::Code {
+        self.thunk.code()
+    }
+}
+
+impl<G: Graph> Matchable for CollapseEdge<G>
+where
+    Edge<G::Ctx>: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.edge.is_match(query)
+    }
+}
+
+impl<G: Graph> Matchable for CollapseOperation<G>
+where
+    Operation<G::Ctx>: Matchable,
+    Thunk<G::Ctx>: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        match &self.node {
+            Node::Operation(op) => op.is_match(query),
+            Node::Thunk(thunk) => thunk.is_match(query),
+        }
+    }
+}
+
+impl<G: Graph> Matchable for CollapseThunk<G>
+where
+    Thunk<G::Ctx>: Matchable,
+{
+    fn is_match(&self, query: &str) -> bool {
+        self.thunk.is_match(query)
+    }
+}
+
 impl<G: Graph> WithWeight for CollapseEdge<G> {
     type Weight = EdgeWeight<G::Ctx>;
 
@@ -341,5 +443,24 @@ fn find_ancestor<T: Ctx>(node: &Node<T>, f: impl Fn(&T::Thunk) -> bool) -> Optio
         Some(thunk)
     } else {
         find_ancestor::<T>(&Node::Thunk(thunk), f)
+    }
+}
+
+impl<G: Graph> ExtensibleEdge for CollapseEdge<G>
+where
+    Edge<G::Ctx>: ExtensibleEdge,
+{
+    fn extend_source(&self) -> Option<Node<Self::Ctx>> {
+        self.inner()
+            .extend_source()
+            .map(|node| Node::new(node, self.expanded.clone()))
+    }
+
+    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
+        Box::new(
+            self.inner()
+                .extend_targets()
+                .map(|node| Node::new(node, self.expanded.clone())),
+        )
     }
 }

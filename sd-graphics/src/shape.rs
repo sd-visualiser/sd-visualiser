@@ -9,7 +9,6 @@ use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
     hypergraph::generic::{Ctx, Node},
-    weak_map::WeakMap,
 };
 
 use crate::{
@@ -32,7 +31,6 @@ pub enum Shape<T: Ctx> {
     Rectangle {
         rect: Rect,
         addr: T::Thunk,
-        fill: Option<Color32>,
         stroke: Option<Stroke>,
     },
     CircleFilled {
@@ -91,7 +89,6 @@ impl<T: Ctx> Shape<T> {
         }
     }
 
-    #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_lines)]
     pub(crate) fn collect_highlights<G>(
         &mut self,
@@ -99,9 +96,8 @@ impl<T: Ctx> Shape<T> {
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
-        highlight_node: &mut Option<Node<T>>,
+        highlight_op: &mut Option<T::Operation>,
         highlight_edges: &mut IndexSet<T::Edge>,
-        expanded: &mut WeakMap<T::Thunk, bool>,
     ) where
         G: RenderableGraph<Ctx = T>,
     {
@@ -132,9 +128,7 @@ impl<T: Ctx> Shape<T> {
                     graph.clicked_edge(addr.clone());
                 }
             }
-            Shape::Rectangle {
-                addr, fill, stroke, ..
-            } => {
+            Shape::Rectangle { addr, stroke, .. } => {
                 let addr: &_ = addr;
                 let selected = graph.selected(Node::Thunk(addr.clone()));
                 let thunk_response = ui.interact(
@@ -146,25 +140,15 @@ impl<T: Ctx> Shape<T> {
                     .style()
                     .interact_selectable(&thunk_response, selected)
                     .fg_stroke;
-                if !selected && expanded[addr] {
+                if !selected {
                     new_stroke.color = new_stroke.color.gamma_multiply(0.35);
                 }
                 *stroke = Some(new_stroke);
-                if !expanded[addr] {
-                    *fill = Some(
-                        ui.style()
-                            .interact_selectable(&thunk_response, selected)
-                            .bg_fill,
-                    );
-                    if thunk_response.hovered() {
-                        *highlight_node = Some(Node::Thunk(addr.clone()));
-                    }
-                }
                 if thunk_response.clicked() {
-                    expanded[addr] = !expanded[addr];
+                    graph.clicked_thunk(addr.clone(), true);
                 }
                 if thunk_response.secondary_clicked() {
-                    graph.clicked_thunk(addr.clone());
+                    graph.clicked_thunk(addr.clone(), false);
                 }
             }
             Shape::Operation {
@@ -177,7 +161,10 @@ impl<T: Ctx> Shape<T> {
                     Sense::click(),
                 );
                 if op_response.clicked() {
-                    graph.clicked_operation(addr.clone());
+                    graph.clicked_operation(addr.clone(), true);
+                }
+                if op_response.secondary_clicked() {
+                    graph.clicked_operation(addr.clone(), false);
                 }
                 *fill = Some(
                     ui.style()
@@ -190,7 +177,7 @@ impl<T: Ctx> Shape<T> {
                         .fg_stroke,
                 );
                 if op_response.hovered() {
-                    *highlight_node = Some(Node::Operation(addr.clone()));
+                    *highlight_op = Some(addr.clone());
                 }
             }
             Shape::Arrow {
@@ -248,12 +235,10 @@ impl<T: Ctx> Shape<T> {
                 );
                 egui::Shape::CubicBezier(bezier)
             }
-            Shape::Rectangle {
-                rect, fill, stroke, ..
-            } => egui::Shape::Rect(RectShape {
+            Shape::Rectangle { rect, stroke, .. } => egui::Shape::Rect(RectShape {
                 rect,
                 rounding: Rounding::none(),
-                fill: fill.unwrap_or_default(),
+                fill: Color32::default(),
                 stroke: stroke.unwrap_or(default_stroke),
             }),
             Shape::CircleFilled {

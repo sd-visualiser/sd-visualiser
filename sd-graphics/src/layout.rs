@@ -16,7 +16,6 @@ use sd_core::{
     },
     lp::LpProblem,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
-    weak_map::WeakMap,
 };
 #[cfg(test)]
 use serde::Serialize;
@@ -47,7 +46,6 @@ pub enum AtomType<T: Ctx> {
     Cup,
     Cap,
     Op(T::Operation),
-    Thunk(T::Thunk),
     Copy,
     Id,
 }
@@ -343,7 +341,6 @@ impl<T: Ctx> Layout<T> {
 #[allow(clippy::too_many_lines)]
 fn h_layout_internal<T: Ctx>(
     graph: &MonoidalGraph<T>,
-    expanded: &WeakMap<T::Thunk, bool>,
     problem: &mut LpProblem,
 ) -> LayoutInternal<T, Variable, ()>
 where
@@ -421,9 +418,9 @@ where
             .iter()
             .map(|op| {
                 let node = match op {
-                    MonoidalOp::Thunk { body, addr, .. } if expanded[addr] => Node::Thunk {
+                    MonoidalOp::Thunk { body, addr, .. } => Node::Thunk {
                         addr: addr.clone(),
-                        layout: h_layout_internal(body, expanded, problem),
+                        layout: h_layout_internal(body, problem),
                     },
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         h_pos: problem.add_variable(variable().min(0.0)),
@@ -451,12 +448,6 @@ where
                             / 2.0)
                             * RADIUS_OPERATION,
                         atype: AtomType::Op(addr.clone()),
-                    },
-                    MonoidalOp::Thunk { addr, .. } => Node::Atom {
-                        h_pos: problem.add_variable(variable().min(0.0)),
-                        v_pos: (),
-                        extra_size: 0.0,
-                        atype: AtomType::Thunk(addr.clone()),
                     },
                     MonoidalOp::Copy { copies, .. } if *copies != 1 => Node::Atom {
                         h_pos: problem.add_variable(variable().min(0.0)),
@@ -817,16 +808,13 @@ fn v_layout_internal<T: Ctx>(
     }
 }
 
-pub fn layout<T: Ctx>(
-    graph: &MonoidalGraph<T>,
-    expanded: &WeakMap<T::Thunk, bool>,
-) -> Result<Layout<T>, LayoutError>
+pub fn layout<T: Ctx>(graph: &MonoidalGraph<T>) -> Result<Layout<T>, LayoutError>
 where
     OperationWeight<T>: Display,
 {
     let mut problem = LpProblem::default();
 
-    let layout = h_layout_internal(graph, expanded, &mut problem);
+    let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
     let h_solution = problem.minimise(good_lp::default_solver)?;
 
@@ -843,21 +831,21 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sd_core::{examples, weak_map::WeakMap};
+    use sd_core::examples;
 
     use super::layout;
 
     #[test]
     fn int() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::int(), &WeakMap::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::int()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn copy() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::copy(), &WeakMap::default()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::copy()).expect("Layout failed"));
         });
     }
 }

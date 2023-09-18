@@ -8,21 +8,17 @@ use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{
     hypergraph::{
-        generic::{Edge, OperationWeight, Thunk},
+        generic::{Edge, OperationWeight},
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
     monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
-    weak_map::WeakMap,
 };
 use sd_graphics::{layout::layout, render, shape::Shapes};
 
 static CACHE: OnceLock<Mutex<IdTypeMap>> = OnceLock::new();
 
-type Cache<G> = LruCache<
-    (G, WeakMap<Thunk<<G as Graph>::Ctx>, bool>),
-    Arc<Mutex<Promise<Shapes<<G as Graph>::Ctx>>>>,
->;
+type Cache<G> = LruCache<G, Arc<Mutex<Promise<Shapes<<G as Graph>::Ctx>>>>>;
 
 fn shape_cache<G>() -> Arc<Mutex<Cache<G>>>
 where
@@ -45,10 +41,7 @@ pub fn clear_shape_cache() {
     }
 }
 
-pub fn generate_shapes<G>(
-    graph: &G,
-    expanded: &WeakMap<Thunk<G::Ctx>, bool>,
-) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
+pub fn generate_shapes<G>(graph: &G) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
 where
     G: Graph + 'static,
     Edge<G::Ctx>: ExtensibleEdge,
@@ -57,9 +50,8 @@ where
     let cache = shape_cache::<G>();
     let mut guard = cache.lock().unwrap();
     guard
-        .get_or_insert((graph.clone(), expanded.clone()), || {
+        .get_or_insert(graph.clone(), || {
             let graph = graph.clone();
-            let expanded = expanded.clone();
             Arc::new(Mutex::new(crate::spawn!("shape", {
                 tracing::debug!("Converting to monoidal term");
                 let monoidal_term = MonoidalWiredGraph::from(&graph);
@@ -70,7 +62,7 @@ where
                 tracing::debug!("Got graph {:#?}", monoidal_graph);
 
                 tracing::debug!("Calculating layout...");
-                let layout = layout(&monoidal_graph, &expanded).unwrap();
+                let layout = layout(&monoidal_graph).unwrap();
                 tracing::debug!("Calculating shapes...");
                 let mut shapes = Vec::new();
                 render::generate_shapes(&mut shapes, &layout, true);

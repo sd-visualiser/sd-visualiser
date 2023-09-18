@@ -2,15 +2,12 @@
 
 use delegate::delegate;
 use eframe::egui;
-use indexmap::IndexMap;
 use sd_core::{
     codeable::Codeable,
     graph::SyntaxHypergraph,
-    hypergraph::{adapter::cut::CutThunk, subgraph::Subgraph},
+    interactive::InteractiveSubgraph,
     language::{chil::Chil, spartan::Spartan, Expr, Language, Thunk},
     prettyprinter::PrettyPrint,
-    selection::SelectionMap,
-    weak_map::WeakMap,
 };
 
 use crate::{
@@ -38,16 +35,12 @@ impl Selection {
 
     pub fn from_graph(graph_ui: &GraphUi, name: String) -> Self {
         match graph_ui {
-            GraphUi::Chil(graph_ui) => Self::Chil(SelectionInternal::new(
-                &graph_ui.graph.selection,
-                &graph_ui.expanded,
-                name,
-            )),
-            GraphUi::Spartan(graph_ui) => Self::Spartan(SelectionInternal::new(
-                &graph_ui.graph.selection,
-                &graph_ui.expanded,
-                name,
-            )),
+            GraphUi::Chil(graph_ui) => {
+                Self::Chil(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
+            }
+            GraphUi::Spartan(graph_ui) => {
+                Self::Spartan(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
+            }
         }
     }
 }
@@ -56,27 +49,15 @@ pub struct SelectionInternal<T: Language> {
     name: String,
     displayed: bool,
     code: String,
-    graph_ui: GraphUiInternal<Subgraph<SyntaxHypergraph<T>>>,
+    graph_ui: GraphUiInternal<InteractiveSubgraph<SyntaxHypergraph<T>>>,
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
-    pub(crate) fn new(
-        selection: &SelectionMap<SyntaxHypergraph<T>>,
-        expanded: &WeakMap<CutThunk<SyntaxHypergraph<T>>, bool>,
-        name: String,
-    ) -> Self
+    pub(crate) fn new(subgraph: InteractiveSubgraph<SyntaxHypergraph<T>>, name: String) -> Self
     where
         Expr<T>: PrettyPrint,
     {
-        let subgraph = Subgraph::new(selection.clone());
-        let expanded = WeakMap::from(
-            expanded
-                .iter()
-                .map(|(thunk, &expanded)| (subgraph.convert_thunk(thunk.inner().clone()), expanded))
-                .collect::<IndexMap<_, _>>(),
-        );
-
-        let graph_ui = GraphUiInternal::new(subgraph, expanded);
+        let graph_ui = GraphUiInternal::new(subgraph);
 
         let code = graph_ui.graph.code().to_pretty();
 
