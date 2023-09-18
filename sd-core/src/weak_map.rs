@@ -1,24 +1,29 @@
 use std::hash::{Hash, Hasher};
 
-use derivative::Derivative;
+use delegate::delegate;
 use indexmap::IndexMap;
 
 /// A wrapper around [`IndexMap`] that implements [`Eq`] and [`Hash`] using the insertion order.
-#[derive(Clone, Debug, Derivative)]
-#[derivative(Default(bound = ""))]
-pub struct WeakMap<K, V>(pub(crate) IndexMap<K, V>);
+#[derive(Clone, Debug)]
+pub struct WeakMap<K, V>(IndexMap<K, V>);
 
-impl<K, V> std::ops::Deref for WeakMap<K, V> {
-    type Target = IndexMap<K, V>;
+impl<K, V> std::ops::Index<&K> for WeakMap<K, V>
+where
+    K: Hash + Eq,
+{
+    type Output = V;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+    fn index(&self, key: &K) -> &Self::Output {
+        &self.0[key]
     }
 }
 
-impl<K, V> std::ops::DerefMut for WeakMap<K, V> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+impl<K, V> std::ops::IndexMut<&K> for WeakMap<K, V>
+where
+    K: Hash + Eq,
+{
+    fn index_mut(&mut self, key: &K) -> &mut Self::Output {
+        &mut self.0[key]
     }
 }
 
@@ -45,5 +50,28 @@ impl<K: Hash, V: Hash> Hash for WeakMap<K, V> {
         for x in self.0.iter() {
             x.hash(state);
         }
+    }
+}
+
+#[allow(clippy::inline_always)]
+#[allow(clippy::must_use_candidate)]
+impl<K, V> WeakMap<K, V> {
+    delegate! {
+        to self.0 {
+            pub fn iter(&self) -> indexmap::map::Iter<'_, K, V>;
+            pub fn iter_mut(&mut self) -> indexmap::map::IterMut<'_, K, V>;
+            pub fn keys(&self) -> indexmap::map::Keys<'_, K, V>;
+            pub fn values(&self) -> indexmap::map::Values<'_, K, V>;
+            pub fn values_mut(&mut self) -> indexmap::map::ValuesMut<'_, K, V>;
+        }
+    }
+}
+
+impl<K, V> FromIterator<(K, V)> for WeakMap<K, V>
+where
+    K: Eq + Hash,
+{
+    fn from_iter<T: IntoIterator<Item = (K, V)>>(iter: T) -> Self {
+        WeakMap(IndexMap::from_iter(iter))
     }
 }

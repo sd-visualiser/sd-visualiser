@@ -14,7 +14,6 @@ use crate::{
         utils::{create_cut_edges, create_expanded, create_selected},
     },
     selection::SelectionMap,
-    weak_map::WeakMap,
 };
 
 /// An interactive graph is a graph with cut edges, collapsible thunks, and selectable nodes.
@@ -64,14 +63,13 @@ impl<G: Graph> InteractiveGraph<G> {
         let subgraph = Subgraph::new(self.selection.clone());
 
         // Reindex the thunk mapping.
-        let expanded = WeakMap(
-            self.graph
-                .inner()
-                .expanded()
-                .iter()
-                .map(|(thunk, value)| (subgraph.convert_thunk(thunk.clone()), *value))
-                .collect(),
-        );
+        let expanded = self
+            .graph
+            .inner()
+            .expanded()
+            .iter()
+            .map(|(thunk, value)| (subgraph.convert_thunk(thunk.clone()), *value))
+            .collect();
 
         InteractiveSubgraph(CollapseGraph::new(subgraph, expanded))
     }

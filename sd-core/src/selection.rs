@@ -29,7 +29,7 @@ where
     T: Ctx,
 {
     fn from(map: IndexMap<Node<T>, bool>) -> Self {
-        Self(WeakMap(map))
+        Self(WeakMap::from(map))
     }
 }
 

@@ -22,7 +22,7 @@ pub fn create_expanded<G: Graph>(graph: &G) -> WeakMap<Thunk<G::Ctx>, bool> {
         helper::<G::Ctx>(&mut set, thunk);
     }
 
-    WeakMap(set)
+    WeakMap::from(set)
 }
 
 #[must_use]
