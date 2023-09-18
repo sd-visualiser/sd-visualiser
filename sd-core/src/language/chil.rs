@@ -10,7 +10,7 @@ use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
-use super::{span_into_str, AsVar};
+use super::{span_into_str, AsVar, Fresh};
 use crate::common::Matchable;
 
 pub struct Chil;
@@ -143,6 +143,15 @@ impl Display for Variable {
         match &self.name {
             None => write!(f, "{}", self.addr),
             Some(name) => write!(f, "{}(id: {})", name, self.addr),
+        }
+    }
+}
+
+impl Fresh for Variable {
+    fn fresh(number: usize) -> Self {
+        Self {
+            name: None,
+            addr: Addr('?', number),
         }
     }
 }

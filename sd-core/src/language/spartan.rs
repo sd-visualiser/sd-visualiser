@@ -12,7 +12,7 @@ use pest_derive::Parser;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::span_into_str;
+use super::{span_into_str, Fresh};
 use crate::common::Matchable;
 
 pub struct Spartan;
@@ -177,6 +177,12 @@ impl Matchable for Variable {
 impl Display for Variable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&self.0)
+    }
+}
+
+impl Fresh for Variable {
+    fn fresh(number: usize) -> Self {
+        Self(format!("?{number}"))
     }
 }
 

@@ -26,11 +26,15 @@ impl<V> AsVar<V> for V {
     }
 }
 
+pub trait Fresh {
+    fn fresh(number: usize) -> Self;
+}
+
 /// `Display` should give the symbolic representation (e.g. "+").
 /// `PrettyPrint` should give the textual representation (e.g. "plus").
 pub trait Language {
     type Op: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint;
-    type Var: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint;
+    type Var: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + Fresh;
     type Addr: Clone + Eq + Hash + Debug + Send + Sync + Display;
     type VarDef: Clone + Eq + Hash + Debug + Send + Sync + PrettyPrint + AsVar<Self::Var>;
 

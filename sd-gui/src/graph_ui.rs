@@ -9,7 +9,6 @@ use eframe::{
 };
 use sd_core::{
     common::{Direction, Matchable},
-    decompile::Fresh,
     graph::{Name, SyntaxHypergraph},
     hypergraph::{
         generic::{Edge, EdgeWeight, Operation, OperationWeight, Thunk},
@@ -97,7 +96,6 @@ where
     pub(crate) fn ui<T>(&mut self, ui: &mut egui::Ui)
     where
         T: Language,
-        T::Var: Fresh,
         Expr<T>: PrettyPrint,
         Edge<G::Ctx>: ExtensibleEdge,
         // Needed for render

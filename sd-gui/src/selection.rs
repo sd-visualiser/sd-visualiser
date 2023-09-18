@@ -4,7 +4,6 @@ use delegate::delegate;
 use eframe::egui;
 use indexmap::IndexMap;
 use sd_core::{
-    decompile::{decompile, Fresh},
     graph::SyntaxHypergraph,
     hypergraph::{
         cut::CutThunk,
@@ -69,7 +68,6 @@ impl<T: 'static + Language> SelectionInternal<T> {
         name: String,
     ) -> Self
     where
-        T::Var: Fresh,
         Expr<T>: PrettyPrint,
     {
         let subgraph = Subgraph::new(selection.clone());
@@ -90,7 +88,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
         let graph_ui = GraphUiInternal::new(subgraph, expanded);
 
-        let code = decompile(&graph_ui.graph)
+        let code = Expr::decompile(&graph_ui.graph)
             .map_or_else(|err| format!("Error: {err:?}"), |expr| expr.to_pretty());
 
         Self {
@@ -111,7 +109,6 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
     where
-        T::Var: Fresh,
         Expr<T>: PrettyPrint,
     {
         egui::Window::new(self.name.clone())

@@ -4,7 +4,6 @@ use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
-    decompile::{decompile, Fresh},
     graph::Name,
     hypergraph::{
         generic::{Ctx, Edge, Node, Operation, OperationWeight, Thunk},
@@ -34,7 +33,6 @@ pub fn render<T, G>(
 ) -> Vec<egui::Shape>
 where
     T: Language,
-    T::Var: Fresh,
     Expr<T>: PrettyPrint,
     G: RenderableGraph,
     Edge<G::InnerCtx>: WithWeight<Weight = Name<T>>,
@@ -78,7 +76,7 @@ where
                 }
                 // TODO(@calintat): Pretty print the full thunk not just the body.
                 Node::Thunk(thunk) => {
-                    vec![decompile(&graph.inner_thunk(thunk))
+                    vec![Expr::decompile(&graph.inner_thunk(thunk))
                         .map_or_else(|_| "thunk".to_owned(), |body| body.to_pretty())]
                 }
             }
