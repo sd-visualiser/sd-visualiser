@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use egui::{emath::RectTransform, show_tooltip_at_pointer, Pos2, Rect, Response};
+use egui::{emath::RectTransform, show_tooltip_at_pointer, Id, Pos2, Rect, Response};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
@@ -38,6 +38,7 @@ where
     let mut highlight_op = None;
     let mut highlight_edges = IndexSet::default();
 
+    let id = Id::new(graph.key());
     let shapes_vec: Vec<_> = shapes
         .iter()
         .filter(|shape| viewport.intersects(shape.bounding_box()))
@@ -46,6 +47,7 @@ where
             s.apply_transform(&to_screen);
             s.collect_highlights(
                 graph,
+                id,
                 ui,
                 response,
                 &to_screen,
@@ -210,7 +212,7 @@ where
                                 center,
                                 radius: RADIUS_COPY,
                                 addr: x_ins[0].addr.clone(),
-                                id: [j, i],
+                                coord: [j, i],
                             });
                         }
                         AtomType::Op(addr) => {
@@ -277,7 +279,7 @@ where
                             center,
                             radius: RADIUS_ARG,
                             addr: edge,
-                            id: [j, i],
+                            coord: [j, i],
                         });
                     }
                     generate_shapes(shapes, layout, false);

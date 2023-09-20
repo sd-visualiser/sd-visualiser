@@ -8,7 +8,10 @@ use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
 use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
-    hypergraph::generic::{Ctx, Node},
+    hypergraph::{
+        generic::{Ctx, Node},
+        traits::Keyable,
+    },
 };
 
 use crate::{
@@ -37,7 +40,7 @@ pub enum Shape<T: Ctx> {
         center: Pos2,
         radius: f32,
         addr: T::Edge,
-        id: [usize; 2],
+        coord: [usize; 2],
     },
     Operation {
         center: Pos2,
@@ -90,10 +93,12 @@ impl<T: Ctx> Shape<T> {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     #[allow(clippy::too_many_lines)]
     pub(crate) fn collect_highlights<G>(
         &mut self,
         graph: &mut G,
+        id: Id,
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
@@ -119,10 +124,10 @@ impl<T: Ctx> Shape<T> {
         }
         match self {
             Shape::Line { .. } | Shape::CubicBezier { .. } => {}
-            Shape::CircleFilled { addr, id, .. } => {
+            Shape::CircleFilled { addr, coord, .. } => {
                 let circle_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph.key(), &addr, id)),
+                    id.with((addr.key(), coord)),
                     Sense::click(),
                 );
                 if circle_response.clicked() {
@@ -134,7 +139,7 @@ impl<T: Ctx> Shape<T> {
                 let selected = graph.selected(Node::Thunk(addr.clone()));
                 let thunk_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph.key(), &addr)),
+                    id.with(addr.key()),
                     Sense::click(),
                 );
                 let mut new_stroke = ui
@@ -158,7 +163,7 @@ impl<T: Ctx> Shape<T> {
                 let selected = graph.selected(Node::Operation(addr.clone()));
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph.key(), &addr)),
+                    id.with(addr.key()),
                     Sense::click(),
                 );
                 if op_response.clicked() {
@@ -189,7 +194,7 @@ impl<T: Ctx> Shape<T> {
             } => {
                 let arrow_response = ui.interact(
                     bounding_box.intersect(bounds),
-                    Id::new((&graph.key(), &addr)),
+                    id.with(addr.key()),
                     Sense::click(),
                 );
 
