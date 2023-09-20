@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use by_address::ByThinAddress;
 use derivative::Derivative;
 use itertools::Either;
 
@@ -22,14 +23,14 @@ use crate::{
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub struct CollapseGraph<G: Graph> {
     graph: G,
-    expanded: Arc<ThunkMap<G::Ctx, bool>>,
+    expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 
 impl<G: Graph> CollapseGraph<G> {
     pub fn new(graph: G, expanded: ThunkMap<G::Ctx, bool>) -> Self {
         Self {
             graph,
-            expanded: Arc::new(expanded),
+            expanded: ByThinAddress(Arc::new(expanded)),
         }
     }
 
@@ -46,15 +47,15 @@ impl<G: Graph> CollapseGraph<G> {
     }
 
     pub fn toggle(&mut self, thunk: &Thunk<G::Ctx>) {
-        let mut expanded = (*self.expanded).clone();
+        let mut expanded = self.expanded().clone();
         expanded[&thunk.key()] ^= true;
-        self.expanded = Arc::new(expanded);
+        self.expanded = ByThinAddress(Arc::new(expanded));
     }
 
     pub fn set_all(&mut self, value: bool) {
-        let mut expanded = (*self.expanded).clone();
+        let mut expanded = self.expanded().clone();
         expanded.values_mut().for_each(|x| *x = value);
-        self.expanded = Arc::new(expanded);
+        self.expanded = ByThinAddress(Arc::new(expanded));
     }
 }
 
@@ -68,7 +69,7 @@ impl<G: Graph> CollapseGraph<G> {
 )]
 pub struct CollapseEdge<G: Graph> {
     edge: Edge<G::Ctx>,
-    expanded: Arc<ThunkMap<G::Ctx, bool>>,
+    expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 
 impl<G: Graph> CollapseEdge<G> {
@@ -91,7 +92,7 @@ impl<G: Graph> CollapseEdge<G> {
 )]
 pub struct CollapseOperation<G: Graph> {
     node: Node<G::Ctx>,
-    expanded: Arc<ThunkMap<G::Ctx, bool>>,
+    expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 
 impl<G: Graph> CollapseOperation<G> {
@@ -114,7 +115,7 @@ impl<G: Graph> CollapseOperation<G> {
 )]
 pub struct CollapseThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
-    expanded: Arc<ThunkMap<G::Ctx, bool>>,
+    expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 
 impl<G: Graph> CollapseThunk<G> {
@@ -132,7 +133,7 @@ impl<G: Graph> CollapseThunk<G> {
 pub type CollapseNode<G> = Node<CollapseGraph<G>>;
 
 impl<G: Graph> CollapseNode<G> {
-    fn new(node: Node<G::Ctx>, expanded: Arc<ThunkMap<G::Ctx, bool>>) -> Self {
+    fn new(node: Node<G::Ctx>, expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>) -> Self {
         match node {
             Node::Operation(op) => Node::Operation(CollapseOperation {
                 node: Node::Operation(op),
@@ -403,7 +404,7 @@ where
 }
 
 impl<G: Graph> Keyable for CollapseGraph<G> {
-    type Key = (Key<G>, Arc<ThunkMap<G::Ctx, bool>>);
+    type Key = (Key<G>, ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>);
 
     fn key(&self) -> Self::Key {
         (self.graph.key(), self.expanded.clone())

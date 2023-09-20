@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use by_address::ByThinAddress;
 use derivative::Derivative;
 use indexmap::IndexSet;
 use itertools::Either;
@@ -23,14 +24,14 @@ use crate::{
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub struct CutGraph<G: Graph> {
     graph: G,
-    cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+    cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
 }
 
 impl<G: Graph> CutGraph<G> {
     pub fn new(graph: G, cut_edges: EdgeMap<G::Ctx, bool>) -> Self {
         Self {
             graph,
-            cut_edges: Arc::new(cut_edges),
+            cut_edges: ByThinAddress(Arc::new(cut_edges)),
         }
     }
 
@@ -42,10 +43,14 @@ impl<G: Graph> CutGraph<G> {
         &mut self.graph
     }
 
+    pub fn cut_edges(&self) -> &EdgeMap<G::Ctx, bool> {
+        &self.cut_edges
+    }
+
     pub fn toggle(&mut self, edge: &Edge<G::Ctx>) {
-        let mut cut_edges = (*self.cut_edges).clone();
+        let mut cut_edges = self.cut_edges().clone();
         cut_edges[&edge.key()] ^= true;
-        self.cut_edges = Arc::new(cut_edges);
+        self.cut_edges = ByThinAddress(Arc::new(cut_edges));
     }
 }
 
@@ -60,12 +65,12 @@ impl<G: Graph> CutGraph<G> {
 pub enum CutEdge<G: Graph> {
     Inner {
         edge: Edge<G::Ctx>,
-        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
     Reuse {
         edge: Edge<G::Ctx>,
         target: Option<Node<G::Ctx>>,
-        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
 }
 
@@ -94,16 +99,16 @@ impl<G: Graph> CutEdge<G> {
 pub enum CutOperation<G: Graph> {
     Inner {
         op: Operation<G::Ctx>,
-        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
     Store {
         edge: Edge<G::Ctx>,
-        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
     Reuse {
         edge: Edge<G::Ctx>,
         target: Option<Node<G::Ctx>>,
-        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
 }
 
@@ -133,7 +138,7 @@ impl<G: Graph> CutOperation<G> {
 )]
 pub struct CutThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
-    cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+    cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
 }
 
 impl<G: Graph> CutThunk<G> {
@@ -151,21 +156,21 @@ impl<G: Graph> CutThunk<G> {
 pub type CutNode<G> = Node<CutGraph<G>>;
 
 impl<G: Graph> CutNode<G> {
-    fn new(node: Node<G::Ctx>, cut_edges: Arc<EdgeMap<G::Ctx, bool>>) -> Self {
+    fn new(node: Node<G::Ctx>, cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>) -> Self {
         match node {
             Node::Operation(op) => Node::Operation(CutOperation::Inner { op, cut_edges }),
             Node::Thunk(thunk) => Node::Thunk(CutThunk { thunk, cut_edges }),
         }
     }
 
-    fn store(edge: Edge<G::Ctx>, cut_edges: Arc<EdgeMap<G::Ctx, bool>>) -> Self {
+    fn store(edge: Edge<G::Ctx>, cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>) -> Self {
         Node::Operation(CutOperation::Store { edge, cut_edges })
     }
 
     fn reuse(
         edge: Edge<G::Ctx>,
         target: Option<Node<G::Ctx>>,
-        cut_edges: Arc<EdgeMap<G::Ctx, bool>>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     ) -> Self {
         Node::Operation(CutOperation::Reuse {
             edge,
@@ -507,7 +512,7 @@ impl<G: Graph> NodeLike for CutThunk<G> {
 }
 
 impl<G: Graph> Keyable for CutGraph<G> {
-    type Key = (Key<G>, Arc<EdgeMap<G::Ctx, bool>>);
+    type Key = (Key<G>, ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>);
 
     fn key(&self) -> Self::Key {
         (self.graph.key(), self.cut_edges.clone())
