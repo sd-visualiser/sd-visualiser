@@ -440,6 +440,7 @@ impl eframe::App for App {
                 .show(ui, |ui| self.selection_ui(ui));
         });
 
+        #[allow(clippy::redundant_closure_call)]
         egui::CentralPanel::default().show(ctx, |ui| {
             macro_rules! optional_editor {
                 ($graph:expr) => {

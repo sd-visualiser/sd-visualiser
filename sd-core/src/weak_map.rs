@@ -47,7 +47,7 @@ impl<K: Eq, V: Eq> Eq for WeakMap<K, V> {}
 
 impl<K: Hash, V: Hash> Hash for WeakMap<K, V> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        for x in self.0.iter() {
+        for x in &self.0 {
             x.hash(state);
         }
     }
