@@ -140,7 +140,7 @@ where
             (Value::Variable(var), ProcessInput::Variables(inputs)) => {
                 // We have tried to assign a variable to another variable
                 Err(ConvertError::Aliased(
-                    inputs.into_iter().map(|x| x.into_var()).collect(),
+                    inputs.into_iter().map(GetVar::into_var).collect(),
                     var.clone(),
                 ))
             }

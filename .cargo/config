@@ -11,6 +11,7 @@ rustflags = [
     "-Aclippy::significant_drop_tightening",
     "-Aclippy::suboptimal_flops",
     "-Aclippy::use_self",
+    "-Aclippy::type_repetition_in_bounds",
 
     # pedantic
     "-Wclippy::pedantic",
