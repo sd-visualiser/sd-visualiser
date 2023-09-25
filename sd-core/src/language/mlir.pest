@@ -1,181 +1,194 @@
-WHITESPACE = _{ " " | "\t" | "\n" }
+newline    = _{ "\n" | "\r\n" }
+WHITESPACE = _{ " " | "\t" | newline }
+COMMENT    = _{ ("//" ~ !("/" | "!") ~ (!newline ~ ANY)*) }
+// BCPL line comments
 /// https://mlir.llvm.org/docs/LangRef/#common-syntax
-id_punct = @{ "$" | "." | "_" | "-" }
-bool_literal = @{ "true" | "false" }
-integer_literal = @{ decimal_literal | hexadecimal_literal }
-decimal_literal = @{ ASCII_DIGIT+ }
+id_punct            = @{ "$" | "." | "_" | "-" }
+bool_literal        = @{ "true" | "false" }
+integer_literal     = @{ decimal_literal | hexadecimal_literal }
+decimal_literal     = @{ ASCII_DIGIT+ }
 hexadecimal_literal = @{ "0x" ~ ASCII_HEX_DIGIT+ }
-float_literal = @{ ("-" | "+")? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* ~ (("e" | "E") ~ ("-" | "+")? ~ ASCII_DIGIT+)? }
-string_literal = @{"\"" ~ (!(CONTROL | "\"") ~ ANY)* ~ "\""}
+float_literal       = @{ ("-" | "+")? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* ~ (("e" | "E") ~ ("-" | "+")? ~ ASCII_DIGIT+)? }
+string_literal      = @{ "\"" ~ (!(CONTROL | "\"") ~ ANY)* ~ "\"" }
 
 /// https://mlir.llvm.org/docs/LangRef/#top-level-productions
-toplevel = { SOI ~ (operation | attribute_alias_def | type_alias_def)* ~ EOI }
+toplevel = _{ SOI ~ (operation | attribute_alias_def | type_alias_def)* ~ EOI }
 
 /// https://mlir.llvm.org/docs/LangRef/#identifiers-and-keywords
-bare_id = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_" | "$" | ".")* }
-bare_id_list = { bare_id ~ ("," ~ bare_id)* }
-symbol_ref_id = @{ "@" ~ (suffix_id | string_literal) ~ ("::" ~ symbol_ref_id)? }
-value_id = @{ "%" ~ suffix_id }
-alias_name = { bare_id }
-suffix_id = @{ ASCII_DIGIT+ | ((ASCII_ALPHA | id_punct) ~ (ASCII_ALPHANUMERIC | id_punct)*) }
-value_use = { value_id ~ ("#" ~ decimal_literal)? }
-value_use_list = { value_use ~ ("," ~ value_use)* }
+bare_id        = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_" | "$" | ".")* }
+bare_id_list   =  { bare_id ~ ("," ~ bare_id)* }
+symbol_ref_id  = @{ "@" ~ (suffix_id | string_literal) ~ ("::" ~ symbol_ref_id)? }
+value_id       = @{ "%" ~ suffix_id }
+alias_name     =  { bare_id }
+suffix_id      = @{ ASCII_DIGIT+ | ((ASCII_ALPHA | id_punct) ~ (ASCII_ALPHANUMERIC | id_punct)*) }
+value_use      =  { value_id ~ ("#" ~ decimal_literal)? }
+value_use_list = _{ value_use ~ ("," ~ value_use)* }
 
 /// https://mlir.llvm.org/docs/LangRef/#operations
-operation = { op_result_list? ~ generic_operation ~ trailing_location? }
-generic_operation = { string_literal ~ "(" ~ value_use_list? ~ ")" ~ successor_list? ~ dictionary_properties? ~ region_list? ~ dictionary_attribute? ~ ":" ~ function_type } 
+operation         = { op_result_list? ~ generic_operation ~ trailing_location? }
+generic_operation = { string_literal ~ "(" ~ value_use_list? ~ ")" ~ successor_list? ~ dictionary_properties? ~ region_list? ~ dictionary_attribute? ~ ":" ~ function_type }
 // operation = { op_result_list? ~ (generic_operation | custom_operation) ~ trailing_location? }
 // custom_operation = { bare_id ~ custom_operation_format }
-op_result_list = { op_result ~ ("," ~ op_result)* ~ "=" }
-op_result = { value_id ~ (":" ~ integer_literal)? }
-successor_list = { "[" ~ successor ~ ("," ~ successor)* ~ "]" }
-successor = { caret_id ~ (":" ~ block_arg_list)? }
-dictionary_properties = { "<" ~ dictionary_attribute ~ ">" }
-region_list = { "(" ~ region ~ ("," ~ region)* ~ ")" }
-dictionary_attribute = { "{" ~ (attribute_entry ~ ("," ~ attribute_entry)*)? ~ "}" }
-trailing_location = { "loc" ~ "(" ~ location ~ ")" }
+op_result_list        = _{ op_result ~ ("," ~ op_result)* ~ "=" }
+op_result             =  { value_id ~ (":" ~ integer_literal)? }
+successor_list        = _{ "[" ~ successor ~ ("," ~ successor)* ~ "]" }
+successor             =  { caret_id ~ (":" ~ block_arg_list)? }
+dictionary_properties = _{ "<" ~ dictionary_attribute ~ ">" }
+region_list           = _{ "(" ~ region ~ ("," ~ region)* ~ ")" }
+dictionary_attribute  = _{ "{" ~ (attribute_entry ~ ("," ~ attribute_entry)*)? ~ "}" }
+trailing_location     = _{ "loc" ~ "(" ~ location ~ ")" }
 
 /// https://mlir.llvm.org/docs/LangRef/#blocks
-block = { block_label ~ operation+ }
-block_label = { block_id ~ block_arg_list? ~ ":" }
-block_id = { caret_id }
-caret_id = @{ "^" ~ suffix_id }
-value_id_and_type = { value_id ~ ":" ~ type }
-value_id_and_type_list = { value_id_and_type ~ ("," ~ value_id_and_type)* }
-block_arg_list = { "(" ~ value_id_and_type_list ~ ")" }
+block                  =  { block_label ~ operation+ }
+block_label            =  { block_id ~ block_arg_list? ~ ":" }
+block_id               =  { caret_id }
+caret_id               = @{ "^" ~ suffix_id }
+value_id_and_type      =  { value_id ~ ":" ~ type }
+value_id_and_type_list = _{ value_id_and_type ~ ("," ~ value_id_and_type)* }
+block_arg_list         = _{ "(" ~ value_id_and_type_list ~ ")" }
 
 /// https://mlir.llvm.org/docs/LangRef/#regions
-region = { "{" ~ entry_block? ~ block* ~ "}" }
+region      = { "{" ~ entry_block? ~ block* ~ "}" }
 entry_block = { operation+ }
 
 /// https://mlir.llvm.org/docs/LangRef/#type-system
-type = { type_alias | dialect_type | builtin_type }
-type_list_no_parens = { type ~ ("," ~ type)* }
-type_list_parens = { "(" ~ type_list_no_parens? ~ ")" }
-ssa_use_and_type = { ssa_use ~ ":" ~ type }
-ssa_use = { value_use }
+type                  = { function_type | non_function_type }
+non_function_type     = { type_alias | dialect_type | builtin_type }
+type_list_no_parens   = { type ~ ("," ~ type)* }
+type_list_parens      = { "(" ~ type_list_no_parens? ~ ")" }
+ssa_use_and_type      = { ssa_use ~ ":" ~ type }
+ssa_use               = { value_use }
 ssa_use_and_type_list = { ssa_use_and_type ~ ("," ~ ssa_use_and_type)* }
-function_type = { (type | type_list_parens) ~ "->" ~ (type | type_list_parens) }
+function_type         = { type_list_parens ~ "->" ~ function_result_type }
+function_result_type  = { type_list_parens | non_function_type }
+
 /// https://mlir.llvm.org/docs/LangRef/#type-aliases
 type_alias_def = { "!" ~ alias_name ~ "=" ~ type }
-type_alias = { "!" ~ alias_name }
+type_alias     = { "!" ~ alias_name }
+
 /// https://mlir.llvm.org/docs/LangRef/#dialect-types
-dialect_namespace = { bare_id }
-dialect_type = { "!" ~ (opaque_dialect_type | pretty_dialect_type) }
-opaque_dialect_type = { dialect_namespace ~ dialect_type_body }
-pretty_dialect_type = { dialect_namespace ~ "." ~ pretty_dialect_type_lead_ident ~ dialect_type_body? }
+dialect_namespace              = { bare_id }
+dialect_type                   = { "!" ~ (opaque_dialect_type | pretty_dialect_type) }
+opaque_dialect_type            = { dialect_namespace ~ dialect_type_body }
+pretty_dialect_type            = { dialect_namespace ~ "." ~ pretty_dialect_type_lead_ident ~ dialect_type_body? }
 pretty_dialect_type_lead_ident = { ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "." | "_")* }
-dialect_type_body = { "<" ~ dialect_type_contents+ ~ ">" }
-dialect_type_contents = { dialect_type_body
-                        | "(" ~ dialect_type_contents+ ~ ")"
-                        | "[" ~ dialect_type_contents+ ~ "]"
-                        | "{" ~ dialect_type_contents+ ~ "}"
-                        | (!("[" | "<" | "(" | "{" | "]" | ">" | ")" | "}" | "\0") ~ ANY)+
-                        }
+dialect_type_body              = { "<" ~ dialect_type_contents+ ~ ">" }
+dialect_type_contents          = {
+    dialect_type_body
+  | "(" ~ dialect_type_contents+ ~ ")"
+  | "[" ~ dialect_type_contents+ ~ "]"
+  | "{" ~ dialect_type_contents+ ~ "}"
+  | (!("[" | "<" | "(" | "{" | "]" | ">" | ")" | "}" | "\0") ~ ANY)+
+}
 
 /// https://mlir.llvm.org/docs/LangRef/#attributes
 attribute_entry = { (bare_id | string_literal) ~ "=" ~ attribute_value }
 attribute_value = { attribute_alias | dialect_attribute | builtin_attribute }
+
 /// https://mlir.llvm.org/docs/LangRef/#attribute-value-aliases
 attribute_alias_def = { "#" ~ alias_name ~ "=" ~ attribute_value }
-attribute_alias = { "#" ~ alias_name }
+attribute_alias     = { "#" ~ alias_name }
+
 /// https://mlir.llvm.org/docs/LangRef/#dialect-attribute-values
-dialect_attribute = { "#" ~ (opaque_dialect_attribute | pretty_dialect_attribute) }
-opaque_dialect_attribute = { dialect_namespace ~ dialect_attribute_body }
-pretty_dialect_attribute = { dialect_namespace ~ "." ~ pretty_dialect_attribute_lead_ident ~ dialect_attribute_body? }
+dialect_attribute                   = { "#" ~ (opaque_dialect_attribute | pretty_dialect_attribute) }
+opaque_dialect_attribute            = { dialect_namespace ~ dialect_attribute_body }
+pretty_dialect_attribute            = { dialect_namespace ~ "." ~ pretty_dialect_attribute_lead_ident ~ dialect_attribute_body? }
 pretty_dialect_attribute_lead_ident = { ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "." | "_")* }
-dialect_attribute_body = { "<" ~ dialect_attribute_contents+ ~ ">" }
-dialect_attribute_contents = { dialect_attribute_body
-                            | "(" ~ dialect_attribute_contents+ ~ ")"
-                            | "[" ~ dialect_attribute_contents+ ~ "]"
-                            | "{" ~ dialect_attribute_contents+ ~ "}"
-                            | (!("[" | "<" | "(" | "{" | "]" | ">" | ")" | "}" | "\0") ~ ANY)+
-                            }
+dialect_attribute_body              = { "<" ~ dialect_attribute_contents+ ~ ">" }
+dialect_attribute_contents          = {
+    dialect_attribute_body
+  | "(" ~ dialect_attribute_contents+ ~ ")"
+  | "[" ~ dialect_attribute_contents+ ~ "]"
+  | "{" ~ dialect_attribute_contents+ ~ "}"
+  | (!("[" | "<" | "(" | "{" | "]" | ">" | ")" | "}" | "\0") ~ ANY)+
+}
 
 /// https://mlir.llvm.org/docs/Dialects/Builtin
 /// https://mlir.llvm.org/docs/Dialects/Builtin/#attributes
-builtin_attribute = { // affine_map_attribute |
-                      array_attribute
-                    | dense_array_attribute
-                    | dense_intorfloat_elements_attribute
-                    // | dense_resource_elements_attribute
-                    | dense_string_elements_attribute
-                    | dictionary_attribute
-                    | float_attribute
-                    | integer_attribute
-                    // | integer_set_attribute
-                    | opaque_attribute
-                    | sparse_elements_attribute
-                    | string_attribute
-                    | symbol_ref_attribute
-                    | type_attribute
-                    | unit_attribute
-                    | strided_layout_attribute
-                    }
+builtin_attribute = {
+    // affine_map_attribute |
+    array_attribute
+  | dense_array_attribute
+  | dense_intorfloat_elements_attribute // | dense_resource_elements_attribute
+
+  | dense_string_elements_attribute
+  | dictionary_attribute
+  | float_attribute
+  | integer_attribute // | integer_set_attribute
+
+  | opaque_attribute
+  | sparse_elements_attribute
+  | string_attribute
+  | symbol_ref_attribute
+  | type_attribute
+  | unit_attribute
+  | strided_layout_attribute
+}
 // affine_map_attribute = { "affine_map" ~ "<" ~ affine_map ~ ">" }
-array_attribute = { "[" ~ (attribute_value ~ ("," ~ attribute_value)*)? ~ "]" }
-dense_array_attribute = { "array" ~ "<" ~ (integer_type | float_type) ~ (":" ~ tensor_literal)? ~ ">" }
-tensor_literal = { integer_literal | float_literal | bool_literal | "[" ~ (tensor_literal ~ ("," ~ tensor_literal)*)? ~ "]" }
+array_attribute                     = { "[" ~ (attribute_value ~ ("," ~ attribute_value)*)? ~ "]" }
+dense_array_attribute               = { "array" ~ "<" ~ (integer_type | float_type) ~ (":" ~ tensor_literal)? ~ ">" }
+tensor_literal                      = { integer_literal | float_literal | bool_literal | "[" ~ (tensor_literal ~ ("," ~ tensor_literal)*)? ~ "]" }
 dense_intorfloat_elements_attribute = { "dense" ~ "<" ~ tensor_literal ~ ">" ~ ":" ~ (tensor_type | vector_type) }
 // dense_resource_elements_attribute = { "dense_resource" ~ "<" ~ resource_handle ~ ">" ~ ":" ~ shaped_type }
 dense_string_elements_attribute = { "dense" ~ "<" ~ attribute_value ~ ">" ~ ":" ~ (tensor_type | vector_type) }
-float_attribute = { (float_literal ~ (":" ~ float_type)?) | (hexadecimal_literal ~ ":" ~ float_type) }
-integer_attribute = { (integer_literal ~ (":" ~ (index_type | integer_type))?) | "true" | "false" }
+float_attribute                 = { (float_literal ~ (":" ~ float_type)?) | (hexadecimal_literal ~ ":" ~ float_type) }
+integer_attribute               = { (integer_literal ~ (":" ~ (index_type | integer_type))?) | "true" | "false" }
 // integer_set_attribute = { "affine_set" ~ "<" ~ integer_set ~ ">" }
-opaque_attribute = { dialect_namespace ~ "<" ~ attribute_value ~ ">" }
+opaque_attribute          = { dialect_namespace ~ "<" ~ attribute_value ~ ">" }
 sparse_elements_attribute = { "sparse" ~ "<" ~ attribute_value ~ "," ~ attribute_value ~ ">" ~ ":" ~ (tensor_type | vector_type) }
-string_attribute = { string_literal ~ (":" ~ type)? }
-symbol_ref_attribute = { symbol_ref_id ~ ("::" ~ symbol_ref_id)* }
-type_attribute = { type }
-unit_attribute = { "unit" }
-strided_layout_attribute = { "strided" ~ "<" ~ "[" ~ stride_list ~ "]" ~ ("," ~ "offset" ~ ":" ~ dimension)? ~ ">" }
-stride_list = { (dimension ~ ("," ~ dimension)*)? }
+string_attribute          = { string_literal ~ (":" ~ type)? }
+symbol_ref_attribute      = { symbol_ref_id ~ ("::" ~ symbol_ref_id)* }
+type_attribute            = { type }
+unit_attribute            = { "unit" }
+strided_layout_attribute  = { "strided" ~ "<" ~ "[" ~ stride_list ~ "]" ~ ("," ~ "offset" ~ ":" ~ dimension)? ~ ">" }
+stride_list               = { (dimension ~ ("," ~ dimension)*)? }
 
 /// https://mlir.llvm.org/docs/Dialects/Builtin/#location-attributes
-location = { location_attribute }
-location_attribute = { callsite_location | filelinecol_location | fused_location | name_location | opaque_location | unknown_location }
-callsite_location = { "callsite" ~ "(" ~ location ~ "at" ~ location ~ ")" }
-filelinecol_location = { string_literal ~ ":" ~ integer_literal ~ ":" ~ integer_literal }
-fused_location = { "fused" ~ fusion_metadata? ~ "[" ~ location ~ (location ~ ",")* ~ "]" }
-fusion_metadata = { "<" ~ attribute_value ~ ">" }
-name_location = { string_literal ~ ("(" ~ location ~ ")")? }
-opaque_location = { "opaque" ~ "<" ~ location ~ ">" }
-unknown_location = { "?" }
+location             =  { location_attribute }
+location_attribute   = _{ callsite_location | filelinecol_location | fused_location | name_location | opaque_location | unknown_location }
+callsite_location    =  { "callsite" ~ "(" ~ location ~ "at" ~ location ~ ")" }
+filelinecol_location =  { string_literal ~ ":" ~ integer_literal ~ ":" ~ integer_literal }
+fused_location       =  { "fused" ~ fusion_metadata? ~ "[" ~ location ~ (location ~ ",")* ~ "]" }
+fusion_metadata      =  { "<" ~ attribute_value ~ ">" }
+name_location        =  { string_literal ~ ("(" ~ location ~ ")")? }
+opaque_location      =  { "opaque" ~ "<" ~ location ~ ">" }
+unknown_location     =  { "?" }
 
 /// https://mlir.llvm.org/docs/Dialects/Builtin/#types
-builtin_type = { complex_type
-               | float_type
-               | index_type
-               | integer_type
-               | memref_type
-               | none_type
-               | tensor_type
-               | opaque_type
-               | tuple_type
-               | unranked_memref_type
-               | unranked_tensor_type
-               | vector_type
-               }
-complex_type = { "complex" ~ "<" ~ type ~ ">" }
-float_type = { "f16" | "bf16" | "f32" | "f64" | "f80" | "f128" }
-index_type = { "index" }
-none_type = { "none" }
-signed_integer_type = { "si" ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
+builtin_type          = {
+    complex_type
+  | float_type
+  | index_type
+  | integer_type
+  | memref_type
+  | none_type
+  | tensor_type
+  | opaque_type
+  | tuple_type
+  | unranked_memref_type
+  | unranked_tensor_type
+  | vector_type
+}
+complex_type          = { "complex" ~ "<" ~ type ~ ">" }
+float_type            = { "f16" | "bf16" | "f32" | "f64" | "f80" | "f128" }
+index_type            = { "index" }
+none_type             = { "none" }
+signed_integer_type   = { "si" ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 unsigned_integer_type = { "ui" ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
 signless_integer_type = { "i" ~ ASCII_NONZERO_DIGIT ~ ASCII_DIGIT* }
-integer_type = { signed_integer_type | unsigned_integer_type | signless_integer_type }
-memref_type = { "memref" ~ "<" ~ dimension_list ~ type ~ ("," ~ layout_specification)? ~ ("," ~ memory_space)? ~ ">" }
-layout_specification = { attribute_value }
-memory_space = { attribute_value }
-opaque_type = { "opaque" ~ "<" ~ type ~ ">" }
-tensor_type = { "tensor" ~ "<" ~ dimension_list ~ type ~ ("," ~ encoding)? ~ ">" }
-dimension_list = { (dimension ~ ("x"))* }
-dimension = { "?" | decimal_literal }
-encoding = { attribute_value }
-tuple_type = { "tuple" ~ "<" ~ (type ~ ("," ~ type)*)? ~ ">" }
-unranked_memref_type = { "memref" ~ "<" ~ "*" ~ "x" ~ type ~ ("," ~ memory_space)? ~ ">" }
-unranked_tensor_type = { "tensor" ~ "<" ~ "*" ~ "x" ~ type ~ ">" }
-vector_type = { "vector" ~ "<" ~ vector_dim_list ~ vector_element_type ~ ">" }
-vector_element_type = { float_type | integer_type | index_type }
-vector_dim_list = { static_dim ~ ("x" ~ static_dim)* }
-static_dim = { (decimal_literal | "[" ~ decimal_literal ~ "]") }
+integer_type          = { signed_integer_type | unsigned_integer_type | signless_integer_type }
+memref_type           = { "memref" ~ "<" ~ dimension_list ~ type ~ ("," ~ layout_specification)? ~ ("," ~ memory_space)? ~ ">" }
+layout_specification  = { attribute_value }
+memory_space          = { attribute_value }
+opaque_type           = { "opaque" ~ "<" ~ type ~ ">" }
+tensor_type           = { "tensor" ~ "<" ~ dimension_list ~ type ~ ("," ~ encoding)? ~ ">" }
+dimension_list        = { (dimension ~ ("x"))* }
+dimension             = { "?" | decimal_literal }
+encoding              = { attribute_value }
+tuple_type            = { "tuple" ~ "<" ~ (type ~ ("," ~ type)*)? ~ ">" }
+unranked_memref_type  = { "memref" ~ "<" ~ "*" ~ "x" ~ type ~ ("," ~ memory_space)? ~ ">" }
+unranked_tensor_type  = { "tensor" ~ "<" ~ "*" ~ "x" ~ type ~ ">" }
+vector_type           = { "vector" ~ "<" ~ vector_dim_list ~ vector_element_type ~ ">" }
+vector_element_type   = { float_type | integer_type | index_type }
+vector_dim_list       = { static_dim ~ ("x" ~ static_dim)* }
+static_dim            = { (decimal_literal | "[" ~ decimal_literal ~ "]") }

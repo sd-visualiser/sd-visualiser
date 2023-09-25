@@ -1,0 +1,244 @@
+---
+source: sd-core/src/language/mlir.rs
+expression: syntax_tree
+---
+Region {
+    entry_block: None,
+    blocks: [
+        Block {
+            label: BlockLabel {
+                id: "^bb0",
+                args: [
+                    TypedArg {
+                        id: "%arg0",
+                        type: "i64",
+                    },
+                    TypedArg {
+                        id: "%arg1",
+                        type: "i1",
+                    },
+                ],
+            },
+            operations: [
+                Operation {
+                    result: [],
+                    operation: GenericOperation {
+                        op: "\"cf.cond_br\"",
+                        operands: [
+                            Value {
+                                id: "%arg1",
+                                index: None,
+                            },
+                        ],
+                        successors: [
+                            Successor(
+                                "^bb1",
+                            ),
+                            Successor(
+                                "^bb2",
+                            ),
+                        ],
+                        properties: [
+                            Attribute(
+                                "operand_segment_sizes",
+                                "array<i32: [1, 0, 0]>",
+                            ),
+                        ],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i1) -> ()",
+                    },
+                    location: None,
+                },
+            ],
+        },
+        Block {
+            label: BlockLabel {
+                id: "^bb1",
+                args: [],
+            },
+            operations: [
+                Operation {
+                    result: [],
+                    operation: GenericOperation {
+                        op: "\"cf.br\"",
+                        operands: [
+                            Value {
+                                id: "%arg0",
+                                index: None,
+                            },
+                        ],
+                        successors: [
+                            Successor(
+                                "^bb3",
+                            ),
+                        ],
+                        properties: [],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i64) -> ()",
+                    },
+                    location: None,
+                },
+            ],
+        },
+        Block {
+            label: BlockLabel {
+                id: "^bb2",
+                args: [],
+            },
+            operations: [
+                Operation {
+                    result: [
+                        OpResult {
+                            id: "%0",
+                            index: None,
+                        },
+                    ],
+                    operation: GenericOperation {
+                        op: "\"arith.addi\"",
+                        operands: [
+                            Value {
+                                id: "%arg0",
+                                index: None,
+                            },
+                            Value {
+                                id: "%arg0",
+                                index: None,
+                            },
+                        ],
+                        successors: [],
+                        properties: [],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i64, i64) -> i64",
+                    },
+                    location: None,
+                },
+                Operation {
+                    result: [],
+                    operation: GenericOperation {
+                        op: "\"cf.br\"",
+                        operands: [
+                            Value {
+                                id: "%0",
+                                index: None,
+                            },
+                        ],
+                        successors: [
+                            Successor(
+                                "^bb3",
+                            ),
+                        ],
+                        properties: [],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i64) -> ()",
+                    },
+                    location: None,
+                },
+            ],
+        },
+        Block {
+            label: BlockLabel {
+                id: "^bb3",
+                args: [
+                    TypedArg {
+                        id: "%1",
+                        type: "i64",
+                    },
+                ],
+            },
+            operations: [
+                Operation {
+                    result: [],
+                    operation: GenericOperation {
+                        op: "\"cf.br\"",
+                        operands: [
+                            Value {
+                                id: "%1",
+                                index: None,
+                            },
+                            Value {
+                                id: "%arg0",
+                                index: None,
+                            },
+                        ],
+                        successors: [
+                            Successor(
+                                "^bb4",
+                            ),
+                        ],
+                        properties: [],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i64, i64) -> ()",
+                    },
+                    location: None,
+                },
+            ],
+        },
+        Block {
+            label: BlockLabel {
+                id: "^bb4",
+                args: [
+                    TypedArg {
+                        id: "%2",
+                        type: "i64",
+                    },
+                    TypedArg {
+                        id: "%3",
+                        type: "i64",
+                    },
+                ],
+            },
+            operations: [
+                Operation {
+                    result: [
+                        OpResult {
+                            id: "%4",
+                            index: None,
+                        },
+                    ],
+                    operation: GenericOperation {
+                        op: "\"arith.addi\"",
+                        operands: [
+                            Value {
+                                id: "%2",
+                                index: None,
+                            },
+                            Value {
+                                id: "%3",
+                                index: None,
+                            },
+                        ],
+                        successors: [],
+                        properties: [],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i64, i64) -> i64",
+                    },
+                    location: None,
+                },
+                Operation {
+                    result: [],
+                    operation: GenericOperation {
+                        op: "\"func.return\"",
+                        operands: [
+                            Value {
+                                id: "%4",
+                                index: None,
+                            },
+                        ],
+                        successors: [],
+                        properties: [],
+                        regions: [],
+                        attributes: [],
+                        function_type: "(i64) -> ()",
+                    },
+                    location: None,
+                },
+            ],
+        },
+    ],
+}

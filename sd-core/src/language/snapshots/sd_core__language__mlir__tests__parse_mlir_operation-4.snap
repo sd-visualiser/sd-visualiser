@@ -1,0 +1,35 @@
+---
+source: sd-core/src/language/mlir.rs
+expression: syntax_tree
+---
+Operation {
+    result: [
+        OpResult {
+            id: "%foo",
+            index: None,
+        },
+        OpResult {
+            id: "%bar",
+            index: None,
+        },
+    ],
+    operation: GenericOperation {
+        op: "\"foo_div\"",
+        operands: [],
+        successors: [],
+        properties: [
+            Attribute(
+                "some_attr",
+                "\"value\"",
+            ),
+            Attribute(
+                "other_attr",
+                "42 : i64",
+            ),
+        ],
+        regions: [],
+        attributes: [],
+        function_type: "() -> (f32, i32)",
+    },
+    location: None,
+}

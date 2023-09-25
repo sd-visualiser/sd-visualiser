@@ -1,0 +1,51 @@
+---
+source: sd-core/src/language/mlir.rs
+expression: syntax_tree
+---
+Block {
+    label: BlockLabel {
+        id: "^bb0",
+        args: [
+            TypedArg {
+                id: "%arg0",
+                type: "i64",
+            },
+            TypedArg {
+                id: "%arg1",
+                type: "i1",
+            },
+        ],
+    },
+    operations: [
+        Operation {
+            result: [],
+            operation: GenericOperation {
+                op: "\"cf.cond_br\"",
+                operands: [
+                    Value {
+                        id: "%arg1",
+                        index: None,
+                    },
+                ],
+                successors: [
+                    Successor(
+                        "^bb1",
+                    ),
+                    Successor(
+                        "^bb2",
+                    ),
+                ],
+                properties: [
+                    Attribute(
+                        "operand_segment_sizes",
+                        "array<i32: [1, 0, 0]>",
+                    ),
+                ],
+                regions: [],
+                attributes: [],
+                function_type: "(i1) -> ()",
+            },
+            location: None,
+        },
+    ],
+}

@@ -8,6 +8,7 @@ use derivative::Derivative;
 use crate::{common::Matchable, prettyprinter::PrettyPrint};
 
 pub mod chil;
+pub mod mlir;
 pub mod spartan;
 
 pub(crate) fn span_into_str(span: pest::Span) -> &str {

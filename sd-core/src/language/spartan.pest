@@ -17,4 +17,5 @@ number = @{ ASCII_DIGIT+ }
 variable = @{ !(keyword | op) ~ "_"* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 COMMENT = _{ "#" ~ (!"\n" ~ ANY)* }
-WHITESPACE = _{ " " | "\t" | "\n" }
+newline = _{ "\n" | "\r\n" }
+WHITESPACE = _{ " " | "\t" | newline }

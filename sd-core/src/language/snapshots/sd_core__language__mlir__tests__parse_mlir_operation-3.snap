@@ -1,0 +1,40 @@
+---
+source: sd-core/src/language/mlir.rs
+expression: syntax_tree
+---
+Operation {
+    result: [
+        OpResult {
+            id: "%2",
+            index: None,
+        },
+    ],
+    operation: GenericOperation {
+        op: "\"tf.scramble\"",
+        operands: [
+            Value {
+                id: "%result",
+                index: Some(
+                    ValueIndex(
+                        0,
+                    ),
+                ),
+            },
+            Value {
+                id: "%bar",
+                index: None,
+            },
+        ],
+        successors: [],
+        properties: [
+            Attribute(
+                "fruit",
+                "\"banana\"",
+            ),
+        ],
+        regions: [],
+        attributes: [],
+        function_type: "(f32, i32) -> f32",
+    },
+    location: None,
+}

@@ -1,0 +1,66 @@
+---
+source: sd-core/src/language/mlir.rs
+expression: syntax_tree
+---
+Block {
+    label: BlockLabel {
+        id: "^bb4",
+        args: [
+            TypedArg {
+                id: "%2",
+                type: "i64",
+            },
+            TypedArg {
+                id: "%3",
+                type: "i64",
+            },
+        ],
+    },
+    operations: [
+        Operation {
+            result: [
+                OpResult {
+                    id: "%4",
+                    index: None,
+                },
+            ],
+            operation: GenericOperation {
+                op: "\"arith.addi\"",
+                operands: [
+                    Value {
+                        id: "%2",
+                        index: None,
+                    },
+                    Value {
+                        id: "%3",
+                        index: None,
+                    },
+                ],
+                successors: [],
+                properties: [],
+                regions: [],
+                attributes: [],
+                function_type: "(i64, i64) -> i64",
+            },
+            location: None,
+        },
+        Operation {
+            result: [],
+            operation: GenericOperation {
+                op: "\"func.return\"",
+                operands: [
+                    Value {
+                        id: "%4",
+                        index: None,
+                    },
+                ],
+                successors: [],
+                properties: [],
+                regions: [],
+                attributes: [],
+                function_type: "(i64) -> ()",
+            },
+            location: None,
+        },
+    ],
+}
