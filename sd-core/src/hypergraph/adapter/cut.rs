@@ -363,19 +363,27 @@ impl<G: Graph> NodeLike for CutOperation<G> {
                 thunk: op.backlink()?,
                 cut_edges: cut_edges.clone(),
             }),
-            Self::Store { edge, cut_edges } => edge.source().and_then(|node| {
-                Some(CutThunk {
-                    thunk: node.backlink()?,
+            Self::Store { edge, cut_edges } => edge.source().and_then(|node| match node {
+                Node::Operation(op) => Some(CutThunk {
+                    thunk: op.backlink()?,
                     cut_edges: cut_edges.clone(),
-                })
+                }),
+                Node::Thunk(thunk) => Some(CutThunk {
+                    thunk,
+                    cut_edges: cut_edges.clone(),
+                }),
             }),
             Self::Reuse {
                 target, cut_edges, ..
-            } => target.as_ref().and_then(|node| {
-                Some(CutThunk {
-                    thunk: node.backlink()?,
+            } => target.as_ref().and_then(|node| match node {
+                Node::Operation(op) => Some(CutThunk {
+                    thunk: op.backlink()?,
                     cut_edges: cut_edges.clone(),
-                })
+                }),
+                Node::Thunk(thunk) => Some(CutThunk {
+                    thunk: thunk.clone(),
+                    cut_edges: cut_edges.clone(),
+                }),
             }),
         }
     }
