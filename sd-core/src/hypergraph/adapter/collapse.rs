@@ -9,7 +9,8 @@ use crate::{
     common::Matchable,
     hypergraph::{
         generic::{
-            Ctx, Edge, EdgeWeight, Key, Node, Operation, OperationWeight, Thunk, ThunkWeight,
+            Ctx, Edge, EdgeWeight, Endpoint, Key, Node, Operation, OperationWeight, Thunk,
+            ThunkWeight,
         },
         mapping::ThunkMap,
         subgraph::ExtensibleEdge,
@@ -130,25 +131,40 @@ impl<G: Graph> CollapseThunk<G> {
 
 ////////////////////////////////////////////////////////////////
 
+/// Finds the topmost ancestor of given thunk that is not expanded.
+fn find_ancestor<T: Ctx>(thunk: T::Thunk, expanded: &ThunkMap<T, bool>) -> Option<T::Thunk> {
+    let x = thunk
+        .backlink()
+        .and_then(|b| find_ancestor::<T>(b, expanded));
+    x.or_else(|| (!expanded[&thunk.key()]).then_some(thunk))
+}
+
 pub type CollapseNode<G> = Node<CollapseGraph<G>>;
 
 impl<G: Graph> CollapseNode<G> {
     fn new(node: Node<G::Ctx>, expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>) -> Self {
-        match node {
+        match &node {
             Node::Operation(op) => Node::Operation(CollapseOperation {
-                node: Node::Operation(op),
+                node: op
+                    .backlink()
+                    .and_then(|b| find_ancestor::<G::Ctx>(b, &expanded))
+                    .map_or(node, Node::Thunk),
                 expanded,
             }),
-            Node::Thunk(thunk) => {
-                if expanded[&thunk.key()] {
-                    Node::Thunk(CollapseThunk { thunk, expanded })
-                } else {
+            Node::Thunk(thunk) => find_ancestor::<G::Ctx>(thunk.clone(), &expanded).map_or_else(
+                || {
+                    Node::Thunk(CollapseThunk {
+                        thunk: thunk.clone(),
+                        expanded: expanded.clone(),
+                    })
+                },
+                |thunk| {
                     Node::Operation(CollapseOperation {
                         node: Node::Thunk(thunk),
-                        expanded,
+                        expanded: expanded.clone(),
                     })
-                }
-            }
+                },
+            ),
         }
     }
 
@@ -156,6 +172,38 @@ impl<G: Graph> CollapseNode<G> {
         match self {
             Node::Operation(op) => op.into_inner(),
             Node::Thunk(thunk) => Node::Thunk(thunk.into_inner()),
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////
+
+pub type CollapseEndpoint<G> = Endpoint<CollapseGraph<G>>;
+
+impl<G: Graph> CollapseEndpoint<G> {
+    pub fn new(
+        endpoint: Endpoint<G::Ctx>,
+        expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
+    ) -> Self {
+        match endpoint {
+            Endpoint::Node(node) => Endpoint::Node(Node::new(node, expanded)),
+            Endpoint::Boundary(graph) => match graph {
+                Some(thunk) => find_ancestor::<G::Ctx>(thunk.clone(), &expanded).map_or_else(
+                    || {
+                        Endpoint::Boundary(Some(CollapseThunk {
+                            thunk,
+                            expanded: expanded.clone(),
+                        }))
+                    },
+                    |thunk| {
+                        Endpoint::Node(Node::Operation(CollapseOperation {
+                            node: Node::Thunk(thunk),
+                            expanded: expanded.clone(),
+                        }))
+                    },
+                ),
+                None => Endpoint::Boundary(None),
+            },
         }
     }
 }
@@ -205,22 +253,16 @@ impl<G: Graph> Graph for CollapseGraph<G> {
 impl<G: Graph> EdgeLike for CollapseEdge<G> {
     type Ctx = CollapseGraph<G>;
 
-    fn source(&self) -> Option<Node<Self::Ctx>> {
-        self.edge
-            .source()
-            .map(|node| Node::new(node, self.expanded.clone()))
+    fn source(&self) -> Endpoint<Self::Ctx> {
+        CollapseEndpoint::new(self.edge.source(), self.expanded.clone())
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_> {
-        Box::new(self.edge.targets().map(|target| {
-            target.map(|mut node| {
-                // If the node is transitively contained in a collapsed thunk, replace it with the thunk.
-                if let Some(thunk) = find_ancestor(&node, |thunk| !self.expanded[&thunk.key()]) {
-                    node = Node::Thunk(thunk);
-                }
-                Node::new(node, self.expanded.clone())
-            })
-        }))
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<Self::Ctx>> + '_> {
+        Box::new(
+            self.edge
+                .targets()
+                .map(|endpoint| CollapseEndpoint::new(endpoint, self.expanded.clone())),
+        )
     }
 }
 
@@ -462,16 +504,6 @@ impl<G: Graph> WithWeight for CollapseThunk<G> {
 
     fn weight(&self) -> Self::Weight {
         self.thunk.weight()
-    }
-}
-
-/// Finds the ancestor of given node that satisfies the predicate.
-fn find_ancestor<T: Ctx>(node: &Node<T>, f: impl Fn(&T::Thunk) -> bool) -> Option<T::Thunk> {
-    let thunk = node.backlink()?;
-    if f(&thunk) {
-        Some(thunk)
-    } else {
-        find_ancestor::<T>(&Node::Thunk(thunk), f)
     }
 }
 

@@ -21,8 +21,8 @@ mod weakbyaddress;
 use self::{
     generic::Ctx,
     internal::{
-        InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal,
-        WeakNodeInternal,
+        EndPointInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
+        ThunkInternal,
     },
     traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     weakbyaddress::WeakByAddress,
@@ -126,16 +126,22 @@ impl<W: Weight> Debug for Thunk<W> {
 }
 
 pub type Node<W> = generic::Node<Hypergraph<W>>;
+pub type EndPoint<W> = generic::Endpoint<Hypergraph<W>>;
 
-impl<W: Weight> WeakNodeInternal<W> {
-    pub(super) fn unwrap_node(&self) -> Node<W> {
+impl<W: Weight> EndPointInternal<W> {
+    pub(super) fn unwrap_endpoint(&self) -> EndPoint<W> {
         match self {
-            WeakNodeInternal::Operation(op_weak) => {
-                Node::Operation(Operation(ByThinAddress(op_weak.upgrade().unwrap())))
-            }
-            WeakNodeInternal::Thunk(thunk_weak) => {
-                Node::Thunk(Thunk(ByThinAddress(thunk_weak.upgrade().unwrap())))
-            }
+            EndPointInternal::Operation(op_weak) => EndPoint::Node(Node::Operation(Operation(
+                ByThinAddress(op_weak.upgrade().unwrap()),
+            ))),
+            EndPointInternal::Thunk(thunk_weak) => EndPoint::Node(Node::Thunk(Thunk(
+                ByThinAddress(thunk_weak.upgrade().unwrap()),
+            ))),
+            EndPointInternal::GraphBoundary(boundary_weak) => EndPoint::Boundary(
+                boundary_weak
+                    .as_ref()
+                    .map(|thunk_weak| Thunk(ByThinAddress(thunk_weak.upgrade().unwrap()))),
+            ),
         }
     }
 }
@@ -159,11 +165,11 @@ impl<W: Weight> WithWeight for Edge<W> {
 impl<W: Weight> EdgeLike for Edge<W> {
     type Ctx = Hypergraph<W>;
 
-    fn source(&self) -> Option<Node<W>> {
-        self.0.node.as_ref().map(WeakNodeInternal::unwrap_node)
+    fn source(&self) -> EndPoint<W> {
+        self.0.endpoint.unwrap_endpoint()
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<W>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = EndPoint<W>> + '_> {
         Box::new(
             self.0
                 .links
@@ -174,7 +180,7 @@ impl<W: Weight> EdgeLike for Edge<W> {
                     let in_port = in_port
                         .upgrade()
                         .expect("got dangling reference to in_port");
-                    in_port.node.as_ref().map(WeakNodeInternal::unwrap_node)
+                    in_port.endpoint.unwrap_endpoint()
                 })
                 .collect::<Vec<_>>()
                 .into_iter(),

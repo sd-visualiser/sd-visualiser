@@ -10,7 +10,7 @@ use super::{MonoidalTerm, Slice};
 use crate::{
     common::{Direction, InOut, InOutIter, Link},
     hypergraph::{
-        generic::{Ctx, Edge, Node},
+        generic::{Ctx, Edge, Endpoint, Node},
         traits::{Graph, NodeLike},
         utils::{normalised_targets, number_of_normalised_targets},
     },
@@ -266,7 +266,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
                 problem.add_objective(top - bottom);
 
                 for target in targets {
-                    if let Some(target_node) = target {
+                    if let Endpoint::Node(target_node) = target {
                         let (j, _, var_target) = nodes.get_full(&target_node).unwrap();
                         problem.add_constraint(Expression::leq(bottom.into(), var_target));
                         problem.add_constraint(Expression::geq(top.into(), *var_target));
@@ -293,7 +293,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
             problem.add_constraint(Expression::leq(bottom + offset, max));
             problem.add_objective(max - bottom);
             for target in targets {
-                if let Some(target_node) = target {
+                if let Endpoint::Node(target_node) = target {
                     let var_target = nodes.get(&target_node).unwrap();
                     problem.add_constraint(Expression::leq(bottom.into(), *var_target));
                     problem.add_constraint((*var_target + offset).leq(max));

@@ -7,10 +7,14 @@ use itertools::Itertools;
 use thiserror::Error;
 
 use super::{
-    internal::{InPortInternal, NodeInternal, OperationInternal, OutPortInternal, ThunkInternal},
+    internal::{
+        EndPointInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
+        ThunkInternal,
+    },
     traits::{EdgeLike, Graph, NodeLike},
     Hypergraph, Node, Operation, Thunk, Weight,
 };
+use crate::hypergraph::EndPoint;
 
 pub mod fragment;
 pub use self::fragment::Fragment;
@@ -177,11 +181,20 @@ impl<W: Weight> HypergraphBuilder<W> {
     pub fn new(input_weights: Vec<W::EdgeWeight>, number_of_outputs: usize) -> Self {
         let graph_inputs = input_weights
             .into_iter()
-            .map(|weight| ByThinAddress(Arc::new(OutPortInternal::new(None, weight))))
+            .map(|weight| {
+                ByThinAddress(Arc::new(OutPortInternal::new(
+                    EndPointInternal::GraphBoundary(None),
+                    weight,
+                )))
+            })
             .collect();
 
         let graph_outputs = (0..number_of_outputs)
-            .map(|_| ByThinAddress(Arc::new(InPortInternal::new(None))))
+            .map(|_| {
+                ByThinAddress(Arc::new(InPortInternal::new(
+                    EndPointInternal::GraphBoundary(None),
+                )))
+            })
             .collect();
 
         HypergraphBuilder(Hypergraph {
@@ -264,12 +277,12 @@ impl<W: Weight> HypergraphBuilder<W> {
                 .chain(thunk.graph_outputs())
             {
                 match edge.source() {
-                    Some(node) => {
+                    EndPoint::Node(node) => {
                         if !built_nodes.contains(&node) {
                             inputs.insert(edge.0);
                         }
                     }
-                    None => {
+                    EndPoint::Boundary(_) => {
                         if !thunk.bound_graph_inputs().contains(&edge) {
                             inputs.insert(edge.0);
                         }
@@ -353,14 +366,14 @@ impl<W: Weight> HypergraphBuilder<W> {
 
         for out_port in self.graph_inputs() {
             // check associated with hypergraph
-            assert!(&out_port.0.node.is_none());
+            assert!(&out_port.0.endpoint.is_boundary());
             // check inputs initialised
             check_in_ports_initialized(&out_port).map_err(HypergraphError::BuildError)?;
         }
 
         for in_port in self.graph_outputs() {
             // check associated with hypergraph
-            assert!(&in_port.0.node.is_none());
+            assert!(&in_port.0.endpoint.is_boundary());
             // check output initialised
             check_out_port_initialized(&in_port).map_err(HypergraphError::BuildError)?;
         }

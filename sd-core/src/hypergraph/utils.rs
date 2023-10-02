@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use super::{
-    generic::{Ctx, Node},
+    generic::{Ctx, Endpoint, Node},
     traits::{EdgeLike, NodeLike},
 };
 
@@ -16,17 +16,24 @@ pub fn find_ancestor<T: Ctx>(containing: &Option<T::Thunk>, mut node: Node<T>) -
 pub fn normalised_targets<T: Ctx>(
     edge: &T::Edge,
     containing: &Option<T::Thunk>,
-) -> Vec<Option<Node<T>>> {
+) -> Vec<Endpoint<T>> {
     let targets = edge
         .targets()
-        .map(|x| x.and_then(|y| find_ancestor::<T>(containing, y)))
+        .filter_map(|x| match x {
+            Endpoint::Node(node) => find_ancestor(containing, node).map(Endpoint::Node),
+            Endpoint::Boundary(graph) if &graph == containing => Some(Endpoint::Boundary(graph)),
+            Endpoint::Boundary(Some(thunk)) => {
+                find_ancestor(containing, Node::Thunk(thunk)).map(Endpoint::Node)
+            }
+            Endpoint::Boundary(_) => None,
+        })
         .collect::<Vec<_>>();
 
     let mut non_dupe_outputs = HashSet::new();
     let mut outputs = Vec::new();
     for x in targets {
         match x {
-            Some(Node::Thunk(t)) => {
+            Endpoint::Node(Node::Thunk(t)) => {
                 non_dupe_outputs.insert(t);
             }
             _ => {
@@ -34,22 +41,36 @@ pub fn normalised_targets<T: Ctx>(
             }
         }
     }
-    outputs.extend(non_dupe_outputs.into_iter().map(|x| Some(Node::Thunk(x))));
+    outputs.extend(
+        non_dupe_outputs
+            .into_iter()
+            .map(|x| Endpoint::Node(Node::Thunk(x))),
+    );
     outputs
 }
 
 pub fn number_of_normalised_targets<T: Ctx>(edge: &T::Edge) -> usize {
-    let containing = edge.source().and_then(|x| x.backlink());
+    let containing = match edge.source() {
+        Endpoint::Node(node) => node.backlink(),
+        Endpoint::Boundary(graph) => graph,
+    };
     let targets = edge
         .targets()
-        .map(|x| x.and_then(|y| find_ancestor::<T>(&containing, y)))
+        .filter_map(|x| match x {
+            Endpoint::Node(node) => find_ancestor(&containing, node).map(Endpoint::Node),
+            Endpoint::Boundary(graph) if graph == containing => Some(Endpoint::Boundary(graph)),
+            Endpoint::Boundary(Some(thunk)) => {
+                find_ancestor(&containing, Node::Thunk(thunk)).map(Endpoint::Node)
+            }
+            Endpoint::Boundary(_) => None,
+        })
         .collect::<Vec<_>>();
 
     let mut non_dupe_outputs = HashSet::new();
     let mut other_outputs = 0;
     for x in targets {
         match x {
-            Some(Node::Thunk(t)) => {
+            Endpoint::Node(Node::Thunk(t)) => {
                 non_dupe_outputs.insert(t);
             }
             _ => {

@@ -90,3 +90,16 @@ impl<T: Ctx> NodeLike for Node<T> {
         }
     }
 }
+
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    PartialEq(bound = ""),
+    Eq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+pub enum Endpoint<T: Ctx> {
+    Node(Node<T>),
+    Boundary(Option<T::Thunk>),
+}

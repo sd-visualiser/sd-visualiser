@@ -4,14 +4,27 @@ use indexmap::IndexSet;
 use itertools::Itertools;
 
 use super::{
-    generic::{Ctx, Node},
+    generic::{Ctx, Endpoint, Node},
     traits::{EdgeLike, NodeLike},
 };
+
+impl<T: Ctx> Endpoint<T> {
+    pub fn into_node(self) -> Option<Node<T>> {
+        match self {
+            Endpoint::Node(n) => Some(n),
+            Endpoint::Boundary(b) => b.map(|thunk| Node::Thunk(thunk)),
+        }
+    }
+}
 
 impl<T: Ctx> Node<T> {
     pub fn successors(&self) -> impl Iterator<Item = Self> + '_ {
         self.outputs()
-            .flat_map(|edge| edge.targets().flatten().collect::<Vec<_>>())
+            .flat_map(|edge| {
+                edge.targets()
+                    .filter_map(Endpoint::into_node)
+                    .collect::<Vec<_>>()
+            })
             .unique()
     }
 
@@ -32,7 +45,9 @@ impl<T: Ctx> Node<T> {
     }
 
     pub fn predecessors(&self) -> impl Iterator<Item = Self> + '_ {
-        self.inputs().filter_map(|edge| edge.source()).unique()
+        self.inputs()
+            .filter_map(|edge| edge.source().into_node())
+            .unique()
     }
 
     #[inline]

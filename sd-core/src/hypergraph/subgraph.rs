@@ -4,7 +4,7 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::{
-    generic::{Edge, EdgeWeight, Key, Node, OperationWeight, Thunk, ThunkWeight},
+    generic::{Edge, EdgeWeight, Endpoint, Key, Node, OperationWeight, Thunk, ThunkWeight},
     traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     Weight,
 };
@@ -69,6 +69,20 @@ impl<T: Ctx> SubNode<T> {
         match self {
             Node::Operation(SubOperation { op, .. }) => Node::Operation(op),
             Node::Thunk(SubThunk { thunk, .. }) => Node::Thunk(thunk),
+        }
+    }
+}
+
+pub type SubEndpoint<T> = Endpoint<Subgraph<T>>;
+
+impl<T: Ctx> SubEndpoint<T> {
+    fn new(endpoint: Endpoint<T>, selection: Arc<SelectionMap<T>>) -> Self {
+        match endpoint {
+            Endpoint::Node(node) if selection[&node] => Endpoint::Node(Node::new(node, selection)),
+            Endpoint::Boundary(Some(thunk)) if selection[&Node::Thunk(thunk.clone())] => {
+                Endpoint::Boundary(Some(SubThunk { thunk, selection }))
+            }
+            _ => Endpoint::Boundary(None),
         }
     }
 }
@@ -157,8 +171,8 @@ impl<T: Ctx> Graph for Subgraph<T> {
             for edge in node.inputs() {
                 if edge
                     .source()
-                    .as_ref()
-                    .map_or(true, |node| !self.selection[node])
+                    .into_node()
+                    .map_or(true, |node| !self.selection[&node])
                 {
                     inputs.insert(edge);
                 }
@@ -179,7 +193,10 @@ impl<T: Ctx> Graph for Subgraph<T> {
         for node in self.selection.roots() {
             for edge in node.outputs() {
                 for target in edge.targets() {
-                    if target.as_ref().map_or(true, |node| !self.selection[node]) {
+                    if target
+                        .into_node()
+                        .map_or(true, |node| !self.selection[&node])
+                    {
                         outputs.push(edge.clone());
                     }
                 }
@@ -316,19 +333,16 @@ impl<T: Ctx> NodeLike for SubThunk<T> {
 impl<T: Ctx> EdgeLike for SubEdge<T> {
     type Ctx = Subgraph<T>;
 
-    fn source(&self) -> Option<Node<Self::Ctx>> {
-        self.edge
-            .source()
-            .filter(|node| self.selection[node])
-            .map(|node| Node::new(node, self.selection.clone()))
+    fn source(&self) -> Endpoint<Self::Ctx> {
+        SubEndpoint::new(self.edge.source(), self.selection.clone())
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_> {
-        Box::new(self.edge.targets().map(|target| {
-            target
-                .filter(|node| self.selection[node])
-                .map(|node| Node::new(node, self.selection.clone()))
-        }))
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<Self::Ctx>> + '_> {
+        Box::new(
+            self.edge
+                .targets()
+                .map(|target| SubEndpoint::new(target, self.selection.clone())),
+        )
     }
 }
 
@@ -464,6 +478,7 @@ impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
     fn extend_source(&self) -> Option<Node<Self::Ctx>> {
         self.edge
             .source()
+            .into_node()
             .filter(|node| !self.selection[node])
             .map(|node| Node::new(node, self.selection.clone()))
     }
@@ -472,7 +487,7 @@ impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
         Box::new(
             self.edge
                 .targets()
-                .flatten()
+                .filter_map(Endpoint::into_node)
                 .filter(|node| !self.selection[node])
                 .map(|node| Node::new(node, self.selection.clone())),
         )

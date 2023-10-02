@@ -10,7 +10,8 @@ use crate::{
     common::Matchable,
     hypergraph::{
         generic::{
-            Ctx, Edge, EdgeWeight, Key, Node, Operation, OperationWeight, Thunk, ThunkWeight,
+            Ctx, Edge, EdgeWeight, Endpoint, Key, Node, Operation, OperationWeight, Thunk,
+            ThunkWeight,
         },
         mapping::EdgeMap,
         subgraph::ExtensibleEdge,
@@ -69,7 +70,7 @@ pub enum CutEdge<G: Graph> {
     },
     Reuse {
         edge: Edge<G::Ctx>,
-        target: Option<Node<G::Ctx>>,
+        target: Endpoint<G::Ctx>,
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
 }
@@ -107,7 +108,7 @@ pub enum CutOperation<G: Graph> {
     },
     Reuse {
         edge: Edge<G::Ctx>,
-        target: Option<Node<G::Ctx>>,
+        target: Endpoint<G::Ctx>,
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
 }
@@ -169,7 +170,7 @@ impl<G: Graph> CutNode<G> {
 
     fn reuse(
         edge: Edge<G::Ctx>,
-        target: Option<Node<G::Ctx>>,
+        target: Endpoint<G::Ctx>,
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     ) -> Self {
         Node::Operation(CutOperation::Reuse {
@@ -183,6 +184,24 @@ impl<G: Graph> CutNode<G> {
         match self {
             Node::Operation(op) => op.into_inner().map_left(Node::Operation),
             Node::Thunk(thunk) => Either::Left(Node::Thunk(thunk.into_inner())),
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////
+
+pub type CutEndpoint<G> = Endpoint<CutGraph<G>>;
+
+impl<G: Graph> CutEndpoint<G> {
+    pub fn new(
+        endpoint: Endpoint<G::Ctx>,
+        cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
+    ) -> Self {
+        match endpoint {
+            Endpoint::Node(node) => Endpoint::Node(Node::new(node, cut_edges)),
+            Endpoint::Boundary(graph) => {
+                Endpoint::Boundary(graph.map(|thunk| CutThunk { thunk, cut_edges }))
+            }
         }
     }
 }
@@ -214,7 +233,7 @@ impl<G: Graph> Graph for CutGraph<G> {
             if self.cut_edges[&edge.key()] {
                 CutEdge::Reuse {
                     edge,
-                    target: None,
+                    target: Endpoint::Boundary(None),
                     cut_edges: self.cut_edges.clone(),
                 }
             } else {
@@ -230,7 +249,11 @@ impl<G: Graph> Graph for CutGraph<G> {
         let mut nodes: IndexSet<CutNode<G>> = IndexSet::default();
         for edge in self.graph.graph_outputs() {
             if self.cut_edges[&edge.key()] {
-                nodes.insert(Node::reuse(edge, None, self.cut_edges.clone()));
+                nodes.insert(Node::reuse(
+                    edge,
+                    Endpoint::Boundary(None),
+                    self.cut_edges.clone(),
+                ));
             }
         }
         for node in self.graph.nodes() {
@@ -244,7 +267,7 @@ impl<G: Graph> Graph for CutGraph<G> {
                 for edge in node.inputs().filter(|edge| self.cut_edges[&edge.key()]) {
                     nodes.insert(Node::reuse(
                         edge,
-                        Some(node.clone()),
+                        Endpoint::Node(node.clone()),
                         self.cut_edges.clone(),
                     ));
                 }
@@ -266,31 +289,29 @@ impl<G: Graph> Graph for CutGraph<G> {
 impl<G: Graph> EdgeLike for CutEdge<G> {
     type Ctx = CutGraph<G>;
 
-    fn source(&self) -> Option<Node<Self::Ctx>> {
+    fn source(&self) -> Endpoint<Self::Ctx> {
         match self {
-            Self::Inner { edge, cut_edges } => {
-                edge.source().map(|node| Node::new(node, cut_edges.clone()))
-            }
+            Self::Inner { edge, cut_edges } => CutEndpoint::new(edge.source(), cut_edges.clone()),
             Self::Reuse {
                 edge,
                 target,
                 cut_edges,
-            } => Some(Node::reuse(edge.clone(), target.clone(), cut_edges.clone())),
+            } => CutEndpoint::Node(Node::reuse(edge.clone(), target.clone(), cut_edges.clone())),
         }
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<Self::Ctx>> + '_> {
         match self {
             Self::Inner { edge, cut_edges } => {
                 if cut_edges[&edge.key()] {
-                    Box::new(std::iter::once(Some(Node::store(
+                    Box::new(std::iter::once(Endpoint::Node(Node::store(
                         edge.clone(),
                         cut_edges.clone(),
                     ))))
                 } else {
                     Box::new(
                         edge.targets()
-                            .map(|target| target.map(|node| Node::new(node, cut_edges.clone()))),
+                            .map(|target| CutEndpoint::new(target, cut_edges.clone())),
                     )
                 }
             }
@@ -301,11 +322,7 @@ impl<G: Graph> EdgeLike for CutEdge<G> {
             } => {
                 // Calculate how many times `target` is copied in `edge.targets()`.
                 let copies = edge.targets().filter(|t| t == target).count();
-                Box::new((0..copies).map(|_| {
-                    target
-                        .as_ref()
-                        .map(|node| Node::new(node.clone(), cut_edges.clone()))
-                }))
+                Box::new((0..copies).map(|_| CutEndpoint::new(target.clone(), cut_edges.clone())))
             }
         }
     }
@@ -320,7 +337,7 @@ impl<G: Graph> NodeLike for CutOperation<G> {
                 if cut_edges[&edge.key()] {
                     CutEdge::Reuse {
                         edge,
-                        target: Some(Node::Operation(op.clone())),
+                        target: Endpoint::Node(Node::Operation(op.clone())),
                         cut_edges: cut_edges.clone(),
                     }
                 } else {
@@ -363,28 +380,28 @@ impl<G: Graph> NodeLike for CutOperation<G> {
                 thunk: op.backlink()?,
                 cut_edges: cut_edges.clone(),
             }),
-            Self::Store { edge, cut_edges } => edge.source().and_then(|node| match node {
-                Node::Operation(op) => Some(CutThunk {
-                    thunk: op.backlink()?,
-                    cut_edges: cut_edges.clone(),
-                }),
-                Node::Thunk(thunk) => Some(CutThunk {
+            Self::Store { edge, cut_edges } => match edge.source() {
+                Endpoint::Node(node) => node.backlink().map(|thunk| CutThunk {
                     thunk,
                     cut_edges: cut_edges.clone(),
                 }),
-            }),
-            Self::Reuse {
-                target, cut_edges, ..
-            } => target.as_ref().and_then(|node| match node {
-                Node::Operation(op) => Some(CutThunk {
-                    thunk: op.backlink()?,
+                Endpoint::Boundary(graph) => graph.map(|thunk| CutThunk {
+                    thunk,
                     cut_edges: cut_edges.clone(),
                 }),
-                Node::Thunk(thunk) => Some(CutThunk {
+            },
+            Self::Reuse {
+                target, cut_edges, ..
+            } => match target {
+                Endpoint::Node(node) => node.backlink().map(|thunk| CutThunk {
+                    thunk,
+                    cut_edges: cut_edges.clone(),
+                }),
+                Endpoint::Boundary(graph) => graph.as_ref().map(|thunk| CutThunk {
                     thunk: thunk.clone(),
                     cut_edges: cut_edges.clone(),
                 }),
-            }),
+            },
         }
     }
 
@@ -432,7 +449,7 @@ impl<G: Graph> Graph for CutThunk<G> {
             if self.cut_edges[&edge.key()] {
                 CutEdge::Reuse {
                     edge,
-                    target: Some(Node::Thunk(self.thunk.clone())),
+                    target: Endpoint::Boundary(Some(self.thunk.clone())),
                     cut_edges: self.cut_edges.clone(),
                 }
             } else {
@@ -450,7 +467,7 @@ impl<G: Graph> Graph for CutThunk<G> {
             if self.cut_edges[&edge.key()] {
                 nodes.insert(Node::reuse(
                     edge,
-                    Some(Node::Thunk(self.thunk.clone())),
+                    Endpoint::Boundary(Some(self.thunk.clone())),
                     self.cut_edges.clone(),
                 ));
             }
@@ -466,7 +483,7 @@ impl<G: Graph> Graph for CutThunk<G> {
                 for edge in node.inputs().filter(|edge| self.cut_edges[&edge.key()]) {
                     nodes.insert(Node::reuse(
                         edge,
-                        Some(node.clone()),
+                        Endpoint::Node(node.clone()),
                         self.cut_edges.clone(),
                     ));
                 }

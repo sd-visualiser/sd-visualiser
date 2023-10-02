@@ -1,6 +1,6 @@
 use std::{fmt::Debug, hash::Hash};
 
-use super::generic::{Ctx, Edge, Node, Operation, Thunk};
+use super::generic::{Ctx, Edge, Endpoint, Node, Operation, Thunk};
 
 pub trait Keyable {
     type Key: Clone + Eq + Hash + Debug + Send + Sync;
@@ -29,8 +29,8 @@ pub trait NodeLike: Clone + Eq + Hash + Debug + Send + Sync {
 
 pub trait EdgeLike: Clone + Eq + Hash + Debug + Send + Sync {
     type Ctx: Ctx;
-    fn source(&self) -> Option<Node<Self::Ctx>>;
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<Self::Ctx>>> + '_>;
+    fn source(&self) -> Endpoint<Self::Ctx>;
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<Self::Ctx>> + '_>;
 }
 
 pub trait Graph: Clone + Debug + Send + Sync + Keyable {

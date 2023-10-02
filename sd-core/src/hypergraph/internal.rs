@@ -8,22 +8,29 @@ use super::{weakbyaddress::WeakByAddress, Weight};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
-pub(super) enum WeakNodeInternal<W: Weight> {
+pub(super) enum EndPointInternal<W: Weight> {
     Operation(Weak<OperationInternal<W>>),
     Thunk(Weak<ThunkInternal<W>>),
+    GraphBoundary(Option<Weak<ThunkInternal<W>>>),
+}
+
+impl<W: Weight> EndPointInternal<W> {
+    pub(super) fn is_boundary(&self) -> bool {
+        matches!(self, EndPointInternal::GraphBoundary(_))
+    }
 }
 
 #[derive(Derivative)]
 #[derivative(Debug(bound = ""))]
 pub(super) struct InPortInternal<W: Weight> {
-    pub(super) node: Option<WeakNodeInternal<W>>,
+    pub(super) endpoint: EndPointInternal<W>,
     pub(super) link: RwLock<Weak<OutPortInternal<W>>>,
 }
 
 impl<W: Weight> InPortInternal<W> {
-    pub(super) fn new(node: Option<WeakNodeInternal<W>>) -> Self {
+    pub(super) fn new(endpoint: EndPointInternal<W>) -> Self {
         Self {
-            node,
+            endpoint,
             link: RwLock::new(Weak::default()),
         }
     }
@@ -36,15 +43,15 @@ impl<W: Weight> InPortInternal<W> {
 #[derive(Derivative)]
 #[derivative(Debug(bound = ""))]
 pub(super) struct OutPortInternal<W: Weight> {
-    pub(super) node: Option<WeakNodeInternal<W>>,
+    pub(super) endpoint: EndPointInternal<W>,
     pub(super) links: RwLock<IndexSet<WeakByAddress<InPortInternal<W>>>>,
     pub(super) weight: W::EdgeWeight,
 }
 
 impl<W: Weight> OutPortInternal<W> {
-    pub(super) fn new(node: Option<WeakNodeInternal<W>>, weight: W::EdgeWeight) -> Self {
+    pub(super) fn new(endpoint: EndPointInternal<W>, weight: W::EdgeWeight) -> Self {
         Self {
-            node,
+            endpoint,
             links: RwLock::new(IndexSet::default()),
             weight,
         }
@@ -84,7 +91,7 @@ impl<W: Weight> OperationInternal<W> {
             let inputs = (0..input_len)
                 .map(|_| {
                     Arc::new(InPortInternal {
-                        node: Some(WeakNodeInternal::Operation(weak.clone())),
+                        endpoint: EndPointInternal::Operation(weak.clone()),
                         link: RwLock::new(Weak::new()),
                     })
                 })
@@ -93,7 +100,7 @@ impl<W: Weight> OperationInternal<W> {
                 .into_iter()
                 .map(|weight| {
                     Arc::new(OutPortInternal {
-                        node: Some(WeakNodeInternal::Operation(weak.clone())),
+                        endpoint: EndPointInternal::Operation(weak.clone()),
                         links: RwLock::new(IndexSet::default()),
                         weight,
                     })
@@ -132,12 +139,17 @@ impl<W: Weight> ThunkInternal<W> {
         Arc::new_cyclic(|weak: &Weak<Self>| {
             let bound_inputs = bound_inputs
                 .into_iter()
-                .map(|weight| Arc::new(OutPortInternal::new(None, weight)))
+                .map(|weight| {
+                    Arc::new(OutPortInternal::new(
+                        EndPointInternal::GraphBoundary(Some(weak.clone())),
+                        weight,
+                    ))
+                })
                 .collect();
 
             let inner_outputs = (0..inner_output_len)
                 .map(|_| {
-                    Arc::new(InPortInternal::new(Some(WeakNodeInternal::Thunk(
+                    Arc::new(InPortInternal::new(EndPointInternal::GraphBoundary(Some(
                         weak.clone(),
                     ))))
                 })
@@ -147,7 +159,7 @@ impl<W: Weight> ThunkInternal<W> {
                 .into_iter()
                 .map(|weight| {
                     Arc::new(OutPortInternal::new(
-                        Some(WeakNodeInternal::Thunk(weak.clone())),
+                        EndPointInternal::Thunk(weak.clone()),
                         weight,
                     ))
                 })

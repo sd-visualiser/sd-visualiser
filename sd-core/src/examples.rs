@@ -1,6 +1,6 @@
 use crate::{
     hypergraph::{
-        generic::{Ctx, Node},
+        generic::{Ctx, Endpoint, Node},
         traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     },
     language::spartan::Op,
@@ -24,11 +24,11 @@ pub struct DummyEdge;
 impl EdgeLike for DummyEdge {
     type Ctx = DummyCtx;
 
-    fn source(&self) -> Option<Node<DummyCtx>> {
+    fn source(&self) -> Endpoint<DummyCtx> {
         panic!("unsupported")
     }
 
-    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Option<Node<DummyCtx>>> + '_> {
+    fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<DummyCtx>> + '_> {
         panic!("unsupported")
     }
 }

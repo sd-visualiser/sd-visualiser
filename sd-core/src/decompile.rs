@@ -47,7 +47,7 @@ impl<T: Language> Expr<T> {
                             Some(var) => {
                                 args.push(Arg::Value(Value::Variable(var)));
                             }
-                            None => match edge.source() {
+                            None => match edge.source().into_node() {
                                 None => {
                                     args.push(Arg::Value(Value::Variable(T::Var::fresh(
                                         fresh_vars,
@@ -119,7 +119,7 @@ impl<T: Language> Expr<T> {
             .graph_outputs()
             .map(|edge| match edge.weight().into_var() {
                 Some(var) => Ok(Value::Variable(var)),
-                None => match edge.source() {
+                None => match edge.source().into_node() {
                     None => Err(DecompileError::Corrupt),
                     Some(node) => node_to_syntax
                         .get(&node)
@@ -181,7 +181,7 @@ impl<T: Language> FakeValue<T> {
         Thunk<E::Ctx>: WithWeight<Weight = T::Addr>,
     {
         match edge.weight() {
-            Name::Nil => match edge.source() {
+            Name::Nil => match edge.source().into_node() {
                 None => Self::Fresh,
                 Some(Node::Operation(op)) => Self::Operation(
                     op.weight(),
