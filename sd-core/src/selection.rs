@@ -74,7 +74,8 @@ where
     pub fn iter(&self) -> impl DoubleEndedIterator<Item = Node<T>> + Clone + '_ {
         self.0
             .iter()
-            .filter_map(|(node, selected)| selected.then(|| node.clone()))
+            .filter(|(_, &selected)| selected)
+            .map(|(node, _)| node.clone())
     }
 
     /// Number of selected nodes.
