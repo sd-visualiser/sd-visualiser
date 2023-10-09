@@ -118,7 +118,7 @@ impl App {
 
         if text_edit_out.response.changed() {
             tracing::trace!("code changed changed");
-            self.trigger_parse(ui.ctx());
+            self.trigger_parse(ui.ctx(), false);
         }
         if let Some(error) = &self.last_parse_error {
             match error {
@@ -138,7 +138,7 @@ impl App {
         });
     }
 
-    fn trigger_parse(&mut self, ctx: &egui::Context) {
+    fn trigger_parse(&mut self, ctx: &egui::Context, send_error: bool) {
         let tx = self.tx.clone();
         let code = self.code.clone();
         let language = self.language;
@@ -154,8 +154,10 @@ impl App {
                         Some(parse)
                     }
                     Err(err) => {
-                        tx.send(Message::ParseError(err))
-                            .expect("failed to send message");
+                        if send_error {
+                            tx.send(Message::ParseError(err))
+                                .expect("failed to send message");
+                        }
                         None
                     }
                 }
@@ -164,7 +166,7 @@ impl App {
 
     fn trigger_compile(&mut self, ctx: &egui::Context) {
         clear_shape_cache();
-        self.trigger_parse(ctx);
+        self.trigger_parse(ctx, true);
         {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
