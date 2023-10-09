@@ -80,10 +80,12 @@ impl<T: Ctx> InOutIter for WiredOp<T> {
             WiredOp::Operation { addr } => {
                 Box::new(addr.inputs().map(|edge| (edge, Direction::Forward)))
             }
-            WiredOp::Thunk { body, .. } => Box::new(
+            WiredOp::Thunk { addr, body } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|edge| (edge.clone(), Direction::Forward)),
+                    .cloned()
+                    .chain(addr.inputs().skip(body.free_inputs.len()))
+                    .map(|edge| (edge, Direction::Forward)),
             ),
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
@@ -99,9 +101,13 @@ impl<T: Ctx> InOutIter for WiredOp<T> {
             WiredOp::Operation { addr } => {
                 Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
-            WiredOp::Thunk { addr, .. } => {
-                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
-            }
+            WiredOp::Thunk { addr, body } => Box::new(
+                body.free_outputs
+                    .iter()
+                    .cloned()
+                    .chain(addr.outputs().skip(body.free_outputs.len()))
+                    .map(|edge| (edge, Direction::Forward)),
+            ),
             WiredOp::Backlink { addr } => {
                 Box::new(std::iter::once((addr.clone(), Direction::Backward)))
             }
@@ -364,7 +370,8 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
             free_inputs: graph.free_graph_inputs().collect(),
             bound_inputs: graph.bound_graph_inputs().collect(),
             slices: builder.slices,
-            outputs,
+            free_outputs: graph.free_graph_outputs().collect(),
+            bound_outputs: graph.bound_graph_outputs().collect(),
         };
 
         // We can minimise swaps, keeping "compound terms" together

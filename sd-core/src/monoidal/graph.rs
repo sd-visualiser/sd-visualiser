@@ -257,10 +257,12 @@ impl<T: Ctx> InOutIter for MonoidalOp<T> {
             MonoidalOp::Operation { addr, .. } => {
                 Box::new(addr.inputs().map(|edge| (edge, Direction::Forward)))
             }
-            MonoidalOp::Thunk { body, .. } => Box::new(
+            MonoidalOp::Thunk { addr, body } => Box::new(
                 body.free_inputs
                     .iter()
-                    .map(|edge| (edge.clone(), Direction::Forward)),
+                    .cloned()
+                    .chain(addr.inputs().skip(body.free_inputs.len()))
+                    .map(|edge| (edge, Direction::Forward)),
             ),
             MonoidalOp::Swap { addrs, .. } => Box::new(addrs.iter().cloned()),
             MonoidalOp::Backlink { addr } => {
@@ -287,9 +289,13 @@ impl<T: Ctx> InOutIter for MonoidalOp<T> {
             MonoidalOp::Operation { addr, .. } => {
                 Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
-            MonoidalOp::Thunk { addr, .. } => {
-                Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
-            }
+            MonoidalOp::Thunk { addr, body } => Box::new(
+                body.free_outputs
+                    .iter()
+                    .cloned()
+                    .chain(addr.outputs().skip(body.free_outputs.len()))
+                    .map(|edge| (edge, Direction::Forward)),
+            ),
             MonoidalOp::Swap { addrs, out_to_in } => {
                 Box::new(out_to_in.iter().map(|idx| addrs[*idx].clone()))
             }
@@ -407,8 +413,9 @@ impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T> {
         builder.extend(Slice::insert_caps_cups_deletes(
             builder.open_edges(),
             graph
-                .outputs
+                .free_outputs
                 .iter()
+                .chain(graph.bound_outputs.iter())
                 .map(|edge| (edge.clone(), Direction::Forward)),
             true,
         ));
@@ -417,8 +424,9 @@ impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T> {
         builder.extend(Slice::permutation_to_swaps(
             builder.open_edges(),
             graph
-                .outputs
+                .free_outputs
                 .iter()
+                .chain(graph.bound_outputs.iter())
                 .map(|edge| (edge.clone(), Direction::Forward)),
         ));
 
@@ -426,7 +434,8 @@ impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T> {
             free_inputs: graph.free_inputs.clone(),
             bound_inputs: graph.bound_inputs.clone(),
             slices: builder.slices,
-            outputs: graph.outputs.clone(),
+            free_outputs: graph.free_outputs.clone(),
+            bound_outputs: graph.bound_outputs.clone(),
         };
 
         debug!("Monoidal Term: {:#?}", graph);

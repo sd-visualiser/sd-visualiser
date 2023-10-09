@@ -72,8 +72,10 @@ pub struct MonoidalTerm<T: Ctx, O> {
     pub bound_inputs: Vec<T::Edge>,
     /// Layers of operations of type `O`
     pub slices: Vec<Slice<O>>,
-    /// Outputs of the term
-    pub outputs: Vec<T::Edge>,
+    /// Free outputs of the term
+    pub free_outputs: Vec<T::Edge>,
+    /// Bound outputs of the term which should not be reordered
+    pub bound_outputs: Vec<T::Edge>,
 }
 
 impl<T: Ctx, O: InOut + Debug> MonoidalTerm<T, O> {
@@ -88,7 +90,10 @@ impl<T: Ctx, O: InOut + Debug> MonoidalTerm<T, O> {
 
             input_count = slice.number_of_outputs();
         }
-        assert_eq!(input_count, self.outputs.len());
+        assert_eq!(
+            input_count,
+            self.free_outputs.len() + self.bound_outputs.len()
+        );
     }
 }
 
@@ -107,8 +112,9 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> MonoidalTerm<O::T, O> {
 
         let edges_below = self.slices.iter_mut().rev().fold(
             Box::new(
-                self.outputs
+                self.free_outputs
                     .iter()
+                    .chain(self.bound_outputs.iter())
                     .map(|edge| (edge.clone(), Direction::Forward)),
             ) as Box<dyn Iterator<Item = Link<O::T>>>,
             fold_slice::<O>,
@@ -168,17 +174,12 @@ impl<T: Ctx, O> MonoidalTerm<T, Slice<O>> {
     /// Flattens a monoidal term where each operation is itself a slice by inlining these slices
     #[must_use]
     pub fn flatten_graph(self) -> MonoidalTerm<T, O> {
-        let MonoidalTerm {
-            free_inputs: unordered_inputs,
-            bound_inputs: ordered_inputs,
-            slices,
-            outputs,
-        } = self;
         MonoidalTerm {
-            free_inputs: unordered_inputs,
-            bound_inputs: ordered_inputs,
-            slices: slices.into_iter().map(Slice::flatten_slice).collect(),
-            outputs,
+            free_inputs: self.free_inputs,
+            bound_inputs: self.bound_inputs,
+            slices: self.slices.into_iter().map(Slice::flatten_slice).collect(),
+            free_outputs: self.free_outputs,
+            bound_outputs: self.bound_outputs,
         }
     }
 }

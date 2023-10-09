@@ -180,7 +180,8 @@ pub fn int() -> MonoidalGraph<DummyCtx> {
                 },
             }],
         }],
-        outputs: vec![DummyEdge],
+        free_outputs: vec![],
+        bound_outputs: vec![DummyEdge],
     }
 }
 
@@ -209,7 +210,8 @@ pub fn copy() -> MonoidalGraph<DummyCtx> {
                 ],
             },
         ],
-        outputs: vec![DummyEdge; 3],
+        free_outputs: vec![],
+        bound_outputs: vec![DummyEdge; 3],
     }
 }
 
@@ -227,7 +229,8 @@ pub fn thunk() -> MonoidalGraph<DummyCtx> {
                 },
             }],
         }],
-        outputs: vec![DummyEdge],
+        free_outputs: vec![],
+        bound_outputs: vec![DummyEdge],
     };
 
     MonoidalGraph {
@@ -248,6 +251,7 @@ pub fn thunk() -> MonoidalGraph<DummyCtx> {
                 },
             ],
         }],
-        outputs: vec![DummyEdge; 2],
+        free_outputs: vec![],
+        bound_outputs: vec![DummyEdge; 2],
     }
 }
