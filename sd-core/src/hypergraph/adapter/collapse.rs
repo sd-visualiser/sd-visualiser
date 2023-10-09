@@ -66,10 +66,11 @@ impl<G: Graph> CollapseGraph<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "")
+    Debug = "transparent"
 )]
 pub struct CollapseEdge<G: Graph> {
     edge: Edge<G::Ctx>,
+    #[derivative(Debug = "ignore")]
     expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 
@@ -89,10 +90,11 @@ impl<G: Graph> CollapseEdge<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "")
+    Debug = "transparent"
 )]
 pub struct CollapseOperation<G: Graph> {
     node: Node<G::Ctx>,
+    #[derivative(Debug = "ignore")]
     expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 
@@ -112,10 +114,11 @@ impl<G: Graph> CollapseOperation<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "")
+    Debug = "transparent"
 )]
 pub struct CollapseThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
+    #[derivative(Debug = "ignore")]
     expanded: ByThinAddress<Arc<ThunkMap<G::Ctx, bool>>>,
 }
 

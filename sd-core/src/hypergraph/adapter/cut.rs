@@ -64,13 +64,16 @@ impl<G: Graph> CutGraph<G> {
     Debug(bound = "")
 )]
 pub enum CutEdge<G: Graph> {
+    #[derivative(Debug = "transparent")]
     Inner {
         edge: Edge<G::Ctx>,
+        #[derivative(Debug = "ignore")]
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
     Reuse {
         edge: Edge<G::Ctx>,
         target: Endpoint<G::Ctx>,
+        #[derivative(Debug = "ignore")]
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
 }
@@ -98,17 +101,21 @@ impl<G: Graph> CutEdge<G> {
     Debug(bound = "")
 )]
 pub enum CutOperation<G: Graph> {
+    #[derivative(Debug = "transparent")]
     Inner {
         op: Operation<G::Ctx>,
+        #[derivative(Debug = "ignore")]
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
     Store {
         edge: Edge<G::Ctx>,
+        #[derivative(Debug = "ignore")]
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
     Reuse {
         edge: Edge<G::Ctx>,
         target: Endpoint<G::Ctx>,
+        #[derivative(Debug = "ignore")]
         cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
     },
 }
@@ -135,10 +142,11 @@ impl<G: Graph> CutOperation<G> {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "")
+    Debug = "transparent"
 )]
 pub struct CutThunk<G: Graph> {
     thunk: Thunk<G::Ctx>,
+    #[derivative(Debug = "ignore")]
     cut_edges: ByThinAddress<Arc<EdgeMap<G::Ctx, bool>>>,
 }
 
