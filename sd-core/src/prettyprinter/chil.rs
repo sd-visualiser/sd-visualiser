@@ -1,12 +1,9 @@
 use pretty::RcDoc;
 
 use super::{list, paran_list, PrettyPrint};
-use crate::language::{
-    chil::{
-        Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType,
-        Type, Value, Variable, VariableDef,
-    },
-    Arg,
+use crate::language::chil::{
+    Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType, Type,
+    Value, Variable, VariableDef,
 };
 
 const INDENTATION: isize = 2;
@@ -112,11 +109,12 @@ impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Variable(var) => var.to_doc(),
+            Self::Thunk(thunk) => thunk.to_doc(),
             Self::Op { op, args } => {
                 let mut doc = op.to_doc();
                 if !args.is_empty() {
-                    let vs = args.iter().filter_map(Arg::value).collect::<Vec<_>>();
-                    let ds = args.iter().filter_map(Arg::thunk).collect::<Vec<_>>();
+                    let (ds, vs): (Vec<_>, Vec<_>) =
+                        args.iter().partition(|v| matches!(v, Value::Thunk(_)));
                     doc = doc.append(RcDoc::text("("));
                     if !vs.is_empty() {
                         doc = doc.append(list(vs.iter().copied()));

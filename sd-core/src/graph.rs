@@ -15,7 +15,7 @@ use crate::{
         builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
         Hypergraph, Weight,
     },
-    language::{Arg, Expr, GetVar, Language, Thunk, Value},
+    language::{Expr, GetVar, Language, Value},
     prettyprinter::PrettyPrint,
 };
 
@@ -148,6 +148,62 @@ where
                 self.inputs.push((in_port, var.clone()));
                 Ok(())
             }
+            (Value::Thunk(thunk), input) => {
+                let output_weights = if let ProcessInput::Variables(inputs) = &input {
+                    inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
+                } else {
+                    vec![Name::Nil]
+                };
+
+                let thunk_node = self.fragment.add_thunk(
+                    0,
+                    thunk.args.iter().cloned().map(Name::BoundVar),
+                    thunk.body.values.len(),
+                    output_weights,
+                    thunk.addr.clone(),
+                );
+
+                self.fragment
+                    .in_thunk(thunk_node.clone(), |inner_fragment| {
+                        let mut thunk_env = Environment::new(inner_fragment);
+
+                        // Add bound inputs of the thunk to the environment
+                        for (def, out_port) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
+                            let var = def.var();
+                            thunk_env
+                                .outputs
+                                .insert(var.clone(), out_port)
+                                .is_none()
+                                .then_some(())
+                                .ok_or(ConvertError::Shadowed(var.clone()))?;
+                        }
+                        thunk_env.process_expr(&thunk.body)?;
+
+                        // Add any free inputs of the thunk to the outer environment
+                        self.inputs.extend(thunk_env.inputs);
+                        Ok::<_, ConvertError<T>>(())
+                    })?;
+
+                let mut out_ports = thunk_node.outputs();
+
+                match input {
+                    ProcessInput::Variables(inputs) => {
+                        for (input, out_port) in inputs.into_iter().zip(out_ports) {
+                            let var = input.var();
+                            self.outputs
+                                .insert(var.clone(), out_port)
+                                .is_none()
+                                .then_some(())
+                                .ok_or(ConvertError::Shadowed(var.clone()))?;
+                        }
+                    }
+                    ProcessInput::InPort(in_port) => {
+                        self.fragment.link(out_ports.next().unwrap(), in_port)?;
+                    }
+                }
+
+                Ok(())
+            }
             (Value::Op { op, args }, input) => {
                 let output_weights = if let ProcessInput::Variables(inputs) = &input {
                     inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
@@ -159,14 +215,7 @@ where
                     self.fragment
                         .add_operation(args.len(), output_weights, op.clone());
                 for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
-                    match arg {
-                        Arg::Value(value) => {
-                            self.process_value(value, ProcessInput::InPort(in_port))?;
-                        }
-                        Arg::Thunk(thunk) => {
-                            self.process_thunk(thunk, in_port)?;
-                        }
-                    }
+                    self.process_value(arg, ProcessInput::InPort(in_port))?;
                 }
 
                 let mut out_ports = operation_node.outputs();
@@ -190,56 +239,6 @@ where
                 Ok(())
             }
         }
-    }
-
-    /// Insert `thunk` into a hypergraph and update the environment.
-    ///
-    /// The caller expects the `in_port` that is passed in to be linked.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if variables are malformed.
-    fn process_thunk(
-        &mut self,
-        thunk: &Thunk<T>,
-        in_port: InPort<Syntax<T>>,
-    ) -> Result<(), ConvertError<T>> {
-        let thunk_node = self.fragment.add_thunk(
-            0,
-            thunk.args.iter().cloned().map(Name::BoundVar),
-            thunk.body.values.len(),
-            [Name::Nil],
-            thunk.addr.clone(),
-        );
-
-        self.fragment
-            .in_thunk(thunk_node.clone(), |inner_fragment| {
-                let mut thunk_env = Environment::new(inner_fragment);
-
-                // Add bound inputs of the thunk to the environment
-                for (def, out_port) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
-                    let var = def.var();
-                    thunk_env
-                        .outputs
-                        .insert(var.clone(), out_port)
-                        .is_none()
-                        .then_some(())
-                        .ok_or(ConvertError::Shadowed(var.clone()))?;
-                }
-                thunk_env.process_expr(&thunk.body)?;
-
-                // Add any free inputs of the thunk to the outer environment
-                self.inputs.extend(thunk_env.inputs);
-                Ok::<_, ConvertError<T>>(())
-            })?;
-
-        let out_port = thunk_node
-            .outputs()
-            .next()
-            .ok_or(ConvertError::NoOutputError)?;
-        self.fragment.link(out_port, in_port)?;
-
-        Ok(())
     }
 
     /// Insert `expr` into a hypergraph, updating the environment.

@@ -1,10 +1,7 @@
 use pretty::RcDoc;
 
 use super::{paran_list, PrettyPrint};
-use crate::language::{
-    spartan::{Addr, Bind, Expr, Op, Spartan, Thunk, Value, Variable},
-    Arg,
-};
+use crate::language::spartan::{Addr, Bind, Expr, Op, Thunk, Value, Variable};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -49,6 +46,7 @@ impl PrettyPrint for Value {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
             Self::Variable(var) => var.to_doc(),
+            Self::Thunk(thunk) => thunk.to_doc(),
             Self::Op { op, args } => {
                 if args.is_empty() {
                     op.to_doc()
@@ -56,15 +54,6 @@ impl PrettyPrint for Value {
                     op.to_doc().append(paran_list(args))
                 }
             }
-        }
-    }
-}
-
-impl PrettyPrint for Arg<Spartan> {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        match self {
-            Self::Value(value) => value.to_doc(),
-            Self::Thunk(thunk) => thunk.to_doc(),
         }
     }
 }

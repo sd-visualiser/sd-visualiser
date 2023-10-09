@@ -1,6 +1,6 @@
 use indexmap::IndexSet;
 
-use crate::language::{Arg, Expr, GetVar, Language, Thunk, Value};
+use crate::language::{Expr, GetVar, Language, Thunk, Value};
 
 impl<T: Language> Expr<T> {
     pub(crate) fn free_vars(&self) -> IndexSet<T::Var> {
@@ -28,12 +28,12 @@ impl<T: Language> Value<T> {
             Value::Variable(v) => {
                 vars.insert(v.clone());
             }
+            Value::Thunk(thunk) => {
+                thunk.free_vars(vars);
+            }
             Value::Op { args, .. } => {
                 for arg in args {
-                    match arg {
-                        Arg::Value(v) => v.free_vars(vars),
-                        Arg::Thunk(d) => d.free_vars(vars),
-                    }
+                    arg.free_vars(vars);
                 }
             }
         }

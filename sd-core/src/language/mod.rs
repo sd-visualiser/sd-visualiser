@@ -89,7 +89,8 @@ pub struct Bind<T: Language> {
 )]
 pub enum Value<T: Language> {
     Variable(T::Var),
-    Op { op: T::Op, args: Vec<Arg<T>> },
+    Thunk(Thunk<T>),
+    Op { op: T::Op, args: Vec<Value<T>> },
 }
 
 #[derive(Derivative)]
@@ -104,35 +105,6 @@ pub struct Thunk<T: Language> {
     pub addr: T::Addr,
     pub args: Vec<T::VarDef>,
     pub body: Expr<T>,
-}
-
-#[derive(Derivative)]
-#[derivative(
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = ""),
-    Debug(bound = "")
-)]
-pub enum Arg<T: Language> {
-    Value(Value<T>),
-    Thunk(Thunk<T>),
-}
-
-impl<T: Language> Arg<T> {
-    pub const fn value(&self) -> Option<&Value<T>> {
-        match self {
-            Self::Value(value) => Some(value),
-            Self::Thunk(_) => None,
-        }
-    }
-
-    pub const fn thunk(&self) -> Option<&Thunk<T>> {
-        match self {
-            Self::Value(_) => None,
-            Self::Thunk(thunk) => Some(thunk),
-        }
-    }
 }
 
 // Conversions between languages
@@ -177,9 +149,10 @@ impl<T: Language> Value<T> {
     {
         match self {
             Self::Variable(var) => Value::Variable(var.into()),
+            Self::Thunk(thunk) => Value::Thunk(thunk.into()),
             Self::Op { op, args } => Value::Op {
                 op: op.into(),
-                args: args.into_iter().map(Arg::into).collect(),
+                args: args.into_iter().map(Value::into).collect(),
             },
         }
     }
@@ -197,21 +170,6 @@ impl<T: Language> Thunk<T> {
             addr: self.addr.into(),
             args: self.args.into_iter().map(Into::into).collect(),
             body: self.body.into(),
-        }
-    }
-}
-
-impl<T: Language> Arg<T> {
-    pub fn into<U: Language>(self) -> Arg<U>
-    where
-        U::Op: From<T::Op>,
-        U::Var: From<T::Var>,
-        U::Addr: From<T::Addr>,
-        U::VarDef: From<T::VarDef>,
-    {
-        match self {
-            Self::Value(value) => Arg::Value(value.into()),
-            Self::Thunk(thunk) => Arg::Thunk(thunk.into()),
         }
     }
 }
@@ -302,35 +260,49 @@ where
     ) -> Result<Self, ConversionError<Self::FatalError>> {
         let mut clone = pest.clone();
         let pair = clone.next().ok_or(ConversionError::NoMatch)?;
-        if pair.as_rule() != T::value_rule() {
-            return Err(ConversionError::NoMatch);
+        if pair.as_rule() == T::value_rule() {
+            let value = Err(ConversionError::NoMatch)
+                .or_else(|_: ConversionError<Void>| {
+                    let mut inner = pair.clone().into_inner();
+                    let value = Value::Variable(FromPest::from_pest(&mut inner)?);
+                    if inner.next().is_some() {
+                        return Err(ConversionError::Extraneous {
+                            current_node: stringify!(Value),
+                        });
+                    }
+                    Ok(value)
+                })
+                .or_else(|_: ConversionError<Void>| {
+                    let mut inner = pair.clone().into_inner();
+                    let value = Value::Thunk(FromPest::from_pest(&mut inner)?);
+                    if inner.next().is_some() {
+                        return Err(ConversionError::Extraneous {
+                            current_node: stringify!(Value),
+                        });
+                    }
+                    Ok(value)
+                })
+                .or_else(|_: ConversionError<Void>| {
+                    let mut inner = pair.into_inner();
+                    let value = Value::Op {
+                        op: FromPest::from_pest(&mut inner)?,
+                        args: FromPest::from_pest(&mut inner)?,
+                    };
+                    if inner.next().is_some() {
+                        return Err(ConversionError::Extraneous {
+                            current_node: stringify!(Value),
+                        });
+                    }
+                    Ok(value)
+                })?;
+            *pest = clone;
+            Ok(value)
+        } else if pair.as_rule() == T::thunk_rule() {
+            let thunk = FromPest::from_pest(pest)?;
+            Ok(Value::Thunk(thunk))
+        } else {
+            Err(ConversionError::NoMatch)
         }
-        let value = Err(ConversionError::NoMatch)
-            .or_else(|_: ConversionError<Void>| {
-                let mut inner = pair.clone().into_inner();
-                let value = Value::Variable(FromPest::from_pest(&mut inner)?);
-                if inner.next().is_some() {
-                    return Err(ConversionError::Extraneous {
-                        current_node: stringify!(Value),
-                    });
-                }
-                Ok(value)
-            })
-            .or_else(|_: ConversionError<Void>| {
-                let mut inner = pair.into_inner();
-                let value = Value::Op {
-                    op: FromPest::from_pest(&mut inner)?,
-                    args: FromPest::from_pest(&mut inner)?,
-                };
-                if inner.next().is_some() {
-                    return Err(ConversionError::Extraneous {
-                        current_node: stringify!(Value),
-                    });
-                }
-                Ok(value)
-            })?;
-        *pest = clone;
-        Ok(value)
     }
 }
 
@@ -366,36 +338,6 @@ where
         }
         *pest = clone;
         Ok(thunk)
-    }
-}
-
-impl<'pest, T> FromPest<'pest> for Arg<T>
-where
-    T: Language,
-    T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-{
-    type Rule = T::Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        Err(ConversionError::NoMatch)
-            .or_else(|_: ConversionError<Void>| {
-                let mut clone = pest.clone();
-                let arg = Arg::Value(FromPest::from_pest(&mut clone)?);
-                *pest = clone;
-                Ok(arg)
-            })
-            .or_else(|_: ConversionError<Void>| {
-                let mut clone = pest.clone();
-                let arg = Arg::Thunk(FromPest::from_pest(&mut clone)?);
-                *pest = clone;
-                Ok(arg)
-            })
     }
 }
 

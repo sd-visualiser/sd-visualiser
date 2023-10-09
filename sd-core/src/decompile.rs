@@ -11,7 +11,7 @@ use crate::{
         generic::{Edge, Node, Operation, Thunk},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
-    language::{Arg, Bind, Expr, Fresh, Language, Thunk as SThunk, Value},
+    language::{Bind, Expr, Fresh, Language, Thunk as SThunk, Value},
     prettyprinter::{paran_list, PrettyPrint},
 };
 
@@ -34,8 +34,8 @@ impl<T: Language> Expr<T> {
     {
         let mut binds = Vec::default();
 
-        // Maps hypergraph nodes to corresponding thunks (for thunk nodes) or values (for operation nodes).
-        let mut node_to_syntax = HashMap::<Node<G::Ctx>, Arg<T>>::default();
+        // Maps hypergraph nodes to values.
+        let mut node_to_value = HashMap::<Node<G::Ctx>, Value<T>>::default();
 
         let mut fresh_vars = 0;
         for node in graph.nodes().rev() {
@@ -45,18 +45,16 @@ impl<T: Language> Expr<T> {
                     for edge in op.inputs() {
                         match edge.weight().into_var() {
                             Some(var) => {
-                                args.push(Arg::Value(Value::Variable(var)));
+                                args.push(Value::Variable(var));
                             }
                             None => match edge.source().into_node() {
                                 None => {
-                                    args.push(Arg::Value(Value::Variable(T::Var::fresh(
-                                        fresh_vars,
-                                    ))));
+                                    args.push(Value::Variable(T::Var::fresh(fresh_vars)));
                                     fresh_vars += 1;
                                 }
                                 Some(other_node) => {
                                     args.push(
-                                        node_to_syntax
+                                        node_to_value
                                             .get(&other_node)
                                             .ok_or(DecompileError::Corrupt)?
                                             .clone(),
@@ -85,7 +83,7 @@ impl<T: Language> Expr<T> {
                                 return Err(DecompileError::Corrupt);
                             }
                             // The node has a unique output which does not have a name.
-                            node_to_syntax.insert(node, Arg::Value(value));
+                            node_to_value.insert(node, value);
                         }
                         Some(defs) => {
                             // The node has any number of outputs which are all bound variables.
@@ -105,7 +103,7 @@ impl<T: Language> Expr<T> {
                     // Check the output does not have a name.
                     match output.weight() {
                         Name::Nil => {
-                            node_to_syntax.insert(node, Arg::Thunk(thunk));
+                            node_to_value.insert(node, Value::Thunk(thunk));
                         }
                         Name::FreeVar(_) | Name::BoundVar(_) => {
                             return Err(DecompileError::Corrupt)
@@ -121,9 +119,9 @@ impl<T: Language> Expr<T> {
                 Some(var) => Ok(Value::Variable(var)),
                 None => match edge.source().into_node() {
                     None => Err(DecompileError::Corrupt),
-                    Some(node) => node_to_syntax
+                    Some(node) => node_to_value
                         .get(&node)
-                        .and_then(|arg| arg.value().cloned())
+                        .cloned()
                         .ok_or(DecompileError::Corrupt),
                 },
             })
