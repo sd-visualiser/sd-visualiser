@@ -95,6 +95,6 @@ pub fn normalised_targets<T: Ctx>(
         }
     }
 
-    outputs.extend(non_dupe_outputs.into_iter());
+    outputs.extend(non_dupe_outputs);
     outputs
 }
