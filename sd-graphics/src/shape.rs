@@ -102,10 +102,13 @@ impl<T: Ctx> Shape<T> {
         ui: &egui::Ui,
         response: &Response,
         transform: &RectTransform,
+        search: Option<&str>,
         highlight_op: &mut Option<T::Operation>,
         highlight_edges: &mut IndexSet<T::Edge>,
     ) where
         G: RenderableGraph<Ctx = T>,
+        T::Operation: Matchable,
+        T::Thunk: Matchable,
     {
         let bounds = *transform.to();
         let tolerance = TOLERANCE * transform.scale().min_elem();
@@ -135,6 +138,7 @@ impl<T: Ctx> Shape<T> {
                 }
             }
             Shape::Rectangle { addr, stroke, .. } => {
+                let search_match = search.map(|x| addr.is_match(x)).unwrap_or_default();
                 let addr: &_ = addr;
                 let selected = graph.selected(Node::Thunk(addr.clone()));
                 let thunk_response = ui.interact(
@@ -149,7 +153,11 @@ impl<T: Ctx> Shape<T> {
                 if !selected {
                     new_stroke.color = new_stroke.color.gamma_multiply(0.35);
                 }
+                if search_match {
+                    new_stroke.color = Color32::LIGHT_RED;
+                }
                 *stroke = Some(new_stroke);
+
                 if thunk_response.clicked() {
                     graph.clicked_thunk(addr.clone(), true);
                 }
@@ -160,6 +168,7 @@ impl<T: Ctx> Shape<T> {
             Shape::Operation {
                 addr, fill, stroke, ..
             } => {
+                let search_match = search.map(|x| addr.is_match(x)).unwrap_or_default();
                 let selected = graph.selected(Node::Operation(addr.clone()));
                 let op_response = ui.interact(
                     bounding_box.intersect(bounds),
@@ -182,6 +191,11 @@ impl<T: Ctx> Shape<T> {
                         .interact_selectable(&op_response, selected)
                         .fg_stroke,
                 );
+                if search_match {
+                    *fill = Some(Color32::DARK_RED);
+                    stroke.as_mut().unwrap().color = Color32::LIGHT_RED;
+                }
+
                 if op_response.hovered() {
                     *highlight_op = Some(addr.clone());
                 }

@@ -90,7 +90,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
                         &mut self.code.as_str(),
                         UiLanguage::Spartan,
                     );
-                    self.graph_ui.ui(&mut columns[1]);
+                    self.graph_ui.ui(&mut columns[1], None);
                 });
             });
     }

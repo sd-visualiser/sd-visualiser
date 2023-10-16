@@ -329,7 +329,12 @@ impl eframe::App for App {
                 let has_selections = finished(&self.graph_ui)
                     .map(|graph_ui| !graph_ui.is_empty())
                     .unwrap_or_default();
-                if button!("Reset", egui::Key::Num0, enabled = ready) {
+                if button!(
+                    "Reset",
+                    egui::Modifiers::COMMAND,
+                    egui::Key::Num0,
+                    enabled = ready
+                ) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.reset();
                     }
@@ -465,7 +470,7 @@ impl eframe::App for App {
                     .map(|p| p.poll_mut().map(Result::as_mut))
                 {
                     Some(Poll::Ready(Ok(graph_ui))) => {
-                        graph_ui.ui(ui);
+                        graph_ui.ui(ui, self.find.as_deref());
                     }
                     Some(Poll::Pending) => {
                         ui.centered_and_justified(eframe::egui::Ui::spinner);
@@ -490,7 +495,6 @@ impl eframe::App for App {
                     ui.horizontal(|ui| {
                         if ui.button("Find").clicked() {
                             graph_ui.find(query);
-                            clear_find = true;
                         }
                         if ui.button("Cancel").clicked() {
                             clear_find = true;

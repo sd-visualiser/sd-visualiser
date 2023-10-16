@@ -5,8 +5,9 @@ use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
     codeable::Codeable,
+    common::Matchable,
     hypergraph::{
-        generic::{Ctx, Edge, Operation, OperationWeight},
+        generic::{Ctx, Edge, Operation, OperationWeight, Thunk},
         subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
@@ -27,11 +28,13 @@ pub fn render<G>(
     shapes: &[Shape<G::Ctx>],
     response: &Response,
     to_screen: RectTransform,
+    search: Option<&str>,
 ) -> Vec<egui::Shape>
 where
     G: RenderableGraph,
     Edge<G::Ctx>: Codeable,
-    Operation<G::Ctx>: Codeable,
+    Operation<G::Ctx>: Codeable + Matchable,
+    Thunk<G::Ctx>: Matchable,
 {
     let viewport = *to_screen.from();
 
@@ -51,6 +54,7 @@ where
                 ui,
                 response,
                 &to_screen,
+                search,
                 &mut highlight_op,
                 &mut highlight_edges,
             );

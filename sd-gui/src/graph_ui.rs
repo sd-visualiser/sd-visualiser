@@ -42,7 +42,7 @@ impl GraphUi {
             GraphUi::Chil(graph_ui) => graph_ui,
             GraphUi::Spartan(graph_ui) => graph_ui,
         } {
-            pub(crate) fn ui(&mut self, ui: &mut egui::Ui);
+            pub(crate) fn ui(&mut self, ui: &mut egui::Ui, search: Option<&str>);
             pub(crate) const fn ready(&self) -> bool;
             pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
@@ -85,13 +85,13 @@ where
         }
     }
 
-    pub(crate) fn ui(&mut self, ui: &mut egui::Ui)
+    pub(crate) fn ui(&mut self, ui: &mut egui::Ui, search: Option<&str>)
     where
         // Needed for render
         G: RenderableGraph,
         Edge<G::Ctx>: Codeable,
-        Operation<G::Ctx>: Codeable,
-        Thunk<G::Ctx>: Codeable,
+        Operation<G::Ctx>: Codeable + Matchable,
+        Thunk<G::Ctx>: Codeable + Matchable,
         // Needed for generate_shapes
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Shapeable,
@@ -155,6 +155,7 @@ where
                 &shapes.shapes,
                 &response,
                 to_screen,
+                search,
             ));
             self.ready = true;
         } else {
