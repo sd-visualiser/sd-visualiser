@@ -530,10 +530,11 @@ impl<G: Graph> NodeLike for CutThunk<G> {
     type Ctx = CutGraph<G>;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        let free_inputs: IndexSet<_> = self.thunk.free_graph_inputs().collect();
         Box::new(
             self.thunk
                 .inputs()
-                .filter(|edge| !self.cut_edges[&edge.key()])
+                .filter(move |edge| !free_inputs.contains(edge) || !self.cut_edges[&edge.key()])
                 .map(|edge| CutEdge::Inner {
                     edge,
                     cut_edges: self.cut_edges.clone(),
@@ -542,10 +543,16 @@ impl<G: Graph> NodeLike for CutThunk<G> {
     }
 
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(self.thunk.outputs().map(|edge| CutEdge::Inner {
-            edge,
-            cut_edges: self.cut_edges.clone(),
-        }))
+        let free_outputs: IndexSet<_> = self.thunk.free_graph_outputs().collect();
+        Box::new(
+            self.thunk
+                .outputs()
+                .filter(move |edge| !free_outputs.contains(edge) || !self.cut_edges[&edge.key()])
+                .map(|edge| CutEdge::Inner {
+                    edge,
+                    cut_edges: self.cut_edges.clone(),
+                }),
+        )
     }
 
     fn backlink(&self) -> Option<Thunk<Self::Ctx>> {
@@ -553,10 +560,6 @@ impl<G: Graph> NodeLike for CutThunk<G> {
             thunk: self.thunk.backlink()?,
             cut_edges: self.cut_edges.clone(),
         })
-    }
-
-    fn number_of_outputs(&self) -> usize {
-        self.thunk.number_of_outputs()
     }
 }
 
