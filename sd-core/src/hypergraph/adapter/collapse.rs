@@ -233,15 +233,15 @@ impl<G: Graph> Graph for CollapseGraph<G> {
         Box::new(std::iter::empty())
     }
 
+    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
+        Box::new(std::iter::empty())
+    }
+
     fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         Box::new(self.graph.bound_graph_outputs().map(|edge| CollapseEdge {
             edge,
             expanded: self.expanded.clone(),
         }))
-    }
-
-    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        Box::new(std::iter::empty())
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
@@ -254,6 +254,22 @@ impl<G: Graph> Graph for CollapseGraph<G> {
 
     fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
         None
+    }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        self.graph.number_of_free_graph_inputs()
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        0
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        0
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        self.graph.number_of_bound_graph_outputs()
     }
 }
 
@@ -347,6 +363,22 @@ impl<G: Graph> Graph for CollapseThunk<G> {
 
     fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
         Some(self.clone())
+    }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        self.thunk.number_of_free_graph_inputs()
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        self.thunk.number_of_bound_graph_inputs()
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        self.thunk.number_of_free_graph_outputs()
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        self.thunk.number_of_bound_graph_outputs()
     }
 }
 

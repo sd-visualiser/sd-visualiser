@@ -61,28 +61,19 @@ impl<G: Graph> InteractiveGraph<G> {
 impl<G: Graph> Graph for InteractiveGraph<G> {
     type Ctx = CutGraph<CollapseGraph<SelectableGraph<G>>>;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.free_graph_inputs()
-    }
-
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.bound_graph_inputs()
-    }
-
-    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.free_graph_outputs()
-    }
-
-    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.bound_graph_outputs()
-    }
-
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
-        self.0.nodes()
-    }
-
-    fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
-        self.0.graph_backlink()
+    delegate! {
+        to self.0 {
+            fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_>;
+            fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>>;
+            fn number_of_free_graph_inputs(&self) -> usize;
+            fn number_of_bound_graph_inputs(&self) -> usize;
+            fn number_of_free_graph_outputs(&self) -> usize;
+            fn number_of_bound_graph_outputs(&self) -> usize;
+        }
     }
 }
 
@@ -110,28 +101,19 @@ pub struct InteractiveSubgraph<T: Ctx>(pub CollapseGraph<Subgraph<T>>);
 impl<T: Ctx> Graph for InteractiveSubgraph<T> {
     type Ctx = CollapseGraph<Subgraph<T>>;
 
-    fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.free_graph_inputs()
-    }
-
-    fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.bound_graph_inputs()
-    }
-
-    fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.free_graph_outputs()
-    }
-
-    fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
-        self.0.bound_graph_outputs()
-    }
-
-    fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
-        self.0.nodes()
-    }
-
-    fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
-        self.0.graph_backlink()
+    delegate! {
+        to self.0 {
+            fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
+            fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_>;
+            fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>>;
+            fn number_of_free_graph_inputs(&self) -> usize;
+            fn number_of_bound_graph_inputs(&self) -> usize;
+            fn number_of_free_graph_outputs(&self) -> usize;
+            fn number_of_bound_graph_outputs(&self) -> usize;
+        }
     }
 }
 

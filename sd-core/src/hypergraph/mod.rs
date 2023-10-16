@@ -229,6 +229,22 @@ impl<W: Weight> Graph for Hypergraph<W> {
     fn graph_backlink(&self) -> Option<Thunk<W>> {
         None
     }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        self.graph_inputs.len()
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        0
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        0
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        self.graph_outputs.len()
+    }
 }
 
 impl<W: Weight> Graph for Thunk<W> {
@@ -295,6 +311,22 @@ impl<W: Weight> Graph for Thunk<W> {
 
     fn graph_backlink(&self) -> Option<Thunk<W>> {
         Some(self.clone())
+    }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        self.0.free_inputs.get().expect("Could not lock").len()
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        self.0.bound_inputs.len()
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        self.0.free_outputs.get().expect("Could not lock").len()
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        self.0.bound_outputs.len()
     }
 }
 

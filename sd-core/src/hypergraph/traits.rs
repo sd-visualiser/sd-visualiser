@@ -18,13 +18,8 @@ pub trait NodeLike: Clone + Eq + Hash + Debug + Send + Sync {
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
     fn backlink(&self) -> Option<Thunk<Self::Ctx>>;
 
-    fn number_of_inputs(&self) -> usize {
-        self.inputs().count()
-    }
-
-    fn number_of_outputs(&self) -> usize {
-        self.outputs().count()
-    }
+    fn number_of_inputs(&self) -> usize;
+    fn number_of_outputs(&self) -> usize;
 }
 
 pub trait EdgeLike: Clone + Eq + Hash + Debug + Send + Sync {
@@ -37,18 +32,13 @@ pub trait Graph: Clone + Debug + Send + Sync + Keyable {
     type Ctx: Ctx;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
-
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
 
-    fn graph_inputs<'a>(&'a self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + 'a>
-    where
-        Edge<Self::Ctx>: 'a,
-    {
+    fn graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
         Box::new(self.free_graph_inputs().chain(self.bound_graph_inputs()))
     }
 
     fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
-
     fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;
 
     fn graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_> {
@@ -66,4 +56,18 @@ pub trait Graph: Clone + Debug + Send + Sync + Keyable {
     }
 
     fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>>;
+
+    fn number_of_free_graph_inputs(&self) -> usize;
+    fn number_of_bound_graph_inputs(&self) -> usize;
+
+    fn number_of_graph_inputs(&self) -> usize {
+        self.number_of_free_graph_inputs() + self.number_of_bound_graph_inputs()
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize;
+    fn number_of_bound_graph_outputs(&self) -> usize;
+
+    fn number_of_graph_outputs(&self) -> usize {
+        self.number_of_free_graph_outputs() + self.number_of_bound_graph_outputs()
+    }
 }

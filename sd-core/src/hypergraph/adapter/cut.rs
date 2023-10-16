@@ -296,6 +296,22 @@ impl<G: Graph> Graph for CutGraph<G> {
     fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
         None
     }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        self.graph.number_of_free_graph_inputs()
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        0
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        0
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        self.graph.number_of_bound_graph_outputs()
+    }
 }
 
 impl<G: Graph> EdgeLike for CutEdge<G> {
@@ -524,6 +540,22 @@ impl<G: Graph> Graph for CutThunk<G> {
     fn graph_backlink(&self) -> Option<Thunk<Self::Ctx>> {
         Some(self.clone())
     }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        self.free_graph_inputs().count() // can't do any better
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        self.thunk.number_of_bound_graph_inputs()
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        self.free_graph_outputs().count() // can't do any better
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        self.thunk.number_of_bound_graph_outputs()
+    }
 }
 
 impl<G: Graph> NodeLike for CutThunk<G> {
@@ -560,6 +592,14 @@ impl<G: Graph> NodeLike for CutThunk<G> {
             thunk: self.thunk.backlink()?,
             cut_edges: self.cut_edges.clone(),
         })
+    }
+
+    fn number_of_inputs(&self) -> usize {
+        self.inputs().count() // can't do any better
+    }
+
+    fn number_of_outputs(&self) -> usize {
+        self.outputs().count() // can't do any better
     }
 }
 

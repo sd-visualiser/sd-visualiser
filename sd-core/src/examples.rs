@@ -149,6 +149,22 @@ impl Graph for DummyThunk {
     fn graph_backlink(&self) -> Option<DummyThunk> {
         panic!("unsupported")
     }
+
+    fn number_of_free_graph_inputs(&self) -> usize {
+        panic!("unsupported")
+    }
+
+    fn number_of_bound_graph_inputs(&self) -> usize {
+        panic!("unsupported")
+    }
+
+    fn number_of_free_graph_outputs(&self) -> usize {
+        panic!("unsupported")
+    }
+
+    fn number_of_bound_graph_outputs(&self) -> usize {
+        panic!("unsupported")
+    }
 }
 
 impl Keyable for DummyThunk {
