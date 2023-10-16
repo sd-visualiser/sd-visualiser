@@ -12,7 +12,7 @@ use crate::{
     hypergraph::{
         generic::{Ctx, Edge, Endpoint, Node},
         traits::{Graph, NodeLike},
-        utils::{normalised_targets, number_of_normalised_targets},
+        utils::normalised_targets,
     },
     lp::LpProblem,
 };
@@ -213,7 +213,7 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
         node.outputs().for_each(|edge| {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
-            if open_edges < number_of_normalised_targets::<T>(&edge, node.backlink().as_ref()) {
+            if open_edges < normalised_targets::<T>(&edge, node.backlink().as_ref()).len() {
                 // We need to backlink the edge as it is not done
                 if open_edges == 0 {
                     // Only backlink without copying

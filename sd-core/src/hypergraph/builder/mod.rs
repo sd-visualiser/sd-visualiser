@@ -280,13 +280,13 @@ impl<W: Weight> HypergraphBuilder<W> {
             {
                 match edge.source() {
                     EndPoint::Node(node) => {
-                        if find_ancestor(Some(&thunk), node).is_none() {
+                        if find_ancestor(Some(&thunk), &node).no_ancestor() {
                             inputs.insert(edge.0);
                         }
                     }
                     EndPoint::Boundary(graph) => {
                         if graph.map_or(true, |t| {
-                            t != thunk && find_ancestor(Some(&thunk), Node::Thunk(t)).is_none()
+                            t != thunk && find_ancestor(Some(&thunk), &Node::Thunk(t)).no_ancestor()
                         }) {
                             inputs.insert(edge.0);
                         }
@@ -300,9 +300,9 @@ impl<W: Weight> HypergraphBuilder<W> {
                 .chain(thunk.bound_graph_inputs())
             {
                 if edge.targets().any(|target| match target {
-                    EndPoint::Node(node) => find_ancestor(Some(&thunk), node).is_none(),
+                    EndPoint::Node(node) => find_ancestor(Some(&thunk), &node).no_ancestor(),
                     EndPoint::Boundary(graph) => graph.map_or(true, |t| {
-                        t != thunk && find_ancestor(Some(&thunk), Node::Thunk(t)).is_none()
+                        t != thunk && find_ancestor(Some(&thunk), &Node::Thunk(t)).no_ancestor()
                     }),
                 }) {
                     outputs.insert(edge.0);

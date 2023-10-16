@@ -140,14 +140,18 @@ fn normalise_selection<T: Ctx>(selection: &SelectionMap<T>) -> IndexSet<Node<T>>
     if let Some(op) = selected.first() {
         let mut containing = op.backlink();
         for node in &selected[1..] {
-            while find_ancestor::<T>(containing.as_ref(), node.clone()).is_none() {
+            while find_ancestor::<T>(containing.as_ref(), node).no_ancestor() {
                 containing = containing.unwrap().backlink();
             }
         }
 
         selected
             .into_iter()
-            .map(|node| find_ancestor::<T>(containing.as_ref(), node).unwrap())
+            .map(|node| {
+                find_ancestor::<T>(containing.as_ref(), &node)
+                    .to_node(node)
+                    .unwrap()
+            })
             .collect()
     } else {
         IndexSet::new()
