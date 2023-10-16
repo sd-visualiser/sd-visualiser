@@ -127,8 +127,8 @@ where
     // Wires
     for wire in layout.wires.iter().flat_map(|x| x.iter()) {
         shapes.push(Shape::Line {
-            start: Pos2::new(wire.h, wire.v_top),
-            end: Pos2::new(wire.h, wire.v_bot),
+            start: Pos2::new(wire.h, wire.v_min),
+            end: Pos2::new(wire.h, wire.v_max),
             addr: wire.addr.clone(),
         });
     }
@@ -163,8 +163,8 @@ where
                     let (x_ins_rem, x_outs_rem) = match atype {
                         AtomType::Cap => {
                             for (wire_in, wire_out) in x_ins.iter().zip(&x_outs[1..]) {
-                                let start = Pos2::new(wire_in.h, wire_in.v_bot);
-                                let end = Pos2::new(wire_out.h, wire_out.v_top);
+                                let start = Pos2::new(wire_in.h, wire_in.v_max);
+                                let end = Pos2::new(wire_out.h, wire_out.v_min);
                                 shapes.push(Shape::Line {
                                     start,
                                     end,
@@ -178,8 +178,8 @@ where
                         }
                         AtomType::Cup => {
                             for (wire_out, wire_in) in x_outs.iter().zip(&x_ins[1..]) {
-                                let start = Pos2::new(wire_in.h, wire_in.v_bot);
-                                let end = Pos2::new(wire_out.h, wire_out.v_top);
+                                let start = Pos2::new(wire_in.h, wire_in.v_max);
+                                let end = Pos2::new(wire_out.h, wire_out.v_min);
                                 shapes.push(Shape::Line {
                                     start,
                                     end,
@@ -195,7 +195,7 @@ where
                     };
 
                     for wire in x_ins_rem {
-                        let input = Pos2::new(wire.h, wire.v_bot);
+                        let input = Pos2::new(wire.h, wire.v_max);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_horizontal_in(input, center),
                             addr: wire.addr.clone(),
@@ -203,7 +203,7 @@ where
                     }
 
                     for wire in x_outs_rem {
-                        let output = Pos2::new(wire.h, wire.v_top);
+                        let output = Pos2::new(wire.h, wire.v_min);
                         shapes.push(Shape::CubicBezier {
                             points: horizontal_out_vertical_in(center, output),
                             addr: wire.addr.clone(),
@@ -248,22 +248,27 @@ where
                         });
                     }
                 }
-                crate::layout::Node::Thunk { addr, layout } => {
-                    for (x, x_body) in x_ins.iter().zip(layout.input_wires()) {
-                        let start = Pos2::new(x.h, x.v_bot);
-                        let end = Pos2::new(x_body.h, x_body.v_top);
+                crate::layout::Node::Thunk {
+                    addr,
+                    layout,
+                    inputs,
+                    outputs,
+                } => {
+                    for (outer, inner) in x_ins.iter().zip(inputs) {
+                        let start = Pos2::new(outer.h, outer.v_max);
+                        let end = Pos2::new(*inner, layout.v_min);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_vertical_in(start, end),
-                            addr: x.addr.clone(),
+                            addr: outer.addr.clone(),
                         });
                     }
 
-                    for (x, x_body) in x_outs.iter().zip(layout.output_wires()) {
-                        let start = Pos2::new(x_body.h, x_body.v_bot);
-                        let end = Pos2::new(x.h, x.v_top);
+                    for (outer, inner) in x_outs.iter().zip(outputs) {
+                        let start = Pos2::new(*inner, layout.v_max);
+                        let end = Pos2::new(outer.h, outer.v_min);
                         shapes.push(Shape::CubicBezier {
                             points: vertical_out_vertical_in(start, end),
-                            addr: x.addr.clone(),
+                            addr: outer.addr.clone(),
                         });
                     }
 
@@ -286,6 +291,15 @@ where
                             coord: [j, i],
                         });
                     }
+                    for (edge, &x) in addr.bound_graph_outputs().rev().zip(layout.outputs().rev()) {
+                        shapes.push(Shape::CircleFilled {
+                            center: Pos2::new(x, layout.v_max),
+                            radius: RADIUS_ARG,
+                            addr: edge,
+                            coord: [j, i],
+                        });
+                    }
+
                     generate_shapes(shapes, layout, false);
                 }
             }

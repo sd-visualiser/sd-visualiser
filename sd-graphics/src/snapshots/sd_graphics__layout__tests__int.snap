@@ -31,8 +31,8 @@ LayoutInternal(
     [
       WireData(
         h: 0.5,
-        v_top: 1.5,
-        v_bot: 2.0,
+        v_min: 1.5,
+        v_max: 2.0,
       ),
     ],
   ],

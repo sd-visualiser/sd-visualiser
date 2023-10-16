@@ -62,37 +62,37 @@ LayoutInternal(
     [
       WireData(
         h: 1.75,
-        v_top: 0.0,
-        v_bot: 0.5,
+        v_min: 0.0,
+        v_max: 0.5,
       ),
     ],
     [
       WireData(
         h: 1.0,
-        v_top: 1.6123724,
-        v_bot: 1.6123724,
+        v_min: 1.6123724,
+        v_max: 1.6123724,
       ),
       WireData(
         h: 2.5,
-        v_top: 1.6123724,
-        v_bot: 1.6123724,
+        v_min: 1.6123724,
+        v_max: 1.6123724,
       ),
     ],
     [
       WireData(
         h: 0.5,
-        v_top: 2.6123724,
-        v_bot: 3.1123724,
+        v_min: 2.6123724,
+        v_max: 3.1123724,
       ),
       WireData(
         h: 1.5,
-        v_top: 2.6123724,
-        v_bot: 3.1123724,
+        v_min: 2.6123724,
+        v_max: 3.1123724,
       ),
       WireData(
         h: 2.5,
-        v_top: 2.6123724,
-        v_bot: 3.1123724,
+        v_min: 2.6123724,
+        v_max: 3.1123724,
       ),
     ],
   ],

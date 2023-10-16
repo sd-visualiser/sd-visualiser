@@ -96,18 +96,23 @@ impl WithWeight for DummyOperation {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct DummyThunk {
-    inputs: usize,
+    node_inputs: usize,
+    free_inputs: usize,
+    bound_inputs: usize,
+    node_outputs: usize,
+    free_outputs: usize,
+    bound_outputs: usize,
 }
 
 impl NodeLike for DummyThunk {
     type Ctx = DummyCtx;
 
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        Box::new((0..self.inputs).map(|_| DummyEdge))
+        Box::new((0..self.free_inputs + self.node_inputs).map(|_| DummyEdge))
     }
 
     fn outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        Box::new(std::iter::once(DummyEdge))
+        Box::new((0..self.free_outputs + self.node_outputs).map(|_| DummyEdge))
     }
 
     fn backlink(&self) -> Option<DummyThunk> {
@@ -115,11 +120,11 @@ impl NodeLike for DummyThunk {
     }
 
     fn number_of_inputs(&self) -> usize {
-        self.inputs
+        self.free_inputs + self.node_inputs
     }
 
     fn number_of_outputs(&self) -> usize {
-        1
+        self.free_outputs + self.node_outputs
     }
 }
 
@@ -127,19 +132,19 @@ impl Graph for DummyThunk {
     type Ctx = DummyCtx;
 
     fn free_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new((0..self.free_inputs).map(|_| DummyEdge))
     }
 
     fn bound_graph_inputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new((0..self.bound_inputs).map(|_| DummyEdge))
     }
 
     fn free_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new((0..self.free_outputs).map(|_| DummyEdge))
     }
 
     fn bound_graph_outputs(&self) -> Box<dyn DoubleEndedIterator<Item = DummyEdge> + '_> {
-        panic!("unsupported")
+        Box::new((0..self.bound_outputs).map(|_| DummyEdge))
     }
 
     fn nodes(&self) -> Box<dyn DoubleEndedIterator<Item = Node<DummyCtx>> + '_> {
@@ -151,19 +156,19 @@ impl Graph for DummyThunk {
     }
 
     fn number_of_free_graph_inputs(&self) -> usize {
-        panic!("unsupported")
+        self.free_inputs
     }
 
     fn number_of_bound_graph_inputs(&self) -> usize {
-        panic!("unsupported")
+        self.bound_inputs
     }
 
     fn number_of_free_graph_outputs(&self) -> usize {
-        panic!("unsupported")
+        self.free_outputs
     }
 
     fn number_of_bound_graph_outputs(&self) -> usize {
-        panic!("unsupported")
+        self.bound_outputs
     }
 }
 
@@ -234,8 +239,8 @@ pub fn copy() -> MonoidalGraph<DummyCtx> {
 #[must_use]
 pub fn thunk() -> MonoidalGraph<DummyCtx> {
     let plus = MonoidalGraph {
-        free_inputs: vec![],
-        bound_inputs: vec![DummyEdge; 2],
+        free_inputs: vec![DummyEdge],
+        bound_inputs: vec![DummyEdge],
         slices: vec![Slice {
             ops: vec![MonoidalOp::Operation {
                 addr: DummyOperation {
@@ -255,7 +260,14 @@ pub fn thunk() -> MonoidalGraph<DummyCtx> {
         slices: vec![Slice {
             ops: vec![
                 MonoidalOp::Thunk {
-                    addr: DummyThunk { inputs: 1 },
+                    addr: DummyThunk {
+                        node_inputs: 0,
+                        free_inputs: 1,
+                        bound_inputs: 1,
+                        node_outputs: 0,
+                        free_outputs: 0,
+                        bound_outputs: 1,
+                    },
                     body: plus,
                 },
                 MonoidalOp::Operation {

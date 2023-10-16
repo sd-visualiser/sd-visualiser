@@ -12,7 +12,7 @@ use sd_core::{
     common::{InOut, InOutIter},
     hypergraph::{
         generic::{Ctx, OperationWeight},
-        traits::WithWeight,
+        traits::{Graph, NodeLike, WithWeight},
     },
     lp::LpProblem,
     monoidal::graph::{MonoidalGraph, MonoidalOp},
@@ -71,6 +71,8 @@ pub enum Node<T: Ctx, H, V> {
         #[cfg_attr(test, serde(skip_serializing))]
         addr: T::Thunk,
         layout: LayoutInternal<T, H, V>,
+        inputs: Vec<H>,
+        outputs: Vec<H>,
     },
 }
 
@@ -136,8 +138,8 @@ impl<T: Ctx, H, V> InOut for NodeOffset<T, H, V> {
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct WireData<T: Ctx, H, V> {
     pub h: H,
-    pub v_top: V,
-    pub v_bot: V,
+    pub v_min: V,
+    pub v_max: V,
     #[cfg_attr(test, serde(skip_serializing))]
     pub addr: T::Edge,
 }
@@ -219,9 +221,22 @@ impl<T: Ctx, S> HLayout<T, S> {
                                     v_bot,
                                     out_to_in,
                                 },
-                                Node::Thunk { addr, layout } => Node::Thunk {
+                                Node::Thunk {
+                                    addr,
+                                    layout,
+                                    inputs,
+                                    outputs,
+                                } => Node::Thunk {
                                     addr,
                                     layout: Self::from_solution_h(layout, solution),
+                                    inputs: inputs
+                                        .into_iter()
+                                        .map(|x| solution.value(x) as f32)
+                                        .collect(),
+                                    outputs: outputs
+                                        .into_iter()
+                                        .map(|x| solution.value(x) as f32)
+                                        .collect(),
                                 },
                             },
                             inputs: n.inputs,
@@ -238,13 +253,13 @@ impl<T: Ctx, S> HLayout<T, S> {
                         .map(
                             |WireData {
                                  h,
-                                 v_top,
-                                 v_bot,
+                                 v_min,
+                                 v_max,
                                  addr,
                              }| WireData {
                                 h: solution.value(h) as f32,
-                                v_top,
-                                v_bot,
+                                v_min,
+                                v_max,
                                 addr,
                             },
                         )
@@ -302,9 +317,16 @@ impl<T: Ctx> Layout<T> {
                                     v_bot: solution.value(v_bot) as f32,
                                     out_to_in,
                                 },
-                                Node::Thunk { addr, layout } => Node::Thunk {
+                                Node::Thunk {
+                                    addr,
+                                    layout,
+                                    inputs,
+                                    outputs,
+                                } => Node::Thunk {
                                     addr,
                                     layout: Layout::from_solution_v(layout, solution),
+                                    inputs,
+                                    outputs,
                                 },
                             },
                             inputs: n.inputs,
@@ -321,13 +343,13 @@ impl<T: Ctx> Layout<T> {
                         .map(
                             |WireData {
                                  h,
-                                 v_top,
-                                 v_bot,
+                                 v_min,
+                                 v_max,
                                  addr,
                              }| WireData {
                                 h,
-                                v_top: solution.value(v_top) as f32,
-                                v_bot: solution.value(v_bot) as f32,
+                                v_min: solution.value(v_min) as f32,
+                                v_max: solution.value(v_max) as f32,
                                 addr,
                             },
                         )
@@ -353,17 +375,18 @@ where
     let mut nodes = Vec::default();
     let mut wires: Vec<Vec<WireData<T, Variable, ()>>> = Vec::default();
 
-    let add_constraints_wires = |problem: &mut LpProblem, vs: &Vec<Variable>| {
-        if let Some(x) = vs.first().copied() {
-            problem.add_constraint((x - min).geq(0.5));
-        }
-        if let Some(x) = vs.last().copied() {
-            problem.add_constraint((max - x).geq(0.5));
-        }
-        for (x, y) in vs.iter().copied().tuple_windows() {
-            problem.add_constraint((y - x).geq(1.0));
-        }
-    };
+    let add_constraints_wires =
+        |problem: &mut LpProblem, vs: &Vec<Variable>, min: Variable, max: Variable| {
+            if let Some(x) = vs.first().copied() {
+                problem.add_constraint((x - min).geq(0.5));
+            }
+            if let Some(x) = vs.last().copied() {
+                problem.add_constraint((max - x).geq(0.5));
+            }
+            for (x, y) in vs.iter().copied().tuple_windows() {
+                problem.add_constraint((y - x).geq(1.0));
+            }
+        };
 
     let add_constraints_nodes = |problem: &mut LpProblem, ns: &Vec<NodeOffset<T, Variable, ()>>| {
         if let Some(x) = ns.first() {
@@ -381,30 +404,30 @@ where
         variable().min(0.0),
         graph.free_inputs.len() + graph.bound_inputs.len(),
     );
-    add_constraints_wires(problem, &inputs);
+    add_constraints_wires(problem, &inputs, min, max);
     wires.push(
         inputs
             .into_iter()
             .zip(graph.free_inputs.iter().chain(&graph.bound_inputs))
             .map(|(h, addr)| WireData {
                 h,
-                v_top: (),
-                v_bot: (),
+                v_min: (),
+                v_max: (),
                 addr: addr.clone(),
             })
             .collect(),
     );
     for slice in &graph.slices {
         let outputs = problem.add_variables(variable().min(0.0), slice.number_of_outputs());
-        add_constraints_wires(problem, &outputs);
+        add_constraints_wires(problem, &outputs, min, max);
         wires.push(
             outputs
                 .into_iter()
                 .zip(slice.output_links())
                 .map(|(h, link)| WireData {
                     h,
-                    v_top: (),
-                    v_bot: (),
+                    v_min: (),
+                    v_max: (),
                     addr: link.0,
                 })
                 .collect(),
@@ -421,6 +444,9 @@ where
                     MonoidalOp::Thunk { body, addr, .. } => Node::Thunk {
                         addr: addr.clone(),
                         layout: h_layout_internal(body, problem),
+                        inputs: problem.add_variables(variable().min(0.0), addr.number_of_inputs()),
+                        outputs: problem
+                            .add_variables(variable().min(0.0), addr.number_of_outputs()),
                     },
                     MonoidalOp::Swap { out_to_in, .. } => Node::Swap {
                         h_pos: problem.add_variable(variable().min(0.0)),
@@ -534,11 +560,11 @@ where
                         _ => {
                             // Try to "squish" inputs and outputs
                             if ni >= 2 {
-                                problem.add_objective((ins[ni - 1].h - ins[0].h) * ni as f32);
+                                problem.add_objective(ins[ni - 1].h - ins[0].h);
                             }
 
                             if no >= 2 {
-                                problem.add_objective((outs[no - 1].h - outs[0].h) * no as f32);
+                                problem.add_objective(outs[no - 1].h - outs[0].h);
                             }
 
                             // Fair averaging constraints
@@ -568,22 +594,47 @@ where
                         problem.add_objective(distance);
                     }
                 }
-                Node::Thunk { layout, .. } => {
-                    // Align internal wires with the external ones.
-                    for (x, &y) in ins.iter().zip(layout.inputs()) {
+                Node::Thunk {
+                    addr,
+                    layout,
+                    inputs,
+                    outputs,
+                } => {
+                    // Distance constraints for the ports.
+                    add_constraints_wires(problem, inputs, layout.h_min, layout.h_max);
+                    add_constraints_wires(problem, outputs, layout.h_min, layout.h_max);
+
+                    // Align inner wires with ports.
+                    for (&inner, &port) in layout
+                        .inputs()
+                        .take(addr.number_of_free_graph_inputs())
+                        .zip(inputs)
+                    {
+                        problem.add_constraint(Expression::eq(inner.into(), port));
+                    }
+                    for (&inner, &port) in layout
+                        .outputs()
+                        .take(addr.number_of_free_graph_outputs())
+                        .zip(outputs)
+                    {
+                        problem.add_constraint(Expression::eq(inner.into(), port));
+                    }
+
+                    // Align outer wires with ports.
+                    for (outer, &port) in ins.iter().zip(inputs) {
                         let distance = problem.add_variable(variable().min(0.0));
-                        problem.add_constraint((x.h - y).leq(distance));
-                        problem.add_constraint((y - x.h).leq(distance));
+                        problem.add_constraint((outer.h - port).leq(distance));
+                        problem.add_constraint((port - outer.h).leq(distance));
                         problem.add_objective(distance * 1.5);
                     }
-                    for (x, &y) in outs.iter().zip(layout.outputs()) {
+                    for (outer, &port) in outs.iter().zip(outputs) {
                         let distance = problem.add_variable(variable().min(0.0));
-                        problem.add_constraint((x.h - y).leq(distance));
-                        problem.add_constraint((y - x.h).leq(distance));
+                        problem.add_constraint((outer.h - port).leq(distance));
+                        problem.add_constraint((port - outer.h).leq(distance));
                         problem.add_objective(distance * 1.5);
                     }
 
-                    problem.add_objective(layout.h_max - layout.h_min);
+                    problem.add_objective((layout.h_max - layout.h_min) * 2.0);
                 }
             }
 
@@ -622,8 +673,8 @@ fn v_layout_internal<T: Ctx>(
 
                     WireData {
                         h: v.h,
-                        v_top,
-                        v_bot,
+                        v_min: v_top,
+                        v_max: v_bot,
                         addr: v.addr,
                     }
                 })
@@ -636,8 +687,8 @@ fn v_layout_internal<T: Ctx>(
     let v_min = problem.add_variable(variable().min(0.0));
 
     for x in wires.first().unwrap() {
-        problem.add_constraint(Expression::eq(v_min.into(), x.v_top));
-        problem.add_constraint(Expression::leq(x.v_top + 0.5, x.v_bot));
+        problem.add_constraint(Expression::eq(v_min.into(), x.v_min));
+        problem.add_constraint(Expression::leq(x.v_min + 0.5, x.v_max));
     }
 
     // Set up max
@@ -645,8 +696,8 @@ fn v_layout_internal<T: Ctx>(
     let v_max = problem.add_variable(variable().min(0.0));
 
     for x in wires.last().unwrap() {
-        problem.add_constraint(Expression::eq(v_max.into(), x.v_bot));
-        problem.add_constraint(Expression::leq(x.v_top + 0.5, x.v_bot));
+        problem.add_constraint(Expression::eq(v_max.into(), x.v_max));
+        problem.add_constraint(Expression::leq(x.v_min + 0.5, x.v_max));
     }
 
     // Set up nodes
@@ -732,7 +783,12 @@ fn v_layout_internal<T: Ctx>(
                                 interval,
                             )
                         }
-                        Node::Thunk { addr, layout } => {
+                        Node::Thunk {
+                            addr,
+                            layout,
+                            inputs,
+                            outputs,
+                        } => {
                             let layout = v_layout_internal(problem, layout);
 
                             problem.add_constraint((layout.v_min + layout.v_max).eq(thunk_height));
@@ -763,7 +819,17 @@ fn v_layout_internal<T: Ctx>(
                                 Bound::Included(OrderedFloat(layout.h_max)),
                             );
 
-                            (Node::Thunk { addr, layout }, start, end, interval)
+                            (
+                                Node::Thunk {
+                                    addr,
+                                    layout,
+                                    inputs,
+                                    outputs,
+                                },
+                                start,
+                                end,
+                                interval,
+                            )
                         }
                     };
 
@@ -771,11 +837,11 @@ fn v_layout_internal<T: Ctx>(
                     problem.add_constraint(Expression::leq(top + 0.5, v_max));
 
                     for x in &before[n.inputs.clone()] {
-                        problem.add_constraint(Expression::eq(top.into(), x.v_bot));
+                        problem.add_constraint(Expression::eq(top.into(), x.v_max));
                     }
 
                     for x in &after[n.outputs.clone()] {
-                        problem.add_constraint(Expression::eq(bottom.into(), x.v_top));
+                        problem.add_constraint(Expression::eq(bottom.into(), x.v_min));
                     }
 
                     for x in interval_tree.query(&interval) {
