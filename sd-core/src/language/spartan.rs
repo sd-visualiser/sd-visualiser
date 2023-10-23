@@ -142,6 +142,37 @@ impl FromStr for Op {
     }
 }
 
+impl Matchable for Op {
+    fn is_match(&self, query: &str) -> bool {
+        match self {
+            Self::Plus => query == "plus",
+            Self::Minus => query == "minus",
+            Self::Times => query == "times",
+            Self::Div => query == "div",
+            Self::Rem => query == "rem",
+            Self::And => query == "and",
+            Self::Or => query == "or",
+            Self::Not => query == "not",
+            Self::If => query == "if",
+            Self::Eq => query == "eq",
+            Self::Neq => query == "neq",
+            Self::Lt => query == "lt",
+            Self::Leq => query == "leq",
+            Self::Gt => query == "gt",
+            Self::Geq => query == "geq",
+            Self::App => query == "app",
+            Self::Lambda => query == "lambda",
+            Self::Atom => query == "atom",
+            Self::Deref => query == "deref",
+            Self::Assign => query == "assign",
+            Self::Tuple => query == "tuple",
+            Self::Detuple => query == "detuple",
+            Self::Bool(b) => b.to_string() == query,
+            Self::Number(n) => n.to_string() == query,
+        }
+    }
+}
+
 impl<'pest> FromPest<'pest> for Op {
     type Rule = Rule;
     type FatalError = Void;

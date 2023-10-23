@@ -51,9 +51,10 @@ impl<W: Weight> Matchable for hypergraph::Edge<W> {
 impl<W: Weight> Matchable for hypergraph::Operation<W>
 where
     W::EdgeWeight: Matchable,
+    W::OperationWeight: Matchable,
 {
     fn is_match(&self, query: &str) -> bool {
-        self.outputs().any(|edge| edge.weight().is_match(query))
+        self.weight().is_match(query) || self.outputs().any(|edge| edge.weight().is_match(query))
     }
 }
 

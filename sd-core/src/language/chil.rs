@@ -104,6 +104,12 @@ impl Display for Op {
     }
 }
 
+impl Matchable for Op {
+    fn is_match(&self, query: &str) -> bool {
+        self.0 == query
+    }
+}
+
 impl<'pest> FromPest<'pest> for Op {
     type Rule = Rule;
     type FatalError = Void;

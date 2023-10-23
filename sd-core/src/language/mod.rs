@@ -37,14 +37,17 @@ pub trait Fresh {
 
 /// `Display` should give the symbolic representation (e.g. "+").
 /// `PrettyPrint` should give the textual representation (e.g. "plus").
-pub trait Syntax: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint {}
-impl<T: Clone + Eq + Hash + Debug + Send + Sync + Display + PrettyPrint> Syntax for T {}
+pub trait Syntax:
+    Clone + Eq + Hash + Debug + Send + Sync + Display + Matchable + PrettyPrint
+{
+}
+impl<T: Clone + Eq + Hash + Debug + Send + Sync + Display + Matchable + PrettyPrint> Syntax for T {}
 
 pub trait Language {
     type Op: Syntax;
-    type Var: Syntax + Matchable + Fresh;
-    type Addr: Syntax + Matchable;
-    type VarDef: Syntax + Matchable + GetVar<Self::Var>;
+    type Var: Syntax + Fresh;
+    type Addr: Syntax;
+    type VarDef: Syntax + GetVar<Self::Var>;
 
     type Rule: RuleType;
     fn expr_rule() -> Self::Rule;
