@@ -712,6 +712,8 @@ fn v_layout_internal<T: Ctx>(
             let thunk_height = problem.add_variable(variable().min(0.0));
             ns.into_iter()
                 .map(|n| {
+                    let ins = &before[n.inputs.clone()];
+                    let outs = &after[n.outputs.clone()];
                     let (node, top, bottom, interval) = match n.node {
                         Node::Atom {
                             h_pos,
@@ -724,7 +726,7 @@ fn v_layout_internal<T: Ctx>(
                             let in_gap = if n.inputs.len() < 2 {
                                 1.0
                             } else {
-                                f32::sqrt(before[n.inputs.end - 1].h - before[n.inputs.start].h)
+                                f32::sqrt(ins.last().unwrap().h - ins[0].h)
                             } / 2.0;
 
                             let interval = Interval::new(
@@ -735,7 +737,7 @@ fn v_layout_internal<T: Ctx>(
                             let out_gap = if n.outputs.len() < 2 {
                                 1.0
                             } else {
-                                f32::sqrt(after[n.outputs.end - 1].h - after[n.outputs.start].h)
+                                f32::sqrt(outs.last().unwrap().h - outs[0].h)
                             } / 2.0;
 
                             let start = problem.add_variable(variable().min(0.0));
@@ -761,7 +763,7 @@ fn v_layout_internal<T: Ctx>(
                             let height = out_to_in
                                 .iter()
                                 .enumerate()
-                                .map(|(i, x)| f32::sqrt((after[i].h - before[*x].h).abs()))
+                                .map(|(i, x)| f32::sqrt((outs[i].h - ins[*x].h).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
                             let v_top = problem.add_variable(variable().min(0.0));
@@ -769,7 +771,18 @@ fn v_layout_internal<T: Ctx>(
 
                             problem.add_constraint(Expression::eq(v_top + height, v_bot));
 
-                            let interval = Interval::point(OrderedFloat(h_pos));
+                            let (low, high) = ins
+                                .iter()
+                                .chain(outs.iter())
+                                .map(|x| x.h)
+                                .minmax()
+                                .into_option()
+                                .unwrap();
+
+                            let interval = Interval::new(
+                                Bound::Included(OrderedFloat(low)),
+                                Bound::Included(OrderedFloat(high)),
+                            );
 
                             (
                                 Node::Swap {
@@ -793,14 +806,14 @@ fn v_layout_internal<T: Ctx>(
 
                             problem.add_constraint((layout.v_min + layout.v_max).eq(thunk_height));
 
-                            let height_above = before[n.inputs.clone()]
+                            let height_above = ins
                                 .iter()
                                 .zip(layout.inputs())
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
 
-                            let height_below = after[n.outputs.clone()]
+                            let height_below = outs
                                 .iter()
                                 .zip(layout.outputs())
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
