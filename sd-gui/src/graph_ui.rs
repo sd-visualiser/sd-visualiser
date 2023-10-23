@@ -47,7 +47,7 @@ impl GraphUi {
             pub(crate) fn reset(&mut self);
             pub(crate) fn zoom_in(&mut self);
             pub(crate) fn zoom_out(&mut self);
-            pub(crate) fn find(&mut self, query: &str);
+            pub(crate) fn find(&mut self, query: &str, offset: usize);
             pub(crate) fn export_svg(&self) -> String;
         }
     }
@@ -173,7 +173,7 @@ where
     }
 
     /// Searches through the shapes and pans to the one which matches the query
-    pub(crate) fn find(&mut self, query: &str)
+    pub(crate) fn find(&mut self, query: &str, offset: usize)
     where
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Matchable + Shapeable,
@@ -184,11 +184,14 @@ where
         let guard = shapes.lock().unwrap();
 
         if let Some(shapes) = guard.ready() {
-            for shape in &shapes.shapes {
-                if shape.is_match(query) {
-                    self.panzoom.set_pan(shape.center());
-                    break;
-                }
+            let matches = shapes
+                .shapes
+                .iter()
+                .filter(|shape| shape.is_match(query))
+                .collect::<Vec<_>>();
+            if !matches.is_empty() {
+                let shape = matches[offset % matches.len()];
+                self.panzoom.set_pan(shape.center());
             }
         }
     }

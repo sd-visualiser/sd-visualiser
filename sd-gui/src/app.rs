@@ -44,7 +44,7 @@ pub struct App {
     language: UiLanguage,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
-    find: Option<String>,
+    find: Option<(String, usize)>,
     toasts: Toasts,
 }
 
@@ -356,7 +356,7 @@ impl eframe::App for App {
                     egui::Key::F,
                     enabled = ready
                 ) {
-                    self.find = Some(String::new());
+                    self.find = Some((String::new(), 0));
                     find_request_focus = true;
                 }
 
@@ -470,7 +470,7 @@ impl eframe::App for App {
                     .map(|p| p.poll_mut().map(Result::as_mut))
                 {
                     Some(Poll::Ready(Ok(graph_ui))) => {
-                        graph_ui.ui(ui, self.find.as_deref());
+                        graph_ui.ui(ui, self.find.as_ref().map(|x| x.0.as_str()));
                     }
                     Some(Poll::Pending) => {
                         ui.centered_and_justified(eframe::egui::Ui::spinner);
@@ -481,7 +481,9 @@ impl eframe::App for App {
         });
 
         let mut clear_find = false;
-        if let Some((query, graph_ui)) = self.find.as_mut().zip(finished_mut(&mut self.graph_ui)) {
+        if let Some(((query, offset), graph_ui)) =
+            self.find.as_mut().zip(finished_mut(&mut self.graph_ui))
+        {
             egui::Window::new("find_panel")
                 .movable(false)
                 .resizable(false)
@@ -492,9 +494,13 @@ impl eframe::App for App {
                     if find_request_focus {
                         response.request_focus();
                     }
+                    if response.changed() {
+                        *offset = 0;
+                    }
                     ui.horizontal(|ui| {
                         if ui.button("Find").clicked() {
-                            graph_ui.find(query);
+                            graph_ui.find(query, *offset);
+                            *offset += 1;
                         }
                         if ui.button("Cancel").clicked() {
                             clear_find = true;
