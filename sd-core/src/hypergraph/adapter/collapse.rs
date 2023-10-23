@@ -8,10 +8,7 @@ use crate::{
     codeable::{Code, Codeable},
     common::Matchable,
     hypergraph::{
-        generic::{
-            Ctx, Edge, EdgeWeight, Endpoint, Key, Node, Operation, OperationWeight, Thunk,
-            ThunkWeight,
-        },
+        generic::{Ctx, Edge, Endpoint, Key, Node, Operation, Thunk, Weight},
         mapping::ThunkMap,
         subgraph::ExtensibleEdge,
         traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
@@ -527,7 +524,7 @@ impl<G: Graph> Keyable for CollapseThunk<G> {
 }
 
 impl<G: Graph> WithWeight for CollapseEdge<G> {
-    type Weight = EdgeWeight<G::Ctx>;
+    type Weight = Weight<Edge<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
         self.edge.weight()
@@ -535,7 +532,7 @@ impl<G: Graph> WithWeight for CollapseEdge<G> {
 }
 
 impl<G: Graph> WithWeight for CollapseOperation<G> {
-    type Weight = Either<OperationWeight<G::Ctx>, ThunkWeight<G::Ctx>>;
+    type Weight = Either<Weight<Operation<G::Ctx>>, Weight<Thunk<G::Ctx>>>;
 
     fn weight(&self) -> Self::Weight {
         match &self.node {
@@ -546,7 +543,7 @@ impl<G: Graph> WithWeight for CollapseOperation<G> {
 }
 
 impl<G: Graph> WithWeight for CollapseThunk<G> {
-    type Weight = ThunkWeight<G::Ctx>;
+    type Weight = Weight<Thunk<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
         self.thunk.weight()

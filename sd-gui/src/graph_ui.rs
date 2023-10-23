@@ -12,7 +12,7 @@ use sd_core::{
     common::{Direction, Matchable},
     graph::SyntaxHypergraph,
     hypergraph::{
-        generic::{Edge, Operation, OperationWeight, Thunk},
+        generic::{Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
@@ -95,7 +95,7 @@ where
         // Needed for generate_shapes
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Shapeable,
-        OperationWeight<G::Ctx>: Display,
+        Weight<Operation<G::Ctx>>: Display,
     {
         let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap();
@@ -178,7 +178,7 @@ where
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Matchable + Shapeable,
         Thunk<G::Ctx>: Matchable,
-        OperationWeight<G::Ctx>: Display,
+        Weight<Operation<G::Ctx>>: Display,
     {
         let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap();
@@ -204,7 +204,7 @@ where
     where
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Shapeable,
-        OperationWeight<G::Ctx>: Display,
+        Weight<Operation<G::Ctx>>: Display,
     {
         let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here

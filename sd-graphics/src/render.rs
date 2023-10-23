@@ -7,7 +7,7 @@ use sd_core::{
     codeable::Codeable,
     common::Matchable,
     hypergraph::{
-        generic::{Ctx, Edge, Operation, OperationWeight, Thunk},
+        generic::{Ctx, Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
         traits::{Graph, NodeLike, WithWeight},
     },
@@ -91,7 +91,7 @@ where
     T: Ctx,
     T::Edge: ExtensibleEdge,
     T::Operation: Shapeable,
-    OperationWeight<T>: Display,
+    Weight<T::Operation>: Display,
 {
     if arrows {
         // Source

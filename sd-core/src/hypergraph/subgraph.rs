@@ -4,9 +4,8 @@ use derivative::Derivative;
 use indexmap::IndexSet;
 
 use super::{
-    generic::{Edge, EdgeWeight, Endpoint, Key, Node, OperationWeight, Thunk, ThunkWeight},
+    generic::{Edge, Endpoint, Key, Node, Thunk, Weight},
     traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
-    Weight,
 };
 use crate::{
     codeable::{Code, Codeable},
@@ -422,7 +421,7 @@ impl<T: Ctx> Keyable for SubThunk<T> {
 }
 
 impl<T: Ctx> WithWeight for SubEdge<T> {
-    type Weight = EdgeWeight<T>;
+    type Weight = Weight<T::Edge>;
 
     fn weight(&self) -> Self::Weight {
         self.edge.weight()
@@ -430,7 +429,7 @@ impl<T: Ctx> WithWeight for SubEdge<T> {
 }
 
 impl<T: Ctx> WithWeight for SubOperation<T> {
-    type Weight = OperationWeight<T>;
+    type Weight = Weight<T::Operation>;
 
     fn weight(&self) -> Self::Weight {
         self.op.weight()
@@ -438,7 +437,7 @@ impl<T: Ctx> WithWeight for SubOperation<T> {
 }
 
 impl<T: Ctx> WithWeight for SubThunk<T> {
-    type Weight = ThunkWeight<T>;
+    type Weight = Weight<T::Thunk>;
 
     fn weight(&self) -> Self::Weight {
         self.thunk.weight()
@@ -515,7 +514,7 @@ pub trait ExtensibleEdge: EdgeLike {
     }
 }
 
-impl<W: Weight> ExtensibleEdge for super::Edge<W> {}
+impl<W: super::Weight> ExtensibleEdge for super::Edge<W> {}
 
 impl<T: Ctx> ExtensibleEdge for SubEdge<T> {
     fn extend_source(&self) -> Option<Node<Self::Ctx>> {

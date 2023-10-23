@@ -9,10 +9,7 @@ use crate::{
     codeable::{Code, Codeable},
     common::Matchable,
     hypergraph::{
-        generic::{
-            Ctx, Edge, EdgeWeight, Endpoint, Key, Node, Operation, OperationWeight, Thunk,
-            ThunkWeight,
-        },
+        generic::{Ctx, Edge, Endpoint, Key, Node, Operation, Thunk, Weight},
         mapping::EdgeMap,
         subgraph::ExtensibleEdge,
         traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
@@ -636,7 +633,7 @@ impl<G: Graph> Keyable for CutThunk<G> {
 }
 
 impl<G: Graph> WithWeight for CutEdge<G> {
-    type Weight = EdgeWeight<G::Ctx>;
+    type Weight = Weight<Edge<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
         self.inner().weight()
@@ -644,7 +641,7 @@ impl<G: Graph> WithWeight for CutEdge<G> {
 }
 
 impl<G: Graph> WithWeight for CutOperation<G> {
-    type Weight = Either<OperationWeight<G::Ctx>, EdgeWeight<G::Ctx>>;
+    type Weight = Either<Weight<Operation<G::Ctx>>, Weight<Edge<G::Ctx>>>;
 
     fn weight(&self) -> Self::Weight {
         self.inner()
@@ -653,7 +650,7 @@ impl<G: Graph> WithWeight for CutOperation<G> {
 }
 
 impl<G: Graph> WithWeight for CutThunk<G> {
-    type Weight = ThunkWeight<G::Ctx>;
+    type Weight = Weight<Thunk<G::Ctx>>;
 
     fn weight(&self) -> Self::Weight {
         self.inner().weight()

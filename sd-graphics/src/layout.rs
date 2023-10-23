@@ -11,7 +11,7 @@ use ordered_float::OrderedFloat;
 use sd_core::{
     common::{InOut, InOutIter},
     hypergraph::{
-        generic::{Ctx, OperationWeight},
+        generic::{Ctx, Weight},
         traits::{Graph, NodeLike, WithWeight},
     },
     lp::LpProblem,
@@ -366,7 +366,7 @@ fn h_layout_internal<T: Ctx>(
     problem: &mut LpProblem,
 ) -> LayoutInternal<T, Variable, ()>
 where
-    OperationWeight<T>: Display,
+    Weight<T::Operation>: Display,
 {
     // STEP 1. Generate variables for each layer.
     let min = problem.add_variable(variable().min(0.0));
@@ -876,7 +876,7 @@ fn v_layout_internal<T: Ctx>(
 
 pub fn layout<T: Ctx>(graph: &MonoidalGraph<T>) -> Result<Layout<T>, LayoutError>
 where
-    OperationWeight<T>: Display,
+    Weight<T::Operation>: Display,
 {
     let mut problem = LpProblem::default();
 

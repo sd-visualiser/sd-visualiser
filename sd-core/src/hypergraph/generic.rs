@@ -12,14 +12,11 @@ pub trait Ctx {
 }
 
 pub type Key<T> = <T as Keyable>::Key;
+pub type Weight<T> = <T as WithWeight>::Weight;
 
 pub type Edge<T> = <T as Ctx>::Edge;
 pub type Operation<T> = <T as Ctx>::Operation;
 pub type Thunk<T> = <T as Ctx>::Thunk;
-
-pub type EdgeWeight<T> = <Edge<T> as WithWeight>::Weight;
-pub type OperationWeight<T> = <Operation<T> as WithWeight>::Weight;
-pub type ThunkWeight<T> = <Thunk<T> as WithWeight>::Weight;
 
 #[derive(Derivative)]
 #[derivative(
