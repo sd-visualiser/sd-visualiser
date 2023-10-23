@@ -808,14 +808,14 @@ fn v_layout_internal<T: Ctx>(
 
                             let height_above = ins
                                 .iter()
-                                .zip(layout.inputs())
+                                .zip(&inputs)
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
 
                             let height_below = outs
                                 .iter()
-                                .zip(layout.outputs())
+                                .zip(&outputs)
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
