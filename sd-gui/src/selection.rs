@@ -3,7 +3,6 @@
 use delegate::delegate;
 use eframe::egui;
 use sd_core::{
-    codeable::Codeable,
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
     language::{chil::Chil, spartan::Spartan, Expr, Language, Thunk},
@@ -11,6 +10,7 @@ use sd_core::{
 };
 
 use crate::{
+    code_generator::generate_code,
     code_ui::code_ui,
     graph_ui::{GraphUi, GraphUiInternal},
     parser::UiLanguage,
@@ -48,21 +48,14 @@ impl Selection {
 pub struct SelectionInternal<T: Language> {
     name: String,
     displayed: bool,
-    code: String,
     graph_ui: GraphUiInternal<InteractiveSubgraph<SyntaxHypergraph<T>>>,
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
-    pub(crate) fn new(subgraph: InteractiveSubgraph<SyntaxHypergraph<T>>, name: String) -> Self
-    where
-        Expr<T>: PrettyPrint,
-    {
+    pub(crate) fn new(subgraph: InteractiveSubgraph<SyntaxHypergraph<T>>, name: String) -> Self {
         let graph_ui = GraphUiInternal::new(subgraph);
 
-        let code = graph_ui.graph.code().to_pretty();
-
         Self {
-            code,
             name,
             displayed: true,
             graph_ui,
@@ -79,17 +72,18 @@ impl<T: 'static + Language> SelectionInternal<T> {
 
     pub(crate) fn ui(&mut self, ctx: &egui::Context)
     where
+        Expr<T>: PrettyPrint,
         Thunk<T>: PrettyPrint,
     {
         egui::Window::new(self.name.clone())
             .open(&mut self.displayed)
             .show(ctx, |ui| {
                 ui.columns(2, |columns| {
-                    code_ui(
-                        &mut columns[0],
-                        &mut self.code.as_str(),
-                        UiLanguage::Spartan,
-                    );
+                    let code = generate_code(&self.graph_ui.graph);
+                    let guard = code.lock().unwrap();
+                    if let Some(code) = guard.ready() {
+                        code_ui(&mut columns[0], &mut code.as_str(), UiLanguage::Spartan);
+                    }
                     self.graph_ui.ui(&mut columns[1], None);
                 });
             });

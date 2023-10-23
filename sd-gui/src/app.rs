@@ -17,6 +17,7 @@ use poll_promise::Promise;
 use sd_core::{common::Direction, graph::SyntaxHypergraph};
 
 use crate::{
+    code_generator::clear_code_cache,
     code_ui::code_ui,
     graph_ui::GraphUi,
     parser::{parse, ParseError, ParseOutput, UiLanguage},
@@ -396,6 +397,7 @@ impl eframe::App for App {
                 }
                 if button!("Clear selection", enabled = ready && has_selections) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                        clear_code_cache();
                         graph_ui.clear_selection();
                     }
                 }
