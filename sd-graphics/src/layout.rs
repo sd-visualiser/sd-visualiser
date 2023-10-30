@@ -858,7 +858,7 @@ fn v_layout_internal<T: Ctx>(
                     }
 
                     for x in interval_tree.query(&interval) {
-                        problem.add_constraint(Expression::leq((*x.value()).into(), top));
+                        problem.add_constraint(Expression::leq(*x.value() + 0.5, top));
                     }
 
                     interval_tree.insert(interval, bottom);
