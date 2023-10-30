@@ -4,8 +4,6 @@ use std::{
 };
 
 use derivative::Derivative;
-use from_pest::{ConversionError, FromPest, Void};
-use pest::{iterators::Pairs, RuleType};
 
 use crate::{common::Matchable, prettyprinter::PrettyPrint};
 
@@ -48,12 +46,6 @@ pub trait Language {
     type Var: Syntax + Fresh;
     type Addr: Syntax;
     type VarDef: Syntax + GetVar<Self::Var>;
-
-    type Rule: RuleType;
-    fn expr_rule() -> Self::Rule;
-    fn bind_rule() -> Self::Rule;
-    fn value_rule() -> Self::Rule;
-    fn thunk_rule() -> Self::Rule;
 }
 
 #[derive(Derivative)]
@@ -174,173 +166,6 @@ impl<T: Language> Thunk<T> {
             args: self.args.into_iter().map(Into::into).collect(),
             body: self.body.into(),
         }
-    }
-}
-
-// Conversions from pest parse trees
-
-impl<'pest, T> FromPest<'pest> for Expr<T>
-where
-    T: Language,
-    T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-{
-    type Rule = T::Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        let mut clone = pest.clone();
-        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
-        if pair.as_rule() != T::expr_rule() {
-            return Err(ConversionError::NoMatch);
-        }
-        let mut inner = pair.into_inner();
-        let expr = Expr {
-            binds: FromPest::from_pest(&mut inner)?,
-            values: FromPest::from_pest(&mut inner)?,
-        };
-        if inner.clone().next().is_some() {
-            return Err(ConversionError::Extraneous {
-                current_node: stringify!(Expr),
-            });
-        }
-        *pest = clone;
-        Ok(expr)
-    }
-}
-
-impl<'pest, T> FromPest<'pest> for Bind<T>
-where
-    T: Language,
-    T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-{
-    type Rule = T::Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        let mut clone = pest.clone();
-        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
-        if pair.as_rule() != T::bind_rule() {
-            return Err(ConversionError::NoMatch);
-        }
-        let mut inner = pair.into_inner();
-        let bind = Bind {
-            defs: FromPest::from_pest(&mut inner)?,
-            value: FromPest::from_pest(&mut inner)?,
-        };
-        if inner.next().is_some() {
-            return Err(ConversionError::Extraneous {
-                current_node: stringify!(Bind),
-            });
-        }
-        *pest = clone;
-        Ok(bind)
-    }
-}
-
-impl<'pest, T> FromPest<'pest> for Value<T>
-where
-    T: Language,
-    T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-{
-    type Rule = T::Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        let mut clone = pest.clone();
-        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
-        if pair.as_rule() == T::value_rule() {
-            let value = Err(ConversionError::NoMatch)
-                .or_else(|_: ConversionError<Void>| {
-                    let mut inner = pair.clone().into_inner();
-                    let value = Value::Variable(FromPest::from_pest(&mut inner)?);
-                    if inner.next().is_some() {
-                        return Err(ConversionError::Extraneous {
-                            current_node: stringify!(Value),
-                        });
-                    }
-                    Ok(value)
-                })
-                .or_else(|_: ConversionError<Void>| {
-                    let mut inner = pair.clone().into_inner();
-                    let value = Value::Thunk(FromPest::from_pest(&mut inner)?);
-                    if inner.next().is_some() {
-                        return Err(ConversionError::Extraneous {
-                            current_node: stringify!(Value),
-                        });
-                    }
-                    Ok(value)
-                })
-                .or_else(|_: ConversionError<Void>| {
-                    let mut inner = pair.into_inner();
-                    let value = Value::Op {
-                        op: FromPest::from_pest(&mut inner)?,
-                        args: FromPest::from_pest(&mut inner)?,
-                    };
-                    if inner.next().is_some() {
-                        return Err(ConversionError::Extraneous {
-                            current_node: stringify!(Value),
-                        });
-                    }
-                    Ok(value)
-                })?;
-            *pest = clone;
-            Ok(value)
-        } else if pair.as_rule() == T::thunk_rule() {
-            let thunk = FromPest::from_pest(pest)?;
-            Ok(Value::Thunk(thunk))
-        } else {
-            Err(ConversionError::NoMatch)
-        }
-    }
-}
-
-impl<'pest, T> FromPest<'pest> for Thunk<T>
-where
-    T: Language,
-    T::Op: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Var: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::Addr: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-    T::VarDef: FromPest<'pest, Rule = T::Rule, FatalError = Void>,
-{
-    type Rule = T::Rule;
-    type FatalError = Void;
-
-    fn from_pest(
-        pest: &mut Pairs<'pest, Self::Rule>,
-    ) -> Result<Self, ConversionError<Self::FatalError>> {
-        let mut clone = pest.clone();
-        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
-        if pair.as_rule() != T::thunk_rule() {
-            return Err(ConversionError::NoMatch);
-        }
-        let mut inner = pair.into_inner();
-        let thunk = Thunk {
-            addr: FromPest::from_pest(&mut inner)?,
-            args: FromPest::from_pest(&mut inner)?,
-            body: FromPest::from_pest(&mut inner)?,
-        };
-        if inner.next().is_some() {
-            return Err(ConversionError::Extraneous {
-                current_node: stringify!(Thunk),
-            });
-        }
-        *pest = clone;
-        Ok(thunk)
     }
 }
 
