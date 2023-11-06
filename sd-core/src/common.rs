@@ -1,10 +1,18 @@
-use std::{fmt::Debug, hash::Hash};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
-use crate::hypergraph::{
-    self,
-    generic::{Ctx, Edge},
-    traits::{NodeLike, WithWeight},
-    Weight,
+use either::Either;
+
+use crate::{
+    hypergraph::{
+        self,
+        generic::{Ctx, Edge},
+        traits::{NodeLike, WithWeight},
+        Weight,
+    },
+    prettyprinter::PrettyPrint,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -64,5 +72,35 @@ where
 {
     fn is_match(&self, query: &str) -> bool {
         self.weight().is_match(query)
+    }
+}
+
+impl<S: Matchable, T: Matchable> Matchable for Either<S, T> {
+    fn is_match(&self, query: &str) -> bool {
+        match self {
+            Either::Left(l) => l.is_match(query),
+            Either::Right(r) => r.is_match(query),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Hash, Debug, PartialEq, Eq)]
+pub enum Empty {}
+
+impl Display for Empty {
+    fn fmt(&self, _: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {}
+    }
+}
+
+impl Matchable for Empty {
+    fn is_match(&self, _: &str) -> bool {
+        match *self {}
+    }
+}
+
+impl PrettyPrint for Empty {
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
+        match *self {}
     }
 }

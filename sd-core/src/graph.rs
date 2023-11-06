@@ -4,6 +4,7 @@ use std::{
 };
 
 use derivative::Derivative;
+use either::Either::{self, Left, Right};
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
@@ -12,10 +13,13 @@ use tracing::{debug, Level};
 use crate::{
     common::Matchable,
     hypergraph::{
-        builder::{fragment::Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
+        builder::{
+            fragment::{Fragment, ThunkCursor},
+            HypergraphBuilder, HypergraphError, InPort, OutPort, ThunkBuilder,
+        },
         Hypergraph, Weight,
     },
-    language::{Expr, GetVar, Language, Value},
+    language::{BlockWithArgs, ControlFlow, Expr, GetVar, Language, Value, CF},
     prettyprinter::PrettyPrint,
 };
 
@@ -26,7 +30,7 @@ pub struct Syntax<T: Language> {
 impl<T: Language> Weight for Syntax<T> {
     type EdgeWeight = Name<T>;
     type OperationWeight = T::Op;
-    type ThunkWeight = T::Addr;
+    type ThunkWeight = Either<T::Addr, T::BlockAddr>;
 }
 
 #[derive(Derivative)]
@@ -94,19 +98,22 @@ pub enum ConvertError<T: Language> {
 /// Environments capture the local information needed to build a hypergraph from an AST
 #[derive(Derivative)]
 #[derivative(Debug(bound = "F: Debug"))]
+#[allow(clippy::type_complexity)]
 struct Environment<F, T: Language> {
     /// The fragment of the hypergraph we are building in
     fragment: F,
     /// Hanging input ports of nodes, with the variable they should be connected to
     inputs: Vec<(InPort<Syntax<T>>, T::Var)>,
-
     /// Mapping from variables to the output port that corresponds to them
     outputs: HashMap<T::Var, OutPort<Syntax<T>>>,
+    /// Control flow wires to be connected
+    cf_outputs: Vec<(Option<T::BlockAddr>, OutPort<Syntax<T>>)>,
 }
 
 enum ProcessInput<T: Language> {
     Variables(Vec<T::VarDef>),
     InPort(InPort<Syntax<T>>),
+    CF(CF<T>),
 }
 
 impl<T, F> Environment<F, T>
@@ -120,47 +127,82 @@ where
             fragment,
             inputs: Vec::default(),
             outputs: HashMap::default(),
+            cf_outputs: Vec::default(),
         }
+    }
+
+    fn in_thunk<S>(
+        &mut self,
+        thunk: ThunkBuilder<Syntax<T>>,
+        f: impl FnOnce(&mut Environment<ThunkCursor<Syntax<T>>, T>) -> S,
+    ) -> S {
+        self.fragment.in_thunk(thunk, |inner_fragment| {
+            let mut new_env = Environment {
+                fragment: inner_fragment,
+                inputs: std::mem::take(&mut self.inputs),
+                outputs: std::mem::take(&mut self.outputs),
+                cf_outputs: std::mem::take(&mut self.cf_outputs),
+            };
+            let ret = f(&mut new_env);
+            self.inputs = std::mem::take(&mut new_env.inputs);
+            self.outputs = std::mem::take(&mut new_env.outputs);
+            self.cf_outputs = std::mem::take(&mut new_env.cf_outputs);
+            ret
+        })
     }
 
     /// Insert `value` into a hypergraph and update the environment.
     ///
     /// If an `InPort` is passed in to `input` it should be linked or assigned a variable in the environment.
     /// If a `Variable` is passed in to `input` it should be assigned to the `out_port` the value generates.
+    /// If `CF` is passed to `input` then the operation is assumed to be a control flow operation and will only
+    /// generate control flow outputs
     ///
     /// # Errors
     ///
     /// This function will return an error if variables are malformed.
+    #[allow(clippy::too_many_lines)]
     fn process_value(
         &mut self,
         value: &Value<T>,
         input: ProcessInput<T>,
     ) -> Result<(), ConvertError<T>> {
-        match (value, input) {
-            (Value::Variable(var), ProcessInput::Variables(inputs)) => {
-                // We have tried to assign a variable to another variable
-                Err(ConvertError::Aliased(
-                    inputs.into_iter().map(GetVar::into_var).collect(),
-                    var.clone(),
-                ))
+        match value {
+            Value::Variable(var) => {
+                match input {
+                    ProcessInput::Variables(inputs) => {
+                        // We have tried to assign a variable to another variable
+                        Err(ConvertError::Aliased(
+                            inputs.into_iter().map(GetVar::into_var).collect(),
+                            var.clone(),
+                        ))
+                    }
+                    ProcessInput::InPort(in_port) => {
+                        self.inputs.push((in_port, var.clone()));
+                        Ok(())
+                    }
+                    ProcessInput::CF(_) => unreachable!(),
+                }
             }
-            (Value::Variable(var), ProcessInput::InPort(in_port)) => {
-                self.inputs.push((in_port, var.clone()));
-                Ok(())
-            }
-            (Value::Thunk(thunk), input) => {
+            Value::Thunk(thunk) => {
                 let output_weights = if let ProcessInput::Variables(inputs) = &input {
                     inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
                 } else {
                     vec![Name::Nil]
                 };
 
+                let mut cf_free_vars = HashMap::new();
+                thunk.body.cf_free_vars(&mut cf_free_vars);
+                for b in &thunk.blocks {
+                    b.expr.cf_free_vars(&mut cf_free_vars);
+                }
+
                 let thunk_node = self.fragment.add_thunk(
                     0,
                     thunk.args.iter().cloned().map(Name::BoundVar),
-                    thunk.body.values.len(),
+                    thunk.body.values.len() + cf_free_vars.get(&None).copied().unwrap_or_default(),
                     output_weights,
-                    thunk.addr.clone(),
+                    Left(thunk.addr.clone()),
                 );
 
                 self.fragment
@@ -177,7 +219,54 @@ where
                                 .then_some(())
                                 .ok_or(ConvertError::Shadowed(var.clone()))?;
                         }
+
+                        let mut blocks: HashMap<T::BlockAddr, Vec<_>> = HashMap::new();
+
+                        for b in &thunk.blocks {
+                            let block = thunk_env.fragment.add_thunk(
+                                cf_free_vars
+                                    .get(&Some(b.addr.clone()))
+                                    .copied()
+                                    .unwrap_or_default(),
+                                b.args.iter().map(|x| Name::BoundVar(x.clone())),
+                                0,
+                                vec![],
+                                Right(b.addr.clone()),
+                            );
+
+                            blocks.insert(b.addr.clone(), block.inputs().collect());
+
+                            for (def, out_port) in b.args.iter().zip(block.bound_inputs()) {
+                                let var = def.var();
+                                thunk_env
+                                    .outputs
+                                    .insert(var.clone(), out_port)
+                                    .is_none()
+                                    .then_some(())
+                                    .ok_or(ConvertError::Shadowed(var.clone()))?;
+                            }
+
+                            thunk_env.in_thunk(block, |block_env| {
+                                block_env.process_expr(&b.expr)?;
+                                Ok::<_, ConvertError<T>>(())
+                            })?;
+                        }
+
                         thunk_env.process_expr(&thunk.body)?;
+
+                        let mut return_in_ports: Vec<_> = thunk_env
+                            .fragment
+                            .graph_outputs()
+                            .skip(thunk.body.values.len())
+                            .collect();
+
+                        for (addr, port) in thunk_env.cf_outputs {
+                            let in_port = match addr {
+                                Some(a) => blocks.get_mut(&a).unwrap().pop().unwrap(),
+                                None => return_in_ports.pop().unwrap(),
+                            };
+                            thunk_env.fragment.link(port, in_port)?;
+                        }
 
                         // Add any free inputs of the thunk to the outer environment
                         self.inputs.extend(thunk_env.inputs);
@@ -200,15 +289,20 @@ where
                     ProcessInput::InPort(in_port) => {
                         self.fragment.link(out_ports.next().unwrap(), in_port)?;
                     }
+                    ProcessInput::CF(_) => unreachable!(),
                 }
 
                 Ok(())
             }
-            (Value::Op { op, args }, input) => {
-                let output_weights = if let ProcessInput::Variables(inputs) = &input {
-                    inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
-                } else {
-                    vec![Name::Nil]
+            Value::Op { op, args } => {
+                let output_weights = match &input {
+                    ProcessInput::Variables(inputs) => {
+                        inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
+                    }
+                    ProcessInput::InPort(_) | ProcessInput::CF(CF::Return) => vec![Name::Nil],
+                    ProcessInput::CF(CF::Brs(bs)) => {
+                        vec![Name::Nil; bs.len()]
+                    }
                 };
 
                 let operation_node =
@@ -234,11 +328,44 @@ where
                     ProcessInput::InPort(in_port) => {
                         self.fragment.link(out_ports.next().unwrap(), in_port)?;
                     }
+                    ProcessInput::CF(cf) => match cf {
+                        CF::Return => self.cf_outputs.push((None, out_ports.next().unwrap())),
+                        CF::Brs(bs) => {
+                            for b in bs {
+                                self.process_block_with_args(b, out_ports.next().unwrap())?;
+                            }
+                        }
+                    },
                 }
 
                 Ok(())
             }
         }
+    }
+
+    /// Processes a block name applied to some arguments
+    fn process_block_with_args(
+        &mut self,
+        b: BlockWithArgs<T>,
+        out_port: OutPort<Syntax<T>>,
+    ) -> Result<(), ConvertError<T>> {
+        if b.args.is_empty() {
+            self.cf_outputs.push((Some(b.block), out_port));
+        } else {
+            let op = self.fragment.add_operation(
+                b.args.len() + 1,
+                vec![Name::Nil],
+                T::Op::get_apply().unwrap(),
+            );
+            let mut inputs = op.inputs();
+            self.fragment.link(out_port, inputs.next().unwrap())?;
+            for (x, arg) in inputs.zip(b.args) {
+                self.process_value(&arg, ProcessInput::InPort(x))?;
+            }
+            self.cf_outputs
+                .push((Some(b.block), op.outputs().next().unwrap()));
+        }
+        Ok(())
     }
 
     /// Insert `expr` into a hypergraph, updating the environment.
@@ -252,9 +379,17 @@ where
     /// This function will return an error if variables are malformed.
     fn process_expr(&mut self, expr: &Expr<T>) -> Result<(), ConvertError<T>> {
         // Add all nodes in reverse order
-        let graph_outputs = self.fragment.graph_outputs().collect::<Vec<_>>();
-        for (value, in_port) in expr.values.iter().zip(graph_outputs) {
-            self.process_value(value, ProcessInput::InPort(in_port))?;
+        let mut graph_outputs = self
+            .fragment
+            .graph_outputs()
+            .collect::<Vec<_>>()
+            .into_iter();
+        for value in &expr.values {
+            let process_input = match value.get_cf() {
+                None => ProcessInput::InPort(graph_outputs.next().unwrap()),
+                Some(cf) => ProcessInput::CF(cf),
+            };
+            self.process_value(value, process_input)?;
         }
 
         for bind in expr.binds.iter().rev() {

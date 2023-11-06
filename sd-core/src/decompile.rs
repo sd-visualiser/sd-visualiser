@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use derivative::Derivative;
+use either::Either;
 use itertools::Itertools;
 use pretty::RcDoc;
 use thiserror::Error;
@@ -8,7 +9,7 @@ use thiserror::Error;
 use crate::{
     graph::Name,
     hypergraph::{
-        generic::{Edge, Node, Operation, Thunk},
+        generic::{Ctx, Edge, Node, Operation, Thunk},
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::{Bind, Expr, Fresh, Language, Thunk as SThunk, Value},
@@ -22,6 +23,9 @@ pub enum DecompileError {
 
     #[error("thunks cannot have multiple outputs")]
     MultipleOutputs,
+
+    #[error("cannot decompile graphs with blocks")]
+    BlockEncountered,
 }
 
 impl<T: Language> Expr<T> {
@@ -30,7 +34,7 @@ impl<T: Language> Expr<T> {
         G: Graph,
         Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
         Operation<G::Ctx>: WithWeight<Weight = T::Op>,
-        Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
+        Thunk<G::Ctx>: WithWeight<Weight = Either<T::Addr, T::BlockAddr>>,
     {
         let mut binds = Vec::default();
 
@@ -92,7 +96,7 @@ impl<T: Language> Expr<T> {
                     }
                 }
                 Node::Thunk(thunk) => {
-                    let thunk = SThunk::decompile(thunk)?;
+                    let thunk = SThunk::decompile::<<G::Ctx as Ctx>::Thunk>(thunk)?;
 
                     // Check the node has a unique output.
                     let output = node
@@ -134,13 +138,16 @@ impl<T: Language> Expr<T> {
 impl<T: Language> SThunk<T> {
     pub fn decompile<G>(thunk: &G) -> Result<Self, DecompileError>
     where
-        G: Graph + WithWeight<Weight = T::Addr>,
+        G: Graph + WithWeight<Weight = Either<T::Addr, T::BlockAddr>>,
         Edge<G::Ctx>: WithWeight<Weight = Name<T>>,
         Operation<G::Ctx>: WithWeight<Weight = T::Op>,
-        Thunk<G::Ctx>: WithWeight<Weight = T::Addr>,
+        Thunk<G::Ctx>: WithWeight<Weight = Either<T::Addr, T::BlockAddr>>,
     {
         Ok(SThunk {
-            addr: thunk.weight(),
+            addr: thunk
+                .weight()
+                .left()
+                .ok_or(DecompileError::BlockEncountered)?,
             args: thunk
                 .bound_graph_inputs()
                 .map(|edge| match edge.weight() {
@@ -149,6 +156,7 @@ impl<T: Language> SThunk<T> {
                 })
                 .collect::<Result<Vec<_>, _>>()?,
             body: Expr::decompile(thunk)?,
+            blocks: vec![],
         })
     }
 }
@@ -165,6 +173,7 @@ impl<T: Language> SThunk<T> {
 pub enum FakeValue<T: Language> {
     Fresh,
     Thunk(T::Addr),
+    Block(T::BlockAddr),
     FreeVar(T::Var),
     BoundVar(T::VarDef),
     Operation(T::Op, Vec<FakeValue<T>>),
@@ -176,7 +185,7 @@ impl<T: Language> FakeValue<T> {
         E: EdgeLike + WithWeight<Weight = Name<T>>,
         Edge<E::Ctx>: WithWeight<Weight = Name<T>>,
         Operation<E::Ctx>: WithWeight<Weight = T::Op>,
-        Thunk<E::Ctx>: WithWeight<Weight = T::Addr>,
+        Thunk<E::Ctx>: WithWeight<Weight = Either<T::Addr, T::BlockAddr>>,
     {
         match edge.weight() {
             Name::Nil => match edge.source().into_node() {
@@ -185,7 +194,10 @@ impl<T: Language> FakeValue<T> {
                     op.weight(),
                     op.inputs().map(|edge| Self::decompile(&edge)).collect(),
                 ),
-                Some(Node::Thunk(thunk)) => Self::Thunk(thunk.weight()),
+                Some(Node::Thunk(thunk)) => match thunk.weight() {
+                    Either::Left(addr) => Self::Thunk(addr),
+                    Either::Right(addr) => Self::Block(addr),
+                },
             },
             Name::FreeVar(var) => Self::FreeVar(var),
             Name::BoundVar(def) => Self::BoundVar(def),
@@ -203,6 +215,16 @@ impl<T: Language> PrettyPrint for FakeValue<T> {
                     RcDoc::text("thunk")
                 } else {
                     RcDoc::text("thunk")
+                        .append(RcDoc::space())
+                        .append(RcDoc::text(addr))
+                }
+            }
+            Self::Block(addr) => {
+                let addr = addr.to_pretty();
+                if addr.is_empty() {
+                    RcDoc::text("block")
+                } else {
+                    RcDoc::text("block")
                         .append(RcDoc::space())
                         .append(RcDoc::text(addr))
                 }

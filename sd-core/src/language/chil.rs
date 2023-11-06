@@ -10,8 +10,8 @@ use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
-use super::{span_into_str, Fresh, GetVar};
-use crate::common::Matchable;
+use super::{span_into_str, ControlFlow, Fresh, GetVar, CF};
+use crate::common::{Empty, Matchable};
 
 pub struct Chil;
 
@@ -20,6 +20,7 @@ impl super::Language for Chil {
     type Var = Variable;
     type Addr = Addr;
     type VarDef = VariableDef;
+    type BlockAddr = Empty;
 }
 
 pub type Expr = super::Expr<Chil>;
@@ -109,6 +110,12 @@ impl<'pest> FromPest<'pest> for Op {
         }
         *pest = clone;
         Ok(Self(pair.as_str().to_owned()))
+    }
+}
+
+impl ControlFlow<Chil> for Op {
+    fn get_cf(&self) -> Option<CF<Chil>> {
+        None
     }
 }
 
@@ -381,6 +388,7 @@ impl<'pest> FromPest<'pest> for Thunk {
             addr: FromPest::from_pest(&mut inner)?,
             args: FromPest::from_pest(&mut inner)?,
             body: FromPest::from_pest(&mut inner)?,
+            blocks: vec![],
         };
         if inner.next().is_some() {
             return Err(ConversionError::Extraneous {

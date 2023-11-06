@@ -134,6 +134,14 @@ impl<W: Weight> ThunkBuilder<W> {
     }
 
     #[must_use]
+    pub fn inputs(&self) -> impl DoubleEndedIterator<Item = InPort<W>> + '_ {
+        self.0
+            .inputs
+            .iter()
+            .map(|in_port| InPort(ByThinAddress(in_port.clone())))
+    }
+
+    #[must_use]
     pub fn outputs(&self) -> impl DoubleEndedIterator<Item = OutPort<W>> + '_ {
         self.0
             .outputs

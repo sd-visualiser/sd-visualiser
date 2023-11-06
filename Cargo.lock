@@ -2954,6 +2954,7 @@ dependencies = [
  "delegate",
  "derivative",
  "dir-test",
+ "either",
  "from-pest",
  "good_lp",
  "indexmap 2.0.0",

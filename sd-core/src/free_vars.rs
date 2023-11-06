@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use indexmap::IndexSet;
 
-use crate::language::{Expr, GetVar, Language, Thunk, Value};
+use crate::language::{ControlFlow, Expr, GetVar, Language, Thunk, Value, CF};
 
 impl<T: Language> Expr<T> {
     pub(crate) fn free_vars(&self) -> IndexSet<T::Var> {
@@ -20,6 +22,12 @@ impl<T: Language> Expr<T> {
 
         vars
     }
+
+    pub(crate) fn cf_free_vars(&self, addrs: &mut HashMap<Option<T::BlockAddr>, usize>) {
+        for v in &self.values {
+            v.cf_free_vars(addrs);
+        }
+    }
 }
 
 impl<T: Language> Value<T> {
@@ -34,6 +42,20 @@ impl<T: Language> Value<T> {
             Value::Op { args, .. } => {
                 for arg in args {
                     arg.free_vars(vars);
+                }
+            }
+        }
+    }
+
+    pub(crate) fn cf_free_vars(&self, addrs: &mut HashMap<Option<T::BlockAddr>, usize>) {
+        match self.get_cf() {
+            None => (),
+            Some(CF::Return) => {
+                *addrs.entry(None).or_insert(0) += 1;
+            }
+            Some(CF::Brs(bs)) => {
+                for b in bs {
+                    *addrs.entry(Some(b.block)).or_insert(0) += 1;
                 }
             }
         }

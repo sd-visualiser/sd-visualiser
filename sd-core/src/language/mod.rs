@@ -41,10 +41,30 @@ pub trait Syntax:
 }
 impl<T: Clone + Eq + Hash + Debug + Send + Sync + Display + Matchable + PrettyPrint> Syntax for T {}
 
+pub struct BlockWithArgs<T: Language + ?Sized> {
+    pub block: T::BlockAddr,
+    pub args: Vec<Value<T>>,
+}
+
+pub enum CF<T: Language + ?Sized> {
+    Return,
+    Brs(Vec<BlockWithArgs<T>>),
+}
+
+pub trait ControlFlow<T: Language + ?Sized> {
+    fn get_cf(&self) -> Option<CF<T>>;
+
+    #[must_use]
+    fn get_apply() -> Option<T::Op> {
+        None
+    }
+}
+
 pub trait Language {
-    type Op: Syntax;
+    type Op: Syntax + ControlFlow<Self>;
     type Var: Syntax + Fresh;
     type Addr: Syntax;
+    type BlockAddr: Syntax;
     type VarDef: Syntax + GetVar<Self::Var>;
 }
 
@@ -56,7 +76,7 @@ pub trait Language {
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub struct Expr<T: Language> {
+pub struct Expr<T: Language + ?Sized> {
     pub binds: Vec<Bind<T>>,
     pub values: Vec<Value<T>>,
 }
@@ -69,7 +89,7 @@ pub struct Expr<T: Language> {
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub struct Bind<T: Language> {
+pub struct Bind<T: Language + ?Sized> {
     pub defs: Vec<T::VarDef>,
     pub value: Value<T>,
 }
@@ -82,10 +102,19 @@ pub struct Bind<T: Language> {
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub enum Value<T: Language> {
+pub enum Value<T: Language + ?Sized> {
     Variable(T::Var),
     Thunk(Thunk<T>),
     Op { op: T::Op, args: Vec<Value<T>> },
+}
+
+impl<T: Language> ControlFlow<T> for Value<T> {
+    fn get_cf(&self) -> Option<CF<T>> {
+        match self {
+            Value::Op { op, .. } => op.get_cf(),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Derivative)]
@@ -96,10 +125,25 @@ pub enum Value<T: Language> {
     Hash(bound = ""),
     Debug(bound = "")
 )]
-pub struct Thunk<T: Language> {
+pub struct Thunk<T: Language + ?Sized> {
     pub addr: T::Addr,
     pub args: Vec<T::VarDef>,
     pub body: Expr<T>,
+    pub blocks: Vec<Block<T>>,
+}
+
+#[derive(Derivative)]
+#[derivative(
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = ""),
+    Debug(bound = "")
+)]
+pub struct Block<T: Language + ?Sized> {
+    pub addr: T::BlockAddr,
+    pub args: Vec<T::VarDef>,
+    pub expr: Expr<T>,
 }
 
 // Conversions between languages
@@ -111,6 +155,7 @@ impl<T: Language> Expr<T> {
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
         U::VarDef: From<T::VarDef>,
+        U::BlockAddr: From<T::BlockAddr>,
     {
         Expr {
             binds: self.binds.into_iter().map(Bind::into).collect(),
@@ -126,6 +171,7 @@ impl<T: Language> Bind<T> {
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
         U::VarDef: From<T::VarDef>,
+        U::BlockAddr: From<T::BlockAddr>,
     {
         Bind {
             defs: self.defs.into_iter().map(Into::into).collect(),
@@ -141,6 +187,7 @@ impl<T: Language> Value<T> {
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
         U::VarDef: From<T::VarDef>,
+        U::BlockAddr: From<T::BlockAddr>,
     {
         match self {
             Self::Variable(var) => Value::Variable(var.into()),
@@ -160,11 +207,30 @@ impl<T: Language> Thunk<T> {
         U::Var: From<T::Var>,
         U::Addr: From<T::Addr>,
         U::VarDef: From<T::VarDef>,
+        U::BlockAddr: From<T::BlockAddr>,
     {
         Thunk {
             addr: self.addr.into(),
             args: self.args.into_iter().map(Into::into).collect(),
             body: self.body.into(),
+            blocks: self.blocks.into_iter().map(Block::into).collect(),
+        }
+    }
+}
+
+impl<T: Language> Block<T> {
+    pub fn into<U: Language>(self) -> Block<U>
+    where
+        U::Op: From<T::Op>,
+        U::Var: From<T::Var>,
+        U::Addr: From<T::Addr>,
+        U::VarDef: From<T::VarDef>,
+        U::BlockAddr: From<T::BlockAddr>,
+    {
+        Block {
+            addr: self.addr.into(),
+            args: self.args.into_iter().map(Into::into).collect(),
+            expr: self.expr.into(),
         }
     }
 }

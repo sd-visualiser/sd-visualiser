@@ -12,8 +12,8 @@ use pest_derive::Parser;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::{span_into_str, Fresh};
-use crate::common::Matchable;
+use super::{span_into_str, ControlFlow, Fresh, CF};
+use crate::common::{Empty, Matchable};
 
 pub struct Spartan;
 
@@ -22,6 +22,7 @@ impl super::Language for Spartan {
     type Var = Variable;
     type Addr = Addr;
     type VarDef = Variable;
+    type BlockAddr = Empty;
 }
 
 pub type Expr = super::Expr<Spartan>;
@@ -176,6 +177,12 @@ impl<'pest> FromPest<'pest> for Op {
             .map_err(|()| ConversionError::NoMatch)?;
         *pest = clone;
         Ok(op)
+    }
+}
+
+impl ControlFlow<Spartan> for Op {
+    fn get_cf(&self) -> Option<CF<Spartan>> {
+        None
     }
 }
 
@@ -351,6 +358,7 @@ impl<'pest> FromPest<'pest> for Thunk {
             addr: FromPest::from_pest(&mut inner)?,
             args: FromPest::from_pest(&mut inner)?,
             body: FromPest::from_pest(&mut inner)?,
+            blocks: vec![],
         };
         if inner.next().is_some() {
             return Err(ConversionError::Extraneous {
