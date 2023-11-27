@@ -60,7 +60,7 @@ jobs:
       # https://github.com/actions/upload-artifact/issues/92#issuecomment-1080347032
       - name: Build
         run: |
-          nix build -L --show-trace github:sd-visualiser/sd-visualiser?rev=${{ github.sha }}#{{ matrix.target }}
+          nix build -L --show-trace github:sd-visualiser/sd-visualiser?rev=${{ github.sha }}#${{ matrix.target }}
           echo "UPLOAD_PATH=$(readlink -f result)" >> $GITHUB_ENV
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
