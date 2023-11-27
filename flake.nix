@@ -43,7 +43,9 @@
           packages = (attrs.packages or [ ]) ++ (with pkgs; [
             (lib.hiPrio rust-bin.nightly.latest.rustfmt)
             cargo-insta
+            # it seems devshells can not be set to specific targets, so we add cbc here
             cbc
+            # add for convienience
             trunk
           ]);
         });
