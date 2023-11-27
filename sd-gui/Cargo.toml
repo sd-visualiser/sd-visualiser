@@ -30,12 +30,12 @@ tracing = "0.1.37"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-poll-promise = { git = "https://github.com/EmbarkStudios/poll-promise" } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
+poll-promise = "0.3.0"
 tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 log = "0.4.19"
-poll-promise = { git = "https://github.com/EmbarkStudios/poll-promise", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
+poll-promise = { version = "0.3.0", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.37"
 

@@ -45,7 +45,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [linux, windows, web]
+        target: [linux, web]
     steps:
       - name: Install Nix
         uses: cachix/install-nix-action@v20
@@ -60,7 +60,7 @@ jobs:
       # https://github.com/actions/upload-artifact/issues/92#issuecomment-1080347032
       - name: Build
         run: |
-          nix build -L --show-trace "$FLAKE#sd-gui-${{ matrix.target }}-release"
+          nix build -L --show-trace "$FLAKE#{{ matrix.target }}"
           echo "UPLOAD_PATH=$(readlink -f result)" >> $GITHUB_ENV
       - name: Archive build artifacts
         uses: actions/upload-artifact@v3
