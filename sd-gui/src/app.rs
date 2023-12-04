@@ -266,6 +266,7 @@ impl eframe::App for App {
                     }};
                 }
                 ui.visuals_mut().button_frame = false;
+                ui.style_mut().wrap = Some(false);
 
                 if ui.selectable_label(self.editor, "Editor").clicked() {
                     self.editor = !self.editor;
