@@ -9,6 +9,8 @@ pub struct Mlir;
 pub struct MlirParser;
 
 mod ast {
+    // This is used in macros but cargo can't seem to detect it
+    #[allow(unused)]
     use pest::Span;
     use pest_ast::FromPest;
 
