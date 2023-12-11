@@ -28,12 +28,14 @@ Block {
                     },
                 ],
                 successors: [
-                    Successor(
-                        "^bb1",
-                    ),
-                    Successor(
-                        "^bb2",
-                    ),
+                    Successor {
+                        id: "^bb1",
+                        args: [],
+                    },
+                    Successor {
+                        id: "^bb2",
+                        args: [],
+                    },
                 ],
                 properties: [
                     Attribute(

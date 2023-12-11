@@ -79,7 +79,14 @@ mod ast {
         #[pest_ast(inner(rule(Rule::function_type), with(span_into_str), with(str::to_string)))]
         pub function_type: String,
     }
-    passthrough!(inner, Successor, successor);
+
+    #[derive(Debug, FromPest)]
+    #[pest_ast(rule(Rule::successor))]
+    pub struct Successor {
+        #[pest_ast(inner(rule(Rule::caret_id), with(span_into_str), with(str::to_string)))]
+        pub id: String,
+        pub args: Vec<TypedArg>,
+    }
 
     #[derive(Debug, FromPest)]
     #[pest_ast(rule(Rule::op_result))]

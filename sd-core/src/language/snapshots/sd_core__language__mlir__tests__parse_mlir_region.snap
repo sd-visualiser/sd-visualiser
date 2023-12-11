@@ -31,12 +31,14 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb1",
-                            ),
-                            Successor(
-                                "^bb2",
-                            ),
+                            Successor {
+                                id: "^bb1",
+                                args: [],
+                            },
+                            Successor {
+                                id: "^bb2",
+                                args: [],
+                            },
                         ],
                         properties: [
                             Attribute(
@@ -69,9 +71,10 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb3",
-                            ),
+                            Successor {
+                                id: "^bb3",
+                                args: [],
+                            },
                         ],
                         properties: [],
                         regions: [],
@@ -126,9 +129,10 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb3",
-                            ),
+                            Successor {
+                                id: "^bb3",
+                                args: [],
+                            },
                         ],
                         properties: [],
                         regions: [],
@@ -165,9 +169,10 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb4",
-                            ),
+                            Successor {
+                                id: "^bb4",
+                                args: [],
+                            },
                         ],
                         properties: [],
                         regions: [],

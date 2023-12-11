@@ -28,9 +28,10 @@ Block {
                     },
                 ],
                 successors: [
-                    Successor(
-                        "^bb4",
-                    ),
+                    Successor {
+                        id: "^bb4",
+                        args: [],
+                    },
                 ],
                 properties: [],
                 regions: [],
