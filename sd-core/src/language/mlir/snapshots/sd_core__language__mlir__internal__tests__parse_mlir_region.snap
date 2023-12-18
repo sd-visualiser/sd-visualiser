@@ -1,5 +1,5 @@
 ---
-source: sd-core/src/language/mlir.rs
+source: sd-core/src/language/mlir/internal.rs
 expression: syntax_tree
 ---
 Region {
@@ -7,7 +7,9 @@ Region {
     blocks: [
         Block {
             label: BlockLabel {
-                id: "^bb0",
+                id: BlockId(
+                    "^bb0",
+                ),
                 args: [
                     TypedArg {
                         id: "%arg0",
@@ -31,12 +33,14 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb1",
-                            ),
-                            Successor(
-                                "^bb2",
-                            ),
+                            Successor {
+                                id: "^bb1",
+                                args: [],
+                            },
+                            Successor {
+                                id: "^bb2",
+                                args: [],
+                            },
                         ],
                         properties: [
                             Attribute(
@@ -54,7 +58,9 @@ Region {
         },
         Block {
             label: BlockLabel {
-                id: "^bb1",
+                id: BlockId(
+                    "^bb1",
+                ),
                 args: [],
             },
             operations: [
@@ -69,9 +75,10 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb3",
-                            ),
+                            Successor {
+                                id: "^bb3",
+                                args: [],
+                            },
                         ],
                         properties: [],
                         regions: [],
@@ -84,7 +91,9 @@ Region {
         },
         Block {
             label: BlockLabel {
-                id: "^bb2",
+                id: BlockId(
+                    "^bb2",
+                ),
                 args: [],
             },
             operations: [
@@ -126,9 +135,10 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb3",
-                            ),
+                            Successor {
+                                id: "^bb3",
+                                args: [],
+                            },
                         ],
                         properties: [],
                         regions: [],
@@ -141,7 +151,9 @@ Region {
         },
         Block {
             label: BlockLabel {
-                id: "^bb3",
+                id: BlockId(
+                    "^bb3",
+                ),
                 args: [
                     TypedArg {
                         id: "%1",
@@ -165,9 +177,10 @@ Region {
                             },
                         ],
                         successors: [
-                            Successor(
-                                "^bb4",
-                            ),
+                            Successor {
+                                id: "^bb4",
+                                args: [],
+                            },
                         ],
                         properties: [],
                         regions: [],
@@ -180,7 +193,9 @@ Region {
         },
         Block {
             label: BlockLabel {
-                id: "^bb4",
+                id: BlockId(
+                    "^bb4",
+                ),
                 args: [
                     TypedArg {
                         id: "%2",

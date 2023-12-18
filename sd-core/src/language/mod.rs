@@ -65,7 +65,8 @@ pub trait Language {
     Eq(bound = ""),
     PartialEq(bound = ""),
     Hash(bound = ""),
-    Debug(bound = "")
+    Debug(bound = ""),
+    Default(bound = "")
 )]
 pub struct Expr<T: Language + ?Sized> {
     pub binds: Vec<Bind<T>>,

@@ -1,5 +1,5 @@
 ---
-source: sd-core/src/language/mlir.rs
+source: sd-core/src/language/mlir/internal.rs
 expression: syntax_tree
 ---
 Operation {
@@ -17,16 +17,7 @@ Operation {
         op: "\"foo_div\"",
         operands: [],
         successors: [],
-        properties: [
-            Attribute(
-                "some_attr",
-                "\"value\"",
-            ),
-            Attribute(
-                "other_attr",
-                "42 : i64",
-            ),
-        ],
+        properties: [],
         regions: [],
         attributes: [],
         function_type: "() -> (f32, i32)",

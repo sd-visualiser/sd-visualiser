@@ -1,10 +1,12 @@
 ---
-source: sd-core/src/language/mlir.rs
+source: sd-core/src/language/mlir/internal.rs
 expression: syntax_tree
 ---
 Block {
     label: BlockLabel {
-        id: "^bb0",
+        id: BlockId(
+            "^bb0",
+        ),
         args: [
             TypedArg {
                 id: "%arg0",
@@ -28,12 +30,14 @@ Block {
                     },
                 ],
                 successors: [
-                    Successor(
-                        "^bb1",
-                    ),
-                    Successor(
-                        "^bb2",
-                    ),
+                    Successor {
+                        id: "^bb1",
+                        args: [],
+                    },
+                    Successor {
+                        id: "^bb2",
+                        args: [],
+                    },
                 ],
                 properties: [
                     Attribute(

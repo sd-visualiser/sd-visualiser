@@ -1,5 +1,5 @@
 ---
-source: sd-core/src/language/mlir.rs
+source: sd-core/src/language/mlir/internal.rs
 expression: syntax_tree
 ---
 Operation {

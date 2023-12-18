@@ -1,10 +1,12 @@
 ---
-source: sd-core/src/language/mlir.rs
+source: sd-core/src/language/mlir/internal.rs
 expression: syntax_tree
 ---
 Block {
     label: BlockLabel {
-        id: "^bb1",
+        id: BlockId(
+            "^bb1",
+        ),
         args: [],
     },
     operations: [
@@ -19,9 +21,10 @@ Block {
                     },
                 ],
                 successors: [
-                    Successor(
-                        "^bb3",
-                    ),
+                    Successor {
+                        id: "^bb3",
+                        args: [],
+                    },
                 ],
                 properties: [],
                 regions: [],
