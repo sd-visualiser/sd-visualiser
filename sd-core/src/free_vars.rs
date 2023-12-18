@@ -24,8 +24,8 @@ impl<T: Language> Expr<T> {
     }
 
     pub(crate) fn cf_free_vars(&self, addrs: &mut HashMap<Option<T::BlockAddr>, usize>) {
-        for v in &self.values {
-            v.cf_free_vars(addrs);
+        for b in &self.binds {
+            b.value.cf_free_vars(addrs);
         }
     }
 }
