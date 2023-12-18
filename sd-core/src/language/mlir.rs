@@ -239,17 +239,16 @@ impl Language for Mlir {
     type VarDef = Var;
 }
 
-impl Region {
-    #[must_use]
-    pub fn to_thunk(&self) -> Thunk<Mlir> {
+impl From<Region> for Thunk<Mlir> {
+    fn from(region: Region) -> Self {
         Thunk {
             addr: Unit,
             args: vec![],
-            body: self
+            body: region
                 .entry_block
                 .as_ref()
                 .map_or_else(Expr::default, |entry| ops_to_expr(&entry.operations)),
-            blocks: self.blocks.iter().map(MlirBlock::to_block).collect(),
+            blocks: region.blocks.iter().map(MlirBlock::to_block).collect(),
         }
     }
 }
@@ -301,7 +300,7 @@ impl From<GenericOperation> for super::Value<Mlir> {
                     generic_op
                         .regions
                         .into_iter()
-                        .map(|x| super::Value::Thunk(x.to_thunk())),
+                        .map(|x| super::Value::Thunk(x.into())),
                 )
                 .collect(),
         }
