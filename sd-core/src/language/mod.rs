@@ -42,23 +42,13 @@ pub trait Syntax:
 }
 impl<T: Clone + Eq + Hash + Debug + Send + Sync + Display + Matchable + PrettyPrint> Syntax for T {}
 
-pub struct BlockWithArgs<T: Language + ?Sized> {
-    pub block: T::BlockAddr,
-    pub args: Vec<Value<T>>,
-}
-
 pub enum CF<T: Language + ?Sized> {
     Return,
-    Brs(Vec<BlockWithArgs<T>>),
+    Brs(Vec<T::BlockAddr>),
 }
 
 pub trait ControlFlow<T: Language + ?Sized> {
     fn get_cf(&self) -> Option<CF<T>>;
-
-    #[must_use]
-    fn get_apply() -> Option<T::Op> {
-        None
-    }
 }
 
 pub trait Language {
@@ -107,15 +97,6 @@ pub enum Value<T: Language + ?Sized> {
     Variable(T::Var),
     Thunk(Thunk<T>),
     Op { op: T::Op, args: Vec<Value<T>> },
-}
-
-impl<T: Language> ControlFlow<T> for Value<T> {
-    fn get_cf(&self) -> Option<CF<T>> {
-        match self {
-            Value::Op { op, .. } => op.get_cf(),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Derivative)]

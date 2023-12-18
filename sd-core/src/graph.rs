@@ -19,7 +19,7 @@ use crate::{
         },
         Hypergraph, Weight,
     },
-    language::{BlockWithArgs, ControlFlow, Expr, GetVar, Language, Value, CF},
+    language::{ControlFlow, Expr, GetVar, Language, Value, CF},
     prettyprinter::PrettyPrint,
 };
 
@@ -113,7 +113,6 @@ struct Environment<F, T: Language> {
 enum ProcessInput<T: Language> {
     Variables(Vec<T::VarDef>),
     InPort(InPort<Syntax<T>>),
-    CF(CF<T>),
 }
 
 impl<T, F> Environment<F, T>
@@ -181,7 +180,6 @@ where
                         self.inputs.push((in_port, var.clone()));
                         Ok(())
                     }
-                    ProcessInput::CF(_) => unreachable!(),
                 }
             }
             Value::Thunk(thunk) => {
@@ -289,21 +287,29 @@ where
                     ProcessInput::InPort(in_port) => {
                         self.fragment.link(out_ports.next().unwrap(), in_port)?;
                     }
-                    ProcessInput::CF(_) => unreachable!(),
                 }
 
                 Ok(())
             }
             Value::Op { op, args } => {
-                let output_weights = match &input {
+                let mut output_weights = match &input {
                     ProcessInput::Variables(inputs) => {
                         inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
                     }
-                    ProcessInput::InPort(_) | ProcessInput::CF(CF::Return) => vec![Name::Nil],
-                    ProcessInput::CF(CF::Brs(bs)) => {
-                        vec![Name::Nil; bs.len()]
-                    }
+                    ProcessInput::InPort(_) => vec![Name::Nil],
                 };
+
+                let cf = op.get_cf();
+
+                match &cf {
+                    Some(CF::Return) => {
+                        output_weights.push(Name::Nil);
+                    }
+                    Some(CF::Brs(bs)) => {
+                        output_weights.extend(bs.iter().map(|_| Name::Nil));
+                    }
+                    None => {}
+                }
 
                 let operation_node =
                     self.fragment
@@ -313,6 +319,16 @@ where
                 }
 
                 let mut out_ports = operation_node.outputs();
+
+                match cf {
+                    None => {}
+                    Some(CF::Return) => self.cf_outputs.push((None, out_ports.next().unwrap())),
+                    Some(CF::Brs(bs)) => {
+                        for b in bs {
+                            self.cf_outputs.push((Some(b), out_ports.next().unwrap()));
+                        }
+                    }
+                }
 
                 match input {
                     ProcessInput::Variables(inputs) => {
@@ -328,44 +344,11 @@ where
                     ProcessInput::InPort(in_port) => {
                         self.fragment.link(out_ports.next().unwrap(), in_port)?;
                     }
-                    ProcessInput::CF(cf) => match cf {
-                        CF::Return => self.cf_outputs.push((None, out_ports.next().unwrap())),
-                        CF::Brs(bs) => {
-                            for b in bs {
-                                self.process_block_with_args(b, out_ports.next().unwrap())?;
-                            }
-                        }
-                    },
                 }
 
                 Ok(())
             }
         }
-    }
-
-    /// Processes a block name applied to some arguments
-    fn process_block_with_args(
-        &mut self,
-        b: BlockWithArgs<T>,
-        out_port: OutPort<Syntax<T>>,
-    ) -> Result<(), ConvertError<T>> {
-        if b.args.is_empty() {
-            self.cf_outputs.push((Some(b.block), out_port));
-        } else {
-            let op = self.fragment.add_operation(
-                b.args.len() + 1,
-                vec![Name::Nil],
-                T::Op::get_apply().unwrap(),
-            );
-            let mut inputs = op.inputs();
-            self.fragment.link(out_port, inputs.next().unwrap())?;
-            for (x, arg) in inputs.zip(b.args) {
-                self.process_value(&arg, ProcessInput::InPort(x))?;
-            }
-            self.cf_outputs
-                .push((Some(b.block), op.outputs().next().unwrap()));
-        }
-        Ok(())
     }
 
     /// Insert `expr` into a hypergraph, updating the environment.
@@ -385,10 +368,7 @@ where
             .collect::<Vec<_>>()
             .into_iter();
         for value in &expr.values {
-            let process_input = match value.get_cf() {
-                None => ProcessInput::InPort(graph_outputs.next().unwrap()),
-                Some(cf) => ProcessInput::CF(cf),
-            };
+            let process_input = ProcessInput::InPort(graph_outputs.next().unwrap());
             self.process_value(value, process_input)?;
         }
 

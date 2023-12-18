@@ -48,16 +48,19 @@ impl<T: Language> Value<T> {
     }
 
     pub(crate) fn cf_free_vars(&self, addrs: &mut HashMap<Option<T::BlockAddr>, usize>) {
-        match self.get_cf() {
-            None => (),
-            Some(CF::Return) => {
-                *addrs.entry(None).or_insert(0) += 1;
-            }
-            Some(CF::Brs(bs)) => {
-                for b in bs {
-                    *addrs.entry(Some(b.block)).or_insert(0) += 1;
+        match self {
+            Value::Variable(_) | Value::Thunk(_) => {}
+            Value::Op { op, .. } => match op.get_cf() {
+                None => (),
+                Some(CF::Return) => {
+                    *addrs.entry(None).or_insert(0) += 1;
                 }
-            }
+                Some(CF::Brs(bs)) => {
+                    for b in bs {
+                        *addrs.entry(Some(b)).or_insert(0) += 1;
+                    }
+                }
+            },
         }
     }
 }
