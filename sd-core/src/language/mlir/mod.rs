@@ -6,11 +6,8 @@ use itertools::Itertools;
 
 pub mod internal;
 
-use super::{Bind, Block, ControlFlow, Expr, Fresh, Value, CF};
-use crate::{
-    common::{Matchable, Unit},
-    language::{Language, Thunk},
-};
+use super::{ControlFlow, Fresh, Language, CF};
+use crate::common::{Matchable, Unit};
 
 pub struct Mlir;
 
@@ -21,6 +18,12 @@ impl Language for Mlir {
     type VarDef = Var;
     type BlockAddr = BlockAddr;
 }
+
+pub type Expr = super::Expr<Mlir>;
+pub type Bind = super::Bind<Mlir>;
+pub type Value = super::Value<Mlir>;
+pub type Thunk = super::Thunk<Mlir>;
+pub type Block = super::Block<Mlir>;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Op {
@@ -139,7 +142,7 @@ impl From<internal::Successor> for BlockAddr {
     }
 }
 
-impl From<Vec<internal::Operation>> for Expr<Mlir> {
+impl From<Vec<internal::Operation>> for Expr {
     fn from(ops: Vec<internal::Operation>) -> Self {
         Expr {
             binds: ops.into_iter().map_into().collect(),
@@ -148,7 +151,7 @@ impl From<Vec<internal::Operation>> for Expr<Mlir> {
     }
 }
 
-impl From<internal::Operation> for Bind<Mlir> {
+impl From<internal::Operation> for Bind {
     fn from(op: internal::Operation) -> Self {
         Bind {
             defs: op.result.into_iter().map_into().collect(),
@@ -157,7 +160,7 @@ impl From<internal::Operation> for Bind<Mlir> {
     }
 }
 
-impl From<internal::Region> for Thunk<Mlir> {
+impl From<internal::Region> for Thunk {
     fn from(region: internal::Region) -> Self {
         Thunk {
             addr: Unit,
@@ -171,7 +174,7 @@ impl From<internal::Region> for Thunk<Mlir> {
     }
 }
 
-impl From<internal::Block> for Block<Mlir> {
+impl From<internal::Block> for Block {
     fn from(block: internal::Block) -> Self {
         Block {
             addr: block.label.id.into(),
@@ -181,7 +184,7 @@ impl From<internal::Block> for Block<Mlir> {
     }
 }
 
-impl From<internal::GenericOperation> for Value<Mlir> {
+impl From<internal::GenericOperation> for Value {
     fn from(generic_op: internal::GenericOperation) -> Self {
         Value::Op {
             op: Op {
