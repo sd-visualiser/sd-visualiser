@@ -22,9 +22,9 @@ use sd_core::LP_BACKEND;
 )]
 /// String diagram visualiser
 ///
-/// Homepage: <https://calintat.github.io/sd-visualiser>
+/// Homepage: <https://sd-visualiser.github.io/sd-visualiser>
 ///
-/// Please report bugs at <https://github.com/calintat/sd-visualiser/issues>.
+/// Please report bugs at <https://github.com/sd-visualiser/sd-visualiser/issues>.
 struct Args {
     /// Read in a chil file
     #[arg(long, value_name = "FILE")]
@@ -33,6 +33,10 @@ struct Args {
     /// Read in a spartan file
     #[arg(long, value_name = "FILE")]
     spartan: Option<PathBuf>,
+
+    /// Read in an mlir file
+    #[arg(long, value_name = "FILE")]
+    mlir: Option<PathBuf>,
 }
 
 // When compiling natively:
@@ -60,6 +64,9 @@ fn main() -> anyhow::Result<()> {
     } else if let Some(path) = args.spartan {
         let code = std::fs::read_to_string(path)?;
         Some((code, sd_gui::UiLanguage::Spartan))
+    } else if let Some(path) = args.mlir {
+        let code = std::fs::read_to_string(path)?;
+        Some((code, sd_gui::UiLanguage::Mlir))
     } else {
         None
     };
