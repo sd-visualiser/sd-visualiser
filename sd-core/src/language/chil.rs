@@ -447,7 +447,7 @@ impl From<Variable> for super::spartan::Variable {
 }
 
 #[cfg(test)]
-impl From<Addr> for super::spartan::Addr {
+impl From<Addr> for crate::common::Unit {
     fn from(_addr: Addr) -> Self {
         Self
     }

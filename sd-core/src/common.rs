@@ -4,6 +4,9 @@ use std::{
 };
 
 use either::Either;
+use pretty::RcDoc;
+#[cfg(test)]
+use serde::Serialize;
 
 use crate::{
     hypergraph::{
@@ -100,7 +103,29 @@ impl Matchable for Empty {
 }
 
 impl PrettyPrint for Empty {
-    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
         match *self {}
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
+pub struct Unit;
+
+impl Display for Unit {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("")
+    }
+}
+
+impl Matchable for Unit {
+    fn is_match(&self, _: &str) -> bool {
+        false
+    }
+}
+
+impl PrettyPrint for Unit {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        RcDoc::nil()
     }
 }

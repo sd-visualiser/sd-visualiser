@@ -13,14 +13,14 @@ use pest_derive::Parser;
 use serde::Serialize;
 
 use super::{span_into_str, ControlFlow, Fresh, CF};
-use crate::common::{Empty, Matchable};
+use crate::common::{Empty, Matchable, Unit};
 
 pub struct Spartan;
 
 impl super::Language for Spartan {
     type Op = Op;
     type Var = Variable;
-    type Addr = Addr;
+    type Addr = Unit;
     type VarDef = Variable;
     type BlockAddr = Empty;
 }
@@ -209,28 +209,12 @@ impl Fresh for Variable {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-#[cfg_attr(test, derive(Serialize))]
-pub struct Addr;
-
-impl Matchable for Addr {
-    fn is_match(&self, _: &str) -> bool {
-        false
-    }
-}
-
-impl Display for Addr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("")
-    }
-}
-
-impl<'pest> FromPest<'pest> for Addr {
+impl<'pest> FromPest<'pest> for Unit {
     type Rule = Rule;
     type FatalError = Void;
 
     fn from_pest(_: &mut Pairs<'pest, Rule>) -> Result<Self, ConversionError<Void>> {
-        Ok(Addr)
+        Ok(Unit)
     }
 }
 

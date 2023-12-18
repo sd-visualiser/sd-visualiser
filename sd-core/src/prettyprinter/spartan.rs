@@ -1,7 +1,7 @@
 use pretty::RcDoc;
 
 use super::{paran_list, PrettyPrint};
-use crate::language::spartan::{Addr, Bind, Expr, Op, Thunk, Value, Variable};
+use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -102,12 +102,6 @@ impl PrettyPrint for Thunk {
                     .nest(4)
                     .append(RcDoc::line())
             })
-    }
-}
-
-impl PrettyPrint for Addr {
-    fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::nil()
     }
 }
 
