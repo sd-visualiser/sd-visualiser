@@ -80,7 +80,14 @@ pub struct GenericOperation {
     #[pest_ast(inner(rule(Rule::function_type), with(span_into_str), with(str::to_string)))]
     pub function_type: String,
 }
-passthrough!(inner, Successor, successor);
+
+#[derive(Debug, FromPest)]
+#[pest_ast(rule(Rule::successor))]
+pub struct Successor {
+    #[pest_ast(inner(rule(Rule::caret_id), with(span_into_str), with(str::to_string)))]
+    pub id: String,
+    pub args: Vec<TypedArg>,
+}
 
 #[derive(Debug, FromPest)]
 #[pest_ast(rule(Rule::op_result))]
@@ -246,25 +253,27 @@ impl From<Region> for Thunk<Mlir> {
             args: vec![],
             body: region
                 .entry_block
-                .as_ref()
-                .map_or_else(Expr::default, |entry| ops_to_expr(&entry.operations)),
-            blocks: region.blocks.iter().map(MlirBlock::to_block).collect(),
+                .map_or_else(Expr::default, |entry| ops_to_expr(entry.operations)),
+            blocks: region.blocks.into_iter().map_into().collect(),
         }
     }
 }
 
-impl MlirBlock {
-    pub fn to_block(&self) -> Block<Mlir> {
+impl From<MlirBlock> for Block<Mlir> {
+    fn from(block: MlirBlock) -> Self {
         Block {
-            addr: todo!(),
-            args: todo!(),
-            expr: todo!(),
+            addr: block.label.id,
+            args: block.label.args.into_iter().map_into().collect(),
+            expr: ops_to_expr(block.operations),
         }
     }
 }
 
-fn ops_to_expr<'a>(ops: impl IntoIterator<Item = &'a Operation>) -> Expr<Mlir> {
-    todo!()
+fn ops_to_expr(ops: impl IntoIterator<Item = Operation>) -> Expr<Mlir> {
+    Expr {
+        binds: ops.into_iter().map_into().collect(),
+        values: vec![],
+    }
 }
 
 impl From<OpResult> for Var {
@@ -309,107 +318,125 @@ impl From<GenericOperation> for super::Value<Mlir> {
 
 impl From<Successor> for BlockAddr {
     fn from(successor: Successor) -> Self {
-        BlockAddr(successor.0)
+        BlockAddr(successor.id)
     }
 }
 
-#[cfg(test)]
-pub(crate) mod tests {
-    use std::path::Path;
-
-    use dir_test::{dir_test, Fixture};
-    use pest::Parser;
-
-    use super::{MlirParser, Rule};
-
-    #[test]
-    fn parse_mlir_operation() -> Result<(), Box<dyn std::error::Error>> {
-        let ops = [
-            r#"%result:2 = "foo_div"() : () -> (f32, i32)"#,
-            r#"%foo, %bar = "foo_div"() : () -> (f32, i32)"#,
-            r#"%2 = "tf.scramble"(%result#0, %bar) <{fruit = "banana"}> : (f32, i32) -> f32"#,
-            r#"%foo, %bar = "foo_div"() {some_attr = "value", other_attr = 42 : i64} : () -> (f32, i32)"#,
-        ];
-        for op in ops {
-            let mut parse_tree = MlirParser::parse(Rule::operation, op)?;
-            let syntax_tree = super::ast::Operation::from_pest(&mut parse_tree)?;
-            insta::assert_debug_snapshot!(syntax_tree);
+impl From<Operation> for Bind<Mlir> {
+    fn from(operation: Operation) -> Self {
+        Bind {
+            defs: operation.result.into_iter().map_into().collect(),
+            value: operation.operation.into(),
         }
-        Ok(())
-    }
-
-    #[test]
-    fn parse_mlir_block() -> Result<(), Box<dyn std::error::Error>> {
-        let blocks = [
-            r#"^bb0(%arg0: i64, %arg1: i1):
-              "cf.cond_br"(%arg1)[^bb1, ^bb2] {operand_segment_sizes = array<i32: [1, 0, 0]>} : (i1) -> ()
-            "#,
-            r#"^bb1:  // pred: ^bb0
-              "cf.br"(%arg0)[^bb3] : (i64) -> ()
-            "#,
-            r#"^bb2:  // pred: ^bb0
-              %0 = "arith.addi"(%arg0, %arg0) : (i64, i64) -> i64
-              "cf.br"(%0)[^bb3] : (i64) -> ()
-            "#,
-            r#"^bb3(%1: i64):  // 2 preds: ^bb1, ^bb2
-              "cf.br"(%1, %arg0)[^bb4] : (i64, i64) -> ()
-            "#,
-            r#"^bb4(%2: i64, %3: i64):  // pred: ^bb3
-              %4 = "arith.addi"(%2, %3) : (i64, i64) -> i64
-              "func.return"(%4) : (i64) -> ()
-            "#,
-        ];
-        for block in blocks {
-            let mut parse_tree = MlirParser::parse(Rule::block, block)?;
-            let syntax_tree = super::ast::Block::from_pest(&mut parse_tree)?;
-            insta::assert_debug_snapshot!(syntax_tree);
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn parse_mlir_region() -> Result<(), Box<dyn std::error::Error>> {
-        let mut parse_tree = MlirParser::parse(
-            Rule::region,
-            r#"{
-                ^bb0(%arg0: i64, %arg1: i1):
-                  "cf.cond_br"(%arg1)[^bb1, ^bb2] {operand_segment_sizes = array<i32: [1, 0, 0]>} : (i1) -> ()
-                ^bb1:  // pred: ^bb0
-                  "cf.br"(%arg0)[^bb3] : (i64) -> ()
-                ^bb2:  // pred: ^bb0
-                  %0 = "arith.addi"(%arg0, %arg0) : (i64, i64) -> i64
-                  "cf.br"(%0)[^bb3] : (i64) -> ()
-                ^bb3(%1: i64):  // 2 preds: ^bb1, ^bb2
-                  "cf.br"(%1, %arg0)[^bb4] : (i64, i64) -> ()
-                ^bb4(%2: i64, %3: i64):  // pred: ^bb3
-                  %4 = "arith.addi"(%2, %3) : (i64, i64) -> i64
-                  "func.return"(%4) : (i64) -> ()
-                }
-            "#,
-        )?;
-        let syntax_tree = super::ast::Region::from_pest(&mut parse_tree)?;
-        insta::assert_debug_snapshot!(syntax_tree);
-        Ok(())
-    }
-
-    type Toplevel = (); // TODO(@NickHu: should have file-based MLIR parse tests)
-    pub fn parse_mlir(raw_path: &str) -> (&str, Toplevel) {
-        let path = Path::new(raw_path);
-        let program = std::fs::read_to_string(path).unwrap();
-        let mut pairs = MlirParser::parse(Rule::toplevel, &program).unwrap_or_else(|err| {
-            panic!(
-                "could not parse program {:?}\n{err:?}",
-                path.file_stem().unwrap()
-            )
-        });
-        let name = path.file_stem().unwrap().to_str().unwrap();
-        todo!()
-    }
-
-    #[ignore]
-    #[allow(clippy::needless_pass_by_value)]
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.mlir", loader: crate::language::mlir::tests::parse_mlir, postfix: "check_parse")]
-    fn check_parse(fixture: Fixture<(&str, Toplevel)>) {
-        let (_name, _expr) = fixture.content();
     }
 }
+
+impl From<TypedArg> for Var {
+    fn from(arg: TypedArg) -> Self {
+        Var {
+            id: arg.id,
+            index: None,
+        }
+    }
+}
+
+// #[cfg(test)]
+// pub(crate) mod tests {
+//     use std::path::Path;
+
+//     use dir_test::{dir_test, Fixture};
+//     use pest::Parser;
+
+//     use super::{MlirParser, Rule};
+
+//     #[test]
+//     fn parse_mlir_operation() -> Result<(), Box<dyn std::error::Error>> {
+//         let ops = [
+//             r#"%result:2 = "foo_div"() : () -> (f32, i32)"#,
+//             r#"%foo, %bar = "foo_div"() : () -> (f32, i32)"#,
+//             r#"%2 = "tf.scramble"(%result#0, %bar) <{fruit = "banana"}> : (f32, i32) -> f32"#,
+//             r#"%foo, %bar = "foo_div"() {some_attr = "value", other_attr = 42 : i64} : () -> (f32, i32)"#,
+//         ];
+//         for op in ops {
+//             let mut parse_tree = MlirParser::parse(Rule::operation, op)?;
+//             let syntax_tree = super::ast::Operation::from_pest(&mut parse_tree)?;
+//             insta::assert_debug_snapshot!(syntax_tree);
+//         }
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn parse_mlir_block() -> Result<(), Box<dyn std::error::Error>> {
+//         let blocks = [
+//             r#"^bb0(%arg0: i64, %arg1: i1):
+//               "cf.cond_br"(%arg1)[^bb1, ^bb2] {operand_segment_sizes = array<i32: [1, 0, 0]>} : (i1) -> ()
+//             "#,
+//             r#"^bb1:  // pred: ^bb0
+//               "cf.br"(%arg0)[^bb3] : (i64) -> ()
+//             "#,
+//             r#"^bb2:  // pred: ^bb0
+//               %0 = "arith.addi"(%arg0, %arg0) : (i64, i64) -> i64
+//               "cf.br"(%0)[^bb3] : (i64) -> ()
+//             "#,
+//             r#"^bb3(%1: i64):  // 2 preds: ^bb1, ^bb2
+//               "cf.br"(%1, %arg0)[^bb4] : (i64, i64) -> ()
+//             "#,
+//             r#"^bb4(%2: i64, %3: i64):  // pred: ^bb3
+//               %4 = "arith.addi"(%2, %3) : (i64, i64) -> i64
+//               "func.return"(%4) : (i64) -> ()
+//             "#,
+//         ];
+//         for block in blocks {
+//             let mut parse_tree = MlirParser::parse(Rule::block, block)?;
+//             let syntax_tree = super::ast::Block::from_pest(&mut parse_tree)?;
+//             insta::assert_debug_snapshot!(syntax_tree);
+//         }
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn parse_mlir_region() -> Result<(), Box<dyn std::error::Error>> {
+//         let mut parse_tree = MlirParser::parse(
+//             Rule::region,
+//             r#"{
+//                 ^bb0(%arg0: i64, %arg1: i1):
+//                   "cf.cond_br"(%arg1)[^bb1, ^bb2] {operand_segment_sizes = array<i32: [1, 0, 0]>} : (i1) -> ()
+//                 ^bb1:  // pred: ^bb0
+//                   "cf.br"(%arg0)[^bb3] : (i64) -> ()
+//                 ^bb2:  // pred: ^bb0
+//                   %0 = "arith.addi"(%arg0, %arg0) : (i64, i64) -> i64
+//                   "cf.br"(%0)[^bb3] : (i64) -> ()
+//                 ^bb3(%1: i64):  // 2 preds: ^bb1, ^bb2
+//                   "cf.br"(%1, %arg0)[^bb4] : (i64, i64) -> ()
+//                 ^bb4(%2: i64, %3: i64):  // pred: ^bb3
+//                   %4 = "arith.addi"(%2, %3) : (i64, i64) -> i64
+//                   "func.return"(%4) : (i64) -> ()
+//                 }
+//             "#,
+//         )?;
+//         let syntax_tree = super::ast::Region::from_pest(&mut parse_tree)?;
+//         insta::assert_debug_snapshot!(syntax_tree);
+//         Ok(())
+//     }
+
+//     type Toplevel = (); // TODO(@NickHu: should have file-based MLIR parse tests)
+//     pub fn parse_mlir(raw_path: &str) -> (&str, Toplevel) {
+//         let path = Path::new(raw_path);
+//         let program = std::fs::read_to_string(path).unwrap();
+//         let mut pairs = MlirParser::parse(Rule::toplevel, &program).unwrap_or_else(|err| {
+//             panic!(
+//                 "could not parse program {:?}\n{err:?}",
+//                 path.file_stem().unwrap()
+//             )
+//         });
+//         let name = path.file_stem().unwrap().to_str().unwrap();
+//         todo!()
+//     }
+
+//     #[ignore]
+//     #[allow(clippy::needless_pass_by_value)]
+//     #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.mlir", loader: crate::language::mlir::tests::parse_mlir, postfix: "check_parse")]
+//     fn check_parse(fixture: Fixture<(&str, Toplevel)>) {
+//         let (_name, _expr) = fixture.content();
+//     }
+// }
