@@ -2,6 +2,7 @@
 
 use std::fmt::Display;
 
+use itertools::Itertools;
 use pest_derive::Parser;
 
 pub struct Mlir;
@@ -15,7 +16,7 @@ pub struct MlirParser;
 use pest::Span;
 use pest_ast::FromPest;
 
-use super::{Block, ControlFlow, Expr, Fresh, CF};
+use super::{Bind, Block, ControlFlow, Expr, Fresh, CF};
 use crate::{
     common::{Matchable, Unit},
     language::{span_into_str, Language, Thunk},
@@ -125,7 +126,7 @@ pub struct BlockAddr(pub String);
 
 impl From<&str> for BlockAddr {
     fn from(value: &str) -> Self {
-        BlockAddr(value.to_string())
+        BlockAddr(value.to_owned())
     }
 }
 
@@ -178,9 +179,9 @@ impl Matchable for Op {
 impl ControlFlow<Mlir> for Op {
     fn get_cf(&self) -> Option<CF<Mlir>> {
         if !self.successors.is_empty() {
-            return Some(CF::Brs(self.successors.clone()));
+            Some(CF::Brs(self.successors.clone()))
         } else if self.name.contains("return") {
-            return Some(CF::Return);
+            Some(CF::Return)
         } else {
             None
         }
@@ -205,14 +206,14 @@ impl Display for Var {
 
 impl Matchable for Var {
     fn is_match(&self, query: &str) -> bool {
-        &self.id == query
+        self.id == query
     }
 }
 
 impl Fresh for Var {
     fn fresh(number: usize) -> Self {
         Var {
-            id: format!("?{}", number),
+            id: format!("?{number}"),
             index: None,
         }
     }
@@ -220,7 +221,7 @@ impl Fresh for Var {
 
 impl Matchable for BlockAddr {
     fn is_match(&self, query: &str) -> bool {
-        &self.0 == query
+        self.0 == query
     }
 }
 
@@ -239,6 +240,7 @@ impl Language for Mlir {
 }
 
 impl Region {
+    #[must_use]
     pub fn to_thunk(&self) -> Thunk<Mlir> {
         Thunk {
             addr: Unit,
@@ -246,9 +248,8 @@ impl Region {
             body: self
                 .entry_block
                 .as_ref()
-                .map(|entry| ops_to_expr(&entry.operations))
-                .unwrap_or(Expr::default()),
-            blocks: self.blocks.iter().map(|block| block.to_block()).collect(),
+                .map_or_else(Expr::default, |entry| ops_to_expr(&entry.operations)),
+            blocks: self.blocks.iter().map(MlirBlock::to_block).collect(),
         }
     }
 }
@@ -265,6 +266,52 @@ impl MlirBlock {
 
 fn ops_to_expr<'a>(ops: impl IntoIterator<Item = &'a Operation>) -> Expr<Mlir> {
     todo!()
+}
+
+impl From<OpResult> for Var {
+    fn from(op_result: OpResult) -> Self {
+        Var {
+            id: op_result.id,
+            index: op_result.index.map(|idx| idx.0),
+        }
+    }
+}
+
+impl From<Value> for Var {
+    fn from(value: Value) -> Self {
+        Var {
+            id: value.id,
+            index: value.index.map(|idx| idx.0),
+        }
+    }
+}
+
+impl From<GenericOperation> for super::Value<Mlir> {
+    fn from(generic_op: GenericOperation) -> Self {
+        super::Value::Op {
+            op: Op {
+                name: generic_op.op,
+                successors: generic_op.successors.into_iter().map_into().collect(),
+            },
+            args: generic_op
+                .operands
+                .into_iter()
+                .map(|x| super::Value::Variable(x.into()))
+                .chain(
+                    generic_op
+                        .regions
+                        .into_iter()
+                        .map(|x| super::Value::Thunk(x.to_thunk())),
+                )
+                .collect(),
+        }
+    }
+}
+
+impl From<Successor> for BlockAddr {
+    fn from(successor: Successor) -> Self {
+        BlockAddr(successor.0)
+    }
 }
 
 #[cfg(test)]
