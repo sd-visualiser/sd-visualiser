@@ -4,6 +4,7 @@ use itertools::Either;
 use pretty::RcDoc;
 
 pub mod chil;
+pub mod mlir;
 pub mod spartan;
 
 pub trait PrettyPrint {
