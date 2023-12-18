@@ -124,6 +124,7 @@ impl App {
         if let Some(error) = &self.last_parse_error {
             match error {
                 ParseError::Chil(err) => show_parse_error(ui, err, &text_edit_out),
+                ParseError::Mlir(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Spartan(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Conversion(_) => (),
             }
@@ -178,11 +179,15 @@ impl App {
                     .as_ref()
                     .ok_or_else(|| anyhow!("no parse"))?;
                 let compile = Ok(match parse_output {
-                    ParseOutput::ChilExpr(expr) => {
+                    ParseOutput::Chil(expr) => {
                         tracing::debug!("Converting chil to hypergraph...");
                         GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?)
                     }
-                    ParseOutput::SpartanExpr(expr) => {
+                    ParseOutput::Mlir(expr) => {
+                        tracing::debug!("Converting mlir to hypergraph...");
+                        GraphUi::new_mlir(SyntaxHypergraph::try_from(expr)?)
+                    }
+                    ParseOutput::Spartan(expr) => {
                         tracing::debug!("Converting spartan to hypergraph...");
                         GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?)
                     }
@@ -278,6 +283,7 @@ impl eframe::App for App {
 
                 ui.menu_button("Language", |ui| {
                     ui.radio_value(&mut self.language, UiLanguage::Chil, "Chil");
+                    ui.radio_value(&mut self.language, UiLanguage::Mlir, "Mlir");
                     ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
                 });
 

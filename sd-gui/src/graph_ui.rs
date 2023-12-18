@@ -17,7 +17,7 @@ use sd_core::{
         traits::Graph,
     },
     interactive::InteractiveGraph,
-    language::{chil::Chil, spartan::Spartan},
+    language::{chil::Chil, mlir::Mlir, spartan::Spartan},
 };
 use sd_graphics::{common::Shapeable, renderable::RenderableGraph};
 
@@ -25,12 +25,17 @@ use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub enum GraphUi {
     Chil(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Chil>>>),
+    Mlir(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Mlir>>>),
     Spartan(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Spartan>>>),
 }
 
 impl GraphUi {
     pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>) -> Self {
         Self::Chil(GraphUiInternal::new(InteractiveGraph::new(graph)))
+    }
+
+    pub(crate) fn new_mlir(graph: SyntaxHypergraph<Mlir>) -> Self {
+        Self::Mlir(GraphUiInternal::new(InteractiveGraph::new(graph)))
     }
 
     pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>) -> Self {
@@ -40,6 +45,7 @@ impl GraphUi {
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui,
+            GraphUi::Mlir(graph_ui) => graph_ui,
             GraphUi::Spartan(graph_ui) => graph_ui,
         } {
             pub(crate) fn ui(&mut self, ui: &mut egui::Ui, search: Option<&str>);
@@ -55,6 +61,7 @@ impl GraphUi {
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui.graph,
+            GraphUi::Mlir(graph_ui) => graph_ui.graph,
             GraphUi::Spartan(graph_ui) => graph_ui.graph,
         } {
             pub(crate) fn is_empty(&self) -> bool;

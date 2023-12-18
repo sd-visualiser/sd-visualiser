@@ -1,7 +1,7 @@
 use pretty::RcDoc;
 
 use super::PrettyPrint;
-use crate::language::mlir::{BlockAddr, Op, Var};
+use crate::language::mlir::{BlockAddr, Expr, Op, Thunk, Var};
 
 impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -23,5 +23,17 @@ impl PrettyPrint for Var {
 impl PrettyPrint for BlockAddr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(&self.0)
+    }
+}
+
+impl PrettyPrint for Expr {
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
+        RcDoc::nil() // TODO: Implement pretty printing for MLIR
+    }
+}
+
+impl PrettyPrint for Thunk {
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
+        RcDoc::nil() // TODO: Implement pretty printing for MLIR
     }
 }

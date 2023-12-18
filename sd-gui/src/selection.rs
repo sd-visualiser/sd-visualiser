@@ -5,7 +5,7 @@ use eframe::egui;
 use sd_core::{
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
-    language::{chil::Chil, spartan::Spartan, Expr, Language, Thunk},
+    language::{chil::Chil, mlir::Mlir, spartan::Spartan, Expr, Language, Thunk},
     prettyprinter::PrettyPrint,
 };
 
@@ -18,6 +18,7 @@ use crate::{
 
 pub enum Selection {
     Chil(SelectionInternal<Chil>),
+    Mlir(SelectionInternal<Mlir>),
     Spartan(SelectionInternal<Spartan>),
 }
 
@@ -25,6 +26,7 @@ impl Selection {
     delegate! {
         to match self {
             Self::Chil(selection) => selection,
+            Self::Mlir(selection) => selection,
             Self::Spartan(selection) => selection,
         } {
             pub(crate) fn ui(&mut self, ctx: &egui::Context);
@@ -37,6 +39,9 @@ impl Selection {
         match graph_ui {
             GraphUi::Chil(graph_ui) => {
                 Self::Chil(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
+            }
+            GraphUi::Mlir(graph_ui) => {
+                Self::Mlir(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
             }
             GraphUi::Spartan(graph_ui) => {
                 Self::Spartan(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
