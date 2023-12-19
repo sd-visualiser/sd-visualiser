@@ -214,6 +214,10 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
             if open_edges < normalised_targets::<T>(&edge, node.backlink().as_ref()).len() {
+                println!(
+                    "We got here {open_edges} {:?}",
+                    normalised_targets::<T>(&edge, node.backlink().as_ref())
+                );
                 // We need to backlink the edge as it is not done
                 if open_edges == 0 {
                     // Only backlink without copying

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use by_address::ByThinAddress;
 use derivative::Derivative;
@@ -206,6 +206,13 @@ impl<G: Graph> CollapseEndpoint<G> {
             },
         }
     }
+
+    pub fn into_inner(&self) -> Endpoint<G::Ctx> {
+        match self {
+            Endpoint::Node(n) => Endpoint::Node(n.clone().into_inner()),
+            Endpoint::Boundary(g) => Endpoint::Boundary(g.as_ref().map(|t| t.inner().clone())),
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////
@@ -278,10 +285,24 @@ impl<G: Graph> EdgeLike for CollapseEdge<G> {
     }
 
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<Self::Ctx>> + '_> {
+        let mut encountered = HashSet::new();
         Box::new(
             self.edge
                 .targets()
-                .map(|endpoint| CollapseEndpoint::new(endpoint, self.expanded.clone())),
+                .filter_map(|endpoint| {
+                    let col_endpoint =
+                        CollapseEndpoint::new(endpoint.clone(), self.expanded.clone());
+                    if encountered.contains(&col_endpoint) {
+                        None
+                    } else {
+                        if col_endpoint.into_inner() != endpoint {
+                            encountered.insert(col_endpoint.clone());
+                        }
+                        Some(col_endpoint)
+                    }
+                })
+                .collect::<Vec<_>>()
+                .into_iter(),
         )
     }
 }
