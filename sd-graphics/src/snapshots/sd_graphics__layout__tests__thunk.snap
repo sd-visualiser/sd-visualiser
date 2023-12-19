@@ -6,7 +6,7 @@ LayoutInternal(
   h_min: 0.0,
   h_max: 5.0,
   v_min: 0.0,
-  v_max: 2.0,
+  v_max: 3.5,
   nodes: [
     [
       NodeOffset(
@@ -14,14 +14,14 @@ LayoutInternal(
           layout: LayoutInternal(
             h_min: 0.5,
             h_max: 2.5,
-            v_min: 0.5,
-            v_max: 2.5,
+            v_min: 1.0,
+            v_max: 3.0,
             nodes: [
               [
                 NodeOffset(
                   node: Atom(
                     h_pos: 1.5,
-                    v_pos: 1.5,
+                    v_pos: 2.0,
                     extra_size: 0.0,
                   ),
                   inputs: Range(
@@ -39,20 +39,20 @@ LayoutInternal(
               [
                 WireData(
                   h: 1.0,
-                  v_min: 0.5,
-                  v_max: 1.0,
+                  v_min: 1.0,
+                  v_max: 1.5,
                 ),
                 WireData(
                   h: 2.0,
-                  v_min: 0.5,
-                  v_max: 1.0,
+                  v_min: 1.0,
+                  v_max: 1.5,
                 ),
               ],
               [
                 WireData(
                   h: 1.5,
-                  v_min: 2.0,
-                  v_max: 2.5,
+                  v_min: 2.5,
+                  v_max: 3.0,
                 ),
               ],
             ],
@@ -110,7 +110,7 @@ LayoutInternal(
       WireData(
         h: 4.0,
         v_min: 1.5,
-        v_max: 2.0,
+        v_max: 3.5,
       ),
     ],
   ],

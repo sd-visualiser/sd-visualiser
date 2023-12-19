@@ -804,21 +804,23 @@ fn v_layout_internal<T: Ctx>(
                         } => {
                             let layout = v_layout_internal(problem, layout);
 
-                            // problem.add_constraint((layout.v_min + layout.v_max).eq(thunk_height));
-
-                            let height_above = ins
+                            let x = ins
                                 .iter()
                                 .zip(&inputs)
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
 
-                            let height_below = outs
+                            let height_above = if x < 0.5 { 0.5 } else { x };
+
+                            let y = outs
                                 .iter()
                                 .zip(&outputs)
                                 .map(|(x, y)| f32::sqrt((x.h - y).abs()))
                                 .max_by(|x, y| x.partial_cmp(y).unwrap())
                                 .unwrap_or_default();
+
+                            let height_below = if y < 0.5 { 0.5 } else { y };
 
                             let start = problem.add_variable(variable().min(0.0));
                             problem
@@ -846,8 +848,8 @@ fn v_layout_internal<T: Ctx>(
                         }
                     };
 
-                    problem.add_constraint(Expression::leq(v_min + 0.5, top));
-                    problem.add_constraint(Expression::leq(top + 0.5, v_max));
+                    problem.add_constraint(Expression::leq(v_min.into(), top));
+                    problem.add_constraint(Expression::leq(bottom.into(), v_max));
 
                     for x in &before[n.inputs.clone()] {
                         problem.add_constraint(Expression::eq(top.into(), x.v_max));
