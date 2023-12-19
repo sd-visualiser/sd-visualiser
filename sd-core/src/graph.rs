@@ -220,8 +220,6 @@ where
 
                         let mut blocks: HashMap<T::BlockAddr, Vec<_>> = HashMap::new();
 
-                        println!("{cf_free_vars:?}");
-
                         for b in &thunk.blocks {
                             let block = thunk_env.fragment.add_thunk(
                                 cf_free_vars
@@ -259,9 +257,6 @@ where
                             .graph_outputs()
                             .skip(thunk.body.values.len())
                             .collect();
-
-                        println!("Blocks {blocks:?}");
-                        println!("Outputs {:?}", thunk_env.cf_outputs);
 
                         for (addr, port) in thunk_env.cf_outputs {
                             let in_port = match addr {
