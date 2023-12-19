@@ -20,6 +20,10 @@ macro_rules! passthrough {
     };
 }
 
+fn remove_quotes(input: &str) -> &str {
+    &input[1..input.len() - 1]
+}
+
 #[derive(Debug, FromPest)]
 #[pest_ast(rule(Rule::value_use))]
 pub struct Value {
@@ -45,7 +49,12 @@ pub struct Attribute(
 #[derive(Debug, FromPest)]
 #[pest_ast(rule(Rule::generic_operation))]
 pub struct GenericOperation {
-    #[pest_ast(inner(rule(Rule::string_literal), with(span_into_str), with(str::to_string)))]
+    #[pest_ast(inner(
+        rule(Rule::string_literal),
+        with(span_into_str),
+        with(remove_quotes),
+        with(str::to_string)
+    ))]
     pub op: String,
     pub operands: Vec<Value>,
     pub successors: Vec<Successor>,

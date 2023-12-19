@@ -10,7 +10,7 @@ Operation {
         },
     ],
     operation: GenericOperation {
-        op: "\"tf.scramble\"",
+        op: "tf.scramble",
         operands: [
             Value {
                 id: "%result",

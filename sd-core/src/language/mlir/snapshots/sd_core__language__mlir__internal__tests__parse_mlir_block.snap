@@ -22,7 +22,7 @@ Block {
         Operation {
             result: [],
             operation: GenericOperation {
-                op: "\"cf.cond_br\"",
+                op: "cf.cond_br",
                 operands: [
                     Value {
                         id: "%arg1",

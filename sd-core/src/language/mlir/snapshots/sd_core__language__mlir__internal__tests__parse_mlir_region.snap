@@ -25,7 +25,7 @@ Region {
                 Operation {
                     result: [],
                     operation: GenericOperation {
-                        op: "\"cf.cond_br\"",
+                        op: "cf.cond_br",
                         operands: [
                             Value {
                                 id: "%arg1",
@@ -67,7 +67,7 @@ Region {
                 Operation {
                     result: [],
                     operation: GenericOperation {
-                        op: "\"cf.br\"",
+                        op: "cf.br",
                         operands: [
                             Value {
                                 id: "%arg0",
@@ -105,7 +105,7 @@ Region {
                         },
                     ],
                     operation: GenericOperation {
-                        op: "\"arith.addi\"",
+                        op: "arith.addi",
                         operands: [
                             Value {
                                 id: "%arg0",
@@ -127,7 +127,7 @@ Region {
                 Operation {
                     result: [],
                     operation: GenericOperation {
-                        op: "\"cf.br\"",
+                        op: "cf.br",
                         operands: [
                             Value {
                                 id: "%0",
@@ -165,7 +165,7 @@ Region {
                 Operation {
                     result: [],
                     operation: GenericOperation {
-                        op: "\"cf.br\"",
+                        op: "cf.br",
                         operands: [
                             Value {
                                 id: "%1",
@@ -216,7 +216,7 @@ Region {
                         },
                     ],
                     operation: GenericOperation {
-                        op: "\"arith.addi\"",
+                        op: "arith.addi",
                         operands: [
                             Value {
                                 id: "%2",
@@ -238,7 +238,7 @@ Region {
                 Operation {
                     result: [],
                     operation: GenericOperation {
-                        op: "\"func.return\"",
+                        op: "func.return",
                         operands: [
                             Value {
                                 id: "%4",

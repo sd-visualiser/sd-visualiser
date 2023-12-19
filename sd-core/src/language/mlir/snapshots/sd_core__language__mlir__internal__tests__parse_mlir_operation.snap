@@ -14,7 +14,7 @@ Operation {
         },
     ],
     operation: GenericOperation {
-        op: "\"foo_div\"",
+        op: "foo_div",
         operands: [],
         successors: [],
         properties: [],

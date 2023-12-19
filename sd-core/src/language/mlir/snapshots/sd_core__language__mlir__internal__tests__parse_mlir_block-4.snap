@@ -18,7 +18,7 @@ Block {
         Operation {
             result: [],
             operation: GenericOperation {
-                op: "\"cf.br\"",
+                op: "cf.br",
                 operands: [
                     Value {
                         id: "%1",

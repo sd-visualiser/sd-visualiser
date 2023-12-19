@@ -18,7 +18,7 @@ Block {
                 },
             ],
             operation: GenericOperation {
-                op: "\"arith.addi\"",
+                op: "arith.addi",
                 operands: [
                     Value {
                         id: "%arg0",
@@ -40,7 +40,7 @@ Block {
         Operation {
             result: [],
             operation: GenericOperation {
-                op: "\"cf.br\"",
+                op: "cf.br",
                 operands: [
                     Value {
                         id: "%0",
