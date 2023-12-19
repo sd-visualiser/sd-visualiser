@@ -9,7 +9,7 @@ use sd_core::{
     hypergraph::{
         generic::{Ctx, Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
-        traits::{Graph, NodeLike, WithWeight},
+        traits::{Graph, IsCF, NodeLike, WithWeight},
     },
     prettyprinter::PrettyPrint,
 };
@@ -35,6 +35,7 @@ where
     Edge<G::Ctx>: Codeable,
     Operation<G::Ctx>: Codeable + Matchable,
     Thunk<G::Ctx>: Matchable,
+    Weight<Edge<G::Ctx>>: IsCF,
 {
     let viewport = *to_screen.from();
 

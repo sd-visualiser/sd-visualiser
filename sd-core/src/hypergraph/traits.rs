@@ -12,6 +12,10 @@ pub trait WithWeight {
     fn weight(&self) -> Self::Weight;
 }
 
+pub trait IsCF {
+    fn is_cf(&self) -> bool;
+}
+
 pub trait NodeLike: Clone + Eq + Hash + Debug + Send + Sync {
     type Ctx: Ctx;
     fn inputs(&self) -> Box<dyn DoubleEndedIterator<Item = Edge<Self::Ctx>> + '_>;

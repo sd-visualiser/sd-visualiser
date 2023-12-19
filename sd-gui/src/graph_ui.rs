@@ -14,7 +14,7 @@ use sd_core::{
     hypergraph::{
         generic::{Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
-        traits::Graph,
+        traits::{Graph, IsCF},
     },
     interactive::InteractiveGraph,
     language::{chil::Chil, mlir::Mlir, spartan::Spartan},
@@ -103,6 +103,7 @@ where
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Shapeable,
         Weight<Operation<G::Ctx>>: Display,
+        Weight<Edge<G::Ctx>>: IsCF,
     {
         let shapes = generate_shapes(&self.graph);
         let guard = shapes.lock().unwrap();

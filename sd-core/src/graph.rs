@@ -17,6 +17,7 @@ use crate::{
             fragment::{Fragment, ThunkCursor},
             HypergraphBuilder, HypergraphError, InPort, OutPort, ThunkBuilder,
         },
+        traits::IsCF,
         Hypergraph, Weight,
     },
     language::{ControlFlow, Expr, GetVar, Language, Value, CF},
@@ -41,16 +42,29 @@ impl<T: Language> Weight for Syntax<T> {
     Hash(bound = ""),
     Debug(bound = "")
 )]
-#[cfg_attr(test, derive(Serialize))]
+#[cfg_attr(
+    test,
+    derive(Serialize),
+    serde(bound = "T::BlockAddr: Serialize, T::Var: Serialize, T::VarDef: Serialize")
+)]
 pub enum Name<T: Language> {
+    CF(Option<T::BlockAddr>),
     Nil,
     FreeVar(T::Var),
     BoundVar(T::VarDef),
 }
 
+impl<T: Language> IsCF for Name<T> {
+    fn is_cf(&self) -> bool {
+        matches!(self, Name::CF(_))
+    }
+}
+
 impl<T: Language> Display for Name<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Name::CF(None) => write!(f, "return"),
+            Name::CF(Some(bl)) => write!(f, "{bl}"),
             Name::Nil => write!(f, ""),
             Name::FreeVar(var) => write!(f, "{var}"),
             Name::BoundVar(def) => write!(f, "{def}"),
@@ -61,7 +75,7 @@ impl<T: Language> Display for Name<T> {
 impl<T: Language> Matchable for Name<T> {
     fn is_match(&self, query: &str) -> bool {
         match self {
-            Name::Nil => false,
+            Name::Nil | Name::CF(_) => false,
             Name::FreeVar(var) => var.is_match(query),
             Name::BoundVar(def) => def.is_match(query),
         }
@@ -71,7 +85,7 @@ impl<T: Language> Matchable for Name<T> {
 impl<T: Language> Name<T> {
     pub fn into_var(self) -> Option<T::Var> {
         match self {
-            Name::Nil => None,
+            Name::Nil | Name::CF(_) => None,
             Name::FreeVar(var) => Some(var),
             Name::BoundVar(def) => Some(def.into_var()),
         }
@@ -303,10 +317,10 @@ where
 
                 match &cf {
                     Some(CF::Return) => {
-                        output_weights.push(Name::Nil);
+                        output_weights.push(Name::CF(None));
                     }
                     Some(CF::Brs(bs)) => {
-                        output_weights.extend(bs.iter().map(|_| Name::Nil));
+                        output_weights.extend(bs.iter().map(|bl| Name::CF(Some(bl.clone()))));
                     }
                     None => {}
                 }

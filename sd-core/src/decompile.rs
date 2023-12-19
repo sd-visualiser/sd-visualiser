@@ -77,7 +77,7 @@ impl<T: Language> Expr<T> {
                         .outputs()
                         .map(|edge| match edge.weight() {
                             Name::Nil => Ok(None),
-                            Name::FreeVar(_) => Err(DecompileError::Corrupt),
+                            Name::FreeVar(_) | Name::CF(_) => Err(DecompileError::Corrupt),
                             Name::BoundVar(def) => Ok(Some(def)),
                         })
                         .collect::<Result<Option<Vec<_>>, _>>()?
@@ -109,7 +109,7 @@ impl<T: Language> Expr<T> {
                         Name::Nil => {
                             node_to_value.insert(node, Value::Thunk(thunk));
                         }
-                        Name::FreeVar(_) | Name::BoundVar(_) => {
+                        Name::FreeVar(_) | Name::BoundVar(_) | Name::CF(_) => {
                             return Err(DecompileError::Corrupt)
                         }
                     }
@@ -172,6 +172,7 @@ impl<T: Language> SThunk<T> {
 )]
 pub enum FakeValue<T: Language> {
     Fresh,
+    Return,
     Thunk(T::Addr),
     Block(T::BlockAddr),
     FreeVar(T::Var),
@@ -188,6 +189,8 @@ impl<T: Language> FakeValue<T> {
         Thunk<E::Ctx>: WithWeight<Weight = Either<T::Addr, T::BlockAddr>>,
     {
         match edge.weight() {
+            Name::CF(None) => Self::Return,
+            Name::CF(Some(bl)) => Self::Block(bl),
             Name::Nil => match edge.source().into_node() {
                 None => Self::Fresh,
                 Some(Node::Operation(op)) => Self::Operation(
@@ -208,6 +211,7 @@ impl<T: Language> FakeValue<T> {
 impl<T: Language> PrettyPrint for FakeValue<T> {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         match self {
+            Self::Return => RcDoc::text("return"),
             Self::Fresh => RcDoc::text("?"),
             Self::Thunk(addr) => {
                 let addr = addr.to_pretty();

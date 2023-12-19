@@ -9,8 +9,8 @@ use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
     hypergraph::{
-        generic::{Ctx, Node},
-        traits::Keyable,
+        generic::{Ctx, Node, Weight},
+        traits::{IsCF, Keyable, WithWeight},
     },
 };
 
@@ -229,24 +229,43 @@ impl<T: Ctx> Shape<T> {
         ui: &egui::Ui,
         transform: &RectTransform,
         highlight_edges: &IndexSet<T::Edge>,
-    ) -> egui::Shape {
+    ) -> egui::Shape
+    where
+        Weight<T::Edge>: IsCF,
+    {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
 
         match self {
             Shape::Line { start, end, addr } => {
-                let stroke = if highlight_edges.contains(&addr) {
+                let mut stroke = if highlight_edges.contains(&addr) {
                     ui.style().visuals.widgets.hovered.fg_stroke
                 } else {
                     default_stroke
                 };
+                if addr.weight().is_cf() {
+                    if highlight_edges.contains(&addr) {
+                        stroke.color = Color32::YELLOW;
+                    } else {
+                        stroke.color = Color32::GOLD;
+                    }
+                }
                 egui::Shape::line_segment([start, end], stroke)
             }
             Shape::CubicBezier { points, addr } => {
-                let stroke = if highlight_edges.contains(&addr) {
+                let mut stroke = if highlight_edges.contains(&addr) {
                     ui.style().visuals.widgets.hovered.fg_stroke
                 } else {
                     default_stroke
                 };
+
+                if addr.weight().is_cf() {
+                    if highlight_edges.contains(&addr) {
+                        stroke.color = Color32::YELLOW;
+                    } else {
+                        stroke.color = Color32::GOLD;
+                    }
+                }
+
                 let bezier = CubicBezierShape::from_points_stroke(
                     points,
                     false,

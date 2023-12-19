@@ -88,6 +88,7 @@ impl<S: Matchable, T: Matchable> Matchable for Either<S, T> {
 }
 
 #[derive(Clone, Copy, Hash, Debug, PartialEq, Eq)]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Empty {}
 
 impl Display for Empty {
