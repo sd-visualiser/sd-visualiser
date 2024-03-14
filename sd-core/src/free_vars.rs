@@ -17,7 +17,7 @@ impl<T: Language> Expr<T> {
         }
 
         for def in self.binds.iter().flat_map(|bind| &bind.defs) {
-            vars.remove(def.var());
+            vars.swap_remove(def.var());
         }
 
         vars

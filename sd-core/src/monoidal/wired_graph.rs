@@ -143,7 +143,7 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
 
     /// Insert copies and identities so that `edge` is ready to output to at `layer`
     fn prepare_input(&mut self, edge: &T::Edge, layer: usize) {
-        let mut layers = self.open_edges.remove(edge).unwrap_or_default();
+        let mut layers = self.open_edges.swap_remove(edge).unwrap_or_default();
         layers.sort_by_key(|x| Reverse(*x));
         if let Some(mut current_layer) = layers.pop() {
             while current_layer < layer {
@@ -214,10 +214,6 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
             let open_edges = self.open_edges.get(&edge).map(Vec::len).unwrap_or_default();
 
             if open_edges < normalised_targets::<T>(&edge, node.backlink().as_ref()).len() {
-                println!(
-                    "We got here {open_edges} {:?}",
-                    normalised_targets::<T>(&edge, node.backlink().as_ref())
-                );
                 // We need to backlink the edge as it is not done
                 if open_edges == 0 {
                     // Only backlink without copying
