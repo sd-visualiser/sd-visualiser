@@ -13,6 +13,7 @@ pub enum UiLanguage {
     #[default]
     Spartan,
     Mlir,
+    Dot,
 }
 
 impl UiLanguage {
@@ -21,6 +22,7 @@ impl UiLanguage {
             Self::Chil => "chil",
             Self::Spartan => "spartan",
             Self::Mlir => "mlir",
+            Self::Dot => "dot",
         }
     }
 }
@@ -30,6 +32,7 @@ pub enum ParseOutput {
     Chil(chil::Expr),
     Spartan(spartan::Expr),
     Mlir(mlir::Expr),
+    Dot(dot_structures::Graph),
 }
 
 #[derive(Clone, Debug, Error)]
@@ -42,6 +45,9 @@ pub enum ParseError {
 
     #[error("Mlir parsing error:\n{0}")]
     Mlir(#[from] Box<error::Error<mlir::internal::Rule>>),
+
+    #[error("Dot parsing error:\n{0}")]
+    Dot(String),
 
     #[error("Conversion error:\n{0}")]
     Conversion(#[from] ConversionError<Void>),
@@ -66,6 +72,10 @@ pub fn parse(source: &str, language: UiLanguage) -> Result<ParseOutput, ParseErr
             let ops = Vec::<mlir::internal::Operation>::from_pest(&mut pairs)?;
             let expr = mlir::Expr::from(ops);
             Ok(ParseOutput::Mlir(expr))
+        }
+        UiLanguage::Dot => {
+            let graph = graphviz_rust::parse(source).map_err(ParseError::Dot)?;
+            Ok(ParseOutput::Dot(graph))
         }
     }
 }

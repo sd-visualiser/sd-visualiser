@@ -35,17 +35,21 @@ impl Selection {
         }
     }
 
-    pub fn from_graph(graph_ui: &GraphUi, name: String) -> Self {
+    pub fn from_graph(graph_ui: &GraphUi, name: String) -> Option<Self> {
         match graph_ui {
-            GraphUi::Chil(graph_ui) => {
-                Self::Chil(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
-            }
-            GraphUi::Mlir(graph_ui) => {
-                Self::Mlir(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
-            }
-            GraphUi::Spartan(graph_ui) => {
-                Self::Spartan(SelectionInternal::new(graph_ui.graph.to_subgraph(), name))
-            }
+            GraphUi::Chil(graph_ui) => Some(Self::Chil(SelectionInternal::new(
+                graph_ui.graph.to_subgraph(),
+                name,
+            ))),
+            GraphUi::Mlir(graph_ui) => Some(Self::Mlir(SelectionInternal::new(
+                graph_ui.graph.to_subgraph(),
+                name,
+            ))),
+            GraphUi::Spartan(graph_ui) => Some(Self::Spartan(SelectionInternal::new(
+                graph_ui.graph.to_subgraph(),
+                name,
+            ))),
+            GraphUi::Dot(_) => None,
         }
     }
 }

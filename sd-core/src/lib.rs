@@ -9,6 +9,7 @@ pub mod interactive;
 pub mod language;
 pub mod lp;
 pub use lp::LP_BACKEND;
+pub mod dot;
 pub mod monoidal;
 pub mod prettyprinter;
 pub mod selection;

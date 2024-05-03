@@ -10,11 +10,13 @@ use eframe::{
 use sd_core::{
     codeable::Codeable,
     common::{Direction, Matchable},
+    dot::DotWeight,
     graph::SyntaxHypergraph,
     hypergraph::{
         generic::{Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
         traits::{Graph, IsCF},
+        Hypergraph,
     },
     interactive::InteractiveGraph,
     language::{chil::Chil, mlir::Mlir, spartan::Spartan},
@@ -27,6 +29,7 @@ pub enum GraphUi {
     Chil(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Chil>>>),
     Mlir(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Mlir>>>),
     Spartan(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Spartan>>>),
+    Dot(GraphUiInternal<InteractiveGraph<Hypergraph<DotWeight>>>),
 }
 
 impl GraphUi {
@@ -42,11 +45,16 @@ impl GraphUi {
         Self::Spartan(GraphUiInternal::new(InteractiveGraph::new(graph)))
     }
 
+    pub(crate) fn new_dot(graph: Hypergraph<DotWeight>) -> Self {
+        Self::Dot(GraphUiInternal::new(InteractiveGraph::new(graph)))
+    }
+
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui,
             GraphUi::Mlir(graph_ui) => graph_ui,
             GraphUi::Spartan(graph_ui) => graph_ui,
+        GraphUi::Dot(graph_ui) => graph_ui
         } {
             pub(crate) fn ui(&mut self, ui: &mut egui::Ui, search: Option<&str>);
             pub(crate) const fn ready(&self) -> bool;
@@ -63,6 +71,7 @@ impl GraphUi {
             GraphUi::Chil(graph_ui) => graph_ui.graph,
             GraphUi::Mlir(graph_ui) => graph_ui.graph,
             GraphUi::Spartan(graph_ui) => graph_ui.graph,
+        GraphUi::Dot(graph_ui) => graph_ui.graph
         } {
             pub(crate) fn is_empty(&self) -> bool;
             pub(crate) fn clear_selection(&mut self);

@@ -1,7 +1,7 @@
 use egui::{emath::RectTransform, Pos2, Rect};
 use sd_core::hypergraph::generic::Ctx;
 use svg::{
-    node::element::{path::Data, Circle, Group, Line, Path, Rectangle, Text},
+    node::element::{path::Data, Anchor, Circle, Group, Line, Path, Rectangle, Text},
     Document, Node,
 };
 
@@ -15,28 +15,40 @@ impl<T: Ctx> Shape<T> {
                 radius,
                 label,
                 ..
-            } => Box::new(
-                Group::new()
-                    .add(
-                        Circle::new()
-                            .set("cx", center.x)
-                            .set("cy", center.y)
-                            .set("r", *radius)
-                            .set("fill", "white")
-                            .set("stroke", "black")
-                            .set("stroke-width", 1),
-                    )
-                    .add(
-                        Text::new()
-                            .set("x", center.x)
-                            .set("y", center.y)
-                            .set("font-size", 28)
-                            .set("font-family", "monospace")
-                            .set("text-anchor", "middle")
-                            .set("dominant-baseline", "middle")
-                            .add(svg::node::Text::new(html_escape::encode_text(label))),
-                    ),
-            ),
+            } => {
+                let x_size = radius * (label.chars().count().max(1) as f32 + 1.0);
+                Box::new(
+                    Group::new()
+                        .add(
+                            Rectangle::new()
+                                .set("x", center.x - x_size / 2.0)
+                                .set("y", center.y - radius)
+                                .set("width", x_size)
+                                .set("height", radius * 2.0)
+                                .set("rx", *radius)
+                                .set("ry", *radius)
+                                .set("fill", "white")
+                                .set("stroke", "black")
+                                .set("stroke-width", 1),
+                        )
+                        .add(
+                            Anchor::new()
+                                .set(
+                                    "href",
+                                    format!("https://alexarice.github.io/catt-agda/{label}.html"),
+                                )
+                                .add(
+                                    Text::new(html_escape::encode_text(label))
+                                        .set("x", center.x)
+                                        .set("y", center.y)
+                                        .set("font-size", 16)
+                                        .set("font-family", "monospace")
+                                        .set("text-anchor", "middle")
+                                        .set("dominant-baseline", "middle"),
+                                ),
+                        ),
+                )
+            }
             Self::CircleFilled { center, radius, .. } => Box::new(
                 Circle::new()
                     .set("cx", center.x)
@@ -88,7 +100,7 @@ impl<T: Ctx> Shape<T> {
 }
 
 impl<T: Ctx> Shapes<T> {
-    const SCALE: f32 = 100.0;
+    const SCALE: f32 = 50.0;
 
     #[must_use]
     pub fn to_svg(&self) -> Document {

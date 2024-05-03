@@ -14,7 +14,11 @@ use eframe::{
 };
 use egui_notify::Toasts;
 use poll_promise::Promise;
-use sd_core::{common::Direction, graph::SyntaxHypergraph};
+use sd_core::{
+    common::Direction,
+    dot::{dot_to_graph, DotSettings},
+    graph::SyntaxHypergraph,
+};
 
 use crate::{
     code_generator::clear_code_cache,
@@ -43,6 +47,7 @@ pub struct App {
     last_parse: Option<Arc<Mutex<Promise<Option<ParseOutput>>>>>,
     last_parse_error: Option<ParseError>,
     language: UiLanguage,
+    dot_settings: DotSettings,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
     find: Option<(String, usize)>,
@@ -61,6 +66,7 @@ impl Default for App {
             last_parse: Option::default(),
             last_parse_error: Option::default(),
             language: UiLanguage::default(),
+            dot_settings: DotSettings::default(),
             graph_ui: Option::default(),
             selections: Vec::default(),
             find: None,
@@ -126,7 +132,7 @@ impl App {
                 ParseError::Chil(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Mlir(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Spartan(err) => show_parse_error(ui, err, &text_edit_out),
-                ParseError::Conversion(_) => (),
+                ParseError::Dot(_) | ParseError::Conversion(_) => (),
             }
         }
     }
@@ -172,6 +178,7 @@ impl App {
         {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
+            let settings = self.dot_settings;
             self.graph_ui.replace(crate::spawn!("compile", {
                 let promise = parse.lock().unwrap();
                 let parse_output = promise
@@ -190,6 +197,10 @@ impl App {
                     ParseOutput::Spartan(expr) => {
                         tracing::debug!("Converting spartan to hypergraph...");
                         GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?)
+                    }
+                    ParseOutput::Dot(graph) => {
+                        tracing::debug!("Converting dot to hypergraph...");
+                        GraphUi::new_dot(dot_to_graph(graph, settings)?)
                     }
                 });
                 ctx.request_repaint();
@@ -285,7 +296,25 @@ impl eframe::App for App {
                     ui.radio_value(&mut self.language, UiLanguage::Chil, "Chil");
                     ui.radio_value(&mut self.language, UiLanguage::Mlir, "Mlir");
                     ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
+                    ui.radio_value(&mut self.language, UiLanguage::Dot, "Dot");
                 });
+
+                if self.language == UiLanguage::Dot {
+                    ui.menu_button("Settings", |ui| {
+                        if ui
+                            .selectable_label(self.dot_settings.invert, "Invert edges")
+                            .clicked()
+                        {
+                            self.dot_settings.invert = !self.dot_settings.invert;
+                        }
+                        if ui
+                            .selectable_label(self.dot_settings.collect, "Collect edges")
+                            .clicked()
+                        {
+                            self.dot_settings.collect = !self.dot_settings.collect;
+                        }
+                    });
+                }
 
                 if button!("Import file", egui::Modifiers::COMMAND, egui::Key::O) {
                     #[cfg(not(target_arch = "wasm32"))]
@@ -395,10 +424,12 @@ impl eframe::App for App {
                     enabled = ready && has_selections
                 ) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
-                        self.selections.push(Selection::from_graph(
+                        if let Some(sel) = Selection::from_graph(
                             graph_ui,
                             format!("Selection {}", self.selections.len()),
-                        ));
+                        ) {
+                            self.selections.push(sel);
+                        }
                         graph_ui.clear_selection();
                     }
                 }

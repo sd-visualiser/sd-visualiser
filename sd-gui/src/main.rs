@@ -37,6 +37,10 @@ struct Args {
     /// Read in an mlir file
     #[arg(long, value_name = "FILE")]
     mlir: Option<PathBuf>,
+
+    /// Read in an dot file
+    #[arg(long, value_name = "FILE")]
+    dot: Option<PathBuf>,
 }
 
 // When compiling natively:
@@ -67,6 +71,9 @@ fn main() -> anyhow::Result<()> {
     } else if let Some(path) = args.mlir {
         let code = std::fs::read_to_string(path)?;
         Some((code, sd_gui::UiLanguage::Mlir))
+    } else if let Some(path) = args.dot {
+        let code = std::fs::read_to_string(path)?;
+        Some((code, sd_gui::UiLanguage::Dot))
     } else {
         None
     };
