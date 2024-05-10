@@ -5,7 +5,7 @@ COMMENT    = _{ ("//" ~ !("/" | "!") ~ (!newline ~ ANY)*) }
 /// https://mlir.llvm.org/docs/LangRef/#common-syntax
 id_punct            = @{ "$" | "." | "_" | "-" }
 bool_literal        = @{ "true" | "false" }
-integer_literal     = @{ decimal_literal | hexadecimal_literal }
+integer_literal     = @{ "-"? ~ (decimal_literal | hexadecimal_literal) }
 decimal_literal     = @{ ASCII_DIGIT+ }
 hexadecimal_literal = @{ "0x" ~ ASCII_HEX_DIGIT+ }
 float_literal       = @{ ("-" | "+")? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* ~ (("e" | "E") ~ ("-" | "+")? ~ ASCII_DIGIT+)? }
@@ -52,8 +52,8 @@ region      = { "{" ~ entry_block? ~ block* ~ "}" }
 entry_block = { operation+ }
 
 /// https://mlir.llvm.org/docs/LangRef/#type-system
-type                  = { function_type | non_function_type }
-non_function_type     = { type_alias | dialect_type | builtin_type }
+type                  = { non_function_type | function_type }
+non_function_type     = { dialect_type | type_alias | builtin_type }
 type_list_no_parens   = { type ~ ("," ~ type)* }
 type_list_parens      = { "(" ~ type_list_no_parens? ~ ")" }
 ssa_use_and_type      = { ssa_use ~ ":" ~ type }
@@ -82,7 +82,7 @@ dialect_type_contents          = {
 }
 
 /// https://mlir.llvm.org/docs/LangRef/#attributes
-attribute_entry = { (bare_id | string_literal) ~ "=" ~ attribute_value }
+attribute_entry = { (bare_id | string_literal) ~ ("=" ~ attribute_value)? }
 attribute_value = { attribute_alias | dialect_attribute | builtin_attribute }
 
 /// https://mlir.llvm.org/docs/LangRef/#attribute-value-aliases

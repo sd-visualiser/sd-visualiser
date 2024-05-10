@@ -20,11 +20,19 @@ Operation {
         properties: [
             Attribute(
                 "some_attr",
-                "\"value\"",
+                Some(
+                    AttributeValue(
+                        "\"value\"",
+                    ),
+                ),
             ),
             Attribute(
                 "other_attr",
-                "42 : i64",
+                Some(
+                    AttributeValue(
+                        "42 : i64",
+                    ),
+                ),
             ),
         ],
         regions: [],

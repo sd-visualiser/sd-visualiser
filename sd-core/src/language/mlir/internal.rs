@@ -42,9 +42,10 @@ pub struct ValueIndex(
 #[pest_ast(rule(Rule::attribute_entry))]
 pub struct Attribute(
     #[pest_ast(inner(with(span_into_str), with(str::to_string)))] String,
-    #[pest_ast(inner(rule(Rule::attribute_value), with(span_into_str), with(str::to_string)))]
-    String,
+    Option<AttributeValue>,
 );
+
+passthrough!(inner, AttributeValue, attribute_value);
 
 #[derive(Debug, FromPest)]
 #[pest_ast(rule(Rule::generic_operation))]

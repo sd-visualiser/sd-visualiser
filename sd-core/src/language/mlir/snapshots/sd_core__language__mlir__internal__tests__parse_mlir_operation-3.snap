@@ -29,7 +29,11 @@ Operation {
         properties: [
             Attribute(
                 "fruit",
-                "\"banana\"",
+                Some(
+                    AttributeValue(
+                        "\"banana\"",
+                    ),
+                ),
             ),
         ],
         regions: [],
