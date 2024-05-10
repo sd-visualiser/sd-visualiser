@@ -11,6 +11,8 @@ pub const LP_BACKEND: &str =
         "minilp"
     } else if cfg!(feature = "highs") {
         "highs"
+    } else if cfg!(feature = "clarabel") {
+        "clarabel"
     } else {
         unreachable!()
     };

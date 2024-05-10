@@ -43,6 +43,7 @@ wasm-bindgen-futures = "0.4.37"
 
 [features]
 default = ["minilp"]
+clarabel = ["sd-graphics/clarabel"]
 cbc = ["sd-graphics/cbc"]
 highs = ["sd-graphics/highs"]
 minilp = ["sd-graphics/minilp"]

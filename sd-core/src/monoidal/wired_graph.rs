@@ -254,20 +254,20 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
     #[allow(clippy::cast_sign_loss)]
     fn from(graph: &G) -> Self {
         let mut problem = LpProblem::default();
-        let max = problem.add_variable(variable().min(0.0));
+        let max = problem.add_variable(variable().min(0.5));
         let nodes: IndexMap<Node<G::Ctx>, Variable> = graph
             .nodes()
-            .map(|x| (x, problem.add_variable(variable().min(0.0))))
+            .map(|x| (x, problem.add_variable(variable().min(0.5))))
             .collect();
 
         for (i, (node, var)) in nodes.iter().enumerate() {
             problem.add_constraint(Expression::leq((*var).into(), max));
             for edge in node.outputs() {
                 let targets = normalised_targets::<G::Ctx>(&edge, node.backlink().as_ref());
-                let bottom = problem.add_variable(variable().min(0.0));
+                let bottom = problem.add_variable(variable().min(0.5));
                 let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
                 problem.add_constraint(Expression::leq(bottom + offset, var));
-                let top = problem.add_variable(variable().min(0.0));
+                let top = problem.add_variable(variable().min(0.5));
                 problem.add_constraint(Expression::leq((*var).into(), top));
                 problem.add_objective(top - bottom);
 
@@ -286,7 +286,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
                             }
                         };
                     } else {
-                        problem.add_constraint(Expression::eq(bottom.into(), 0.0));
+                        problem.add_constraint(Expression::eq(bottom.into(), 0.5));
                     }
                 }
             }
@@ -294,7 +294,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
 
         for edge in graph.graph_inputs() {
             let targets = normalised_targets::<G::Ctx>(&edge, graph.graph_backlink().as_ref());
-            let bottom = problem.add_variable(variable().min(0.0));
+            let bottom = problem.add_variable(variable().min(0.5));
             let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
             problem.add_constraint(Expression::leq(bottom + offset, max));
             problem.add_objective(max - bottom);
@@ -304,7 +304,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
                     problem.add_constraint(Expression::leq(bottom.into(), *var_target));
                     problem.add_constraint((*var_target + offset).leq(max));
                 } else {
-                    problem.add_constraint(Expression::eq(bottom.into(), 0.0));
+                    problem.add_constraint(Expression::eq(bottom.into(), 0.5));
                 }
             }
         }
