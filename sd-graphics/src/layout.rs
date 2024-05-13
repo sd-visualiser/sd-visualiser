@@ -509,8 +509,6 @@ where
             let ni = node.number_of_inputs();
             let no = node.number_of_outputs();
 
-            assert_ne!(ni + no, 0, "Scalars are not allowed!");
-
             let ins = &wires_i[node.inputs.clone()];
             let outs = &wires_o[node.outputs.clone()];
 
@@ -530,9 +528,10 @@ where
                 (prev_in.clone(), Some(node.node.h_min())),
                 (prev_out.clone(), Some(node.node.h_min())),
                 (prev_op.clone(), ins.first().map(|x| x.h.into())),
-                (prev_op, outs.first().map(|x| x.h.into())),
+                (prev_op.clone(), outs.first().map(|x| x.h.into())),
                 (prev_in, outs.first().map(|x| x.h.into())),
                 (prev_out, ins.first().map(|x| x.h.into())),
+                (prev_op, Some(node.node.h_min())),
             ];
             for (x, y) in constraints.into_iter().filter_map(|(x, y)| x.zip(y)) {
                 problem.add_constraint((y - x).geq(1.0));
