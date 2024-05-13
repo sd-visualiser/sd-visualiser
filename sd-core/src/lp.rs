@@ -1,6 +1,6 @@
 use good_lp::{
-    Constraint, Expression, IntoAffineExpression, ProblemVariables, Solver, SolverModel, Variable,
-    VariableDefinition,
+    Constraint, Expression, IntoAffineExpression, ProblemVariables, ResolutionError, Solution,
+    SolverModel, Variable, VariableDefinition,
 };
 
 pub const LP_BACKEND: &str =
@@ -41,14 +41,26 @@ impl LpProblem {
         self.constraints.push(constraint);
     }
 
-    pub fn minimise<S: Solver>(
-        self,
-        solver: S,
-    ) -> Result<
-        <<S as Solver>::Model as SolverModel>::Solution,
-        <<S as Solver>::Model as SolverModel>::Error,
-    > {
-        let mut model = self.problem.minimise(self.objective).using(solver);
+    pub fn minimise(self) -> Result<impl Solution, ResolutionError> {
+        let to_solve = self.problem.minimise(self.objective);
+
+        #[cfg(feature = "clarabel")]
+        let mut model = to_solve.using(|x| {
+            let mut prob = good_lp::solvers::clarabel::clarabel(x);
+            prob.set_parameter("log", "0");
+            prob
+        });
+
+        #[cfg(feature = "cbc")]
+        let mut model = to_solve.using(|x| {
+            let mut prob = good_lp::solvers::coin_cbc::coin_cbc(x);
+            prob.set_parameter("log", "0");
+            prob
+        });
+
+        #[cfg(all(not(feature = "cbc"), not(feature = "clarabel")))]
+        let mut model = to_solve.using(good_lp::default_solver);
+
         for c in self.constraints {
             model.add_constraint(c);
         }

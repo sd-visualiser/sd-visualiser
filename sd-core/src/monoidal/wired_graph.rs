@@ -310,7 +310,7 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
         }
         problem.add_objective(max);
 
-        let soln = problem.minimise(good_lp::default_solver).unwrap();
+        let soln = problem.minimise().unwrap();
 
         let mut builder = MonoidalWiredGraphBuilder::<G::Ctx>::default();
         let outputs: Vec<Edge<G::Ctx>> = graph.graph_outputs().collect();

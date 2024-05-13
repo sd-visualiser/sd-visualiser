@@ -898,13 +898,13 @@ where
 
     let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
-    let h_solution = problem.minimise(good_lp::default_solver)?;
+    let h_solution = problem.minimise()?;
 
     problem = LpProblem::default();
 
     let v_layout = v_layout_internal(&mut problem, HLayout::from_solution_h(layout, &h_solution));
     problem.add_objective(v_layout.v_max);
-    let v_solution = problem.minimise(good_lp::default_solver)?;
+    let v_solution = problem.minimise()?;
 
     let layout_complete = Layout::from_solution_v(v_layout, &v_solution);
     debug!("Layout complete: {:?}", layout_complete);
