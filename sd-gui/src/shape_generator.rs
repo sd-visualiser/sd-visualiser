@@ -54,17 +54,17 @@ where
         .get_or_insert(graph.key(), || {
             let graph = graph.clone();
             Arc::new(Mutex::new(crate::spawn!("shape", {
-                tracing::debug!("Converting to monoidal term");
+                tracing::info!("Converting to monoidal term");
                 let monoidal_term = MonoidalWiredGraph::from(&graph);
                 tracing::debug!("Got term {:#?}", monoidal_term);
 
-                tracing::debug!("Inserting swaps and copies");
+                tracing::info!("Inserting swaps and copies");
                 let monoidal_graph = Arc::new(MonoidalGraph::from(&monoidal_term));
                 tracing::debug!("Got graph {:#?}", monoidal_graph);
 
-                tracing::debug!("Calculating layout...");
+                tracing::info!("Calculating layout...");
                 let layout = layout(&monoidal_graph).unwrap();
-                tracing::debug!("Calculating shapes...");
+                tracing::info!("Calculating shapes...");
                 let mut shapes = Vec::new();
                 render::generate_shapes(&mut shapes, &layout, true);
                 tracing::debug!("Generated {} shapes...", shapes.len());

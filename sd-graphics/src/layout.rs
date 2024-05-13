@@ -21,7 +21,7 @@ use sd_core::{
 use serde::Serialize;
 use store_interval_tree::{Interval, IntervalTree};
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::common::RADIUS_OPERATION;
 
@@ -896,12 +896,13 @@ where
 {
     let mut problem = LpProblem::default();
 
+    info!("Calculating horizontal layout");
     let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
     let h_solution = problem.minimise()?;
 
     problem = LpProblem::default();
-
+    info!("Calculating vertical layout");
     let v_layout = v_layout_internal(&mut problem, HLayout::from_solution_h(layout, &h_solution));
     problem.add_objective(v_layout.v_max);
     let v_solution = problem.minimise()?;
