@@ -47,7 +47,8 @@ impl ControlFlow<Mlir> for Op {
     fn get_cf(&self) -> Option<CF<Mlir>> {
         if !self.successors.is_empty() {
             Some(CF::Brs(self.successors.clone()))
-        } else if self.name.contains("return") {
+        } else if self.name.contains("return") || self.name == "arc.output" || self.name == "yield"
+        {
             Some(CF::Return)
         } else {
             None
