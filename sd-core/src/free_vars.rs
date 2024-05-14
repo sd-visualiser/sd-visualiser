@@ -8,19 +8,23 @@ impl<T: Language> Expr<T> {
     pub(crate) fn free_vars(&self) -> IndexSet<T::Var> {
         let mut vars: IndexSet<T::Var> = IndexSet::new();
 
+        self.extend_free_vars(&mut vars);
+
+        vars
+    }
+
+    pub(crate) fn extend_free_vars(&self, vars: &mut IndexSet<T::Var>) {
         for bind in &self.binds {
-            bind.value.free_vars(&mut vars);
+            bind.value.free_vars(vars);
         }
 
         for value in &self.values {
-            value.free_vars(&mut vars);
+            value.free_vars(vars);
         }
 
         for def in self.binds.iter().flat_map(|bind| &bind.defs) {
             vars.swap_remove(def.var());
         }
-
-        vars
     }
 
     pub(crate) fn cf_free_vars(&self, addrs: &mut HashMap<Option<T::BlockAddr>, usize>) {
@@ -67,8 +71,12 @@ impl<T: Language> Value<T> {
 
 impl<T: Language> Thunk<T> {
     pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>) {
-        let body_vars = self.body.free_vars();
-        let arg_set: IndexSet<T::Var> = self.args.iter().map(GetVar::var).cloned().collect();
+        let mut body_vars = self.body.free_vars();
+        let mut arg_set: IndexSet<T::Var> = self.args.iter().map(GetVar::var).cloned().collect();
+        for b in &self.blocks {
+            b.expr.extend_free_vars(&mut body_vars);
+            arg_set.extend(b.args.iter().map(GetVar::var).cloned());
+        }
         vars.extend(body_vars.difference(&arg_set).cloned());
     }
 }
