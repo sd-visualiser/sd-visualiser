@@ -5,14 +5,14 @@ use good_lp::{
 
 pub const LP_BACKEND: &str =
     // good_lp default solver hierarchy is cbc > minilp > highs
-    if cfg!(feature = "cbc") {
+    if cfg!(feature = "clarabel") {
+        "clarabel"
+    } else if cfg!(feature = "cbc") {
         "cbc"
-    } else if cfg!(feature = "minilp") {
-        "minilp"
     } else if cfg!(feature = "highs") {
         "highs"
-    } else if cfg!(feature = "clarabel") {
-        "clarabel"
+    } else if cfg!(feature = "minilp") {
+        "minilp"
     } else {
         unreachable!()
     };
@@ -46,19 +46,29 @@ impl LpProblem {
 
         #[cfg(feature = "clarabel")]
         let mut model = to_solve.using(|x| {
-            let mut prob = good_lp::solvers::clarabel::clarabel(x);
-            prob.set_parameter("log", "0");
+            let prob = good_lp::solvers::clarabel::clarabel(x);
+            prob
+        });
+
+        #[cfg(feature = "highs")]
+        let mut model = to_solve.using(|x| {
+            let prob = good_lp::solvers::highs::highs(x);
             prob
         });
 
         #[cfg(feature = "cbc")]
         let mut model = to_solve.using(|x| {
             let mut prob = good_lp::solvers::coin_cbc::coin_cbc(x);
-            prob.set_parameter("log", "0");
+            prob.set_parameter("logLevel", "0");
+            prob.set_parameter("slogLevel", "0");
             prob
         });
 
-        #[cfg(all(not(feature = "cbc"), not(feature = "clarabel")))]
+        #[cfg(all(
+            not(feature = "cbc"),
+            not(feature = "clarabel"),
+            not(feature = "highs")
+        ))]
         let mut model = to_solve.using(good_lp::default_solver);
 
         for c in self.constraints {

@@ -40,6 +40,7 @@
         };
 
         devShells.default = config.nci.outputs.sd-gui.devShell.overrideAttrs (attrs: {
+          LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
           packages = (attrs.packages or [ ]) ++ (with pkgs; [
             (lib.hiPrio rust-bin.nightly.latest.rustfmt)
             cargo-insta
@@ -85,17 +86,23 @@
                 };
               };
 
-              depsDrvConfig.mkDerivation = {
-                nativeBuildInputs = with pkgs; [
-                  pkg-config
-                ];
+              depsDrvConfig = {
 
-                buildInputs = with pkgs; [
-                  libGL
-                  glib
-                  atk
-                  gtk3
-                ];
+                mkDerivation = {
+                  nativeBuildInputs = with pkgs; [
+                    pkg-config
+                    cmake
+                    gcc
+                  ];
+
+                  buildInputs = with pkgs; [
+                    libGL
+                    glib
+                    atk
+                    gtk3
+                    clang
+                  ];
+                };
               };
 
               drvConfig = {
