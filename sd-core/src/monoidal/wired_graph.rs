@@ -269,20 +269,39 @@ impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
                 problem.add_constraint(Expression::leq(bottom + offset, var));
                 let top = problem.add_variable(variable().min(0.5));
                 problem.add_constraint(Expression::leq((*var).into(), top));
+                problem.add_constraint(Expression::leq(top.into(), max));
                 problem.add_objective(top - bottom);
+
+                let top_offset = if targets
+                    .iter()
+                    .filter(|x| {
+                        if let Endpoint::Node(target_node) = x {
+                            nodes.get_index_of(target_node).unwrap() > i
+                        } else {
+                            false
+                        }
+                    })
+                    .count()
+                    > 1
+                {
+                    1.0
+                } else {
+                    0.0
+                };
 
                 for target in targets {
                     if let Endpoint::Node(target_node) = target {
                         let (j, _, var_target) = nodes.get_full(&target_node).unwrap();
-                        problem.add_constraint(Expression::leq(bottom.into(), var_target));
-                        problem.add_constraint(Expression::geq(top.into(), *var_target));
+
                         match j.cmp(&i) {
                             std::cmp::Ordering::Less => {
+                                problem.add_constraint(Expression::leq(bottom.into(), var_target));
                                 problem.add_constraint((*var_target + offset + 1.0).leq(*var));
                             }
                             std::cmp::Ordering::Equal => {}
                             std::cmp::Ordering::Greater => {
                                 problem.add_constraint(Expression::leq((*var).into(), var_target));
+                                problem.add_constraint((*var_target + top_offset).leq(top));
                             }
                         };
                     } else {

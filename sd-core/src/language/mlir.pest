@@ -12,7 +12,8 @@ float_literal       = @{ ("-" | "+")? ~ ASCII_DIGIT+ ~ "." ~ ASCII_DIGIT* ~ (("e
 string_literal      = @{ "\"" ~ (!(CONTROL | "\"") ~ ANY)* ~ "\"" }
 
 /// https://mlir.llvm.org/docs/LangRef/#top-level-productions
-toplevel = _{ SOI ~ (operation | attribute_alias_def | type_alias_def)* ~ EOI }
+toplevel = _{ SOI ~ (toplevelitem)* ~ EOI }
+toplevelitem = { operation | attribute_alias_def | type_alias_def }
 
 /// https://mlir.llvm.org/docs/LangRef/#identifiers-and-keywords
 bare_id        = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_" | "$" | ".")* }
@@ -123,10 +124,12 @@ builtin_attribute = {
   | type_attribute
   | unit_attribute
   | strided_layout_attribute
+  | trailing_location
 }
 // affine_map_attribute = { "affine_map" ~ "<" ~ affine_map ~ ">" }
 array_attribute                     = { "[" ~ (attribute_value ~ ("," ~ attribute_value)*)? ~ "]" }
-dense_array_attribute               = { "array" ~ "<" ~ (integer_type | float_type) ~ (":" ~ tensor_literal)? ~ ">" }
+tensor_element 			    = _{ integer_literal | float_literal | bool_literal }
+dense_array_attribute               = { "array" ~ "<" ~ (integer_type | float_type) ~ (":" ~ tensor_element ~ ("," ~ tensor_element)*)? ~ ">" }
 tensor_literal                      = { integer_literal | float_literal | bool_literal | "[" ~ (tensor_literal ~ ("," ~ tensor_literal)*)? ~ "]" }
 dense_intorfloat_elements_attribute = { "dense" ~ "<" ~ tensor_literal ~ ">" ~ ":" ~ (tensor_type | vector_type) }
 // dense_resource_elements_attribute = { "dense_resource" ~ "<" ~ resource_handle ~ ">" ~ ":" ~ shaped_type }

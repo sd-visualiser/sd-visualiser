@@ -2,7 +2,10 @@ use from_pest::{ConversionError, FromPest, Void};
 use pest::{error, Parser as _};
 use sd_core::language::{
     chil::{self, ChilParser},
-    mlir::{self, internal::MlirParser},
+    mlir::{
+        self,
+        internal::{MlirParser, TopLevelItem},
+    },
     spartan::{self, SpartanParser},
 };
 use thiserror::Error;
@@ -69,7 +72,15 @@ pub fn parse(source: &str, language: UiLanguage) -> Result<ParseOutput, ParseErr
         UiLanguage::Mlir => {
             let mut pairs =
                 MlirParser::parse(mlir::internal::Rule::toplevel, source).map_err(Box::new)?;
-            let ops = Vec::<mlir::internal::Operation>::from_pest(&mut pairs)?;
+
+            let items = Vec::<TopLevelItem>::from_pest(&mut pairs)?;
+            let ops: Vec<mlir::internal::Operation> = items
+                .into_iter()
+                .filter_map(|x| match x {
+                    TopLevelItem::Operation(y) => Some(y),
+                    TopLevelItem::Other(_) => None,
+                })
+                .collect();
             let expr = mlir::Expr::from(ops);
             Ok(ParseOutput::Mlir(expr))
         }

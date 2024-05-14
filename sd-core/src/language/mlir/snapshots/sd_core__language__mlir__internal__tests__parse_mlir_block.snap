@@ -41,10 +41,10 @@ Block {
                 ],
                 properties: [
                     Attribute(
-                        "operand_segment_sizes",
+                        "operandSegmentSizes",
                         Some(
                             AttributeValue(
-                                "array<i32: [1, 0, 0]>",
+                                "array<i32: 1, 0, 0>",
                             ),
                         ),
                     ),

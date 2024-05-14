@@ -7,6 +7,36 @@ use crate::language::span_into_str;
 #[grammar = "language/mlir.pest"]
 pub struct MlirParser;
 
+#[derive(Debug)]
+pub enum TopLevelItem {
+    Operation(Operation),
+    Other(String),
+}
+
+impl<'a> from_pest::FromPest<'a> for TopLevelItem {
+    type Rule = Rule;
+    type FatalError = ::from_pest::Void;
+    fn from_pest(
+        pest: &mut ::from_pest::pest::iterators::Pairs<Rule>,
+    ) -> ::std::result::Result<Self, ::from_pest::ConversionError<::from_pest::Void>> {
+        let mut clone = pest.clone();
+        let pair = clone.next().ok_or(::from_pest::ConversionError::NoMatch)?;
+        if pair.as_rule() == Rule::toplevelitem {
+            let span = pair.as_span();
+            let mut inner = pair.clone().into_inner();
+            let inner = &mut inner;
+            let this = Operation::from_pest(inner).map_or_else(
+                |_| TopLevelItem::Other(span.as_str().to_owned()),
+                TopLevelItem::Operation,
+            );
+            *pest = clone;
+            Ok(this)
+        } else {
+            Err(::from_pest::ConversionError::NoMatch)
+        }
+    }
+}
+
 macro_rules! passthrough {
     (outer, $ast:ident, $rule:ident) => {
         #[derive(Debug, FromPest)]
@@ -179,7 +209,7 @@ pub(crate) mod tests {
     fn parse_mlir_block() -> Result<(), Box<dyn std::error::Error>> {
         let blocks = [
             r#"^bb0(%arg0: i64, %arg1: i1):
-              "cf.cond_br"(%arg1)[^bb1, ^bb2] {operand_segment_sizes = array<i32: [1, 0, 0]>} : (i1) -> ()
+              "cf.cond_br"(%arg1)[^bb1, ^bb2] {operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
             "#,
             r#"^bb1:  // pred: ^bb0
               "cf.br"(%arg0)[^bb3] : (i64) -> ()
@@ -210,7 +240,7 @@ pub(crate) mod tests {
             Rule::region,
             r#"{
                 ^bb0(%arg0: i64, %arg1: i1):
-                  "cf.cond_br"(%arg1)[^bb1, ^bb2] {operand_segment_sizes = array<i32: [1, 0, 0]>} : (i1) -> ()
+                  "cf.cond_br"(%arg1)[^bb1, ^bb2] {operandSegmentSizes = array<i32: 1, 0, 0>} : (i1) -> ()
                 ^bb1:  // pred: ^bb0
                   "cf.br"(%arg0)[^bb3] : (i64) -> ()
                 ^bb2:  // pred: ^bb0
