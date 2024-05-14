@@ -97,7 +97,7 @@ pub type SyntaxHypergraph<T> = Hypergraph<Syntax<T>>;
 #[derive(Derivative, Error)]
 #[derivative(Debug(bound = ""))]
 pub enum ConvertError<T: Language> {
-    #[error("Error constructing hypergraph")]
+    #[error("Error constructing hypergraph: {0}")]
     HypergraphError(#[from] HypergraphError<Syntax<T>>),
     #[error("Couldn't find location of variable `{}`", .0.to_pretty())]
     VariableError(T::Var),

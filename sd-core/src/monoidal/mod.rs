@@ -83,8 +83,9 @@ impl<T: Ctx, O: InOut + Debug> MonoidalTerm<T, O> {
     pub(crate) fn check_in_out_count(&self) {
         let mut input_count = self.free_inputs.len() + self.bound_inputs.len();
         for slice in &self.slices {
-            assert!(
-                input_count == slice.number_of_inputs(),
+            assert_eq!(
+                input_count,
+                slice.number_of_inputs(),
                 "Input slice has the wrong number of inputs"
             );
 
