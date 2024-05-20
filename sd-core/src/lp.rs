@@ -1,3 +1,5 @@
+#[cfg(feature = "gurobi")]
+use good_lp::solvers::lp_solvers::LpSolver;
 use good_lp::{
     Constraint, Expression, IntoAffineExpression, ProblemVariables, ResolutionError, Solution,
     SolverModel, Variable, VariableDefinition,
@@ -7,10 +9,12 @@ pub const LP_BACKEND: &str =
     // good_lp default solver hierarchy is cbc > minilp > highs
     if cfg!(feature = "clarabel") {
         "clarabel"
-    } else if cfg!(feature = "cbc") {
-        "cbc"
+    } else if cfg!(feature = "gurobi") {
+        "gurobi"
     } else if cfg!(feature = "highs") {
         "highs"
+    } else if cfg!(feature = "cbc") {
+        "cbc"
     } else if cfg!(feature = "minilp") {
         "minilp"
     } else {
@@ -50,6 +54,11 @@ impl LpProblem {
             prob
         });
 
+        #[cfg(feature = "gurobi")]
+        let solver = LpSolver(good_lp::solvers::lp_solvers::GurobiSolver::new());
+        #[cfg(feature = "gurobi")]
+        let mut model = to_solve.using(solver);
+
         #[cfg(feature = "highs")]
         let mut model = to_solve.using(|x| {
             let prob = good_lp::solvers::highs::highs(x);
@@ -67,7 +76,8 @@ impl LpProblem {
         #[cfg(all(
             not(feature = "cbc"),
             not(feature = "clarabel"),
-            not(feature = "highs")
+            not(feature = "highs"),
+            not(feature = "gurobi")
         ))]
         let mut model = to_solve.using(good_lp::default_solver);
 

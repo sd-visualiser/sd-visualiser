@@ -1,6 +1,7 @@
 use std::{
     fmt::{Debug, Display},
     ops::{Bound, Range},
+    time::SystemTime,
 };
 
 use derivative::Derivative;
@@ -659,7 +660,7 @@ fn v_layout_internal<T: Ctx>(
     h_layout: HLayout<T, ()>,
 ) -> LayoutInternal<T, f32, Variable> {
     // Set up wires
-
+    info!("Set up wires");
     let wires: Vec<Vec<WireData<T, f32, Variable>>> = h_layout
         .wires
         .into_iter()
@@ -702,14 +703,18 @@ fn v_layout_internal<T: Ctx>(
     }
 
     // Set up nodes
+    info!("Set up nodes");
 
     let mut interval_tree: IntervalTree<OrderedFloat<f32>, Variable> = IntervalTree::new();
 
+    let len = h_layout.nodes.len();
     let nodes = h_layout
         .nodes
         .into_iter()
         .zip(wires.iter().tuple_windows())
-        .map(|(ns, (before, after))| {
+        .enumerate()
+        .map(|(i, (ns, (before, after)))| {
+            info!("Layer {i}/{len}");
             // let thunk_height = problem.add_variable(variable().min(0.0));
             ns.into_iter()
                 .map(|n| {
@@ -896,6 +901,7 @@ where
 {
     let mut problem = LpProblem::default();
 
+    let now = SystemTime::now();
     info!("Calculating horizontal layout");
     let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
@@ -908,7 +914,16 @@ where
     let v_solution = problem.minimise()?;
 
     let layout_complete = Layout::from_solution_v(v_layout, &v_solution);
+
+    if let Ok(elapsed) = now.elapsed() {
+        info!(
+            "Layout took {}.{} seconds",
+            elapsed.as_secs(),
+            elapsed.subsec_millis()
+        );
+    }
     debug!("Layout complete: {:?}", layout_complete);
+
     Ok(layout_complete)
 }
 

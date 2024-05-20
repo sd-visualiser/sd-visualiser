@@ -510,7 +510,7 @@ dependencies = [
  "bitflags 2.5.0",
  "cexpr",
  "clang-sys",
- "itertools 0.10.5",
+ "itertools 0.11.0",
  "lazy_static",
  "lazycell",
  "log",
@@ -1842,6 +1842,7 @@ dependencies = [
  "coin_cbc",
  "fnv",
  "highs",
+ "lp-solvers",
  "minilp",
 ]
 
@@ -2241,6 +2242,16 @@ dependencies = [
  "scoped-tls",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "lp-solvers"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b248cbb1ff9b0bd49235e1b8103e1146d63f57b50ddabb69ce95e7a18055d31e"
+dependencies = [
+ "tempfile",
+ "xml-rs",
 ]
 
 [[package]]
