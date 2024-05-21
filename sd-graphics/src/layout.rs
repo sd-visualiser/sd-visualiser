@@ -660,7 +660,6 @@ fn v_layout_internal<T: Ctx>(
     h_layout: HLayout<T, ()>,
 ) -> LayoutInternal<T, f32, Variable> {
     // Set up wires
-    info!("Set up wires");
     let wires: Vec<Vec<WireData<T, f32, Variable>>> = h_layout
         .wires
         .into_iter()
@@ -703,18 +702,13 @@ fn v_layout_internal<T: Ctx>(
     }
 
     // Set up nodes
-    info!("Set up nodes");
-
     let mut interval_tree: IntervalTree<OrderedFloat<f32>, Variable> = IntervalTree::new();
 
-    let len = h_layout.nodes.len();
     let nodes = h_layout
         .nodes
         .into_iter()
         .zip(wires.iter().tuple_windows())
-        .enumerate()
-        .map(|(i, (ns, (before, after)))| {
-            info!("Layer {i}/{len}");
+        .map(|(ns, (before, after))| {
             // let thunk_height = problem.add_variable(variable().min(0.0));
             ns.into_iter()
                 .map(|n| {

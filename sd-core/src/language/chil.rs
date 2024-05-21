@@ -9,6 +9,8 @@ use from_pest::{ConversionError, FromPest, Void};
 use pest::iterators::Pairs;
 use pest_ast::FromPest;
 use pest_derive::Parser;
+#[cfg(test)]
+use serde::Serialize;
 
 use super::{span_into_str, ControlFlow, Fresh, GetVar, CF};
 use crate::common::{Empty, Matchable};
@@ -41,6 +43,7 @@ fn parse_addr_second(input: &str) -> usize {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Op(pub String);
 
 impl Display for Op {
@@ -121,6 +124,7 @@ impl ControlFlow<Chil> for Op {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Variable {
     pub name: Option<Identifier>,
     pub addr: Addr,
@@ -155,6 +159,7 @@ impl Fresh for Variable {
 
 #[derive(Clone, Eq, Debug, FromPest)]
 #[pest_ast(rule(Rule::addr))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Addr(
     #[pest_ast(outer(with(span_into_str), with(parse_addr_first)))] pub char,
     #[pest_ast(outer(with(span_into_str), with(parse_addr_second)))] pub usize,
@@ -185,6 +190,7 @@ impl Display for Addr {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Identifier(pub String);
 
 impl Display for Identifier {
@@ -212,6 +218,7 @@ impl<'pest> FromPest<'pest> for Identifier {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable_def))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct VariableDef {
     pub var: Variable,
     pub r#type: Option<Type>,
@@ -241,6 +248,7 @@ impl GetVar<Variable> for VariableDef {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::ty))]
+#[cfg_attr(test, derive(Serialize))]
 pub enum Type {
     Base(BaseType),
     Generic(GenericType),
@@ -250,10 +258,12 @@ pub enum Type {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::base_ty))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BaseType(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::generic_ty))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct GenericType {
     pub base: BaseType,
     pub params: Vec<Type>,
@@ -261,12 +271,14 @@ pub struct GenericType {
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::tuple_ty))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct TupleType {
     pub types: Vec<Type>,
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::function_ty))]
+#[cfg_attr(test, derive(Serialize))]
 pub struct FunctionType {
     pub domain: TupleType,
     pub codomain: Box<Type>,

@@ -7,13 +7,18 @@ use crate::language::{ControlFlow, Expr, GetVar, Language, Thunk, Value, CF};
 impl<T: Language> Expr<T> {
     pub(crate) fn free_vars(&self) -> IndexSet<T::Var> {
         let mut vars: IndexSet<T::Var> = IndexSet::new();
+        let mut to_remove: IndexSet<T::Var> = IndexSet::new();
 
-        self.extend_free_vars(&mut vars);
+        self.extend_free_vars(&mut vars, &mut to_remove);
 
-        vars
+        vars.difference(&to_remove).cloned().collect()
     }
 
-    pub(crate) fn extend_free_vars(&self, vars: &mut IndexSet<T::Var>) {
+    pub(crate) fn extend_free_vars(
+        &self,
+        vars: &mut IndexSet<T::Var>,
+        to_remove: &mut IndexSet<T::Var>,
+    ) {
         for bind in &self.binds {
             bind.value.free_vars(vars);
         }
@@ -22,9 +27,12 @@ impl<T: Language> Expr<T> {
             value.free_vars(vars);
         }
 
-        for def in self.binds.iter().flat_map(|bind| &bind.defs) {
-            vars.swap_remove(def.var());
-        }
+        to_remove.extend(
+            self.binds
+                .iter()
+                .flat_map(|bind| &bind.defs)
+                .map(|def| def.var().clone()),
+        );
     }
 
     pub(crate) fn cf_free_vars(&self, addrs: &mut HashMap<Option<T::BlockAddr>, usize>) {
@@ -71,12 +79,15 @@ impl<T: Language> Value<T> {
 
 impl<T: Language> Thunk<T> {
     pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>) {
-        let mut body_vars = self.body.free_vars();
-        let mut arg_set: IndexSet<T::Var> = self.args.iter().map(GetVar::var).cloned().collect();
+        let mut new_vars: IndexSet<T::Var> = IndexSet::new();
+        let mut to_remove: IndexSet<T::Var> = IndexSet::new();
+        self.body.extend_free_vars(&mut new_vars, &mut to_remove);
+        to_remove.extend(self.args.iter().map(|def| def.var().clone()));
         for b in &self.blocks {
-            b.expr.extend_free_vars(&mut body_vars);
-            arg_set.extend(b.args.iter().map(GetVar::var).cloned());
+            b.expr.extend_free_vars(&mut new_vars, &mut to_remove);
+            to_remove.extend(b.args.iter().map(|def| def.var().clone()));
         }
-        vars.extend(body_vars.difference(&arg_set).cloned());
+
+        vars.extend(new_vars.difference(&to_remove).cloned());
     }
 }

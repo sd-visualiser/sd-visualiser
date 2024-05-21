@@ -1,9 +1,13 @@
 ---
 source: sd-core/src/graph.rs
-expression: expr.free_vars()
+expression: expr.free_var_test()
 ---
 {
-    Variable(
-        "var_4",
-    ),
+    Variable {
+        name: None,
+        addr: Addr(
+            '%',
+            4,
+        ),
+    },
 }

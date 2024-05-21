@@ -1,15 +1,39 @@
 ---
 source: sd-core/src/graph.rs
-expression: expr.free_vars()
+expression: expr.free_var_test()
 ---
 {
-    Variable(
-        "var_71",
-    ),
-    Variable(
-        "var_66",
-    ),
-    Variable(
-        "var_76",
-    ),
+    Variable {
+        name: Some(
+            Identifier(
+                "toString",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            66,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "flush_0",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            71,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "print",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            76,
+        ),
+    },
 }

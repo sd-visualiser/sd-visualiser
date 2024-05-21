@@ -4,8 +4,8 @@ expression: to_pet(&graph)
 ---
 Graph(
   nodes: [
-    Edge(FreeVar(Variable("var_71"))),
     Edge(FreeVar(Variable("var_66"))),
+    Edge(FreeVar(Variable("var_71"))),
     Edge(FreeVar(Variable("var_76"))),
     Operation(Plus),
     Edge(BoundVar(Variable("var_25"))),
@@ -338,8 +338,8 @@ Graph(
     Some((8, 7, 0)),
     Some((7, 5, 0)),
     Some((2, 9, 0)),
-    Some((0, 9, 1)),
-    Some((1, 9, 2)),
+    Some((1, 9, 1)),
+    Some((0, 9, 2)),
     Some((4, 9, 3)),
     Some((9, 8, 0)),
     Some((11, 10, 0)),

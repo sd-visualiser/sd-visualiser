@@ -449,18 +449,14 @@ mod tests {
     use anyhow::Result;
     use dir_test::{dir_test, Fixture};
 
-    use crate::{
-        graph::SyntaxHypergraph,
-        hypergraph::petgraph::to_pet,
-        language::spartan::{Expr, Spartan},
-    };
+    use crate::language::tests::ExprTest;
 
     #[allow(clippy::needless_pass_by_value)]
     #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*", loader: crate::language::tests::parse, postfix: "free_vars")]
-    fn free_vars(fixture: Fixture<(&str, &str, Expr)>) {
+    fn free_vars(fixture: Fixture<(&str, &str, Box<dyn ExprTest>)>) {
         let (lang, name, expr) = fixture.content();
 
-        insta::assert_debug_snapshot!(format!("free_vars_{name}.{lang}"), expr.free_vars());
+        insta::assert_debug_snapshot!(format!("free_vars_{name}.{lang}"), expr.free_var_test());
     }
 
     #[allow(clippy::needless_pass_by_value)]
@@ -468,11 +464,10 @@ mod tests {
     #[dir_test_attr(
         #[allow(unused_must_use)]
     )]
-    fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Expr)>) -> Result<()> {
+    fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Box<dyn ExprTest>)>) -> Result<()> {
         let (lang, name, expr) = fixture.content();
-        let graph: SyntaxHypergraph<Spartan> = expr.try_into()?;
 
-        insta::assert_ron_snapshot!(format!("hypergraph_{name}.{lang}"), to_pet(&graph));
+        expr.graph_test(name, lang)?;
 
         Ok(())
     }

@@ -1,30 +1,90 @@
 ---
 source: sd-core/src/graph.rs
-expression: expr.free_vars()
+expression: expr.free_var_test()
 ---
 {
-    Variable(
-        "var_140",
-    ),
-    Variable(
-        "var_134",
-    ),
-    Variable(
-        "var_138",
-    ),
-    Variable(
-        "var_198",
-    ),
-    Variable(
-        "var_422",
-    ),
-    Variable(
-        "var_580",
-    ),
-    Variable(
-        "var_592",
-    ),
-    Variable(
-        "var_142",
-    ),
+    Variable {
+        name: None,
+        addr: Addr(
+            '%',
+            198,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "ADEnvironment",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            422,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "TangentAdd",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            580,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "TangentZero",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            592,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "toString",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            138,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "empty",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            134,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "concat",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            140,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "println",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            142,
+        ),
+    },
 }

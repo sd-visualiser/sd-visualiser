@@ -186,7 +186,7 @@ pub(crate) mod tests {
     use from_pest::FromPest;
     use pest::Parser;
 
-    use super::{MlirParser, Rule};
+    use super::{MlirParser, Rule, TopLevelItem};
 
     #[test]
     fn parse_mlir_operation() -> Result<(), Box<dyn std::error::Error>> {
@@ -259,8 +259,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    type Toplevel = (); // TODO(@NickHu: should have file-based MLIR parse tests)
-    pub fn parse_mlir(raw_path: &str) -> (&str, Toplevel) {
+    pub fn parse_mlir(raw_path: &str) -> (&str, Vec<TopLevelItem>) {
         let path = Path::new(raw_path);
         let program = std::fs::read_to_string(path).unwrap();
         let mut pairs = MlirParser::parse(Rule::toplevel, &program).unwrap_or_else(|err| {
@@ -270,13 +269,12 @@ pub(crate) mod tests {
             )
         });
         let name = path.file_stem().unwrap().to_str().unwrap();
-        todo!()
+        (name, Vec::<TopLevelItem>::from_pest(&mut pairs).unwrap())
     }
 
-    #[ignore]
     #[allow(clippy::needless_pass_by_value)]
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.mlir", loader: crate::language::mlir::tests::parse_mlir, postfix: "check_parse")]
-    fn check_parse(fixture: Fixture<(&str, Toplevel)>) {
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.mlir", loader: crate::language::mlir::internal::tests::parse_mlir, postfix: "check_parse")]
+    fn check_parse(fixture: Fixture<(&str, Vec<TopLevelItem>)>) {
         let (_name, _expr) = fixture.content();
     }
 }

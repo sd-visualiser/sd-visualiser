@@ -222,21 +222,64 @@ impl<T: Language> Block<T> {
 pub(crate) mod tests {
     use std::{ffi::OsStr, path::Path};
 
+    use serde::Serialize;
+
     use super::{
         chil::tests::parse_chil,
-        spartan::{self, tests::parse_sd},
+        mlir::{
+            self,
+            internal::{tests::parse_mlir, TopLevelItem},
+        },
+        spartan::tests::parse_sd,
+        Expr, Language,
     };
+    use crate::{graph::SyntaxHypergraph, hypergraph::petgraph::to_pet};
 
-    pub fn parse(raw_path: &str) -> (&str, &str, spartan::Expr) {
+    pub trait ExprTest {
+        fn free_var_test(&self) -> Box<dyn std::fmt::Debug>;
+        fn graph_test(&self, name: &str, lang: &str) -> anyhow::Result<()>;
+    }
+
+    impl<T: Language + 'static> ExprTest for Expr<T>
+    where
+        <T as Language>::Op: Serialize,
+        <T as Language>::BlockAddr: Serialize,
+        <T as Language>::Var: Serialize,
+        <T as Language>::VarDef: Serialize,
+    {
+        fn free_var_test(&self) -> Box<dyn std::fmt::Debug> {
+            Box::new(self.free_vars())
+        }
+
+        fn graph_test(&self, name: &str, lang: &str) -> anyhow::Result<()> {
+            let graph: SyntaxHypergraph<T> = self.try_into()?;
+            insta::assert_ron_snapshot!(format!("hypergraph_{name}.{lang}"), to_pet(&graph));
+            Ok(())
+        }
+    }
+
+    pub fn parse(raw_path: &str) -> (&str, &str, Box<dyn ExprTest>) {
         let path = Path::new(raw_path);
         match path.extension() {
             Some(ext) if ext == OsStr::new("sd") => {
                 let (name, expr) = parse_sd(raw_path);
-                ("sd", name, expr)
+                ("sd", name, Box::new(expr))
             }
             Some(ext) if ext == OsStr::new("chil") => {
                 let (name, expr) = parse_chil(raw_path);
-                ("chil", name, expr.into())
+                ("chil", name, Box::new(expr))
+            }
+            Some(ext) if ext == OsStr::new("mlir") => {
+                let (name, items) = parse_mlir(raw_path);
+                let ops: Vec<mlir::internal::Operation> = items
+                    .into_iter()
+                    .filter_map(|x| match x {
+                        TopLevelItem::Operation(y) => Some(y),
+                        TopLevelItem::Other(_) => None,
+                    })
+                    .collect();
+                let expr = mlir::Expr::from(ops);
+                ("mlir", name, Box::new(expr))
             }
             _ => unreachable!(),
         }

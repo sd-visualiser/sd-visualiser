@@ -6,6 +6,9 @@ use itertools::Itertools;
 
 pub mod internal;
 
+#[cfg(test)]
+use serde::Serialize;
+
 use super::{ControlFlow, Fresh, Language, CF};
 use crate::common::{Matchable, Unit};
 
@@ -26,6 +29,7 @@ pub type Thunk = super::Thunk<Mlir>;
 pub type Block = super::Block<Mlir>;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Op {
     pub name: String,
     pub successors: Vec<BlockAddr>,
@@ -57,6 +61,7 @@ impl ControlFlow<Mlir> for Op {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct Var {
     pub id: String,
     pub index: Option<usize>,
@@ -88,6 +93,7 @@ impl Fresh for Var {
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
 pub struct BlockAddr(pub String);
 
 impl Display for BlockAddr {

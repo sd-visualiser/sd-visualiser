@@ -1,24 +1,68 @@
 ---
 source: sd-core/src/graph.rs
-expression: expr.free_vars()
+expression: expr.free_var_test()
 ---
 {
-    Variable(
-        "var_44",
-    ),
-    Variable(
-        "var_34",
-    ),
-    Variable(
-        "var_77",
-    ),
-    Variable(
-        "var_198",
-    ),
-    Variable(
-        "var_422",
-    ),
-    Variable(
-        "var_580",
-    ),
+    Variable {
+        name: Some(
+            Identifier(
+                "goo1",
+            ),
+        ),
+        addr: Addr(
+            '@',
+            44,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "hi",
+            ),
+        ),
+        addr: Addr(
+            '@',
+            34,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "foo1",
+            ),
+        ),
+        addr: Addr(
+            '@',
+            77,
+        ),
+    },
+    Variable {
+        name: None,
+        addr: Addr(
+            '%',
+            198,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "ADEnvironment",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            422,
+        ),
+    },
+    Variable {
+        name: Some(
+            Identifier(
+                "TangentAdd",
+            ),
+        ),
+        addr: Addr(
+            '%',
+            580,
+        ),
+    },
 }

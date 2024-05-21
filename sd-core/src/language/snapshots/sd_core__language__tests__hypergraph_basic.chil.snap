@@ -1,0 +1,66 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Edge(FreeVar(Variable(
+      name: None,
+      addr: Addr('%', 4),
+    ))),
+    Operation(Op("func")),
+    Edge(Nil),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: Some(Identifier("main")),
+        addr: Addr('%', 1),
+      ),
+      type: Some(Function(FunctionType(
+        domain: TupleType(
+          types: [
+            Base(BaseType("Float64")),
+          ],
+        ),
+        codomain: Base(BaseType("Float64")),
+      ))),
+    ))),
+    Thunk(Graph(
+      nodes: [
+        Edge(FreeVar(Variable(
+          name: None,
+          addr: Addr('%', 4),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("x")),
+            addr: Addr('%', 3),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("plus")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 5),
+          ),
+          type: None,
+        ))),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((1, 2, 0)),
+        Some((0, 2, 1)),
+        Some((2, 3, 0)),
+      ],
+    )),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((2, 1, 0)),
+    Some((1, 3, 0)),
+    Some((0, 4, 0)),
+    Some((4, 2, 0)),
+  ],
+)

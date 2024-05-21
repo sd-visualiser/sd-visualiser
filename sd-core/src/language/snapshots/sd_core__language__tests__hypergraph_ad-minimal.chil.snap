@@ -1,0 +1,1032 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Edge(FreeVar(Variable(
+      name: Some(Identifier("goo1")),
+      addr: Addr('@', 44),
+    ))),
+    Edge(FreeVar(Variable(
+      name: Some(Identifier("hi")),
+      addr: Addr('@', 34),
+    ))),
+    Edge(FreeVar(Variable(
+      name: Some(Identifier("foo1")),
+      addr: Addr('@', 77),
+    ))),
+    Edge(FreeVar(Variable(
+      name: None,
+      addr: Addr('%', 198),
+    ))),
+    Edge(FreeVar(Variable(
+      name: Some(Identifier("ADEnvironment")),
+      addr: Addr('%', 422),
+    ))),
+    Edge(FreeVar(Variable(
+      name: Some(Identifier("TangentAdd")),
+      addr: Addr('%', 580),
+    ))),
+    Operation(Op("func")),
+    Edge(Nil),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: Some(Identifier("Closure<Class-Object, (Class-Object, Class-Object, Float64) -> Unit>_tangentAdd")),
+        addr: Addr('@', 1661),
+      ),
+      type: Some(Function(FunctionType(
+        domain: TupleType(
+          types: [
+            Generic(GenericType(
+              base: BaseType("Closure"),
+              params: [
+                Base(BaseType("Class-Object")),
+                Function(FunctionType(
+                  domain: TupleType(
+                    types: [
+                      Base(BaseType("Class-Object")),
+                      Base(BaseType("Class-Object")),
+                      Base(BaseType("Float64")),
+                    ],
+                  ),
+                  codomain: Base(BaseType("Unit")),
+                )),
+              ],
+            )),
+            Generic(GenericType(
+              base: BaseType("Closure"),
+              params: [
+                Base(BaseType("Class-Object")),
+                Function(FunctionType(
+                  domain: TupleType(
+                    types: [
+                      Base(BaseType("Class-Object")),
+                      Base(BaseType("Class-Object")),
+                      Base(BaseType("Float64")),
+                    ],
+                  ),
+                  codomain: Base(BaseType("Unit")),
+                )),
+              ],
+            )),
+          ],
+        ),
+        codomain: Generic(GenericType(
+          base: BaseType("Closure"),
+          params: [
+            Base(BaseType("Class-Object")),
+            Function(FunctionType(
+              domain: TupleType(
+                types: [
+                  Base(BaseType("Class-Object")),
+                  Base(BaseType("Class-Object")),
+                  Base(BaseType("Float64")),
+                ],
+              ),
+              codomain: Base(BaseType("Unit")),
+            )),
+          ],
+        )),
+      ))),
+    ))),
+    Thunk(Graph(
+      nodes: [
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("Class-Object_tangentAdd")),
+            addr: Addr('@', 574),
+          ),
+          type: Some(Function(FunctionType(
+            domain: TupleType(
+              types: [
+                Base(BaseType("Class-Object")),
+                Base(BaseType("Class-Object")),
+              ],
+            ),
+            codomain: Base(BaseType("Class-Object")),
+          ))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("__auto_param_142")),
+            addr: Addr('%', 1659),
+          ),
+          type: Some(Generic(GenericType(
+            base: BaseType("Closure"),
+            params: [
+              Base(BaseType("Class-Object")),
+              Function(FunctionType(
+                domain: TupleType(
+                  types: [
+                    Base(BaseType("Class-Object")),
+                    Base(BaseType("Class-Object")),
+                    Base(BaseType("Float64")),
+                  ],
+                ),
+                codomain: Base(BaseType("Unit")),
+              )),
+            ],
+          ))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("__auto_param_143")),
+            addr: Addr('%', 1660),
+          ),
+          type: Some(Generic(GenericType(
+            base: BaseType("Closure"),
+            params: [
+              Base(BaseType("Class-Object")),
+              Function(FunctionType(
+                domain: TupleType(
+                  types: [
+                    Base(BaseType("Class-Object")),
+                    Base(BaseType("Class-Object")),
+                    Base(BaseType("Float64")),
+                  ],
+                ),
+                codomain: Base(BaseType("Unit")),
+              )),
+            ],
+          ))),
+        ))),
+        Operation(Op("tuple/2")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 1665),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 1664),
+          ),
+          type: Some(Function(FunctionType(
+            domain: TupleType(
+              types: [
+                Base(BaseType("Class-Object")),
+                Base(BaseType("Class-Object")),
+                Base(BaseType("Float64")),
+              ],
+            ),
+            codomain: Base(BaseType("Unit")),
+          ))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 1666),
+          ),
+          type: Some(Generic(GenericType(
+            base: BaseType("Closure"),
+            params: [
+              Base(BaseType("Class-Object")),
+              Function(FunctionType(
+                domain: TupleType(
+                  types: [
+                    Base(BaseType("Class-Object")),
+                    Base(BaseType("Class-Object")),
+                    Base(BaseType("Float64")),
+                  ],
+                ),
+                codomain: Base(BaseType("Unit")),
+              )),
+            ],
+          ))),
+        ))),
+        Operation(Op("null")),
+        Operation(Op("apply/2")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 1662),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 1663),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Operation(Op("field/0")),
+        Operation(Op("field/0")),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((4, 3, 0)),
+        Some((5, 3, 1)),
+        Some((3, 6, 0)),
+        Some((7, 5, 0)),
+        Some((0, 8, 0)),
+        Some((9, 8, 1)),
+        Some((10, 8, 2)),
+        Some((8, 4, 0)),
+        Some((2, 11, 0)),
+        Some((11, 10, 0)),
+        Some((1, 12, 0)),
+        Some((12, 9, 0)),
+      ],
+    )),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: Some(Identifier("Class-Object_tangentAdd")),
+        addr: Addr('@', 574),
+      ),
+      type: Some(Function(FunctionType(
+        domain: TupleType(
+          types: [
+            Base(BaseType("Class-Object")),
+            Base(BaseType("Class-Object")),
+          ],
+        ),
+        codomain: Base(BaseType("Class-Object")),
+      ))),
+    ))),
+    Operation(Op("func")),
+    Edge(Nil),
+    Thunk(Graph(
+      nodes: [
+        Edge(FreeVar(Variable(
+          name: Some(Identifier("TangentAdd")),
+          addr: Addr('%', 580),
+        ))),
+        Edge(FreeVar(Variable(
+          name: Some(Identifier("ADEnvironment")),
+          addr: Addr('%', 422),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("__auto_param_48")),
+            addr: Addr('%', 572),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("__auto_param_49")),
+            addr: Addr('%', 573),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Operation(Op("typeCast/Interface-ADEnvironment/Class-Object")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 582),
+          ),
+          type: Some(Base(BaseType("Interface-ADEnvironment"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 583),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Operation(Op("if")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 575),
+          ),
+          type: Some(Base(BaseType("Bool"))),
+        ))),
+        Edge(Nil),
+        Edge(Nil),
+        Thunk(Graph(
+          nodes: [
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 577),
+              ),
+              type: Some(Base(BaseType("Interface-ADEnvironment"))),
+            ))),
+          ],
+          node_holes: [],
+          edge_property: directed,
+          edges: [],
+        )),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 577),
+          ),
+          type: Some(Base(BaseType("Interface-ADEnvironment"))),
+        ))),
+        Thunk(Graph(
+          nodes: [
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 576),
+              ),
+              type: Some(Base(BaseType("Interface-ADEnvironment"))),
+            ))),
+            Edge(FreeVar(Variable(
+              name: Some(Identifier("TangentAdd")),
+              addr: Addr('%', 580),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 577),
+              ),
+              type: Some(Base(BaseType("Interface-ADEnvironment"))),
+            ))),
+            Operation(Op("invoke")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 581),
+              ),
+              type: Some(Base(BaseType("Interface-ADEnvironment"))),
+            ))),
+          ],
+          node_holes: [],
+          edge_property: directed,
+          edges: [
+            Some((0, 3, 0)),
+            Some((1, 3, 1)),
+            Some((2, 3, 2)),
+            Some((3, 4, 0)),
+          ],
+        )),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 576),
+          ),
+          type: Some(Base(BaseType("Interface-ADEnvironment"))),
+        ))),
+        Operation(Op("instanceof")),
+        Operation(Op("typeCast/Class-Object/Interface-ADEnvironment")),
+        Operation(Op("typeCast/Class-Object/Interface-ADEnvironment")),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((5, 4, 0)),
+        Some((4, 6, 0)),
+        Some((8, 7, 0)),
+        Some((9, 7, 1)),
+        Some((10, 7, 2)),
+        Some((7, 5, 0)),
+        Some((12, 11, 0)),
+        Some((11, 10, 0)),
+        Some((14, 13, 0)),
+        Some((0, 13, 1)),
+        Some((12, 13, 2)),
+        Some((13, 9, 0)),
+        Some((2, 15, 0)),
+        Some((1, 15, 1)),
+        Some((15, 8, 0)),
+        Some((3, 16, 0)),
+        Some((16, 12, 0)),
+        Some((2, 17, 0)),
+        Some((17, 14, 0)),
+      ],
+    )),
+    Operation(Op("class/1/0")),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: None,
+        addr: Addr('@', 3173),
+      ),
+      type: Some(Base(BaseType("Class-__Auto__Environment_20"))),
+    ))),
+    Operation(Op("func")),
+    Edge(Nil),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: Some(Identifier("BackProp_3094_3100")),
+        addr: Addr('@', 3100),
+      ),
+      type: Some(Function(FunctionType(
+        domain: TupleType(
+          types: [
+            Base(BaseType("Class-Object")),
+            Base(BaseType("Class-Object")),
+            Base(BaseType("Float64")),
+          ],
+        ),
+        codomain: Base(BaseType("Unit")),
+      ))),
+    ))),
+    Thunk(Graph(
+      nodes: [
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("env")),
+            addr: Addr('%', 3170),
+          ),
+          type: Some(Base(BaseType("Class-Object"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("__auto_param_274")),
+            addr: Addr('%', 3098),
+          ),
+          type: Some(Base(BaseType("Class-__AD__Accumulators_6_ha"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("__auto_param_275")),
+            addr: Addr('%', 3099),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("asg/1")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 9386),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 3104),
+          ),
+          type: Some(Base(BaseType("Unit"))),
+        ))),
+        Operation(Op("plus")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 3102),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("field/1")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 3101),
+          ),
+          type: Some(Base(BaseType("Class-__AD__Accumulators_6_ha"))),
+        ))),
+        Operation(Op("deref")),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((4, 3, 0)),
+        Some((1, 3, 1)),
+        Some((3, 5, 0)),
+        Some((2, 6, 0)),
+        Some((7, 6, 1)),
+        Some((6, 4, 0)),
+        Some((9, 8, 0)),
+        Some((8, 7, 0)),
+        Some((1, 10, 0)),
+        Some((10, 9, 0)),
+      ],
+    )),
+    Operation(Op("func")),
+    Edge(Nil),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: Some(Identifier("foo2")),
+        addr: Addr('@', 94),
+      ),
+      type: Some(Function(FunctionType(
+        domain: TupleType(
+          types: [
+            Base(BaseType("Float64")),
+          ],
+        ),
+        codomain: Base(BaseType("Float64")),
+      ))),
+    ))),
+    Thunk(Graph(
+      nodes: [
+        Edge(FreeVar(Variable(
+          name: Some(Identifier("hi")),
+          addr: Addr('@', 34),
+        ))),
+        Edge(FreeVar(Variable(
+          name: Some(Identifier("foo1")),
+          addr: Addr('@', 77),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("x")),
+            addr: Addr('%', 95),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("typeCast/Float64/Float64")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 93),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 183),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("block")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 90),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Edge(Nil),
+        Thunk(Graph(
+          nodes: [
+            Edge(FreeVar(Variable(
+              name: Some(Identifier("hi")),
+              addr: Addr('@', 34),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: Some(Identifier("x")),
+                addr: Addr('%', 95),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Edge(FreeVar(Variable(
+              name: Some(Identifier("foo1")),
+              addr: Addr('@', 77),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 92),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Operation(Op("break")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 102),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 103),
+              ),
+              type: Some(Base(BaseType("Nothing"))),
+            ))),
+            Operation(Op("if")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 179),
+              ),
+              type: Some(Base(BaseType("Bool"))),
+            ))),
+            Edge(Nil),
+            Edge(Nil),
+            Thunk(Graph(
+              nodes: [
+                Edge(FreeVar(Variable(
+                  name: Some(Identifier("hi")),
+                  addr: Addr('@', 34),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: Some(Identifier("x")),
+                    addr: Addr('%', 95),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("typeCast/Float64/Float64")),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 101),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 182),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("apply/1")),
+              ],
+              node_holes: [],
+              edge_property: directed,
+              edges: [
+                Some((3, 2, 0)),
+                Some((2, 4, 0)),
+                Some((0, 5, 0)),
+                Some((1, 5, 1)),
+                Some((5, 3, 0)),
+              ],
+            )),
+            Thunk(Graph(
+              nodes: [
+                Edge(FreeVar(Variable(
+                  name: Some(Identifier("foo1")),
+                  addr: Addr('@', 77),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: Some(Identifier("x")),
+                    addr: Addr('%', 95),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("typeCast/Float64/Float64")),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 99),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 181),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("apply/1")),
+              ],
+              node_holes: [],
+              edge_property: directed,
+              edges: [
+                Some((3, 2, 0)),
+                Some((2, 4, 0)),
+                Some((0, 5, 0)),
+                Some((1, 5, 1)),
+                Some((5, 3, 0)),
+              ],
+            )),
+            Operation(Op("typeCast/Bool/Bool")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 97),
+              ),
+              type: Some(Base(BaseType("Bool"))),
+            ))),
+            Operation(Op("throwing>")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 96),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Operation(Op("float64/0.000000")),
+          ],
+          node_holes: [],
+          edge_property: directed,
+          edges: [
+            Some((3, 4, 0)),
+            Some((5, 4, 1)),
+            Some((4, 6, 0)),
+            Some((8, 7, 0)),
+            Some((9, 7, 1)),
+            Some((10, 7, 2)),
+            Some((7, 5, 0)),
+            Some((0, 11, 0)),
+            Some((1, 11, 1)),
+            Some((11, 10, 0)),
+            Some((2, 12, 0)),
+            Some((1, 12, 1)),
+            Some((12, 9, 0)),
+            Some((14, 13, 0)),
+            Some((13, 8, 0)),
+            Some((1, 15, 0)),
+            Some((16, 15, 1)),
+            Some((15, 14, 0)),
+            Some((17, 16, 0)),
+          ],
+        )),
+        Operation(Op("atom")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 89),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("null")),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((4, 3, 0)),
+        Some((3, 5, 0)),
+        Some((7, 6, 0)),
+        Some((8, 6, 1)),
+        Some((6, 4, 0)),
+        Some((0, 9, 0)),
+        Some((2, 9, 1)),
+        Some((1, 9, 2)),
+        Some((9, 8, 0)),
+        Some((11, 10, 0)),
+        Some((10, 7, 0)),
+        Some((12, 11, 0)),
+      ],
+    )),
+    Operation(Op("func")),
+    Edge(Nil),
+    Edge(BoundVar(VariableDef(
+      var: Variable(
+        name: Some(Identifier("goo2")),
+        addr: Addr('@', 61),
+      ),
+      type: Some(Function(FunctionType(
+        domain: TupleType(
+          types: [
+            Base(BaseType("Float64")),
+          ],
+        ),
+        codomain: Base(BaseType("Float64")),
+      ))),
+    ))),
+    Thunk(Graph(
+      nodes: [
+        Edge(FreeVar(Variable(
+          name: Some(Identifier("hi")),
+          addr: Addr('@', 34),
+        ))),
+        Edge(FreeVar(Variable(
+          name: Some(Identifier("goo1")),
+          addr: Addr('@', 44),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: Some(Identifier("x")),
+            addr: Addr('%', 62),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("typeCast/Float64/Float64")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 60),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 192),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("block")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 57),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Edge(Nil),
+        Thunk(Graph(
+          nodes: [
+            Edge(FreeVar(Variable(
+              name: Some(Identifier("hi")),
+              addr: Addr('@', 34),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: Some(Identifier("x")),
+                addr: Addr('%', 62),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Edge(FreeVar(Variable(
+              name: Some(Identifier("goo1")),
+              addr: Addr('@', 44),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 59),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Operation(Op("break")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 69),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 70),
+              ),
+              type: Some(Base(BaseType("Nothing"))),
+            ))),
+            Operation(Op("if")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 188),
+              ),
+              type: Some(Base(BaseType("Bool"))),
+            ))),
+            Edge(Nil),
+            Edge(Nil),
+            Thunk(Graph(
+              nodes: [
+                Edge(FreeVar(Variable(
+                  name: Some(Identifier("hi")),
+                  addr: Addr('@', 34),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: Some(Identifier("x")),
+                    addr: Addr('%', 62),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("typeCast/Float64/Float64")),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 68),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 191),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("apply/1")),
+              ],
+              node_holes: [],
+              edge_property: directed,
+              edges: [
+                Some((3, 2, 0)),
+                Some((2, 4, 0)),
+                Some((0, 5, 0)),
+                Some((1, 5, 1)),
+                Some((5, 3, 0)),
+              ],
+            )),
+            Thunk(Graph(
+              nodes: [
+                Edge(FreeVar(Variable(
+                  name: Some(Identifier("goo1")),
+                  addr: Addr('@', 44),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: Some(Identifier("x")),
+                    addr: Addr('%', 62),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("typeCast/Float64/Float64")),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 66),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Edge(BoundVar(VariableDef(
+                  var: Variable(
+                    name: None,
+                    addr: Addr('%', 190),
+                  ),
+                  type: Some(Base(BaseType("Float64"))),
+                ))),
+                Operation(Op("apply/1")),
+              ],
+              node_holes: [],
+              edge_property: directed,
+              edges: [
+                Some((3, 2, 0)),
+                Some((2, 4, 0)),
+                Some((0, 5, 0)),
+                Some((1, 5, 1)),
+                Some((5, 3, 0)),
+              ],
+            )),
+            Operation(Op("typeCast/Bool/Bool")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 64),
+              ),
+              type: Some(Base(BaseType("Bool"))),
+            ))),
+            Operation(Op("throwing>")),
+            Edge(BoundVar(VariableDef(
+              var: Variable(
+                name: None,
+                addr: Addr('%', 63),
+              ),
+              type: Some(Base(BaseType("Float64"))),
+            ))),
+            Operation(Op("float64/0.000000")),
+          ],
+          node_holes: [],
+          edge_property: directed,
+          edges: [
+            Some((3, 4, 0)),
+            Some((5, 4, 1)),
+            Some((4, 6, 0)),
+            Some((8, 7, 0)),
+            Some((9, 7, 1)),
+            Some((10, 7, 2)),
+            Some((7, 5, 0)),
+            Some((0, 11, 0)),
+            Some((1, 11, 1)),
+            Some((11, 10, 0)),
+            Some((2, 12, 0)),
+            Some((1, 12, 1)),
+            Some((12, 9, 0)),
+            Some((14, 13, 0)),
+            Some((13, 8, 0)),
+            Some((1, 15, 0)),
+            Some((16, 15, 1)),
+            Some((15, 14, 0)),
+            Some((17, 16, 0)),
+          ],
+        )),
+        Operation(Op("atom")),
+        Edge(BoundVar(VariableDef(
+          var: Variable(
+            name: None,
+            addr: Addr('%', 56),
+          ),
+          type: Some(Base(BaseType("Float64"))),
+        ))),
+        Operation(Op("null")),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((4, 3, 0)),
+        Some((3, 5, 0)),
+        Some((7, 6, 0)),
+        Some((8, 6, 1)),
+        Some((6, 4, 0)),
+        Some((0, 9, 0)),
+        Some((2, 9, 1)),
+        Some((1, 9, 2)),
+        Some((9, 8, 0)),
+        Some((11, 10, 0)),
+        Some((10, 7, 0)),
+        Some((12, 11, 0)),
+      ],
+    )),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((7, 6, 0)),
+    Some((6, 8, 0)),
+    Some((10, 9, 0)),
+    Some((9, 7, 0)),
+    Some((12, 11, 0)),
+    Some((11, 10, 0)),
+    Some((5, 13, 0)),
+    Some((4, 13, 1)),
+    Some((13, 12, 0)),
+    Some((3, 14, 0)),
+    Some((14, 15, 0)),
+    Some((17, 16, 0)),
+    Some((16, 18, 0)),
+    Some((19, 17, 0)),
+    Some((21, 20, 0)),
+    Some((20, 22, 0)),
+    Some((1, 23, 0)),
+    Some((2, 23, 1)),
+    Some((23, 21, 0)),
+    Some((25, 24, 0)),
+    Some((24, 26, 0)),
+    Some((1, 27, 0)),
+    Some((0, 27, 1)),
+    Some((27, 25, 0)),
+  ],
+)

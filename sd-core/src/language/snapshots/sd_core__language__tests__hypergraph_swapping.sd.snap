@@ -1,0 +1,36 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Operation(Lambda),
+    Edge(Nil),
+    Edge(Nil),
+    Thunk(Graph(
+      nodes: [
+        Edge(BoundVar(Variable("a"))),
+        Edge(BoundVar(Variable("b"))),
+        Edge(BoundVar(Variable("d"))),
+        Edge(BoundVar(Variable("c"))),
+        Operation(Plus),
+        Edge(Nil),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((3, 4, 0)),
+        Some((1, 4, 1)),
+        Some((0, 4, 2)),
+        Some((4, 5, 0)),
+      ],
+    )),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((1, 0, 0)),
+    Some((0, 2, 0)),
+    Some((3, 1, 0)),
+  ],
+)

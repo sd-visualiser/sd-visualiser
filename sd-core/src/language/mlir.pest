@@ -76,15 +76,15 @@ pretty_dialect_type_lead_ident = { ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "." | "_"
 dialect_type_body              = { "<" ~ dialect_type_contents+ ~ ">" }
 dialect_type_contents          = {
     dialect_type_body
-  | "(" ~ dialect_type_contents+ ~ ")"
-  | "[" ~ dialect_type_contents+ ~ "]"
-  | "{" ~ dialect_type_contents+ ~ "}"
+  | "(" ~ dialect_type_contents* ~ ")"
+  | "[" ~ dialect_type_contents* ~ "]"
+  | "{" ~ dialect_type_contents* ~ "}"
   | (!("[" | "<" | "(" | "{" | "]" | ">" | ")" | "}" | "\0") ~ ANY)+
 }
 
 /// https://mlir.llvm.org/docs/LangRef/#attributes
 attribute_entry = { (bare_id | string_literal) ~ ("=" ~ attribute_value)? }
-attribute_value = { attribute_alias | dialect_attribute | builtin_attribute }
+attribute_value = { dialect_attribute | attribute_alias | builtin_attribute }
 
 /// https://mlir.llvm.org/docs/LangRef/#attribute-value-aliases
 attribute_alias_def = { "#" ~ alias_name ~ "=" ~ attribute_value }
@@ -193,5 +193,6 @@ unranked_memref_type  = { "memref" ~ "<" ~ "*" ~ "x" ~ type ~ ("," ~ memory_spac
 unranked_tensor_type  = { "tensor" ~ "<" ~ "*" ~ "x" ~ type ~ ">" }
 vector_type           = { "vector" ~ "<" ~ vector_dim_list ~ vector_element_type ~ ">" }
 vector_element_type   = { float_type | integer_type | index_type }
-vector_dim_list       = { static_dim ~ ("x" ~ static_dim)* }
+vector_dim_list       = { (static_dim_list ~ "x")? }
+static_dim_list	      = { static_dim ~ ("x" ~ static_dim)* }
 static_dim            = { (decimal_literal | "[" ~ decimal_literal ~ "]") }
