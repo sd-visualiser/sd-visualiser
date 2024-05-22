@@ -1,6 +1,6 @@
 use std::{
     fmt::{Debug, Display},
-    ops::{Bound, Range},
+    ops::Range,
     time::SystemTime,
 };
 
@@ -20,11 +20,13 @@ use sd_core::{
 };
 #[cfg(test)]
 use serde::Serialize;
-use store_interval_tree::{Interval, IntervalTree};
 use thiserror::Error;
 use tracing::{debug, info};
 
-use crate::common::RADIUS_OPERATION;
+use crate::{
+    common::RADIUS_OPERATION,
+    intervals::{Interval, Intervals},
+};
 
 #[derive(Clone, Debug, Error)]
 pub enum LayoutError {
@@ -702,7 +704,7 @@ fn v_layout_internal<T: Ctx>(
     }
 
     // Set up nodes
-    let mut interval_tree: IntervalTree<OrderedFloat<f32>, Variable> = IntervalTree::new();
+    let mut interval_tree: Intervals<OrderedFloat<f32>, Variable> = Intervals::new();
 
     let nodes = h_layout
         .nodes
@@ -730,8 +732,8 @@ fn v_layout_internal<T: Ctx>(
                             } / 2.0;
 
                             let interval = Interval::new(
-                                Bound::Included(OrderedFloat(h_pos - extra_size)),
-                                Bound::Included(OrderedFloat(h_pos + extra_size)),
+                                OrderedFloat(h_pos - extra_size),
+                                OrderedFloat(h_pos + extra_size),
                             );
 
                             let out_gap = if n.outputs.len() < 2 {
@@ -779,10 +781,7 @@ fn v_layout_internal<T: Ctx>(
                                 .into_option()
                                 .unwrap();
 
-                            let interval = Interval::new(
-                                Bound::Included(OrderedFloat(low)),
-                                Bound::Included(OrderedFloat(high)),
-                            );
+                            let interval = Interval::new(OrderedFloat(low), OrderedFloat(high));
 
                             (
                                 Node::Swap {
@@ -830,8 +829,8 @@ fn v_layout_internal<T: Ctx>(
                                 .add_constraint(Expression::eq(layout.v_max + height_below, end));
 
                             let interval = Interval::new(
-                                Bound::Included(OrderedFloat(layout.h_min)),
-                                Bound::Included(OrderedFloat(layout.h_max)),
+                                OrderedFloat(layout.h_min),
+                                OrderedFloat(layout.h_max),
                             );
 
                             (
@@ -860,7 +859,7 @@ fn v_layout_internal<T: Ctx>(
                     }
 
                     for x in interval_tree.query(&interval) {
-                        problem.add_constraint(Expression::leq((*x.value()).into(), top));
+                        problem.add_constraint(Expression::leq((*x).into(), top));
                     }
 
                     interval_tree.insert(interval, bottom);
