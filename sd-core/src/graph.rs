@@ -234,7 +234,7 @@ where
 
                         let mut blocks: HashMap<T::BlockAddr, Vec<_>> = HashMap::new();
 
-                        for b in &thunk.blocks {
+                        for b in thunk.blocks.iter().rev() {
                             let block = thunk_env.fragment.add_thunk(
                                 cf_free_vars
                                     .get(&Some(b.addr.clone()))

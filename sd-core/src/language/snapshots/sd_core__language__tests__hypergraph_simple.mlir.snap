@@ -98,28 +98,6 @@ Graph(
                     BlockAddr("^bb3"),
                   ],
                 )),
-                Edge(CF(Some(BlockAddr("^bb3")))),
-              ],
-              node_holes: [],
-              edge_property: directed,
-              edges: [
-                Some((0, 1, 0)),
-                Some((1, 2, 0)),
-              ],
-            )),
-            Edge(CF(Some(BlockAddr("^bb1")))),
-            Thunk(Graph(
-              nodes: [
-                Edge(BoundVar(Var(
-                  id: "%arg0",
-                  index: None,
-                ))),
-                Operation(Op(
-                  name: "cf.br",
-                  successors: [
-                    BlockAddr("^bb3"),
-                  ],
-                )),
                 Edge(BoundVar(Var(
                   id: "%0",
                   index: None,
@@ -141,6 +119,28 @@ Graph(
               ],
             )),
             Edge(CF(Some(BlockAddr("^bb2")))),
+            Thunk(Graph(
+              nodes: [
+                Edge(BoundVar(Var(
+                  id: "%arg0",
+                  index: None,
+                ))),
+                Operation(Op(
+                  name: "cf.br",
+                  successors: [
+                    BlockAddr("^bb3"),
+                  ],
+                )),
+                Edge(CF(Some(BlockAddr("^bb3")))),
+              ],
+              node_holes: [],
+              edge_property: directed,
+              edges: [
+                Some((0, 1, 0)),
+                Some((1, 2, 0)),
+              ],
+            )),
+            Edge(CF(Some(BlockAddr("^bb1")))),
             Thunk(Graph(
               nodes: [
                 Edge(BoundVar(Var(
@@ -185,8 +185,8 @@ Graph(
             Some((4, 9, 0)),
             Some((10, 9, 1)),
             Some((9, 5, 0)),
-            Some((11, 8, 0)),
-            Some((11, 10, 1)),
+            Some((11, 10, 0)),
+            Some((11, 8, 1)),
             Some((11, 4, 2)),
           ],
         )),
