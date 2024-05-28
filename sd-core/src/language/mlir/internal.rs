@@ -68,6 +68,7 @@ pub struct ValueIndex(
     #[pest_ast(outer(with(span_into_str), with(str::parse), with(Result::unwrap)))] pub usize,
 );
 
+#[allow(dead_code)]
 #[derive(Debug, FromPest)]
 #[pest_ast(rule(Rule::attribute_entry))]
 pub struct Attribute(

@@ -1,3 +1,4 @@
+#![allow(clippy::empty_docs)]
 pub mod codeable;
 pub mod common;
 pub mod decompile;

@@ -385,7 +385,7 @@ impl<T: Ctx> From<&MonoidalWiredGraph<T>> for MonoidalGraph<T> {
             // Closure to obtain the target links before cap generation
             let next_inputs = || {
                 end_slices
-                    .get(0)
+                    .first()
                     .map_or(next_slice.input_links(), InOutIter::input_links)
             };
 
