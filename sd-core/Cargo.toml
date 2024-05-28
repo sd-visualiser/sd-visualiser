@@ -16,7 +16,7 @@ derivative = "2.2.0"
 dot-structures = "0.1.1"
 either = "1.9.0"
 from-pest = "0.3.2"
-good_lp = { version = "1.8.1", default-features = false, features = [ "minilp" ] }
+good_lp = { version = "1.8.1", default-features = false, features = [ "minilp", "clarabel" ] }
 indexmap = "2.0.0"
 itertools = "0.11.0"
 num = "0.4.1"
@@ -42,7 +42,6 @@ serde = "1.0.175"
 
 [features]
 default = []
-clarabel = [ "good_lp/clarabel" ]
 cbc = ["good_lp/coin_cbc"]
 highs = ["good_lp/highs"]
 gurobi = ["good_lp/lp-solvers"]

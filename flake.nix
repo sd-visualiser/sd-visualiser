@@ -79,6 +79,7 @@
                       --public-url /sd-visualiser \
                       --dist $out \
                       --release \
+                      --skip-version-check \
                       ''${cargoBuildFlags:-}
                   '';
                   # disable install phase because trunk will directly output to $out

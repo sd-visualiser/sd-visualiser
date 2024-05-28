@@ -15,7 +15,6 @@ pub struct LpProblem {
 
 #[derive(ValueEnum, Clone, Copy, Default, Debug)]
 pub enum Solver {
-    #[cfg(feature = "clarabel")]
     Clarabel,
     #[cfg(feature = "gurobi")]
     Gurobi,
@@ -62,7 +61,6 @@ impl LpProblem {
         let to_solve = self.problem.minimise(self.objective);
 
         match s {
-            #[cfg(feature = "clarabel")]
             Solver::Clarabel => run_model(
                 to_solve.using(good_lp::solvers::clarabel::clarabel),
                 self.constraints,

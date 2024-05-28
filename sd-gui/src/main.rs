@@ -106,7 +106,7 @@ fn main() {
     // Redirect `log` message to `console.log` and friends:
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
     tracing_wasm::set_as_global_default();
-    tracing::info!("lp solver: {}", LP_BACKEND);
+    tracing::info!("lp solver: Clarabel");
 
     let web_options = eframe::WebOptions::default();
 
@@ -115,7 +115,7 @@ fn main() {
             .start(
                 "the_canvas_id", // hardcode it
                 web_options,
-                Box::new(|cc| Box::new(sd_gui::App::new(cc))),
+                Box::new(|cc| Box::new(sd_gui::App::new(cc, Solver::Minilp))),
             )
             .await
             .expect("failed to start eframe");

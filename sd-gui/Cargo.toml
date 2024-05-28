@@ -39,11 +39,11 @@ tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
 log = "0.4.19"
 poll-promise = { version = "0.3.0", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
+getrandom = { version = "0.2.15", features = ["js"]}
 wasm-bindgen-futures = "0.4.37"
 
 [features]
-default = ["cbc", "clarabel", "highs", "gurobi"]
-clarabel = ["sd-graphics/clarabel"]
+default = []
 cbc = ["sd-graphics/cbc"]
 highs = ["sd-graphics/highs"]
 gurobi = ["sd-graphics/gurobi"]

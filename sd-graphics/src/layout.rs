@@ -1,9 +1,10 @@
 use std::{
     fmt::{Debug, Display},
     ops::Range,
-    time::SystemTime,
 };
 
+// #[cfg(not(target_arch = "wasm32"))]
+// use std::time::SystemTime;
 use derivative::Derivative;
 use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
@@ -894,7 +895,8 @@ where
 {
     let mut problem = LpProblem::default();
 
-    let now = SystemTime::now();
+    // #[cfg(not(target_arch = "wasm32"))]
+    // let now = SystemTime::now();
     info!("Calculating horizontal layout");
     let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
@@ -908,13 +910,14 @@ where
 
     let layout_complete = Layout::from_solution_v(v_layout, &*v_solution);
 
-    if let Ok(elapsed) = now.elapsed() {
-        info!(
-            "Layout took {}.{} seconds",
-            elapsed.as_secs(),
-            elapsed.subsec_millis()
-        );
-    }
+    // #[cfg(not(target_arch = "wasm32"))]
+    // if let Ok(elapsed) = now.elapsed() {
+    //     info!(
+    //         "Layout took {}.{} seconds",
+    //         elapsed.as_secs(),
+    //         elapsed.subsec_millis()
+    //     );
+    // }
     debug!("Layout complete: {:?}", layout_complete);
 
     Ok(layout_complete)
