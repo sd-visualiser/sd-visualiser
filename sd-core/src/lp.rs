@@ -1,3 +1,4 @@
+use clap_derive::ValueEnum;
 #[cfg(feature = "gurobi")]
 use good_lp::solvers::lp_solvers::LpSolver;
 use good_lp::{
@@ -5,27 +6,25 @@ use good_lp::{
     SolverModel, Variable, VariableDefinition,
 };
 
-pub const LP_BACKEND: &str =
-    // good_lp default solver hierarchy is cbc > minilp > highs
-    if cfg!(feature = "clarabel") {
-        "clarabel"
-    } else if cfg!(feature = "gurobi") {
-        "gurobi"
-    } else if cfg!(feature = "highs") {
-        "highs"
-    } else if cfg!(feature = "cbc") {
-        "cbc"
-    } else if cfg!(feature = "minilp") {
-        "minilp"
-    } else {
-        unreachable!()
-    };
-
 #[derive(Default)]
 pub struct LpProblem {
     problem: ProblemVariables,
     constraints: Vec<Constraint>,
     objective: Expression,
+}
+
+#[derive(ValueEnum, Clone, Copy, Default, Debug)]
+pub enum Solver {
+    #[cfg(feature = "clarabel")]
+    Clarabel,
+    #[cfg(feature = "gurobi")]
+    Gurobi,
+    #[cfg(feature = "highs")]
+    Highs,
+    #[cfg(feature = "cbc")]
+    Cbc,
+    #[default]
+    Minilp,
 }
 
 impl LpProblem {
@@ -45,45 +44,54 @@ impl LpProblem {
         self.constraints.push(constraint);
     }
 
-    pub fn minimise(self) -> Result<impl Solution, ResolutionError> {
+    pub fn minimise(self, s: Solver) -> Result<Box<dyn Solution>, ResolutionError> {
+        fn run_model<S: SolverModel<Error = ResolutionError>>(
+            mut model: S,
+            constraints: Vec<Constraint>,
+        ) -> Result<Box<dyn Solution>, ResolutionError>
+        where
+            S::Solution: 'static,
+        {
+            for c in constraints {
+                model.add_constraint(c);
+            }
+            let sln = model.solve()?;
+            Ok(Box::new(sln))
+        }
+
         let to_solve = self.problem.minimise(self.objective);
 
-        #[cfg(feature = "clarabel")]
-        let mut model = to_solve.using(|x| {
-            let prob = good_lp::solvers::clarabel::clarabel(x);
-            prob
-        });
+        match s {
+            #[cfg(feature = "clarabel")]
+            Solver::Clarabel => run_model(
+                to_solve.using(good_lp::solvers::clarabel::clarabel),
+                self.constraints,
+            ),
+            #[cfg(feature = "gurobi")]
+            Solver::Gurobi => {
+                let solver = LpSolver(good_lp::solvers::lp_solvers::GurobiSolver::new());
+                run_model(to_solve.using(solver), self.constraints)
+            }
 
-        #[cfg(feature = "gurobi")]
-        let solver = LpSolver(good_lp::solvers::lp_solvers::GurobiSolver::new());
-        #[cfg(feature = "gurobi")]
-        let mut model = to_solve.using(solver);
-
-        #[cfg(feature = "highs")]
-        let mut model = to_solve.using(|x| {
-            let prob = good_lp::solvers::highs::highs(x);
-            prob
-        });
-
-        #[cfg(feature = "cbc")]
-        let mut model = to_solve.using(|x| {
-            let mut prob = good_lp::solvers::coin_cbc::coin_cbc(x);
-            prob.set_parameter("logLevel", "0");
-            prob.set_parameter("slogLevel", "0");
-            prob
-        });
-
-        #[cfg(all(
-            not(feature = "cbc"),
-            not(feature = "clarabel"),
-            not(feature = "highs"),
-            not(feature = "gurobi")
-        ))]
-        let mut model = to_solve.using(good_lp::default_solver);
-
-        for c in self.constraints {
-            model.add_constraint(c);
+            #[cfg(feature = "highs")]
+            Solver::Highs => run_model(
+                to_solve.using(good_lp::solvers::highs::highs),
+                self.constraints,
+            ),
+            #[cfg(feature = "cbc")]
+            Solver::Cbc => run_model(
+                to_solve.using(|x| {
+                    let mut prob = good_lp::solvers::coin_cbc::coin_cbc(x);
+                    prob.set_parameter("logLevel", "0");
+                    prob.set_parameter("slogLevel", "0");
+                    prob
+                }),
+                self.constraints,
+            ),
+            Solver::Minilp => run_model(
+                to_solve.using(good_lp::solvers::minilp::minilp),
+                self.constraints,
+            ),
         }
-        model.solve()
     }
 }

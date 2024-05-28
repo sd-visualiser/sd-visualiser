@@ -15,7 +15,7 @@ use sd_core::{
         generic::{Ctx, Weight},
         traits::{Graph, NodeLike, WithWeight},
     },
-    lp::LpProblem,
+    lp::{LpProblem, Solver},
     monoidal::graph::{MonoidalGraph, MonoidalOp},
 };
 #[cfg(test)]
@@ -189,7 +189,7 @@ impl<T: Ctx, S> HLayout<T, S> {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn from_solution_h(layout: LayoutInternal<T, Variable, S>, solution: &impl Solution) -> Self {
+    fn from_solution_h(layout: LayoutInternal<T, Variable, S>, solution: &dyn Solution) -> Self {
         HLayout {
             h_min: solution.value(layout.h_min) as f32,
             h_max: solution.value(layout.h_max) as f32,
@@ -285,7 +285,7 @@ impl<T: Ctx> Layout<T> {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    fn from_solution_v(layout: LayoutInternal<T, f32, Variable>, solution: &impl Solution) -> Self {
+    fn from_solution_v(layout: LayoutInternal<T, f32, Variable>, solution: &dyn Solution) -> Self {
         Layout {
             h_min: layout.h_min,
             h_max: layout.h_max,
@@ -888,7 +888,7 @@ fn v_layout_internal<T: Ctx>(
     }
 }
 
-pub fn layout<T: Ctx>(graph: &MonoidalGraph<T>) -> Result<Layout<T>, LayoutError>
+pub fn layout<T: Ctx>(graph: &MonoidalGraph<T>, solver: Solver) -> Result<Layout<T>, LayoutError>
 where
     Weight<T::Operation>: Display,
 {
@@ -898,15 +898,15 @@ where
     info!("Calculating horizontal layout");
     let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
-    let h_solution = problem.minimise()?;
+    let h_solution = problem.minimise(solver)?;
 
     problem = LpProblem::default();
     info!("Calculating vertical layout");
-    let v_layout = v_layout_internal(&mut problem, HLayout::from_solution_h(layout, &h_solution));
+    let v_layout = v_layout_internal(&mut problem, HLayout::from_solution_h(layout, &*h_solution));
     problem.add_objective(v_layout.v_max);
-    let v_solution = problem.minimise()?;
+    let v_solution = problem.minimise(solver)?;
 
-    let layout_complete = Layout::from_solution_v(v_layout, &v_solution);
+    let layout_complete = Layout::from_solution_v(v_layout, &*v_solution);
 
     if let Ok(elapsed) = now.elapsed() {
         info!(
@@ -922,28 +922,28 @@ where
 
 #[cfg(test)]
 mod tests {
-    use sd_core::examples;
+    use sd_core::{examples, lp::Solver};
 
     use super::layout;
 
     #[test]
     fn int() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::int()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::int(), Solver::default()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn copy() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::copy()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::copy(), Solver::default()).expect("Layout failed"));
         });
     }
 
     #[test]
     fn thunk() {
         insta::with_settings!({sort_maps => true}, {
-            insta::assert_ron_snapshot!(layout(&examples::thunk()).expect("Layout failed"));
+            insta::assert_ron_snapshot!(layout(&examples::thunk(), Solver::default()).expect("Layout failed"));
         });
     }
 }

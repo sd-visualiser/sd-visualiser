@@ -12,7 +12,8 @@ use sd_core::{
         subgraph::ExtensibleEdge,
         traits::Graph,
     },
-    monoidal::{graph::MonoidalGraph, wired_graph::MonoidalWiredGraph},
+    lp::Solver,
+    monoidal::{graph::MonoidalGraph, wired_graph::from_graph},
 };
 use sd_graphics::{common::Shapeable, layout::layout, render, shape::Shapes};
 
@@ -41,7 +42,7 @@ pub fn clear_shape_cache() {
     }
 }
 
-pub fn generate_shapes<G>(graph: &G) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
+pub fn generate_shapes<G>(graph: &G, solver: Solver) -> Arc<Mutex<Promise<Shapes<G::Ctx>>>>
 where
     G: Graph + 'static,
     Edge<G::Ctx>: ExtensibleEdge,
@@ -55,7 +56,7 @@ where
             let graph = graph.clone();
             Arc::new(Mutex::new(crate::spawn!("shape", {
                 tracing::info!("Converting to monoidal term");
-                let monoidal_term = MonoidalWiredGraph::from(&graph);
+                let monoidal_term = from_graph(&graph, solver);
                 tracing::debug!("Got term {:#?}", monoidal_term);
 
                 tracing::info!("Inserting swaps and copies");
@@ -63,7 +64,7 @@ where
                 tracing::debug!("Got graph {:#?}", monoidal_graph);
 
                 tracing::info!("Calculating layout...");
-                let layout = layout(&monoidal_graph).unwrap();
+                let layout = layout(&monoidal_graph, solver).unwrap();
                 tracing::info!("Calculating shapes...");
                 let mut shapes = Vec::new();
                 render::generate_shapes(&mut shapes, &layout, true);

@@ -20,6 +20,7 @@ use sd_core::{
     },
     interactive::InteractiveGraph,
     language::{chil::Chil, mlir::Mlir, spartan::Spartan},
+    lp::Solver,
 };
 use sd_graphics::{common::Shapeable, renderable::RenderableGraph};
 
@@ -33,20 +34,20 @@ pub enum GraphUi {
 }
 
 impl GraphUi {
-    pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>) -> Self {
-        Self::Chil(GraphUiInternal::new(InteractiveGraph::new(graph)))
+    pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>, solver: Solver) -> Self {
+        Self::Chil(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
-    pub(crate) fn new_mlir(graph: SyntaxHypergraph<Mlir>) -> Self {
-        Self::Mlir(GraphUiInternal::new(InteractiveGraph::new(graph)))
+    pub(crate) fn new_mlir(graph: SyntaxHypergraph<Mlir>, solver: Solver) -> Self {
+        Self::Mlir(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
-    pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>) -> Self {
-        Self::Spartan(GraphUiInternal::new(InteractiveGraph::new(graph)))
+    pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>, solver: Solver) -> Self {
+        Self::Spartan(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
-    pub(crate) fn new_dot(graph: Hypergraph<DotWeight>) -> Self {
-        Self::Dot(GraphUiInternal::new(InteractiveGraph::new(graph)))
+    pub(crate) fn new_dot(graph: Hypergraph<DotWeight>, solver: Solver) -> Self {
+        Self::Dot(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
     delegate! {
@@ -86,18 +87,20 @@ pub struct GraphUiInternal<G: Graph> {
     panzoom: Panzoom,
     ready: bool,
     reset_requested: bool,
+    solver: Solver,
 }
 
 impl<G> GraphUiInternal<G>
 where
     G: Graph + 'static,
 {
-    pub(crate) fn new(graph: G) -> Self {
+    pub(crate) fn new(graph: G, solver: Solver) -> Self {
         Self {
             graph,
             panzoom: Panzoom::default(),
             ready: false,
             reset_requested: true,
+            solver,
         }
     }
 
@@ -114,7 +117,7 @@ where
         Weight<Operation<G::Ctx>>: Display,
         Weight<Edge<G::Ctx>>: IsCF,
     {
-        let shapes = generate_shapes(&self.graph);
+        let shapes = generate_shapes(&self.graph, self.solver);
         let guard = shapes.lock().unwrap();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
@@ -197,7 +200,7 @@ where
         Thunk<G::Ctx>: Matchable,
         Weight<Operation<G::Ctx>>: Display,
     {
-        let shapes = generate_shapes(&self.graph);
+        let shapes = generate_shapes(&self.graph, self.solver);
         let guard = shapes.lock().unwrap();
 
         if let Some(shapes) = guard.ready() {
@@ -226,7 +229,7 @@ where
         Operation<G::Ctx>: Shapeable,
         Weight<Operation<G::Ctx>>: Display,
     {
-        let shapes = generate_shapes(&self.graph);
+        let shapes = generate_shapes(&self.graph, self.solver);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here
                                             // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()

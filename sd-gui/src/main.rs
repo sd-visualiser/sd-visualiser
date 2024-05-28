@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use sd_core::LP_BACKEND;
+use sd_core::lp::Solver;
 
 #[derive(Parser)]
 #[command(
@@ -41,6 +41,10 @@ struct Args {
     /// Read in an dot file
     #[arg(long, value_name = "FILE")]
     dot: Option<PathBuf>,
+
+    /// Choose LP solver
+    #[arg(long, value_enum, default_value_t)]
+    solver: Solver,
 }
 
 // When compiling natively:
@@ -53,9 +57,10 @@ fn main() -> anyhow::Result<()> {
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .with_thread_names(true)
         .init();
-    tracing::info!("lp solver: {}", LP_BACKEND);
 
     let args = Args::parse();
+
+    tracing::info!("lp solver: {:?}", args.solver);
 
     let native_options = eframe::NativeOptions {
         maximized: true,
@@ -80,8 +85,8 @@ fn main() -> anyhow::Result<()> {
     eframe::run_native(
         "SD Visualiser",
         native_options,
-        Box::new(|cc| {
-            let mut app = sd_gui::App::new(cc);
+        Box::new(move |cc| {
+            let mut app = sd_gui::App::new(cc, args.solver);
 
             if let Some((code, language)) = file {
                 app.set_file(&code, Some(language));

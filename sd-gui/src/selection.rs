@@ -6,6 +6,7 @@ use sd_core::{
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
     language::{chil::Chil, mlir::Mlir, spartan::Spartan, Expr, Language, Thunk},
+    lp::Solver,
     prettyprinter::PrettyPrint,
 };
 
@@ -35,19 +36,22 @@ impl Selection {
         }
     }
 
-    pub fn from_graph(graph_ui: &GraphUi, name: String) -> Option<Self> {
+    pub fn from_graph(graph_ui: &GraphUi, name: String, solver: Solver) -> Option<Self> {
         match graph_ui {
             GraphUi::Chil(graph_ui) => Some(Self::Chil(SelectionInternal::new(
                 graph_ui.graph.to_subgraph(),
                 name,
+                solver,
             ))),
             GraphUi::Mlir(graph_ui) => Some(Self::Mlir(SelectionInternal::new(
                 graph_ui.graph.to_subgraph(),
                 name,
+                solver,
             ))),
             GraphUi::Spartan(graph_ui) => Some(Self::Spartan(SelectionInternal::new(
                 graph_ui.graph.to_subgraph(),
                 name,
+                solver,
             ))),
             GraphUi::Dot(_) => None,
         }
@@ -61,8 +65,12 @@ pub struct SelectionInternal<T: Language> {
 }
 
 impl<T: 'static + Language> SelectionInternal<T> {
-    pub(crate) fn new(subgraph: InteractiveSubgraph<SyntaxHypergraph<T>>, name: String) -> Self {
-        let graph_ui = GraphUiInternal::new(subgraph);
+    pub(crate) fn new(
+        subgraph: InteractiveSubgraph<SyntaxHypergraph<T>>,
+        name: String,
+        solver: Solver,
+    ) -> Self {
+        let graph_ui = GraphUiInternal::new(subgraph, solver);
 
         Self {
             name,

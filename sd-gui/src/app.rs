@@ -18,6 +18,7 @@ use sd_core::{
     common::Direction,
     dot::{dot_to_graph, DotSettings},
     graph::SyntaxHypergraph,
+    lp::Solver,
 };
 
 use crate::{
@@ -52,33 +53,13 @@ pub struct App {
     selections: Vec<Selection>,
     find: Option<(String, usize)>,
     toasts: Toasts,
-}
-
-impl Default for App {
-    fn default() -> Self {
-        let (tx, rx) = channel();
-        Self {
-            tx,
-            rx,
-            about: Default::default(),
-            editor: Default::default(),
-            code: Arc::default(),
-            last_parse: Option::default(),
-            last_parse_error: Option::default(),
-            language: UiLanguage::default(),
-            dot_settings: DotSettings::default(),
-            graph_ui: Option::default(),
-            selections: Vec::default(),
-            find: None,
-            toasts: Toasts::default(),
-        }
-    }
+    solver: Solver,
 }
 
 impl App {
     /// Called once before the first frame.
     #[must_use]
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, solver: Solver) -> Self {
         // This is also where you can customize the look and feel of egui using
         // `cc.egui_ctx.set_visuals` and `cc.egui_ctx.set_fonts`.
 
@@ -105,7 +86,23 @@ impl App {
 
         cc.egui_ctx.set_fonts(font_definitions);
 
-        App::default()
+        let (tx, rx) = channel();
+        Self {
+            tx,
+            rx,
+            about: Default::default(),
+            editor: Default::default(),
+            code: Arc::default(),
+            last_parse: Option::default(),
+            last_parse_error: Option::default(),
+            language: UiLanguage::default(),
+            dot_settings: DotSettings::default(),
+            graph_ui: Option::default(),
+            selections: Vec::default(),
+            find: None,
+            toasts: Toasts::default(),
+            solver,
+        }
     }
 
     pub fn set_file(&mut self, code: &str, language: Option<UiLanguage>) {
@@ -179,6 +176,7 @@ impl App {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
             let settings = self.dot_settings;
+            let solver = self.solver;
             self.graph_ui.replace(crate::spawn!("compile", {
                 let promise = parse.lock().unwrap();
                 let parse_output = promise
@@ -188,19 +186,19 @@ impl App {
                 let compile = Ok(match parse_output {
                     ParseOutput::Chil(expr) => {
                         tracing::debug!("Converting chil to hypergraph...");
-                        GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?)
+                        GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?, solver)
                     }
                     ParseOutput::Mlir(expr) => {
                         tracing::debug!("Converting mlir to hypergraph...");
-                        GraphUi::new_mlir(SyntaxHypergraph::try_from(expr)?)
+                        GraphUi::new_mlir(SyntaxHypergraph::try_from(expr)?, solver)
                     }
                     ParseOutput::Spartan(expr) => {
                         tracing::debug!("Converting spartan to hypergraph...");
-                        GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?)
+                        GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?, solver)
                     }
                     ParseOutput::Dot(graph) => {
                         tracing::debug!("Converting dot to hypergraph...");
-                        GraphUi::new_dot(dot_to_graph(graph, settings)?)
+                        GraphUi::new_dot(dot_to_graph(graph, settings)?, solver)
                     }
                 });
                 ctx.request_repaint();
@@ -427,6 +425,7 @@ impl eframe::App for App {
                         if let Some(sel) = Selection::from_graph(
                             graph_ui,
                             format!("Selection {}", self.selections.len()),
+                            self.solver,
                         ) {
                             self.selections.push(sel);
                         }
@@ -560,7 +559,7 @@ impl eframe::App for App {
                 .show(ctx, |ui| {
                     ui.heading(format!("SD Visualiser ({})", env!("CARGO_PKG_VERSION")));
                     ui.label("A string diagram visualiser.");
-                    ui.label(format!("LP backend: {}", sd_core::LP_BACKEND));
+                    ui.label(format!("LP backend: {:?}", self.solver));
                     ui.horizontal(|ui| {
                         ui.label("Homepage:");
                         ui.hyperlink(env!("CARGO_PKG_HOMEPAGE"));

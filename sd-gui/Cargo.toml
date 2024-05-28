@@ -42,9 +42,8 @@ tracing-wasm = "0.2.1"
 wasm-bindgen-futures = "0.4.37"
 
 [features]
-default = ["minilp"]
+default = ["cbc", "clarabel", "highs", "gurobi"]
 clarabel = ["sd-graphics/clarabel"]
 cbc = ["sd-graphics/cbc"]
 highs = ["sd-graphics/highs"]
-minilp = ["sd-graphics/minilp"]
 gurobi = ["sd-graphics/gurobi"]

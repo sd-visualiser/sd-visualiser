@@ -1,7 +1,7 @@
 use std::{cmp::Reverse, collections::HashMap};
 
 use derivative::Derivative;
-use good_lp::{variable, Expression, Solution, Variable};
+use good_lp::{variable, Expression, Variable};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use tracing::debug;
@@ -14,7 +14,7 @@ use crate::{
         traits::{Graph, NodeLike},
         utils::normalised_targets,
     },
-    lp::LpProblem,
+    lp::{LpProblem, Solver},
 };
 
 /// A `MonoidalWiredGraph` stores the operations of a hypergraph layer by layer
@@ -128,6 +128,8 @@ struct MonoidalWiredGraphBuilder<T: Ctx> {
     /// Edges that have been connected to an output but not all their inputs.
     /// Each is mapped to a `BacklinkData`
     backlinks: HashMap<T::Edge, usize>,
+    /// Lp solver
+    solver: Solver,
 }
 
 impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
@@ -204,7 +206,7 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
         let wired_op = match node {
             Node::Operation(op) => WiredOp::Operation { addr: op.clone() },
             Node::Thunk(thunk) => WiredOp::Thunk {
-                body: MonoidalWiredGraph::from(thunk),
+                body: from_graph(thunk, self.solver),
                 addr: thunk.clone(),
             },
         };
@@ -247,156 +249,153 @@ impl<T: Ctx> MonoidalWiredGraphBuilder<T> {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
-impl<G: Graph> From<&G> for MonoidalWiredGraph<G::Ctx> {
-    #[allow(clippy::too_many_lines)]
-    #[allow(clippy::cast_possible_truncation)]
-    #[allow(clippy::cast_sign_loss)]
-    fn from(graph: &G) -> Self {
-        let mut problem = LpProblem::default();
-        let max = problem.add_variable(variable().min(0.5));
-        let nodes: IndexMap<Node<G::Ctx>, Variable> = graph
-            .nodes()
-            .map(|x| (x, problem.add_variable(variable().min(0.5))))
-            .collect();
+#[allow(clippy::too_many_lines)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+pub fn from_graph<G: Graph>(graph: &G, solver: Solver) -> MonoidalWiredGraph<G::Ctx> {
+    let mut problem = LpProblem::default();
+    let max = problem.add_variable(variable().min(0.5));
+    let nodes: IndexMap<Node<G::Ctx>, Variable> = graph
+        .nodes()
+        .map(|x| (x, problem.add_variable(variable().min(0.5))))
+        .collect();
 
-        for (i, (node, var)) in nodes.iter().enumerate() {
-            problem.add_constraint(Expression::leq((*var).into(), max));
-            for edge in node.outputs() {
-                let targets = normalised_targets::<G::Ctx>(&edge, node.backlink().as_ref());
-                let bottom = problem.add_variable(variable().min(0.5));
-                let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
-                problem.add_constraint(Expression::leq(bottom + offset, var));
-                let top = problem.add_variable(variable().min(0.5));
-                problem.add_constraint(Expression::leq((*var).into(), top));
-                problem.add_constraint(Expression::leq(top.into(), max));
-                problem.add_objective(top - bottom);
-
-                let top_offset = if targets
-                    .iter()
-                    .filter(|x| {
-                        if let Endpoint::Node(target_node) = x {
-                            nodes.get_index_of(target_node).unwrap() > i
-                        } else {
-                            false
-                        }
-                    })
-                    .count()
-                    > 1
-                {
-                    1.0
-                } else {
-                    0.0
-                };
-
-                for target in targets {
-                    if let Endpoint::Node(target_node) = target {
-                        let (j, _, var_target) = nodes.get_full(&target_node).unwrap();
-
-                        match j.cmp(&i) {
-                            std::cmp::Ordering::Less => {
-                                problem.add_constraint(Expression::leq(bottom.into(), var_target));
-                                problem.add_constraint((*var_target + offset + 1.0).leq(*var));
-                            }
-                            std::cmp::Ordering::Equal => {}
-                            std::cmp::Ordering::Greater => {
-                                problem.add_constraint(Expression::leq((*var).into(), var_target));
-                                problem.add_constraint((*var_target + top_offset).leq(top));
-                            }
-                        };
-                    } else {
-                        problem.add_constraint(Expression::eq(bottom.into(), 0.5));
-                    }
-                }
-            }
-        }
-
-        for edge in graph.graph_inputs() {
-            let targets = normalised_targets::<G::Ctx>(&edge, graph.graph_backlink().as_ref());
+    for (i, (node, var)) in nodes.iter().enumerate() {
+        problem.add_constraint(Expression::leq((*var).into(), max));
+        for edge in node.outputs() {
+            let targets = normalised_targets::<G::Ctx>(&edge, node.backlink().as_ref());
             let bottom = problem.add_variable(variable().min(0.5));
             let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
-            problem.add_constraint(Expression::leq(bottom + offset, max));
-            problem.add_objective(max - bottom);
+            problem.add_constraint(Expression::leq(bottom + offset, var));
+            let top = problem.add_variable(variable().min(0.5));
+            problem.add_constraint(Expression::leq((*var).into(), top));
+            problem.add_constraint(Expression::leq(top.into(), max));
+            problem.add_objective(top - bottom);
+
+            let top_offset = if targets
+                .iter()
+                .filter(|x| {
+                    if let Endpoint::Node(target_node) = x {
+                        nodes.get_index_of(target_node).unwrap() > i
+                    } else {
+                        false
+                    }
+                })
+                .count()
+                > 1
+            {
+                1.0
+            } else {
+                0.0
+            };
+
             for target in targets {
                 if let Endpoint::Node(target_node) = target {
-                    let var_target = nodes.get(&target_node).unwrap();
-                    problem.add_constraint(Expression::leq(bottom.into(), *var_target));
-                    problem.add_constraint((*var_target + offset).leq(max));
+                    let (j, _, var_target) = nodes.get_full(&target_node).unwrap();
+
+                    match j.cmp(&i) {
+                        std::cmp::Ordering::Less => {
+                            problem.add_constraint(Expression::leq(bottom.into(), var_target));
+                            problem.add_constraint((*var_target + offset + 1.0).leq(*var));
+                        }
+                        std::cmp::Ordering::Equal => {}
+                        std::cmp::Ordering::Greater => {
+                            problem.add_constraint(Expression::leq((*var).into(), var_target));
+                            problem.add_constraint((*var_target + top_offset).leq(top));
+                        }
+                    };
                 } else {
                     problem.add_constraint(Expression::eq(bottom.into(), 0.5));
                 }
             }
         }
-        problem.add_objective(max);
+    }
 
-        let soln = problem.minimise().unwrap();
-
-        let mut builder = MonoidalWiredGraphBuilder::<G::Ctx>::default();
-        let outputs: Vec<Edge<G::Ctx>> = graph.graph_outputs().collect();
-
-        for edge in &outputs {
-            builder.open_edges.entry(edge.clone()).or_default().push(0);
-        }
-
-        for (node, var) in nodes {
-            debug!("Node recieved: {node:#?}");
-            // Use topsorted graph here
-            builder.insert_operation(&node, soln.value(var).floor() as usize);
-        }
-
-        let (backlinked_edges, other_edges): (Vec<_>, Vec<_>) = builder
-            .open_edges
-            .keys()
-            .cloned()
-            .partition(|x| builder.backlinks.get(x).map(|y| (x, y)).is_some());
-
-        // Connect up backlinks
-        for edge in backlinked_edges {
-            let backlink = builder.backlinks.remove(&edge).unwrap();
-            let open_edges = &builder.open_edges[&edge];
-
-            let layer = if open_edges.len() == 1 {
-                let layer = open_edges[0] - 1;
-                builder.insert_backlink_on_layer(edge.clone(), layer, true);
-                layer
+    for edge in graph.graph_inputs() {
+        let targets = normalised_targets::<G::Ctx>(&edge, graph.graph_backlink().as_ref());
+        let bottom = problem.add_variable(variable().min(0.5));
+        let offset = if targets.len() > 1 { 1.0 } else { 0.0 };
+        problem.add_constraint(Expression::leq(bottom + offset, max));
+        problem.add_objective(max - bottom);
+        for target in targets {
+            if let Endpoint::Node(target_node) = target {
+                let var_target = nodes.get(&target_node).unwrap();
+                problem.add_constraint(Expression::leq(bottom.into(), *var_target));
+                problem.add_constraint((*var_target + offset).leq(max));
             } else {
-                let layer = *open_edges.iter().max().unwrap();
-                builder.prepare_input(&edge, layer + 1);
-                builder.insert_backlink_on_layer(edge.clone(), layer, true);
-                layer
-            };
-
-            for x in backlink..layer {
-                builder.add_op(
-                    Slice {
-                        ops: vec![WiredOp::Backlink { addr: edge.clone() }],
-                    },
-                    x,
-                );
+                problem.add_constraint(Expression::eq(bottom.into(), 0.5));
             }
         }
+    }
+    problem.add_objective(max);
 
-        let final_height = soln.value(max).floor() as usize + 1;
+    let soln = problem.minimise(solver).unwrap();
 
-        // Connect up global inputs
-        for edge in other_edges {
-            builder.prepare_input(&edge, final_height);
-        }
+    let mut builder = MonoidalWiredGraphBuilder::<G::Ctx>::default();
+    let outputs: Vec<Edge<G::Ctx>> = graph.graph_outputs().collect();
 
-        builder.slices.reverse();
+    for edge in &outputs {
+        builder.open_edges.entry(edge.clone()).or_default().push(0);
+    }
 
-        let mut graph = MonoidalTerm::<G::Ctx, Slice<WiredOp<G::Ctx>>> {
-            free_inputs: graph.free_graph_inputs().collect(),
-            bound_inputs: graph.bound_graph_inputs().collect(),
-            slices: builder.slices,
-            free_outputs: graph.free_graph_outputs().collect(),
-            bound_outputs: graph.bound_graph_outputs().collect(),
+    for (node, var) in nodes {
+        debug!("Node recieved: {node:#?}");
+        // Use topsorted graph here
+        builder.insert_operation(&node, soln.value(var).floor() as usize);
+    }
+
+    let (backlinked_edges, other_edges): (Vec<_>, Vec<_>) = builder
+        .open_edges
+        .keys()
+        .cloned()
+        .partition(|x| builder.backlinks.get(x).map(|y| (x, y)).is_some());
+
+    // Connect up backlinks
+    for edge in backlinked_edges {
+        let backlink = builder.backlinks.remove(&edge).unwrap();
+        let open_edges = &builder.open_edges[&edge];
+
+        let layer = if open_edges.len() == 1 {
+            let layer = open_edges[0] - 1;
+            builder.insert_backlink_on_layer(edge.clone(), layer, true);
+            layer
+        } else {
+            let layer = *open_edges.iter().max().unwrap();
+            builder.prepare_input(&edge, layer + 1);
+            builder.insert_backlink_on_layer(edge.clone(), layer, true);
+            layer
         };
 
-        // We can minimise swaps, keeping "compound terms" together
-        graph.minimise_swaps();
-
-        // After this we can flatten the "compound terms"
-        graph.flatten_graph()
+        for x in backlink..layer {
+            builder.add_op(
+                Slice {
+                    ops: vec![WiredOp::Backlink { addr: edge.clone() }],
+                },
+                x,
+            );
+        }
     }
+
+    let final_height = soln.value(max).floor() as usize + 1;
+
+    // Connect up global inputs
+    for edge in other_edges {
+        builder.prepare_input(&edge, final_height);
+    }
+
+    builder.slices.reverse();
+
+    let mut graph = MonoidalTerm::<G::Ctx, Slice<WiredOp<G::Ctx>>> {
+        free_inputs: graph.free_graph_inputs().collect(),
+        bound_inputs: graph.bound_graph_inputs().collect(),
+        slices: builder.slices,
+        free_outputs: graph.free_graph_outputs().collect(),
+        bound_outputs: graph.bound_graph_outputs().collect(),
+    };
+
+    // We can minimise swaps, keeping "compound terms" together
+    graph.minimise_swaps();
+
+    // After this we can flatten the "compound terms"
+    graph.flatten_graph()
 }
