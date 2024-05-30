@@ -140,11 +140,20 @@ impl From<internal::TypedArg> for Var {
     }
 }
 
-impl From<internal::OpResult> for Var {
-    fn from(op_result: internal::OpResult) -> Self {
-        Var {
-            id: op_result.id,
-            index: op_result.index.map(|idx| idx.0),
+impl From<internal::OpResult> for Vec<Var> {
+    fn from(op_result: internal::OpResult) -> Vec<Var> {
+        if let Some(idx) = op_result.index {
+            (0..idx.0)
+                .map(|x| Var {
+                    id: op_result.id.clone(),
+                    index: Some(x),
+                })
+                .collect()
+        } else {
+            vec![Var {
+                id: op_result.id,
+                index: None,
+            }]
         }
     }
 }
@@ -173,7 +182,7 @@ impl From<Vec<internal::Operation>> for Expr {
 impl From<internal::Operation> for Bind {
     fn from(op: internal::Operation) -> Self {
         Bind {
-            defs: op.result.into_iter().map_into().collect(),
+            defs: op.result.into_iter().map_into::<Vec<Var>>().concat(),
             value: op.operation.into(),
         }
     }
