@@ -9,6 +9,7 @@ pub mod internal;
 #[cfg(test)]
 use serde::Serialize;
 
+use self::internal::Attribute;
 use super::{ControlFlow, Fresh, Language, CF};
 use crate::common::{Matchable, Unit};
 
@@ -212,7 +213,13 @@ impl From<internal::GenericOperation> for Value {
                             .join(", ")
                     )
                 },
-                sym_name: None,
+                sym_name: generic_op
+                    .attributes
+                    .iter()
+                    .chain(generic_op.properties.iter())
+                    .map(Attribute::is_sym_name)
+                    .find(Option::is_some)
+                    .flatten(),
                 symbols: vec![],
             },
             args: generic_op

@@ -78,6 +78,18 @@ pub struct Attribute(
     Option<AttributeValue>,
 );
 
+impl Attribute {
+    pub(crate) fn is_sym_name(&self) -> Option<String> {
+        if self.0 == "sym_name" {
+            self.1
+                .as_ref()
+                .map(|x| x.0.trim_matches(|c| c == '\"').to_owned())
+        } else {
+            None
+        }
+    }
+}
+
 impl Display for Attribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if let Some(x) = &self.1 {

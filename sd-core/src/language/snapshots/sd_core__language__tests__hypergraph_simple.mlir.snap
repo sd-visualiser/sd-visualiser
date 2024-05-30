@@ -18,7 +18,7 @@ Graph(
           name: "func.func",
           successors: [],
           attributes: "{function_type = (i64, i1) -> i64, sym_name = \"simple\"}",
-          sym_name: None,
+          sym_name: Some("simple"),
           symbols: [],
         )),
         Edge(Nil),
