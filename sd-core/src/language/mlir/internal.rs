@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use pest_ast::FromPest;
 use pest_derive::Parser;
 
@@ -75,6 +77,16 @@ pub struct Attribute(
     #[pest_ast(inner(with(span_into_str), with(str::to_string)))] String,
     Option<AttributeValue>,
 );
+
+impl Display for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(x) = &self.1 {
+            write!(f, "{} = {}", self.0, x.0)
+        } else {
+            f.write_str(&self.0)
+        }
+    }
+}
 
 passthrough!(inner, AttributeValue, attribute_value);
 

@@ -33,6 +33,9 @@ pub type Block = super::Block<Mlir>;
 pub struct Op {
     pub name: String,
     pub successors: Vec<BlockAddr>,
+    pub attributes: String,
+    pub sym_name: Option<String>,
+    pub symbols: Vec<String>,
 }
 
 impl Display for Op {
@@ -197,6 +200,20 @@ impl From<internal::GenericOperation> for Value {
             op: Op {
                 name: generic_op.op,
                 successors: generic_op.successors.into_iter().map_into().collect(),
+                attributes: if generic_op.attributes.len() + generic_op.properties.len() == 0 {
+                    String::new()
+                } else {
+                    format!(
+                        "{{{}}}",
+                        generic_op
+                            .attributes
+                            .iter()
+                            .chain(generic_op.properties.iter())
+                            .join(", ")
+                    )
+                },
+                sym_name: None,
+                symbols: vec![],
             },
             args: generic_op
                 .operands

@@ -7,6 +7,9 @@ Graph(
     Operation(Op(
       name: "builtin.module",
       successors: [],
+      attributes: "",
+      sym_name: None,
+      symbols: [],
     )),
     Edge(Nil),
     Thunk(Graph(
@@ -14,6 +17,9 @@ Graph(
         Operation(Op(
           name: "func.func",
           successors: [],
+          attributes: "{function_type = (i64, i1) -> i64, sym_name = \"simple\"}",
+          sym_name: None,
+          symbols: [],
         )),
         Edge(Nil),
         Thunk(Graph(
@@ -31,6 +37,9 @@ Graph(
                 Operation(Op(
                   name: "func.return",
                   successors: [],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
                 )),
                 Edge(BoundVar(Var(
                   id: "%4",
@@ -40,6 +49,9 @@ Graph(
                 Operation(Op(
                   name: "arith.addi",
                   successors: [],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
                 )),
               ],
               node_holes: [],
@@ -69,6 +81,9 @@ Graph(
                   successors: [
                     BlockAddr("^bb4"),
                   ],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
                 )),
                 Edge(CF(Some(BlockAddr("^bb4")))),
               ],
@@ -97,6 +112,9 @@ Graph(
                   successors: [
                     BlockAddr("^bb3"),
                   ],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
                 )),
                 Edge(BoundVar(Var(
                   id: "%0",
@@ -106,6 +124,9 @@ Graph(
                 Operation(Op(
                   name: "arith.addi",
                   successors: [],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
                 )),
               ],
               node_holes: [],
@@ -130,6 +151,9 @@ Graph(
                   successors: [
                     BlockAddr("^bb3"),
                   ],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
                 )),
                 Edge(CF(Some(BlockAddr("^bb3")))),
               ],
@@ -157,6 +181,9 @@ Graph(
                     BlockAddr("^bb1"),
                     BlockAddr("^bb2"),
                   ],
+                  attributes: "{operandSegmentSizes = array<i32: 1, 0, 0>}",
+                  sym_name: None,
+                  symbols: [],
                 )),
                 Edge(CF(Some(BlockAddr("^bb1")))),
                 Edge(CF(Some(BlockAddr("^bb2")))),

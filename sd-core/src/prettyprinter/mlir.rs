@@ -5,7 +5,7 @@ use crate::language::mlir::{BlockAddr, Expr, Op, Thunk, Var};
 
 impl PrettyPrint for Op {
     fn to_doc(&self) -> RcDoc<'_, ()> {
-        RcDoc::text(&self.name)
+        RcDoc::text(&self.name).append(&self.attributes)
     }
 }
 

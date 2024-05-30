@@ -7,6 +7,9 @@ Graph(
     Operation(Op(
       name: "builtin.module",
       successors: [],
+      attributes: "",
+      sym_name: None,
+      symbols: [],
     )),
     Edge(Nil),
     Thunk(Graph(
@@ -22,11 +25,17 @@ Graph(
               successors: [
                 BlockAddr("^bb0"),
               ],
+              attributes: "",
+              sym_name: None,
+              symbols: [],
             )),
             Edge(CF(Some(BlockAddr("^bb0")))),
             Operation(Op(
               name: "b",
               successors: [],
+              attributes: "",
+              sym_name: None,
+              symbols: [],
             )),
           ],
           node_holes: [],
@@ -49,11 +58,17 @@ Graph(
               successors: [
                 BlockAddr("^bb1"),
               ],
+              attributes: "{operandSegmentSizes = array<i32: 1, 0, 0>}",
+              sym_name: None,
+              symbols: [],
             )),
             Edge(CF(Some(BlockAddr("^bb1")))),
             Operation(Op(
               name: "a",
               successors: [],
+              attributes: "",
+              sym_name: None,
+              symbols: [],
             )),
             Edge(BoundVar(Var(
               id: "%0",
