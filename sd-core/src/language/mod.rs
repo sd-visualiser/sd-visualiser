@@ -5,7 +5,7 @@ use std::{
 
 use derivative::Derivative;
 
-use crate::{common::Matchable, prettyprinter::PrettyPrint};
+use crate::{common::Matchable, hypergraph::traits::WithType, prettyprinter::PrettyPrint};
 
 pub mod chil;
 pub mod mlir;
@@ -51,20 +51,21 @@ pub trait OpInfo<T: Language + ?Sized> {
     fn get_cf(&self) -> Option<CF<T>> {
         None
     }
-    fn symbol_use(&self) -> impl Iterator<Item = &str> {
+    fn symbols_used(&self) -> impl Iterator<Item = T::Symbol> {
         std::iter::empty()
     }
-    fn sym_name(&self) -> Option<&str> {
+    fn sym_name(&self) -> Option<T::Symbol> {
         None
     }
 }
 
 pub trait Language {
     type Op: Syntax + OpInfo<Self>;
-    type Var: Syntax + Fresh;
+    type Var: Syntax + Fresh + From<Self::Symbol> + WithType;
     type Addr: Syntax;
     type BlockAddr: Syntax;
     type VarDef: Syntax + GetVar<Self::Var>;
+    type Symbol: Syntax;
 }
 
 #[derive(Derivative)]

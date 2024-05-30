@@ -18,7 +18,6 @@ Graph(
           nodes: [
             Edge(BoundVar(Var(
               id: "%0",
-              index: None,
             ))),
             Operation(Op(
               name: "cf.br",
@@ -47,7 +46,6 @@ Graph(
         )),
         Edge(BoundVar(Var(
           id: "%0",
-          index: None,
         ))),
         Edge(CF(Some(BlockAddr("^bb1")))),
         Edge(CF(Some(BlockAddr("^bb0")))),
@@ -72,7 +70,6 @@ Graph(
             )),
             Edge(BoundVar(Var(
               id: "%0",
-              index: None,
             ))),
           ],
           node_holes: [],

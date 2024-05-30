@@ -18,7 +18,7 @@ toplevelitem = { operation | attribute_alias_def | type_alias_def }
 /// https://mlir.llvm.org/docs/LangRef/#identifiers-and-keywords
 bare_id        = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_" | "$" | ".")* }
 bare_id_list   =  { bare_id ~ ("," ~ bare_id)* }
-symbol_ref_id  = @{ "@" ~ (suffix_id | string_literal) ~ ("::" ~ symbol_ref_id)? }
+symbol_ref_id  = @{ "@" ~ (string_literal | suffix_id) ~ ("::" ~ symbol_ref_id)? }
 value_id       = @{ "%" ~ suffix_id }
 alias_name     =  { bare_id }
 suffix_id      = @{ ASCII_DIGIT+ | ((ASCII_ALPHA | id_punct) ~ (ASCII_ALPHANUMERIC | id_punct)*) }

@@ -20,11 +20,11 @@ impl<T: Language> Expr<T> {
         to_remove: &mut IndexSet<T::Var>,
     ) {
         for bind in &self.binds {
-            bind.value.free_vars(vars);
+            bind.value.free_vars(vars, to_remove);
         }
 
         for value in &self.values {
-            value.free_vars(vars);
+            value.free_vars(vars, to_remove);
         }
 
         to_remove.extend(
@@ -43,7 +43,7 @@ impl<T: Language> Expr<T> {
 }
 
 impl<T: Language> Value<T> {
-    pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>) {
+    pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>, to_remove: &mut IndexSet<T::Var>) {
         match self {
             Value::Variable(v) => {
                 vars.insert(v.clone());
@@ -51,10 +51,14 @@ impl<T: Language> Value<T> {
             Value::Thunk(thunk) => {
                 thunk.free_vars(vars);
             }
-            Value::Op { args, .. } => {
+            Value::Op { op, args } => {
                 for arg in args {
-                    arg.free_vars(vars);
+                    arg.free_vars(vars, to_remove);
                 }
+                if let Some(s) = op.sym_name() {
+                    to_remove.insert(s.into());
+                }
+                vars.extend(op.symbols_used().map(|s| s.into()))
             }
         }
     }

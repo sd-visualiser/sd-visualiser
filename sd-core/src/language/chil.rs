@@ -13,7 +13,10 @@ use pest_derive::Parser;
 use serde::Serialize;
 
 use super::{span_into_str, Fresh, GetVar, OpInfo};
-use crate::common::{Empty, Matchable};
+use crate::{
+    common::{Empty, Matchable},
+    hypergraph::traits::{WireType, WithType},
+};
 
 pub struct Chil;
 
@@ -23,6 +26,7 @@ impl super::Language for Chil {
     type Addr = Addr;
     type VarDef = VariableDef;
     type BlockAddr = Empty;
+    type Symbol = Empty;
 }
 
 pub type Expr = super::Expr<Chil>;
@@ -124,6 +128,18 @@ impl OpInfo<Chil> for Op {}
 pub struct Variable {
     pub name: Option<Identifier>,
     pub addr: Addr,
+}
+
+impl WithType for Variable {
+    fn get_type(&self) -> WireType {
+        WireType::Data
+    }
+}
+
+impl From<Empty> for Variable {
+    fn from(value: Empty) -> Self {
+        match value {}
+    }
 }
 
 impl Matchable for Variable {

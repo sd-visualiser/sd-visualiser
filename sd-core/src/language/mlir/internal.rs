@@ -92,7 +92,7 @@ impl Attribute {
         self.1.as_ref().and_then(|x| {
             let mut chars = x.0.chars();
             if let Some('@') = chars.next() {
-                Some(chars.filter(|c| *c != '@').collect())
+                Some(chars.filter(|c| *c != '@' && *c != '\"').collect())
             } else {
                 None
             }

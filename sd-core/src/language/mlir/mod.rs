@@ -6,12 +6,17 @@ use itertools::Itertools;
 
 pub mod internal;
 
+use pretty::RcDoc;
 #[cfg(test)]
 use serde::Serialize;
 
 use self::internal::Attribute;
 use super::{Fresh, Language, OpInfo, CF};
-use crate::common::{Matchable, Unit};
+use crate::{
+    common::{Matchable, Unit},
+    hypergraph::traits::{WireType, WithType},
+    prettyprinter::PrettyPrint,
+};
 
 pub struct Mlir;
 
@@ -21,6 +26,7 @@ impl Language for Mlir {
     type Addr = Unit;
     type VarDef = Var;
     type BlockAddr = BlockAddr;
+    type Symbol = Symbol;
 }
 
 pub type Expr = super::Expr<Mlir>;
@@ -63,43 +69,62 @@ impl OpInfo<Mlir> for Op {
         }
     }
 
-    fn symbol_use(&self) -> impl Iterator<Item = &str> {
-        self.symbols.iter().map(|x| x.as_str())
+    fn symbols_used(&self) -> impl Iterator<Item = Symbol> {
+        self.symbols.iter().map(|x| Symbol(x.clone()))
     }
 
-    fn sym_name(&self) -> Option<&str> {
-        self.sym_name.as_deref()
+    fn sym_name(&self) -> Option<Symbol> {
+        self.sym_name.as_ref().map(|x| Symbol(x.clone()))
     }
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(test, derive(Serialize))]
-pub struct Var {
-    pub id: String,
-    pub index: Option<usize>,
+pub enum Var {
+    Var { id: String },
+    VarIdx { id: String, index: usize },
+    Symbol(Symbol),
+}
+
+impl WithType for Var {
+    fn get_type(&self) -> WireType {
+        match self {
+            Var::Symbol(_) => WireType::SymName,
+            _ => WireType::Data,
+        }
+    }
+}
+
+impl From<Symbol> for Var {
+    fn from(value: Symbol) -> Self {
+        Var::Symbol(value)
+    }
 }
 
 impl Display for Var {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Some(idx) = self.index {
-            write!(f, "{}#{idx}", self.id)
-        } else {
-            f.write_str(&self.id)
+        match self {
+            Var::Var { id } => f.write_str(id),
+            Var::VarIdx { id, index } => write!(f, "{id}#{index}"),
+            Var::Symbol(s) => s.fmt(f),
         }
     }
 }
 
 impl Matchable for Var {
     fn is_match(&self, query: &str) -> bool {
-        self.id == query
+        match self {
+            Var::Var { id } => id == query,
+            Var::VarIdx { id, .. } => id == query,
+            Var::Symbol(s) => s.is_match(query),
+        }
     }
 }
 
 impl Fresh for Var {
     fn fresh(number: usize) -> Self {
-        Var {
+        Var::Var {
             id: format!("?{number}"),
-            index: None,
         }
     }
 }
@@ -120,23 +145,46 @@ impl Matchable for BlockAddr {
     }
 }
 
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(test, derive(Serialize))]
+pub struct Symbol(pub String);
+
+impl Display for Symbol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+impl Matchable for Symbol {
+    fn is_match(&self, query: &str) -> bool {
+        self.0 == query || self.0 == query.chars().filter(|c| c != &'@').collect::<String>()
+    }
+}
+
+impl PrettyPrint for Symbol {
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
+        RcDoc::text(&self.0)
+    }
+}
+
 // Conversion from internal AST.
 
 impl From<internal::Value> for Var {
     fn from(value: internal::Value) -> Self {
-        Var {
-            id: value.id,
-            index: value.index.map(|idx| idx.0),
+        if let Some(i) = value.index {
+            Var::VarIdx {
+                id: value.id,
+                index: i.0,
+            }
+        } else {
+            Var::Var { id: value.id }
         }
     }
 }
 
 impl From<internal::TypedArg> for Var {
     fn from(arg: internal::TypedArg) -> Self {
-        Var {
-            id: arg.id,
-            index: None,
-        }
+        Var::Var { id: arg.id }
     }
 }
 
@@ -144,16 +192,13 @@ impl From<internal::OpResult> for Vec<Var> {
     fn from(op_result: internal::OpResult) -> Vec<Var> {
         if let Some(idx) = op_result.index {
             (0..idx.0)
-                .map(|x| Var {
+                .map(|x| Var::VarIdx {
                     id: op_result.id.clone(),
-                    index: Some(x),
+                    index: x,
                 })
                 .collect()
         } else {
-            vec![Var {
-                id: op_result.id,
-                index: None,
-            }]
+            vec![Var::Var { id: op_result.id }]
         }
     }
 }

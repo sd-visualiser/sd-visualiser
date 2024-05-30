@@ -22,17 +22,16 @@ Graph(
           symbols: [],
         )),
         Edge(Nil),
+        Edge(FreeVar(Symbol(Symbol("simple")))),
         Thunk(Graph(
           nodes: [
             Thunk(Graph(
               nodes: [
                 Edge(BoundVar(Var(
                   id: "%2",
-                  index: None,
                 ))),
                 Edge(BoundVar(Var(
                   id: "%3",
-                  index: None,
                 ))),
                 Operation(Op(
                   name: "func.return",
@@ -43,7 +42,6 @@ Graph(
                 )),
                 Edge(BoundVar(Var(
                   id: "%4",
-                  index: None,
                 ))),
                 Edge(CF(None)),
                 Operation(Op(
@@ -70,11 +68,9 @@ Graph(
               nodes: [
                 Edge(BoundVar(Var(
                   id: "%arg0",
-                  index: None,
                 ))),
                 Edge(BoundVar(Var(
                   id: "%1",
-                  index: None,
                 ))),
                 Operation(Op(
                   name: "cf.br",
@@ -97,7 +93,6 @@ Graph(
             )),
             Edge(BoundVar(Var(
               id: "%arg0",
-              index: None,
             ))),
             Edge(CF(Some(BlockAddr("^bb3")))),
             Edge(CF(Some(BlockAddr("^bb3")))),
@@ -105,7 +100,6 @@ Graph(
               nodes: [
                 Edge(BoundVar(Var(
                   id: "%arg0",
-                  index: None,
                 ))),
                 Operation(Op(
                   name: "cf.br",
@@ -118,7 +112,6 @@ Graph(
                 )),
                 Edge(BoundVar(Var(
                   id: "%0",
-                  index: None,
                 ))),
                 Edge(CF(Some(BlockAddr("^bb3")))),
                 Operation(Op(
@@ -144,7 +137,6 @@ Graph(
               nodes: [
                 Edge(BoundVar(Var(
                   id: "%arg0",
-                  index: None,
                 ))),
                 Operation(Op(
                   name: "cf.br",
@@ -169,11 +161,9 @@ Graph(
               nodes: [
                 Edge(BoundVar(Var(
                   id: "%arg0",
-                  index: None,
                 ))),
                 Edge(BoundVar(Var(
                   id: "%arg1",
-                  index: None,
                 ))),
                 Operation(Op(
                   name: "cf.cond_br",
@@ -222,7 +212,8 @@ Graph(
       edge_property: directed,
       edges: [
         Some((1, 0, 0)),
-        Some((2, 1, 0)),
+        Some((0, 2, 0)),
+        Some((3, 1, 0)),
       ],
     )),
   ],

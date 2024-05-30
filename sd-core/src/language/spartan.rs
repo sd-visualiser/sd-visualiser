@@ -13,7 +13,10 @@ use pest_derive::Parser;
 use serde::Serialize;
 
 use super::{span_into_str, Fresh, OpInfo};
-use crate::common::{Empty, Matchable, Unit};
+use crate::{
+    common::{Empty, Matchable, Unit},
+    hypergraph::traits::{WireType, WithType},
+};
 
 pub struct Spartan;
 
@@ -23,6 +26,7 @@ impl super::Language for Spartan {
     type Addr = Unit;
     type VarDef = Variable;
     type BlockAddr = Empty;
+    type Symbol = Empty;
 }
 
 pub type Expr = super::Expr<Spartan>;
@@ -186,6 +190,18 @@ impl OpInfo<Spartan> for Op {}
 #[cfg_attr(test, derive(Serialize))]
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
+
+impl WithType for Variable {
+    fn get_type(&self) -> WireType {
+        WireType::Data
+    }
+}
+
+impl From<Empty> for Variable {
+    fn from(value: Empty) -> Self {
+        match value {}
+    }
+}
 
 impl Matchable for Variable {
     fn is_match(&self, query: &str) -> bool {

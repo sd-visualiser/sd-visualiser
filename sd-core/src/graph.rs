@@ -5,6 +5,7 @@ use std::{
 
 use derivative::Derivative;
 use either::Either::{self, Left, Right};
+use itertools::Itertools;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
@@ -56,10 +57,11 @@ pub enum Name<T: Language> {
 
 impl<T: Language> WithType for Name<T> {
     fn get_type(&self) -> WireType {
-        if matches!(self, Name::CF(_)) {
-            WireType::ControlFlow
-        } else {
-            WireType::Data
+        match self {
+            Name::CF(_) => WireType::ControlFlow,
+            Name::Nil => WireType::Data,
+            Name::FreeVar(v) => v.get_type(),
+            Name::BoundVar(v) => v.var().get_type(),
         }
     }
 }
@@ -111,6 +113,8 @@ pub enum ConvertError<T: Language> {
     Shadowed(T::Var),
     #[error("Fragment did not have output")]
     NoOutputError,
+    #[error("Uninitialised Inports for variables: {0:?}")]
+    UnitialisedInput(Vec<T::Var>),
 }
 
 /// Environments capture the local information needed to build a hypergraph from an AST
@@ -317,6 +321,10 @@ where
                     ProcessInput::InPort(_) => vec![Name::Nil],
                 };
 
+                if let Some(symbol) = op.sym_name() {
+                    output_weights.push(Name::FreeVar(symbol.into()))
+                }
+
                 let cf = op.get_cf();
 
                 match &cf {
@@ -329,10 +337,22 @@ where
                     None => {}
                 }
 
-                let operation_node =
-                    self.fragment
-                        .add_operation(args.len(), output_weights, op.clone());
-                for (arg, in_port) in args.iter().rev().zip(operation_node.inputs().rev()) {
+                let symbol: Vec<_> = op.symbols_used().collect();
+
+                let len = args.len() + symbol.len();
+
+                let operation_node = self.fragment.add_operation(len, output_weights, op.clone());
+
+                let mut inputs = operation_node.inputs().rev();
+                self.inputs.extend(
+                    symbol
+                        .into_iter()
+                        .rev()
+                        .map_into()
+                        .zip(inputs.by_ref())
+                        .map(|(x, y)| (y, x)),
+                );
+                for (arg, in_port) in args.iter().rev().zip(inputs) {
                     self.process_value(arg, ProcessInput::InPort(in_port))?;
                 }
 
@@ -350,13 +370,20 @@ where
 
                 match input {
                     ProcessInput::Variables(inputs) => {
-                        for (input, out_port) in inputs.into_iter().zip(out_ports) {
+                        for (input, out_port) in inputs.into_iter().zip(out_ports.by_ref()) {
                             let var = input.var();
                             self.outputs
                                 .insert(var.clone(), out_port)
                                 .is_none()
                                 .then_some(())
                                 .ok_or(ConvertError::Shadowed(var.clone()))?;
+                        }
+                        if let Some(symbol) = op.sym_name() {
+                            self.outputs
+                                .insert(symbol.clone().into(), out_ports.next().unwrap())
+                                .is_none()
+                                .then_some(())
+                                .ok_or(ConvertError::Shadowed(symbol.into()))?;
                         }
                     }
                     ProcessInput::InPort(in_port) => {
@@ -443,6 +470,12 @@ where
         env.process_expr(expr)?;
 
         debug!("Expression processed");
+
+        if !env.inputs.is_empty() {
+            return Err(ConvertError::UnitialisedInput(
+                env.inputs.into_iter().map(|x| x.1).collect(),
+            ));
+        }
 
         Ok(env.fragment.build()?)
     }
