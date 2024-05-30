@@ -15,7 +15,7 @@ use sd_core::{
     hypergraph::{
         generic::{Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
-        traits::{Graph, IsCF},
+        traits::{Graph, WithType},
         Hypergraph,
     },
     interactive::InteractiveGraph,
@@ -115,7 +115,7 @@ where
         Edge<G::Ctx>: ExtensibleEdge,
         Operation<G::Ctx>: Shapeable,
         Weight<Operation<G::Ctx>>: Display,
-        Weight<Edge<G::Ctx>>: IsCF,
+        Weight<Edge<G::Ctx>>: WithType,
     {
         let shapes = generate_shapes(&self.graph, self.solver);
         let guard = shapes.lock().unwrap();

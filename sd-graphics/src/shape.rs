@@ -10,7 +10,7 @@ use sd_core::{
     common::Matchable,
     hypergraph::{
         generic::{Ctx, Node, Weight},
-        traits::{IsCF, Keyable, WithWeight},
+        traits::{Keyable, WireType, WithType, WithWeight},
     },
 };
 
@@ -231,7 +231,7 @@ impl<T: Ctx> Shape<T> {
         highlight_edges: &IndexSet<T::Edge>,
     ) -> egui::Shape
     where
-        Weight<T::Edge>: IsCF,
+        Weight<T::Edge>: WithType,
     {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
 
@@ -242,11 +242,21 @@ impl<T: Ctx> Shape<T> {
                 } else {
                     default_stroke
                 };
-                if addr.weight().is_cf() {
-                    if highlight_edges.contains(&addr) {
-                        stroke.color = Color32::YELLOW;
-                    } else {
-                        stroke.color = Color32::GOLD;
+                match addr.weight().get_type() {
+                    WireType::Data => {}
+                    WireType::ControlFlow => {
+                        if highlight_edges.contains(&addr) {
+                            stroke.color = Color32::YELLOW;
+                        } else {
+                            stroke.color = Color32::GOLD;
+                        }
+                    }
+                    WireType::SymName => {
+                        if highlight_edges.contains(&addr) {
+                            stroke.color = Color32::GREEN;
+                        } else {
+                            stroke.color = Color32::DARK_GREEN;
+                        }
                     }
                 }
                 egui::Shape::line_segment([start, end], stroke)
@@ -258,11 +268,21 @@ impl<T: Ctx> Shape<T> {
                     default_stroke
                 };
 
-                if addr.weight().is_cf() {
-                    if highlight_edges.contains(&addr) {
-                        stroke.color = Color32::YELLOW;
-                    } else {
-                        stroke.color = Color32::GOLD;
+                match addr.weight().get_type() {
+                    WireType::Data => {}
+                    WireType::ControlFlow => {
+                        if highlight_edges.contains(&addr) {
+                            stroke.color = Color32::YELLOW;
+                        } else {
+                            stroke.color = Color32::GOLD;
+                        }
+                    }
+                    WireType::SymName => {
+                        if highlight_edges.contains(&addr) {
+                            stroke.color = Color32::GREEN;
+                        } else {
+                            stroke.color = Color32::DARK_GREEN;
+                        }
                     }
                 }
 

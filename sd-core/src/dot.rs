@@ -9,7 +9,7 @@ use crate::{
     common::Matchable,
     hypergraph::{
         builder::{Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
-        traits::{IsCF, WithWeight},
+        traits::{WireType, WithType, WithWeight},
         Edge, Hypergraph, Operation, Thunk, Weight,
     },
     prettyprinter::PrettyPrint,
@@ -18,9 +18,9 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Label(pub String);
 
-impl IsCF for Label {
-    fn is_cf(&self) -> bool {
-        false
+impl WithType for Label {
+    fn get_type(&self) -> WireType {
+        WireType::Data
     }
 }
 

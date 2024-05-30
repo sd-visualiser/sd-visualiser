@@ -17,7 +17,7 @@ use crate::{
             fragment::{Fragment, ThunkCursor},
             HypergraphBuilder, HypergraphError, InPort, OutPort, ThunkBuilder,
         },
-        traits::IsCF,
+        traits::{WireType, WithType},
         Hypergraph, Weight,
     },
     language::{ControlFlow, Expr, GetVar, Language, Value, CF},
@@ -54,9 +54,13 @@ pub enum Name<T: Language> {
     BoundVar(T::VarDef),
 }
 
-impl<T: Language> IsCF for Name<T> {
-    fn is_cf(&self) -> bool {
-        matches!(self, Name::CF(_))
+impl<T: Language> WithType for Name<T> {
+    fn get_type(&self) -> WireType {
+        if matches!(self, Name::CF(_)) {
+            WireType::ControlFlow
+        } else {
+            WireType::Data
+        }
     }
 }
 

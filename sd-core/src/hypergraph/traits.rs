@@ -12,8 +12,15 @@ pub trait WithWeight {
     fn weight(&self) -> Self::Weight;
 }
 
-pub trait IsCF {
-    fn is_cf(&self) -> bool;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WireType {
+    Data,
+    ControlFlow,
+    SymName,
+}
+
+pub trait WithType {
+    fn get_type(&self) -> WireType;
 }
 
 pub trait NodeLike: Clone + Eq + Hash + Debug + Send + Sync {
