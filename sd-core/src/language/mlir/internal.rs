@@ -88,6 +88,16 @@ impl Attribute {
             None
         }
     }
+    pub(crate) fn get_symbol(&self) -> Option<String> {
+        self.1.as_ref().and_then(|x| {
+            let mut chars = x.0.chars();
+            if let Some('@') = chars.next() {
+                Some(chars.filter(|c| *c != '@').collect())
+            } else {
+                None
+            }
+        })
+    }
 }
 
 impl Display for Attribute {

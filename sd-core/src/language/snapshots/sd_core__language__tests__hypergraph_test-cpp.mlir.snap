@@ -103,7 +103,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @fclose, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "fclose",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%207",
@@ -202,7 +204,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @fputc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "fputc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%214",
@@ -366,7 +370,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @fopen, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "fopen",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%182",
@@ -853,14 +859,18 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @free, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "free",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<fastcc>, callee = @_ZL10inner_loopPiiS_S_iib, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL10inner_loopPiiS_S_iib",
+                  ],
                 )),
               ],
               node_holes: [],
@@ -2335,7 +2345,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<fastcc>, callee = @_ZL10inner_loopPiiS_S_iib, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL10inner_loopPiiS_S_iib",
+                  ],
                 )),
               ],
               node_holes: [],
@@ -3799,7 +3811,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.intr.memset",
@@ -3813,7 +3827,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @qsort, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "qsort",
+                  ],
                 )),
               ],
               node_holes: [],
@@ -3953,7 +3969,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @rand, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "rand",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.store",
@@ -4000,7 +4018,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @rand, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "rand",
+                  ],
                 )),
               ],
               node_holes: [],
@@ -4073,7 +4093,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%1",
@@ -4088,7 +4110,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%0",
@@ -4136,7 +4160,9 @@ Graph(
                   successors: [],
                   attributes: "{global_name = @\".str.1\"}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "\".str.1\"",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%32",
@@ -4158,7 +4184,9 @@ Graph(
                   successors: [],
                   attributes: "{global_name = @\".str\"}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "\".str\"",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%30",
@@ -4411,7 +4439,9 @@ Graph(
                   successors: [],
                   attributes: "{global_name = @_ZL26compare_two_feature_pointsPKvS0_}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL26compare_two_feature_pointsPKvS0_",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%7",
@@ -4860,21 +4890,27 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @free, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "free",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @free, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "free",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @free, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "free",
+                  ],
                 )),
               ],
               node_holes: [],
@@ -15673,7 +15709,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%11",
@@ -15688,7 +15726,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%13",
@@ -15699,7 +15739,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%12",
@@ -23842,7 +23884,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @free, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "free",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%14",
@@ -23853,35 +23897,45 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<fastcc>, callee = @_ZL10inner_loopPiiS_S_iib, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL10inner_loopPiiS_S_iib",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<fastcc>, callee = @_ZL16build_candidatesPiiS_iib, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL16build_candidatesPiiS_iib",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<fastcc>, callee = @_ZL10inner_loopPiiS_S_iib, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL10inner_loopPiiS_S_iib",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<fastcc>, callee = @_ZL16build_candidatesPiiS_iib, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL16build_candidatesPiiS_iib",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.call",
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @malloc, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "malloc",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%13",
@@ -24125,7 +24179,9 @@ Graph(
                   successors: [],
                   attributes: "{CConv = #llvm.cconv<ccc>, callee = @qsort, fastmathFlags = #llvm.fastmath<none>}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "qsort",
+                  ],
                 )),
                 Edge(BoundVar(Var(
                   id: "%7",
@@ -24202,7 +24258,9 @@ Graph(
                   successors: [],
                   attributes: "{global_name = @_ZL26compare_two_feature_pointsPKvS0_}",
                   sym_name: None,
-                  symbols: [],
+                  symbols: [
+                    "_ZL26compare_two_feature_pointsPKvS0_",
+                  ],
                 )),
                 Operation(Op(
                   name: "llvm.mlir.constant",

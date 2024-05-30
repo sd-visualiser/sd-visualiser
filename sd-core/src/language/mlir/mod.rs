@@ -220,7 +220,12 @@ impl From<internal::GenericOperation> for Value {
                     .map(Attribute::is_sym_name)
                     .find(Option::is_some)
                     .flatten(),
-                symbols: vec![],
+                symbols: generic_op
+                    .attributes
+                    .iter()
+                    .chain(generic_op.properties.iter())
+                    .filter_map(|attr| attr.get_symbol())
+                    .collect(),
             },
             args: generic_op
                 .operands
