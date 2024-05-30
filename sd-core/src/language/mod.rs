@@ -47,12 +47,20 @@ pub enum CF<T: Language + ?Sized> {
     Brs(Vec<T::BlockAddr>),
 }
 
-pub trait ControlFlow<T: Language + ?Sized> {
-    fn get_cf(&self) -> Option<CF<T>>;
+pub trait OpInfo<T: Language + ?Sized> {
+    fn get_cf(&self) -> Option<CF<T>> {
+        None
+    }
+    fn symbol_use(&self) -> impl Iterator<Item = &str> {
+        std::iter::empty()
+    }
+    fn sym_name(&self) -> Option<&str> {
+        None
+    }
 }
 
 pub trait Language {
-    type Op: Syntax + ControlFlow<Self>;
+    type Op: Syntax + OpInfo<Self>;
     type Var: Syntax + Fresh;
     type Addr: Syntax;
     type BlockAddr: Syntax;

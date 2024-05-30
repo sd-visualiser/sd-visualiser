@@ -10,7 +10,7 @@ pub mod internal;
 use serde::Serialize;
 
 use self::internal::Attribute;
-use super::{ControlFlow, Fresh, Language, CF};
+use super::{Fresh, Language, OpInfo, CF};
 use crate::common::{Matchable, Unit};
 
 pub struct Mlir;
@@ -51,7 +51,7 @@ impl Matchable for Op {
     }
 }
 
-impl ControlFlow<Mlir> for Op {
+impl OpInfo<Mlir> for Op {
     fn get_cf(&self) -> Option<CF<Mlir>> {
         if !self.successors.is_empty() {
             Some(CF::Brs(self.successors.clone()))
@@ -61,6 +61,14 @@ impl ControlFlow<Mlir> for Op {
         } else {
             None
         }
+    }
+
+    fn symbol_use(&self) -> impl Iterator<Item = &str> {
+        self.symbols.iter().map(|x| x.as_str())
+    }
+
+    fn sym_name(&self) -> Option<&str> {
+        self.sym_name.as_deref()
     }
 }
 

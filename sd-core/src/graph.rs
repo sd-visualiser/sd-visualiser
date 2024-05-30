@@ -20,7 +20,7 @@ use crate::{
         traits::{WireType, WithType},
         Hypergraph, Weight,
     },
-    language::{ControlFlow, Expr, GetVar, Language, Value, CF},
+    language::{Expr, GetVar, Language, OpInfo, Value, CF},
     prettyprinter::PrettyPrint,
 };
 

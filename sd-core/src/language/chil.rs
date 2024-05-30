@@ -12,7 +12,7 @@ use pest_derive::Parser;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::{span_into_str, ControlFlow, Fresh, GetVar, CF};
+use super::{span_into_str, Fresh, GetVar, OpInfo};
 use crate::common::{Empty, Matchable};
 
 pub struct Chil;
@@ -116,11 +116,7 @@ impl<'pest> FromPest<'pest> for Op {
     }
 }
 
-impl ControlFlow<Chil> for Op {
-    fn get_cf(&self) -> Option<CF<Chil>> {
-        None
-    }
-}
+impl OpInfo<Chil> for Op {}
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::variable))]
