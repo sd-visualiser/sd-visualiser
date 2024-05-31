@@ -3,8 +3,6 @@ use std::{
     ops::Range,
 };
 
-// #[cfg(not(target_arch = "wasm32"))]
-// use std::time::SystemTime;
 use derivative::Derivative;
 use egui::Vec2;
 use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
@@ -23,6 +21,7 @@ use sd_core::{
 use serde::Serialize;
 use thiserror::Error;
 use tracing::{debug, info};
+use web_time::Instant;
 
 use crate::{
     common::RADIUS_OPERATION,
@@ -895,8 +894,7 @@ where
 {
     let mut problem = LpProblem::default();
 
-    // #[cfg(not(target_arch = "wasm32"))]
-    // let now = SystemTime::now();
+    let now = Instant::now();
     info!("Calculating horizontal layout");
     let layout = h_layout_internal(graph, &mut problem);
     problem.add_objective(layout.h_max);
@@ -910,14 +908,12 @@ where
 
     let layout_complete = Layout::from_solution_v(v_layout, &*v_solution);
 
-    // #[cfg(not(target_arch = "wasm32"))]
-    // if let Ok(elapsed) = now.elapsed() {
-    //     info!(
-    //         "Layout took {}.{} seconds",
-    //         elapsed.as_secs(),
-    //         elapsed.subsec_millis()
-    //     );
-    // }
+    let elapsed = now.elapsed();
+    info!(
+        "Layout took {}.{} seconds",
+        elapsed.as_secs(),
+        elapsed.subsec_millis()
+    );
     debug!("Layout complete: {:?}", layout_complete);
 
     Ok(layout_complete)
