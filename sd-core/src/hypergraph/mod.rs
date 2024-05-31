@@ -24,12 +24,12 @@ use self::{
         EndPointInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
         ThunkInternal,
     },
-    traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
+    traits::{EdgeLike, Graph, Keyable, NodeLike, WithType, WithWeight},
     weakbyaddress::WeakByAddress,
 };
 
 pub trait Weight {
-    type EdgeWeight: Clone + Debug + Send + Sync;
+    type EdgeWeight: Clone + Debug + Send + Sync + WithType;
     type OperationWeight: Clone + Debug + Send + Sync;
     type ThunkWeight: Clone + Debug + Send + Sync;
 }

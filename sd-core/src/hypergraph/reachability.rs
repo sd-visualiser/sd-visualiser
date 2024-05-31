@@ -5,7 +5,7 @@ use itertools::Itertools;
 
 use super::{
     generic::{Ctx, Endpoint, Node},
-    traits::{EdgeLike, NodeLike},
+    traits::{EdgeLike, NodeLike, WireType, WithType, WithWeight},
 };
 
 impl<T: Ctx> Endpoint<T> {
@@ -24,22 +24,6 @@ impl<T: Ctx> Node<T> {
                 edge.targets()
                     .filter_map(Endpoint::into_node)
                     .collect::<Vec<_>>()
-            })
-            .unique()
-    }
-
-    // Returns successors at the same thunk depth
-    pub fn flat_successors(&self) -> impl Iterator<Item = Self> + '_ {
-        let backlink = self.backlink();
-        self.successors()
-            .filter_map(move |node| {
-                let mut last = node;
-                let mut next = last.backlink();
-                while next != backlink {
-                    last = Node::Thunk(next?);
-                    next = last.backlink();
-                }
-                Some(last)
             })
             .unique()
     }
@@ -99,6 +83,47 @@ impl<T: Ctx> Node<T> {
     #[inline]
     fn boxed_predecessors(&self) -> Box<dyn Iterator<Item = Self> + '_> {
         Box::new(self.predecessors())
+    }
+}
+
+impl<T: Ctx> Node<T>
+where
+    <T::Edge as WithWeight>::Weight: WithType,
+{
+    pub fn data_successors(&self) -> impl Iterator<Item = Self> + '_ {
+        self.outputs()
+            .flat_map(|edge| {
+                if edge.weight().get_type() != WireType::Data {
+                    vec![]
+                } else {
+                    edge.targets()
+                        .filter_map(Endpoint::into_node)
+                        .collect::<Vec<_>>()
+                }
+            })
+            .unique()
+    }
+
+    // Returns successors at the same thunk depth
+    pub fn flat_successors(&self, only_data: bool) -> impl Iterator<Item = Self> + '_ {
+        let backlink = self.backlink();
+        let successors: Vec<_> = if only_data {
+            self.data_successors().collect()
+        } else {
+            self.successors().collect()
+        };
+        successors
+            .into_iter()
+            .filter_map(move |node| {
+                let mut last = node;
+                let mut next = last.backlink();
+                while next != backlink {
+                    last = Node::Thunk(next?);
+                    next = last.backlink();
+                }
+                Some(last)
+            })
+            .unique()
     }
 }
 

@@ -326,13 +326,14 @@ impl<W: Weight> HypergraphBuilder<W> {
             visited: &mut HashMap<Node<W>, usize>,
             output: &mut Vec<Vec<Node<W>>>,
             node: &Node<W>,
+            only_data: bool,
         ) {
             let index = stack.insert_full(node.clone()).0;
             visited.insert(node.clone(), index);
 
-            for n in node.flat_successors() {
+            for n in node.flat_successors(only_data) {
                 if !visited.contains_key(&n) {
-                    strongconnect(stack, visited, output, &n);
+                    strongconnect(stack, visited, output, &n, only_data);
                     let y = visited[&n];
                     let x = visited.get_mut(node).unwrap();
                     *x = min(*x, y);
@@ -348,7 +349,7 @@ impl<W: Weight> HypergraphBuilder<W> {
             }
         }
 
-        fn tarjans<W: Weight>(xs: Vec<Node<W>>) -> Vec<Node<W>> {
+        fn tarjans<W: Weight>(xs: Vec<Node<W>>, only_data: bool) -> Vec<Node<W>> {
             let original_ord: IndexSet<Node<W>> = xs.into_iter().collect();
             let mut output: Vec<Vec<Node<W>>> = Vec::default();
 
@@ -358,7 +359,7 @@ impl<W: Weight> HypergraphBuilder<W> {
 
             for x in &original_ord {
                 if !visited.contains_key(x) {
-                    strongconnect(&mut stack, &mut visited, &mut output, x);
+                    strongconnect(&mut stack, &mut visited, &mut output, x, only_data);
                 }
             }
 
@@ -382,7 +383,8 @@ impl<W: Weight> HypergraphBuilder<W> {
                     NodeInternal::Thunk(thunk) => Node::Thunk(Thunk(thunk.clone())),
                 })
                 .collect();
-            nodes = tarjans(nodes);
+            nodes = tarjans(nodes, true);
+            nodes = tarjans(nodes, false);
             *internals = nodes
                 .into_iter()
                 .map(|node| match node {
