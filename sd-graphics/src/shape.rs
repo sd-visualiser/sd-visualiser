@@ -234,57 +234,41 @@ impl<T: Ctx> Shape<T> {
         Weight<T::Edge>: WithType,
     {
         let default_stroke = ui.visuals().noninteractive().fg_stroke;
+        let fg_stroke = ui.visuals().widgets.hovered.fg_stroke;
+
+        let wire_stroke = |highlighted: bool, wire_type: WireType| -> Stroke {
+            let mut stroke = if highlighted {
+                fg_stroke
+            } else {
+                default_stroke
+            };
+            match wire_type {
+                WireType::Data => {}
+                WireType::ControlFlow => {
+                    if highlighted {
+                        stroke.color = Color32::YELLOW;
+                    } else {
+                        stroke.color = Color32::GOLD;
+                    }
+                }
+                WireType::SymName => {
+                    if highlighted {
+                        stroke.color = Color32::GREEN;
+                    } else {
+                        stroke.color = Color32::DARK_GREEN;
+                    }
+                }
+            }
+            stroke
+        };
 
         match self {
             Shape::Line { start, end, addr } => {
-                let mut stroke = if highlight_edges.contains(&addr) {
-                    ui.style().visuals.widgets.hovered.fg_stroke
-                } else {
-                    default_stroke
-                };
-                match addr.weight().get_type() {
-                    WireType::Data => {}
-                    WireType::ControlFlow => {
-                        if highlight_edges.contains(&addr) {
-                            stroke.color = Color32::YELLOW;
-                        } else {
-                            stroke.color = Color32::GOLD;
-                        }
-                    }
-                    WireType::SymName => {
-                        if highlight_edges.contains(&addr) {
-                            stroke.color = Color32::GREEN;
-                        } else {
-                            stroke.color = Color32::DARK_GREEN;
-                        }
-                    }
-                }
+                let stroke = wire_stroke(highlight_edges.contains(&addr), addr.weight().get_type());
                 egui::Shape::line_segment([start, end], stroke)
             }
             Shape::CubicBezier { points, addr } => {
-                let mut stroke = if highlight_edges.contains(&addr) {
-                    ui.style().visuals.widgets.hovered.fg_stroke
-                } else {
-                    default_stroke
-                };
-
-                match addr.weight().get_type() {
-                    WireType::Data => {}
-                    WireType::ControlFlow => {
-                        if highlight_edges.contains(&addr) {
-                            stroke.color = Color32::YELLOW;
-                        } else {
-                            stroke.color = Color32::GOLD;
-                        }
-                    }
-                    WireType::SymName => {
-                        if highlight_edges.contains(&addr) {
-                            stroke.color = Color32::GREEN;
-                        } else {
-                            stroke.color = Color32::DARK_GREEN;
-                        }
-                    }
-                }
+                let stroke = wire_stroke(highlight_edges.contains(&addr), addr.weight().get_type());
 
                 let bezier = CubicBezierShape::from_points_stroke(
                     points,
@@ -306,11 +290,7 @@ impl<T: Ctx> Shape<T> {
                 addr,
                 ..
             } => {
-                let stroke = if highlight_edges.contains(&addr) {
-                    ui.style().visuals.widgets.hovered.fg_stroke
-                } else {
-                    default_stroke
-                };
+                let stroke = wire_stroke(highlight_edges.contains(&addr), addr.weight().get_type());
                 egui::Shape::circle_filled(center, radius, stroke.color)
             }
             Shape::Operation {
