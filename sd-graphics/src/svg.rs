@@ -1,7 +1,7 @@
 use egui::{emath::RectTransform, Pos2, Rect};
 use sd_core::hypergraph::generic::Ctx;
 use svg::{
-    node::element::{path::Data, Anchor, Circle, Group, Line, Path, Rectangle, Text},
+    node::element::{path::Data, Circle, Group, Line, Path, Rectangle, Text},
     Document, Node,
 };
 
@@ -32,20 +32,13 @@ impl<T: Ctx> Shape<T> {
                                 .set("stroke-width", 1),
                         )
                         .add(
-                            Anchor::new()
-                                .set(
-                                    "href",
-                                    format!("https://alexarice.github.io/catt-agda/{label}.html"),
-                                )
-                                .add(
-                                    Text::new(html_escape::encode_text(label))
-                                        .set("x", center.x)
-                                        .set("y", center.y)
-                                        .set("font-size", 16)
-                                        .set("font-family", "monospace")
-                                        .set("text-anchor", "middle")
-                                        .set("dominant-baseline", "middle"),
-                                ),
+                            Text::new(html_escape::encode_text(label))
+                                .set("x", center.x)
+                                .set("y", center.y)
+                                .set("font-size", 16)
+                                .set("font-family", "monospace")
+                                .set("text-anchor", "middle")
+                                .set("dominant-baseline", "middle"),
                         ),
                 )
             }
