@@ -18,6 +18,11 @@ use crate::{
     prettyprinter::PrettyPrint,
 };
 
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Default)]
+pub struct MlirSettings {
+    pub sym_name_linking: bool,
+}
+
 pub struct Mlir;
 
 impl Language for Mlir {

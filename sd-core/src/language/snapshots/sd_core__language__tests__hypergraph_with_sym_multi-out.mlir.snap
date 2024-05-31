@@ -1,0 +1,79 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Operation(Op(
+      name: "builtin.module",
+      successors: [],
+      attributes: "",
+      sym_name: None,
+      symbols: [],
+    )),
+    Edge(Nil),
+    Thunk(Graph(
+      nodes: [
+        Operation(Op(
+          name: "c",
+          successors: [],
+          attributes: "",
+          sym_name: None,
+          symbols: [],
+        )),
+        Edge(BoundVar(Var(
+          id: "%1",
+        ))),
+        Edge(BoundVar(VarIdx(
+          id: "%2",
+          index: 0,
+        ))),
+        Edge(BoundVar(VarIdx(
+          id: "%2",
+          index: 2,
+        ))),
+        Edge(BoundVar(VarIdx(
+          id: "%2",
+          index: 1,
+        ))),
+        Operation(Op(
+          name: "b",
+          successors: [],
+          attributes: "",
+          sym_name: None,
+          symbols: [],
+        )),
+        Edge(BoundVar(Var(
+          id: "%0",
+        ))),
+        Operation(Op(
+          name: "a",
+          successors: [],
+          attributes: "",
+          sym_name: None,
+          symbols: [],
+        )),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((1, 0, 0)),
+        Some((2, 0, 1)),
+        Some((3, 0, 2)),
+        Some((4, 0, 3)),
+        Some((6, 5, 0)),
+        Some((5, 2, 0)),
+        Some((5, 4, 1)),
+        Some((5, 3, 2)),
+        Some((7, 6, 0)),
+        Some((7, 1, 1)),
+      ],
+    )),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((1, 0, 0)),
+    Some((2, 1, 0)),
+  ],
+)

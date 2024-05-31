@@ -5,11 +5,11 @@ use indexmap::IndexSet;
 use crate::language::{Expr, GetVar, Language, OpInfo, Thunk, Value, CF};
 
 impl<T: Language> Expr<T> {
-    pub(crate) fn free_vars(&self) -> IndexSet<T::Var> {
+    pub(crate) fn free_vars(&self, sym_name_link: bool) -> IndexSet<T::Var> {
         let mut vars: IndexSet<T::Var> = IndexSet::new();
         let mut to_remove: IndexSet<T::Var> = IndexSet::new();
 
-        self.extend_free_vars(&mut vars, &mut to_remove);
+        self.extend_free_vars(&mut vars, &mut to_remove, sym_name_link);
 
         vars.difference(&to_remove).cloned().collect()
     }
@@ -18,13 +18,14 @@ impl<T: Language> Expr<T> {
         &self,
         vars: &mut IndexSet<T::Var>,
         to_remove: &mut IndexSet<T::Var>,
+        sym_name_link: bool,
     ) {
         for bind in &self.binds {
-            bind.value.free_vars(vars, to_remove);
+            bind.value.free_vars(vars, to_remove, sym_name_link);
         }
 
         for value in &self.values {
-            value.free_vars(vars, to_remove);
+            value.free_vars(vars, to_remove, sym_name_link);
         }
 
         to_remove.extend(
@@ -43,22 +44,29 @@ impl<T: Language> Expr<T> {
 }
 
 impl<T: Language> Value<T> {
-    pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>, to_remove: &mut IndexSet<T::Var>) {
+    pub(crate) fn free_vars(
+        &self,
+        vars: &mut IndexSet<T::Var>,
+        to_remove: &mut IndexSet<T::Var>,
+        sym_name_link: bool,
+    ) {
         match self {
             Value::Variable(v) => {
                 vars.insert(v.clone());
             }
             Value::Thunk(thunk) => {
-                thunk.free_vars(vars);
+                thunk.free_vars(vars, sym_name_link);
             }
             Value::Op { op, args } => {
                 for arg in args {
-                    arg.free_vars(vars, to_remove);
+                    arg.free_vars(vars, to_remove, sym_name_link);
                 }
-                if let Some(s) = op.sym_name() {
-                    to_remove.insert(s.into());
+                if sym_name_link {
+                    if let Some(s) = op.sym_name() {
+                        to_remove.insert(s.into());
+                    }
+                    vars.extend(op.symbols_used().map(|s| s.into()))
                 }
-                vars.extend(op.symbols_used().map(|s| s.into()))
             }
         }
     }
@@ -82,13 +90,15 @@ impl<T: Language> Value<T> {
 }
 
 impl<T: Language> Thunk<T> {
-    pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>) {
+    pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>, sym_name_link: bool) {
         let mut new_vars: IndexSet<T::Var> = IndexSet::new();
         let mut to_remove: IndexSet<T::Var> = IndexSet::new();
-        self.body.extend_free_vars(&mut new_vars, &mut to_remove);
+        self.body
+            .extend_free_vars(&mut new_vars, &mut to_remove, sym_name_link);
         to_remove.extend(self.args.iter().map(|def| def.var().clone()));
         for b in &self.blocks {
-            b.expr.extend_free_vars(&mut new_vars, &mut to_remove);
+            b.expr
+                .extend_free_vars(&mut new_vars, &mut to_remove, sym_name_link);
             to_remove.extend(b.args.iter().map(|def| def.var().clone()));
         }
 

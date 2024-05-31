@@ -246,7 +246,7 @@ pub(crate) mod tests {
 
     pub trait ExprTest {
         fn free_var_test(&self) -> Box<dyn std::fmt::Debug>;
-        fn graph_test(&self, name: &str, lang: &str) -> anyhow::Result<()>;
+        fn graph_test(&self, name: &str, lang: &str, sym_name_link: bool) -> anyhow::Result<()>;
     }
 
     impl<T: Language + 'static> ExprTest for Expr<T>
@@ -257,12 +257,17 @@ pub(crate) mod tests {
         <T as Language>::VarDef: Serialize,
     {
         fn free_var_test(&self) -> Box<dyn std::fmt::Debug> {
-            Box::new(self.free_vars())
+            Box::new(self.free_vars(false))
         }
 
-        fn graph_test(&self, name: &str, lang: &str) -> anyhow::Result<()> {
-            let graph: SyntaxHypergraph<T> = self.try_into()?;
-            insta::assert_ron_snapshot!(format!("hypergraph_{name}.{lang}"), to_pet(&graph));
+        fn graph_test(&self, name: &str, lang: &str, sym_name_link: bool) -> anyhow::Result<()> {
+            let graph: SyntaxHypergraph<T> = self.to_graph(sym_name_link)?;
+            let name = if sym_name_link {
+                format!("hypergraph_with_sym_{name}.{lang}")
+            } else {
+                format!("hypergraph_{name}.{lang}")
+            };
+            insta::assert_ron_snapshot!(name, to_pet(&graph));
             Ok(())
         }
     }

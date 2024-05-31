@@ -23,6 +23,7 @@ Graph(
             "test",
           ],
         )),
+        Edge(FreeVar(Symbol(Symbol("test")))),
         Edge(BoundVar(Var(
           id: "%1",
         ))),
@@ -40,8 +41,10 @@ Graph(
       node_holes: [],
       edge_property: directed,
       edges: [
-        Some((0, 1, 0)),
-        Some((2, 3, 0)),
+        Some((1, 0, 0)),
+        Some((0, 2, 0)),
+        Some((3, 4, 0)),
+        Some((3, 1, 1)),
       ],
     )),
   ],

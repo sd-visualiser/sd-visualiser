@@ -9,7 +9,7 @@ use itertools::Itertools;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
-use tracing::{debug, Level};
+use tracing::debug;
 
 use crate::{
     common::Matchable,
@@ -130,6 +130,8 @@ struct Environment<F, T: Language> {
     outputs: HashMap<T::Var, OutPort<Syntax<T>>>,
     /// Control flow wires to be connected
     cf_outputs: Vec<(Option<T::BlockAddr>, OutPort<Syntax<T>>)>,
+    /// Whether to link symbols in mlir
+    sym_name_link: bool,
 }
 
 enum ProcessInput<T: Language> {
@@ -143,12 +145,13 @@ where
     F: Fragment<Weight = Syntax<T>>,
 {
     /// Create a new empty environment from a given `fragment`
-    fn new(fragment: F) -> Self {
+    fn new(fragment: F, sym_name_link: bool) -> Self {
         Self {
             fragment,
             inputs: Vec::default(),
             outputs: HashMap::default(),
             cf_outputs: Vec::default(),
+            sym_name_link,
         }
     }
 
@@ -163,6 +166,7 @@ where
                 inputs: std::mem::take(&mut self.inputs),
                 outputs: std::mem::take(&mut self.outputs),
                 cf_outputs: std::mem::take(&mut self.cf_outputs),
+                sym_name_link: self.sym_name_link,
             };
             let ret = f(&mut new_env);
             self.inputs = std::mem::take(&mut new_env.inputs);
@@ -227,7 +231,7 @@ where
 
                 self.fragment
                     .in_thunk(thunk_node.clone(), |inner_fragment| {
-                        let mut thunk_env = Environment::new(inner_fragment);
+                        let mut thunk_env = Environment::new(inner_fragment, self.sym_name_link);
 
                         // Add bound inputs of the thunk to the environment
                         for (def, out_port) in thunk.args.iter().zip(thunk_node.bound_inputs()) {
@@ -320,9 +324,10 @@ where
                     }
                     ProcessInput::InPort(_) => vec![Name::Nil],
                 };
-
-                if let Some(symbol) = op.sym_name() {
-                    output_weights.push(Name::FreeVar(symbol.into()))
+                if self.sym_name_link {
+                    if let Some(symbol) = op.sym_name() {
+                        output_weights.push(Name::FreeVar(symbol.into()))
+                    }
                 }
 
                 let cf = op.get_cf();
@@ -337,7 +342,11 @@ where
                     None => {}
                 }
 
-                let symbol: Vec<_> = op.symbols_used().collect();
+                let symbol: Vec<_> = if self.sym_name_link {
+                    op.symbols_used().collect()
+                } else {
+                    vec![]
+                };
 
                 let len = args.len() + symbol.len();
 
@@ -378,12 +387,14 @@ where
                                 .then_some(())
                                 .ok_or(ConvertError::Shadowed(var.clone()))?;
                         }
-                        if let Some(symbol) = op.sym_name() {
-                            self.outputs
-                                .insert(symbol.clone().into(), out_ports.next().unwrap())
-                                .is_none()
-                                .then_some(())
-                                .ok_or(ConvertError::Shadowed(symbol.into()))?;
+                        if self.sym_name_link {
+                            if let Some(symbol) = op.sym_name() {
+                                self.outputs
+                                    .insert(symbol.clone().into(), out_ports.next().unwrap())
+                                    .is_none()
+                                    .then_some(())
+                                    .ok_or(ConvertError::Shadowed(symbol.into()))?;
+                            }
                         }
                     }
                     ProcessInput::InPort(in_port) => {
@@ -438,24 +449,18 @@ where
     }
 }
 
-impl<T> TryFrom<&Expr<T>> for SyntaxHypergraph<T>
-where
-    T: Language + 'static,
-{
-    type Error = ConvertError<T>;
-
-    #[tracing::instrument(level=Level::TRACE, ret, err)]
-    fn try_from(expr: &Expr<T>) -> Result<Self, Self::Error> {
-        let free = expr.free_vars();
+impl<T: Language + 'static> Expr<T> {
+    pub fn to_graph(&self, sym_name_link: bool) -> Result<SyntaxHypergraph<T>, ConvertError<T>> {
+        let free = self.free_vars(sym_name_link);
         debug!("free variables: {:?}", free);
 
         let graph = HypergraphBuilder::new(
             free.iter().cloned().map(Name::FreeVar).collect(),
-            expr.values.len(),
+            self.values.len(),
         );
         debug!("made initial hypergraph: {:?}", graph);
 
-        let mut env = Environment::new(graph);
+        let mut env = Environment::new(graph, sym_name_link);
         debug!("determined environment: {:?}", env);
 
         for (var, out_port) in free.iter().zip(env.fragment.graph_inputs()) {
@@ -467,7 +472,7 @@ where
         }
         debug!("processed free variables: {:?}", env.outputs);
 
-        env.process_expr(expr)?;
+        env.process_expr(self)?;
 
         debug!("Expression processed");
 
@@ -504,7 +509,11 @@ mod tests {
     fn hypergraph_snapshots(fixture: Fixture<(&str, &str, Box<dyn ExprTest>)>) -> Result<()> {
         let (lang, name, expr) = fixture.content();
 
-        expr.graph_test(name, lang)?;
+        expr.graph_test(name, lang, false)?;
+
+        if lang == &"mlir" {
+            expr.graph_test(name, lang, true)?;
+        }
 
         Ok(())
     }

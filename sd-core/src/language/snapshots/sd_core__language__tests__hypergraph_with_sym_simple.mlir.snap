@@ -22,6 +22,7 @@ Graph(
           symbols: [],
         )),
         Edge(Nil),
+        Edge(FreeVar(Symbol(Symbol("simple")))),
         Thunk(Graph(
           nodes: [
             Thunk(Graph(
@@ -211,7 +212,8 @@ Graph(
       edge_property: directed,
       edges: [
         Some((1, 0, 0)),
-        Some((2, 1, 0)),
+        Some((0, 2, 0)),
+        Some((3, 1, 0)),
       ],
     )),
   ],

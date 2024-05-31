@@ -17,7 +17,7 @@ use poll_promise::Promise;
 use sd_core::{
     common::Direction,
     dot::{dot_to_graph, DotSettings},
-    graph::SyntaxHypergraph,
+    language::mlir::MlirSettings,
     lp::Solver,
 };
 
@@ -49,6 +49,7 @@ pub struct App {
     last_parse_error: Option<ParseError>,
     language: UiLanguage,
     dot_settings: DotSettings,
+    mlir_settings: MlirSettings,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
     find: Option<(String, usize)>,
@@ -97,6 +98,7 @@ impl App {
             last_parse_error: Option::default(),
             language: UiLanguage::default(),
             dot_settings: DotSettings::default(),
+            mlir_settings: MlirSettings::default(),
             graph_ui: Option::default(),
             selections: Vec::default(),
             find: None,
@@ -175,7 +177,8 @@ impl App {
         {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
-            let settings = self.dot_settings;
+            let dot_settings = self.dot_settings;
+            let mlir_settings = self.mlir_settings;
             let solver = self.solver;
             self.graph_ui.replace(crate::spawn!("compile", {
                 let promise = parse.lock().unwrap();
@@ -186,19 +189,19 @@ impl App {
                 let compile = Ok(match parse_output {
                     ParseOutput::Chil(expr) => {
                         tracing::debug!("Converting chil to hypergraph...");
-                        GraphUi::new_chil(SyntaxHypergraph::try_from(expr)?, solver)
+                        GraphUi::new_chil(expr.to_graph(false)?, solver)
                     }
                     ParseOutput::Mlir(expr) => {
                         tracing::debug!("Converting mlir to hypergraph...");
-                        GraphUi::new_mlir(SyntaxHypergraph::try_from(expr)?, solver)
+                        GraphUi::new_mlir(expr.to_graph(mlir_settings.sym_name_linking)?, solver)
                     }
                     ParseOutput::Spartan(expr) => {
                         tracing::debug!("Converting spartan to hypergraph...");
-                        GraphUi::new_spartan(SyntaxHypergraph::try_from(expr)?, solver)
+                        GraphUi::new_spartan(expr.to_graph(false)?, solver)
                     }
                     ParseOutput::Dot(graph) => {
                         tracing::debug!("Converting dot to hypergraph...");
-                        GraphUi::new_dot(dot_to_graph(graph, settings)?, solver)
+                        GraphUi::new_dot(dot_to_graph(graph, dot_settings)?, solver)
                     }
                 });
                 ctx.request_repaint();
@@ -304,12 +307,27 @@ impl eframe::App for App {
                             .clicked()
                         {
                             self.dot_settings.invert = !self.dot_settings.invert;
+                            self.trigger_compile(ui.ctx());
                         }
                         if ui
                             .selectable_label(self.dot_settings.collect, "Collect edges")
                             .clicked()
                         {
                             self.dot_settings.collect = !self.dot_settings.collect;
+                            self.trigger_compile(ui.ctx());
+                        }
+                    });
+                }
+
+                if self.language == UiLanguage::Mlir {
+                    ui.menu_button("Settings", |ui| {
+                        if ui
+                            .selectable_label(self.mlir_settings.sym_name_linking, "Link symbols")
+                            .clicked()
+                        {
+                            self.mlir_settings.sym_name_linking =
+                                !self.mlir_settings.sym_name_linking;
+                            self.trigger_compile(ui.ctx());
                         }
                     });
                 }
