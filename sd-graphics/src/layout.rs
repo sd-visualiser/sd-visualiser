@@ -507,7 +507,6 @@ where
 
     // STEP 2. Add constraints between layers.
     for (nodes, (wires_i, wires_o)) in nodes.iter().zip(wires.iter().tuple_windows()) {
-        let mut prev_op = None;
         for node in nodes {
             let ni = node.number_of_inputs();
             let no = node.number_of_outputs();
@@ -515,29 +514,26 @@ where
             let ins = &wires_i[node.inputs.clone()];
             let outs = &wires_o[node.outputs.clone()];
 
-            let prev_in: Option<Expression> = if node.inputs.start == 0 {
-                None
-            } else {
-                wires_i.get(node.inputs.start - 1).map(|x| x.h.into())
-            };
-            let prev_out: Option<Expression> = if node.outputs.start == 0 {
-                None
-            } else {
-                wires_o.get(node.outputs.start - 1).map(|x| x.h.into())
-            };
+            if ni == 0 {
+                if node.inputs.start != 0 {
+                    problem.add_constraint(
+                        (node.node.h_min() - wires_i[node.inputs.start - 1].h).geq(1.0),
+                    );
+                }
+                if let Some(wire) = wires_i.get(node.inputs.start) {
+                    problem.add_constraint((wire.h - node.node.h_max()).geq(1.0));
+                }
+            }
 
-            // Distance constraints
-            let constraints = [
-                (prev_in.clone(), Some(node.node.h_min())),
-                (prev_out.clone(), Some(node.node.h_min())),
-                (prev_op.clone(), ins.first().map(|x| x.h.into())),
-                (prev_op.clone(), outs.first().map(|x| x.h.into())),
-                (prev_in, outs.first().map(|x| x.h.into())),
-                (prev_out, ins.first().map(|x| x.h.into())),
-                (prev_op, Some(node.node.h_min())),
-            ];
-            for (x, y) in constraints.into_iter().filter_map(|(x, y)| x.zip(y)) {
-                problem.add_constraint((y - x).geq(1.0));
+            if no == 0 {
+                if node.outputs.start != 0 {
+                    problem.add_constraint(
+                        (node.node.h_min() - wires_o[node.outputs.start - 1].h).geq(1.0),
+                    );
+                }
+                if let Some(wire) = wires_o.get(node.outputs.start) {
+                    problem.add_constraint((wire.h - node.node.h_max()).geq(1.0));
+                }
             }
 
             match &node.node {
@@ -641,8 +637,6 @@ where
                     problem.add_objective((layout.h_max - layout.h_min) * 2.0);
                 }
             }
-
-            prev_op = Some(node.node.h_max());
         }
     }
 
