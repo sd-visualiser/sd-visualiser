@@ -121,18 +121,21 @@ where
         let guard = shapes.lock().unwrap();
         if let Some(shapes) = guard.ready() {
             let (response, painter) =
-                ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::hover());
+                ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
 
             let to_screen = self.panzoom.transform(response.rect);
-            if let Some(hover_pos) = response.hover_pos() {
-                let drag_response =
-                    ui.interact(response.rect, Id::new("drag_interact"), Sense::drag());
-                let anchor = to_screen.inverse().transform_pos(hover_pos);
+
+            if response.contains_pointer() {
                 ui.input(|i| {
-                    self.panzoom.zoom(i.zoom_delta(), anchor);
-                    self.panzoom.pan(i.raw_scroll_delta);
-                    self.panzoom.pan(drag_response.drag_delta());
+                    if let Some(hover_pos) = i.pointer.hover_pos() {
+                        let anchor = to_screen.inverse().transform_pos(hover_pos);
+                        self.panzoom.zoom(i.zoom_delta(), anchor);
+                    }
+
+                    self.panzoom.pan(i.smooth_scroll_delta);
                 });
+                self.panzoom.pan(response.drag_delta());
+
                 ui.input_mut(|i| {
                     let mut pan_by_key = |key, pan: fn(&mut Panzoom) -> ()| {
                         if i.consume_shortcut(&egui::KeyboardShortcut::new(
