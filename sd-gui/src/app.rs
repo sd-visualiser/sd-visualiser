@@ -305,14 +305,18 @@ impl eframe::App for App {
                             .clicked()
                         {
                             self.dot_settings.invert = !self.dot_settings.invert;
-                            self.trigger_compile(ui.ctx());
+                            self.tx
+                                .send(Message::Compile)
+                                .expect("Failed to send message");
                         }
                         if ui
                             .selectable_label(self.dot_settings.collect, "Collect edges")
                             .clicked()
                         {
                             self.dot_settings.collect = !self.dot_settings.collect;
-                            self.trigger_compile(ui.ctx());
+                            self.tx
+                                .send(Message::Compile)
+                                .expect("Failed to send message");
                         }
                     });
                 }
@@ -325,7 +329,9 @@ impl eframe::App for App {
                         {
                             self.mlir_settings.sym_name_linking =
                                 !self.mlir_settings.sym_name_linking;
-                            self.trigger_compile(ui.ctx());
+                            self.tx
+                                .send(Message::Compile)
+                                .expect("Failed to send message");
                         }
                     });
                 }
@@ -428,7 +434,9 @@ impl eframe::App for App {
                 ui.separator();
 
                 if button!("Compile", egui::Key::F5) {
-                    self.trigger_compile(ui.ctx());
+                    self.tx
+                        .send(Message::Compile)
+                        .expect("failed to send message");
                 }
 
                 if button!(
