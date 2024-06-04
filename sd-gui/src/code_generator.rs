@@ -21,7 +21,7 @@ where
         .get_or_init(Mutex::default)
         .lock()
         .unwrap()
-        .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<G>>>>(Id::null(), || {
+        .get_temp_mut_or_insert_with::<Arc<Mutex<Cache<G>>>>(Id::NULL, || {
             tracing::trace!("initialise code cache");
             Arc::new(Mutex::new(LruCache::unbounded()))
         })

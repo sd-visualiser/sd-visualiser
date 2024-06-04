@@ -8,7 +8,7 @@ use std::{
 
 use anyhow::anyhow;
 use eframe::{
-    egui::{self, FontDefinitions, TextBuffer},
+    egui::{self, FontDefinitions},
     emath::{Align, Align2},
     epaint::{vec2, Vec2},
 };
@@ -108,7 +108,7 @@ impl App {
     }
 
     pub fn set_file(&mut self, code: &str, language: Option<UiLanguage>) {
-        self.code.lock().unwrap().replace(code);
+        *self.code.lock().unwrap() = code.to_string();
         if let Some(language) = language {
             self.tx
                 .send(Message::SetLanguage(language))
@@ -236,8 +236,6 @@ impl eframe::App for App {
         let mut find_request_focus = false;
 
         egui::TopBottomPanel::top("menu").show(ctx, |ui| {
-            egui::trace!(ui);
-
             // Code below is copied from ui.horizontal_wrapped,
             // except we add the with_main_align to get button shortcut text to work properly
             let initial_size = vec2(
@@ -392,7 +390,7 @@ impl eframe::App for App {
                         graph_ui.reset();
                     }
                 }
-                if button!("Zoom In", egui::Key::PlusEquals, enabled = ready) {
+                if button!("Zoom In", egui::Key::Plus, enabled = ready) {
                     if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_in();
                     }

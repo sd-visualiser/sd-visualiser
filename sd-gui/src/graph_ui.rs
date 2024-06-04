@@ -125,16 +125,12 @@ where
 
             let to_screen = self.panzoom.transform(response.rect);
             if let Some(hover_pos) = response.hover_pos() {
-                let drag_response = ui.interact_with_hovered(
-                    response.rect,
-                    true,
-                    Id::new("drag_interact"),
-                    Sense::drag(),
-                );
+                let drag_response =
+                    ui.interact(response.rect, Id::new("drag_interact"), Sense::drag());
                 let anchor = to_screen.inverse().transform_pos(hover_pos);
                 ui.input(|i| {
                     self.panzoom.zoom(i.zoom_delta(), anchor);
-                    self.panzoom.pan(i.scroll_delta);
+                    self.panzoom.pan(i.raw_scroll_delta);
                     self.panzoom.pan(drag_response.drag_delta());
                 });
                 ui.input_mut(|i| {
@@ -165,7 +161,7 @@ where
             // Background
             painter.add(Shape::rect_filled(
                 response.rect,
-                Rounding::none(),
+                Rounding::ZERO,
                 ui.visuals().faint_bg_color,
             ));
 

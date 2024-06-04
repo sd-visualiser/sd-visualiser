@@ -41,13 +41,13 @@ pub fn show_parse_error(ui: &egui::Ui, err: &Error<impl RuleType>, text_edit_out
             };
             for i in 0..count {
                 let start: Pos2 =
-                    Pos2::from((w_avg(f32::from(i)), base)) + text_edit_out.text_draw_pos.to_vec2();
+                    Pos2::from((w_avg(f32::from(i)), base)) + text_edit_out.galley_pos.to_vec2();
                 let control: Pos2 = Pos2::from((
                     w_avg(f32::from(i) + 0.5),
                     base + SQUIGGLE_HEIGHT * (f32::from((i + 1) % 2) - 0.5),
-                )) + text_edit_out.text_draw_pos.to_vec2();
+                )) + text_edit_out.galley_pos.to_vec2();
                 let end: Pos2 = Pos2::from((w_avg(f32::from(i + 1)), base))
-                    + text_edit_out.text_draw_pos.to_vec2();
+                    + text_edit_out.galley_pos.to_vec2();
                 painter.add(QuadraticBezierShape {
                     points: [start, control, end],
                     closed: false,
@@ -59,7 +59,7 @@ pub fn show_parse_error(ui: &egui::Ui, err: &Error<impl RuleType>, text_edit_out
     }
 
     if let Some(x) = text_edit_out.response.hover_pos() {
-        let pos = x - text_edit_out.text_draw_pos;
+        let pos = x - text_edit_out.galley_pos;
 
         if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
             let cursor = text_edit_out.galley.cursor_from_pos(pos);

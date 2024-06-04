@@ -53,6 +53,7 @@ fn main() -> anyhow::Result<()> {
     // Log to stdout (if you run with `RUST_LOG=debug`).
 
     use anyhow::anyhow;
+    use egui::ViewportBuilder;
     tracing_subscriber::fmt::fmt()
         .with_env_filter(tracing_subscriber::filter::EnvFilter::from_default_env())
         .with_thread_names(true)
@@ -63,7 +64,10 @@ fn main() -> anyhow::Result<()> {
     tracing::info!("lp solver: {:?}", args.solver);
 
     let native_options = eframe::NativeOptions {
-        maximized: true,
+        viewport: ViewportBuilder {
+            maximized: Some(true),
+            ..Default::default()
+        },
         ..Default::default()
     };
 

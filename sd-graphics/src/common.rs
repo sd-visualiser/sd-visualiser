@@ -54,7 +54,7 @@ impl ShapeKind {
     #[must_use]
     pub fn into_rounding(self, radius: f32) -> Rounding {
         match self {
-            ShapeKind::Square => Rounding::none(),
+            ShapeKind::Square => Rounding::ZERO,
             ShapeKind::Squircle => Rounding::same(radius),
             ShapeKind::BulletUp => Rounding {
                 nw: radius,

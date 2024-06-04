@@ -9,7 +9,7 @@ homepage.workspace = true
 
 [dependencies]
 derivative = "2.2.0"
-egui = "0.22.0"
+egui = "0.27.2"
 flo_curves = "0.7.2"
 good_lp = { version = "1.8.1", default-features = false, features = [ "minilp", "clarabel" ] }
 html-escape = "0.2.13"

@@ -278,12 +278,12 @@ impl<T: Ctx> Shape<T> {
                 );
                 egui::Shape::CubicBezier(bezier)
             }
-            Shape::Rectangle { rect, stroke, .. } => egui::Shape::Rect(RectShape {
+            Shape::Rectangle { rect, stroke, .. } => egui::Shape::Rect(RectShape::new(
                 rect,
-                rounding: Rounding::none(),
-                fill: Color32::default(),
-                stroke: stroke.unwrap_or(default_stroke),
-            }),
+                Rounding::ZERO,
+                Color32::default(),
+                stroke.unwrap_or(default_stroke),
+            )),
             Shape::CircleFilled {
                 center,
                 radius,
@@ -302,15 +302,15 @@ impl<T: Ctx> Shape<T> {
                 stroke,
                 ..
             } => {
-                let rect = egui::Shape::Rect(RectShape {
-                    rect: Rect::from_center_size(
+                let rect = egui::Shape::Rect(RectShape::new(
+                    Rect::from_center_size(
                         center,
                         radius * vec2(label.chars().count().max(1) as f32 + 1.0, 2.0),
                     ),
-                    rounding: kind.into_rounding(radius),
-                    fill: fill.unwrap_or_default(),
-                    stroke: stroke.unwrap_or(default_stroke),
-                });
+                    kind.into_rounding(radius),
+                    fill.unwrap_or_default(),
+                    stroke.unwrap_or(default_stroke),
+                ));
                 let text_size: f32 = TEXT_SIZE * transform.scale().min_elem();
                 if text_size <= 5.0 {
                     return rect;
