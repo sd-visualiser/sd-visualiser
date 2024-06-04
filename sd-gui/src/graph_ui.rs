@@ -4,7 +4,7 @@ use std::fmt::Display;
 
 use delegate::delegate;
 use eframe::{
-    egui::{self, Id, Sense},
+    egui,
     epaint::{Rounding, Shape},
 };
 use sd_core::{

@@ -567,12 +567,14 @@ where
 
                             // Fair averaging constraints
                             if ni > 0 {
-                                let sum_ins: Expression = ins.iter().map(|x| x.h).sum();
-                                problem.add_constraint((*pos * ni as f64).eq(sum_ins));
+                                // let sum_ins: Expression = ins.iter().map(|x| x.h).sum();
+                                let sum_ins = ins.first().unwrap().h + ins.last().unwrap().h;
+                                problem.add_constraint((*pos * 2.0).eq(sum_ins));
                             }
                             if no > 0 {
-                                let sum_outs: Expression = outs.iter().map(|x| x.h).sum();
-                                problem.add_constraint((*pos * no as f64).eq(sum_outs));
+                                // let sum_outs: Expression = outs.iter().map(|x| x.h).sum();
+                                let sum_outs = outs.first().unwrap().h + outs.last().unwrap().h;
+                                problem.add_constraint((*pos * 2.0).eq(sum_outs));
                             }
                         }
                     }
