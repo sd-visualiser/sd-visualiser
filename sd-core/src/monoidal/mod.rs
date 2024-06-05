@@ -100,26 +100,37 @@ impl<T: Ctx, O: InOut + Debug> MonoidalTerm<T, O> {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-impl<O: InOutIter + PartialEq + Eq + Hash + Clone> MonoidalTerm<O::T, O> {
+impl<O: InOutIter + PartialEq + Eq + Hash + Clone + Debug> MonoidalTerm<O::T, O> {
     /// Reorder the operations on each slice of a monoidal term to attempt to reduce the amount of swapping
-    pub fn minimise_swaps(&mut self) {
-        fn fold_slice<'a, O: InOutIter + PartialEq + Eq + Hash + Clone>(
-            edges_below: Box<dyn Iterator<Item = Link<O::T>> + 'a>,
-            slice: &'a mut Slice<O>,
-        ) -> Box<dyn Iterator<Item = Link<O::T>> + 'a> {
-            slice.minimise_swaps(edges_below);
-            slice.input_links()
-        }
+    pub fn minimise_swaps(&mut self, use_above: bool) {
+        let mut edges_below = Box::new(
+            self.free_outputs
+                .iter()
+                .chain(self.bound_outputs.iter())
+                .map(|edge| (edge.clone(), Direction::Forward)),
+        ) as Box<dyn Iterator<Item = Link<O::T>>>;
+        let mut slices = self.slices.iter_mut().rev().peekable();
 
-        let edges_below = self.slices.iter_mut().rev().fold(
-            Box::new(
-                self.free_outputs
-                    .iter()
-                    .chain(self.bound_outputs.iter())
-                    .map(|edge| (edge.clone(), Direction::Forward)),
-            ) as Box<dyn Iterator<Item = Link<O::T>>>,
-            fold_slice::<O>,
-        );
+        while let Some(slice) = slices.next() {
+            let edges_above = if use_above {
+                slices.peek().map_or_else(
+                    || {
+                        Box::new(
+                            self.free_inputs
+                                .iter()
+                                .chain(self.bound_inputs.iter())
+                                .map(|edge| (edge.clone(), Direction::Forward)),
+                        ) as Box<dyn Iterator<Item = Link<O::T>>>
+                    },
+                    |s| s.output_links(),
+                )
+            } else {
+                Box::new(std::iter::empty())
+            };
+
+            slice.minimise_swaps(edges_above.into_iter(), edges_below);
+            edges_below = slice.input_links();
+        }
 
         let perm_map: HashMap<Link<O::T>, PermutationOutput> = generate_permutation::<O::T>(
             self.free_inputs
@@ -141,12 +152,21 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> MonoidalTerm<O::T, O> {
     }
 }
 
-impl<O: InOutIter + PartialEq + Eq + Hash + Clone> Slice<O> {
+impl<O: InOutIter + PartialEq + Eq + Hash + Clone + Debug> Slice<O> {
     /// Reorder the operations in a slice to try to reduce the number of swapping needed to link with the edges in `edges_below`
-    pub fn minimise_swaps(&mut self, edges_below: impl Iterator<Item = Link<O::T>>) {
+    pub fn minimise_swaps(
+        &mut self,
+        edges_above: impl Iterator<Item = Link<O::T>>,
+        edges_below: impl Iterator<Item = Link<O::T>>,
+    ) {
         let outputs = self.output_links();
-
-        let mut perm_list = generate_permutation::<O::T>(outputs, edges_below);
+        let mut edge_idx: HashMap<Link<O::T>, (usize, usize)> = HashMap::new();
+        for (i, edge) in edges_above.enumerate() {
+            let (x, y) = edge_idx.entry(edge).or_default();
+            *x += i;
+            *y += 1;
+        }
+        let mut perm_list_below = generate_permutation::<O::T>(outputs, edges_below);
 
         let perm_map: HashMap<O, Ratio<usize>> = self
             .ops
@@ -154,14 +174,18 @@ impl<O: InOutIter + PartialEq + Eq + Hash + Clone> Slice<O> {
             .rev()
             .map(|op| {
                 let outs = op.number_of_outputs();
-                let ret = match perm_list
-                    .split_off(perm_list.len() - outs)
+                let (total_below, number_below) = perm_list_below
+                    .split_off(perm_list_below.len() - outs)
                     .into_iter()
                     .filter_map(|(_, y)| Option::<usize>::from(y))
-                    .fold((0, 0), |(a, b), c: usize| (a + c, b + 1))
-                {
-                    (_, 0) => usize::MAX.into(),
-                    (x, y) => Ratio::new_raw(x, y),
+                    .fold((0, 0), |(a, b), c: usize| (a + c, b + 1));
+                let (total_above, number_above) = op
+                    .input_links()
+                    .map(|x| edge_idx.get(&x).cloned().unwrap_or_default())
+                    .fold((0, 0), |(a, b), (c, d)| (a + c, b + d));
+                let ret = match (total_above + total_below, number_above + number_below) {
+                    (0, 0) => Ratio::new(usize::MAX, 1),
+                    (n, k) => Ratio::new(n, k),
                 };
                 (op.clone(), ret)
             })

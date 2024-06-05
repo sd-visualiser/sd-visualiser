@@ -394,7 +394,10 @@ pub fn from_graph<G: Graph>(graph: &G, solver: Solver) -> MonoidalWiredGraph<G::
     };
 
     // We can minimise swaps, keeping "compound terms" together
-    graph.minimise_swaps();
+    graph.minimise_swaps(false);
+    for _ in 0..10 {
+        graph.minimise_swaps(true);
+    }
 
     // After this we can flatten the "compound terms"
     graph.flatten_graph()
