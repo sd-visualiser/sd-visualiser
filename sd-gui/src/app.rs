@@ -366,7 +366,7 @@ impl eframe::App for App {
                             };
                             let contents = file.read().await;
                             if let Ok(string) = String::from_utf8(contents) {
-                                code.lock().unwrap().replace(&string);
+                                *code.lock().unwrap() = string.to_owned();
                                 if let Some(language) = language {
                                     tx.send(Message::SetLanguage(language))
                                         .expect("failed to send message");
