@@ -15,14 +15,14 @@ use syntect::{
     util::LinesWithEndings,
 };
 
+impl egui::util::cache::ComputerMut<(&CodeTheme, &str, &str), LayoutJob> for Highlighter {
+    fn compute(&mut self, (theme, code, language): (&CodeTheme, &str, &str)) -> LayoutJob {
+        self.highlight(theme, code, language)
+    }
+}
+
 /// Memoized syntax highlighting
 pub fn highlight(ctx: &egui::Context, theme: &CodeTheme, code: &str, language: &str) -> LayoutJob {
-    impl egui::util::cache::ComputerMut<(&CodeTheme, &str, &str), LayoutJob> for Highlighter {
-        fn compute(&mut self, (theme, code, language): (&CodeTheme, &str, &str)) -> LayoutJob {
-            self.highlight(theme, code, language)
-        }
-    }
-
     type HighlightCache = egui::util::cache::FrameCache<LayoutJob, Highlighter>;
 
     ctx.memory_mut(|mem| {
