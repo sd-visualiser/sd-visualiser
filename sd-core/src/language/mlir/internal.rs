@@ -15,7 +15,7 @@ pub enum TopLevelItem {
     Other(String),
 }
 
-impl<'a> from_pest::FromPest<'a> for TopLevelItem {
+impl from_pest::FromPest<'_> for TopLevelItem {
     type Rule = Rule;
     type FatalError = ::from_pest::Void;
     fn from_pest(

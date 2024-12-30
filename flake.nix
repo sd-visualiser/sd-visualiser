@@ -60,6 +60,7 @@
         nci = {
           projects.sd = {
             path = ./.;
+            profiles.dev = { };
             profiles.release = {runTests = false;};
           };
           crates = {
