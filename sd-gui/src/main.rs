@@ -119,7 +119,7 @@ fn main() {
             .start(
                 "the_canvas_id", // hardcode it
                 web_options,
-                Box::new(|cc| Box::new(sd_gui::App::new(cc, Solver::Minilp))),
+                Box::new(|cc| Box::new(sd_gui::App::new(cc, Solver::Microlp))),
             )
             .await
             .expect("failed to start eframe");

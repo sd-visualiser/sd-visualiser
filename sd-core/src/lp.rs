@@ -23,7 +23,7 @@ pub enum Solver {
     #[cfg(feature = "cbc")]
     Cbc,
     #[default]
-    Minilp,
+    Microlp,
 }
 
 impl LpProblem {
@@ -86,8 +86,8 @@ impl LpProblem {
                 }),
                 self.constraints,
             ),
-            Solver::Minilp => run_model(
-                to_solve.using(good_lp::solvers::minilp::minilp),
+            Solver::Microlp => run_model(
+                to_solve.using(good_lp::solvers::microlp::microlp),
                 self.constraints,
             ),
         }
