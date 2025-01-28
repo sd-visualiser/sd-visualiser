@@ -3,9 +3,9 @@ source: sd-graphics/src/layout.rs
 expression: "layout(&examples::thunk(), Solver::default()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
-  h_min: 0.0,
+  h_min: 0.00000000013747575,
   h_max: 4.5,
-  v_min: 0.0,
+  v_min: 0.0000000073578215,
   v_max: 3.5,
   nodes: [
     [
@@ -92,17 +92,17 @@ LayoutInternal(
     [
       WireData(
         h: 1.0,
-        v_min: 0.0,
+        v_min: 0.000000007357813,
         v_max: 0.5,
       ),
       WireData(
         h: 3.0,
-        v_min: 0.0,
+        v_min: 0.000000007357821,
         v_max: 0.5,
       ),
       WireData(
         h: 4.0,
-        v_min: 0.0,
+        v_min: 0.000000007357821,
         v_max: 0.5,
       ),
     ],

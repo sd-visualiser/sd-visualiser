@@ -15,6 +15,7 @@ pub struct LpProblem {
 
 #[derive(ValueEnum, Clone, Copy, Default, Debug)]
 pub enum Solver {
+    #[default]
     Clarabel,
     #[cfg(feature = "gurobi")]
     Gurobi,
@@ -22,7 +23,7 @@ pub enum Solver {
     Highs,
     #[cfg(feature = "cbc")]
     Cbc,
-    #[default]
+    #[cfg(feature = "microlp")]
     Microlp,
 }
 
@@ -86,6 +87,7 @@ impl LpProblem {
                 }),
                 self.constraints,
             ),
+            #[cfg(feature = "microlp")]
             Solver::Microlp => run_model(
                 to_solve.using(good_lp::solvers::microlp::microlp),
                 self.constraints,

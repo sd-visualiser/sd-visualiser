@@ -45,6 +45,7 @@ wasm-bindgen-futures = "0.4.37"
 
 [features]
 default = []
+microlp = ["sd-graphics/microlp"]
 cbc = ["sd-graphics/cbc"]
 highs = ["sd-graphics/highs"]
 gurobi = ["sd-graphics/gurobi"]

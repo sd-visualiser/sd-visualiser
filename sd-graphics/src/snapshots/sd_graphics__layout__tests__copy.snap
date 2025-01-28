@@ -1,11 +1,11 @@
 ---
 source: sd-graphics/src/layout.rs
-expression: "layout(&examples::copy()).expect(\"Layout failed\")"
+expression: "layout(&examples::copy(), Solver::default()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
-  h_min: 0.0,
+  h_min: -0.000000000009017399,
   h_max: 3.0,
-  v_min: 0.0,
+  v_min: 0.00000000020703243,
   v_max: 3.1123724,
   nodes: [
     [
@@ -62,20 +62,20 @@ LayoutInternal(
     [
       WireData(
         h: 1.75,
-        v_min: 0.0,
+        v_min: 0.00000000020703157,
         v_max: 0.5,
       ),
     ],
     [
       WireData(
         h: 1.0,
-        v_min: 1.6123724,
-        v_max: 1.6123724,
+        v_min: 1.6123725,
+        v_max: 1.6123725,
       ),
       WireData(
         h: 2.5,
-        v_min: 1.6123724,
-        v_max: 1.6123724,
+        v_min: 1.6123725,
+        v_max: 1.6123725,
       ),
     ],
     [

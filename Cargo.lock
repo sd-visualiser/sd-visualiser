@@ -897,6 +897,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror 1.0.69",
+ "web-time 0.2.4",
 ]
 
 [[package]]
@@ -2757,9 +2758,9 @@ dependencies = [
 
 [[package]]
 name = "microlp"
-version = "0.2.7"
+version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4d5845c04529928925fd1abd6776813710ad57ef41cb31958b1d35622a7d8e9"
+checksum = "54df3293c9060b47f9953c8785e5c96e3d3c29e48afaf215f3f335ffc7007304"
 dependencies = [
  "log",
  "sprs",
@@ -4174,9 +4175,9 @@ dependencies = [
 
 [[package]]
 name = "sprs"
-version = "0.11.2"
+version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "704ef26d974e8a452313ed629828cd9d4e4fa34667ca1ad9d6b1fffa43c6e166"
+checksum = "8bff8419009a08f6cb7519a602c5590241fbff1446bcc823c07af15386eb801b"
 dependencies = [
  "ndarray",
  "num-complex",

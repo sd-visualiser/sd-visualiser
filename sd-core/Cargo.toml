@@ -16,7 +16,7 @@ derivative = "2.2.0"
 dot-structures = "0.1.1"
 either = "1.9.0"
 from-pest = "0.3.2"
-good_lp = { version = "1.8.1", default-features = false, features = [ "minilp", "clarabel" ] }
+good_lp = { version = "1.8.1", default-features = false, features = [ "clarabel" ] }
 indexmap = "2.0.0"
 itertools = "0.11.0"
 num = "0.4.1"
@@ -30,6 +30,9 @@ qcell = "0.5.4"
 thiserror = "1.0.44"
 tracing = "0.1.37"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+good_lp = { version = "1.8.1", default-features = false, features = [ "clarabel-wasm" ] }
+
 [dev-dependencies]
 anyhow = "1.0.72"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
@@ -42,6 +45,7 @@ serde = "1.0.175"
 
 [features]
 default = []
+microlp = ["good_lp/minilp"]
 cbc = ["good_lp/coin_cbc"]
 highs = ["good_lp/highs"]
 gurobi = ["good_lp/lp-solvers"]

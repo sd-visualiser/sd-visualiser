@@ -1,11 +1,11 @@
 ---
 source: sd-graphics/src/layout.rs
-expression: "layout(&examples::int()).expect(\"Layout failed\")"
+expression: "layout(&examples::int(), Solver::default()).expect(\"Layout failed\")"
 ---
 LayoutInternal(
-  h_min: 0.0,
+  h_min: -0.000000000027437294,
   h_max: 1.0,
-  v_min: 0.0,
+  v_min: -0.000000000008786459,
   v_max: 1.5,
   nodes: [
     [
