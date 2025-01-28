@@ -106,44 +106,10 @@
                   };
                 };
 
-                depsDrvConfig = {
-
-                  mkDerivation = {
-                    nativeBuildInputs = with pkgs; [
-                      pkg-config
-                      cmake
-                      gcc
-                    ];
-
-                    buildInputs = with pkgs; [
-                      libGL
-                      glib
-                      atk
-                      gtk3
-                      clang
-                    ];
-                  };
-                };
-
-                drvConfig = {
-                  mkDerivation = {
-                    nativeBuildInputs = with pkgs; [
-                      pkg-config
-                    ];
-
-                    buildInputs = with pkgs; [
-                      libGL
-                      glib
-                      atk
-                      gtk3
-                    ];
-                  };
-                };
-
                 runtimeLibs = with pkgs; [
                   libGL
-                  gtk3
-                  glib
+                  libxkbcommon
+                  wayland
                 ];
               };
             };
