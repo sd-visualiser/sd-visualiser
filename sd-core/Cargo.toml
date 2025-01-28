@@ -8,40 +8,40 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-by_address = "1.1.0"
-clap = "4.5.4"
-clap_derive = "4.5.4"
-delegate = "0.10.0"
+by_address = "1.2.1"
+clap = "4.5.27"
+clap_derive = "4.5.24"
+delegate = "0.13.2"
 derivative = "2.2.0"
 dot-structures = "0.1.1"
-either = "1.9.0"
-from-pest = "0.3.2"
-good_lp = { version = "1.8.1", default-features = false, features = [ "clarabel" ] }
-indexmap = "2.0.0"
-itertools = "0.11.0"
-num = "0.4.1"
-pest = "2.7.1"
-pest-ast = "0.3.4"
-pest_derive = "2.7.1"
-petgraph = "0.6.3"
-pretty = "0.12.1"
-priority-queue = "1.3.2"
+either = "1.13.0"
+from-pest = "0.3.3"
+good_lp = { version = "1.11.0", default-features = false, features = [ "clarabel" ] }
+indexmap = "2.7.1"
+itertools = "0.14.0"
+num = "0.4.3"
+pest = "2.7.15"
+pest-ast = "0.3.5"
+pest_derive = "2.7.15"
+petgraph = "0.7.1"
+pretty = "0.12.3"
+priority-queue = "2.1.1"
 qcell = "0.5.4"
-thiserror = "1.0.44"
-tracing = "0.1.37"
+thiserror = "2.0.11"
+tracing = "0.1.41"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-good_lp = { version = "1.8.1", default-features = false, features = [ "clarabel-wasm" ] }
+good_lp = { version = "1.11.0", default-features = false, features = [ "clarabel-wasm" ] }
 
 [dev-dependencies]
-anyhow = "1.0.72"
+anyhow = "1.0.95"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 dir-test = "0.1.1"
-insta = { version = "1.31.0", features = ["ron", "redactions"] }
-petgraph = { version = "0.6.3", features = ["serde-1"] }
-rstest = "0.18.1"
-slab = { version = "0.4.8", features = ["serde"] }
-serde = "1.0.175"
+insta = { version = "1.42.1", features = ["ron", "redactions"] }
+petgraph = { version = "0.7.1", features = ["serde-1"] }
+rstest = "0.24.0"
+slab = { version = "0.4.9", features = ["serde"] }
+serde = "1.0.217"
 
 [features]
 default = []

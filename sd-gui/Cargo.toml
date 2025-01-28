@@ -9,39 +9,39 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-anyhow = "1.0.72"
-clap = { version = "4.3.19", features = ["derive"] }
-delegate = "0.10.0"
+anyhow = "1.0.95"
+clap = { version = "4.5.27", features = ["derive"] }
+delegate = "0.13.2"
 derivative = "2.2.0"
 dot-structures = "0.1.1"
 eframe = "0.27.2"
 egui = "0.27.2"
 egui-notify = "0.14.0"
-from-pest = "0.3.2"
-graphviz-rust = "0.7.2"
-indexmap = "2.0.0"
-lru = "0.11.0"
-pest = "2.7.1"
+from-pest = "0.3.3"
+graphviz-rust = "0.9.3"
+indexmap = "2.7.1"
+lru = "0.13.0"
+pest = "2.7.15"
 rfd = "0.15.2"
 sd-core = { path = "../sd-core" }
 sd-graphics = { path = "../sd-graphics" }
-syntect = { version = "5.0.0", default-features = false, features = ["default-fancy"] }
-thiserror = "1.0.44"
-tracing = "0.1.37"
+syntect = { version = "5.2.0", default-features = false, features = ["default-fancy"] }
+thiserror = "2.0.11"
+tracing = "0.1.41"
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 poll-promise = "0.3.0"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-log = "0.4.19"
+log = "0.4.25"
 poll-promise = { version = "0.3.0", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
 getrandom = { version = "0.2.15", features = ["js"]}
-wasm-bindgen-futures = "0.4.37"
+wasm-bindgen-futures = "0.4.50"
 
 [features]
 default = []
