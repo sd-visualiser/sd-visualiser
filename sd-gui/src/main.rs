@@ -96,7 +96,7 @@ fn main() -> anyhow::Result<()> {
                 app.set_file(&code, Some(language));
             }
 
-            Box::new(app)
+            Ok(Box::new(app))
         }),
     )
     .map_err(|err| anyhow!("{}", err))?;

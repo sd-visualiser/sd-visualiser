@@ -354,7 +354,7 @@ impl<T: Ctx> Shape<T> {
                     points,
                     closed: true,
                     fill,
-                    stroke,
+                    stroke: stroke.into(),
                 })
             }
         }

@@ -75,9 +75,12 @@ where
             .collect(),
     };
     for label in labels {
-        show_tooltip_at_pointer(ui.ctx(), egui::Id::new("hover_tooltip"), |ui| {
-            ui.label(label)
-        });
+        show_tooltip_at_pointer(
+            ui.ctx(),
+            ui.layer_id(),
+            egui::Id::new("hover_tooltip"),
+            |ui| ui.label(label),
+        );
     }
 
     shapes_vec

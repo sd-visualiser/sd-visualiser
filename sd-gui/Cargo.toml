@@ -14,9 +14,9 @@ clap = { version = "4.5.27", features = ["derive"] }
 delegate = "0.13.2"
 derivative = "2.2.0"
 dot-structures = "0.1.1"
-eframe = "0.27.2"
-egui = "0.27.2"
-egui-notify = "0.14.0"
+eframe = "0.30.0"
+egui = "0.30.0"
+egui-notify = "0.18.0"
 from-pest = "0.3.3"
 graphviz-rust = "0.9.3"
 indexmap = "2.7.1"
@@ -40,7 +40,7 @@ tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 log = "0.4.25"
 poll-promise = { version = "0.3.0", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
-getrandom = { version = "0.2.15", features = ["js"]}
+getrandom = { version = "*", features = ["js"]} # enable `js` feature on eframe/egui transitive dep
 wasm-bindgen-futures = "0.4.50"
 
 [features]

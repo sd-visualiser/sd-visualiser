@@ -52,7 +52,7 @@ pub fn show_parse_error(ui: &egui::Ui, err: &Error<impl RuleType>, text_edit_out
                     points: [start, control, end],
                     closed: false,
                     fill: Color32::TRANSPARENT,
-                    stroke: Stroke::new(1.0, ui.style().visuals.error_fg_color),
+                    stroke: Stroke::new(1.0, ui.style().visuals.error_fg_color).into(),
                 });
             }
         }
@@ -64,7 +64,7 @@ pub fn show_parse_error(ui: &egui::Ui, err: &Error<impl RuleType>, text_edit_out
         if text_edit_out.galley.rect.contains((pos.x, pos.y).into()) {
             let cursor = text_edit_out.galley.cursor_from_pos(pos);
             if is_in_line(cursor.rcursor.row, &err.line_col) {
-                show_tooltip_at_pointer(ui.ctx(), Id::new("hover_tooltip"), |ui| {
+                show_tooltip_at_pointer(ui.ctx(), ui.layer_id(), Id::new("hover_tooltip"), |ui| {
                     ui.label(RichText::new(err.to_string()).font(FontId::monospace(13.5)))
                 });
             }

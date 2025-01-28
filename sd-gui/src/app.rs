@@ -76,7 +76,8 @@ impl App {
 
         font_definitions.font_data.insert(
             font_name.clone(),
-            egui::FontData::from_static(include_bytes!("../assets/JetBrainsMonoNL-Regular.ttf")),
+            egui::FontData::from_static(include_bytes!("../assets/JetBrainsMonoNL-Regular.ttf"))
+                .into(),
         );
 
         font_definitions
@@ -281,13 +282,13 @@ impl eframe::App for App {
                     }};
                 }
                 ui.visuals_mut().button_frame = false;
-                ui.style_mut().wrap = Some(false);
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Truncate);
 
                 if ui.selectable_label(self.editor, "Editor").clicked() {
                     self.editor = !self.editor;
                 };
 
-                egui::widgets::global_dark_light_mode_buttons(ui);
+                egui::widgets::global_theme_preference_buttons(ui);
 
                 ui.separator();
 
@@ -524,7 +525,7 @@ impl eframe::App for App {
 
         egui::SidePanel::right("selection_panel").show(ctx, |ui| {
             egui::ScrollArea::vertical()
-                .id_source("selections")
+                .id_salt("selections")
                 .show(ui, |ui| self.selection_ui(ui));
         });
 
@@ -535,7 +536,7 @@ impl eframe::App for App {
                     if self.editor {
                         ui.columns(2, |columns| {
                             egui::ScrollArea::both()
-                                .id_source("code")
+                                .id_salt("code")
                                 .show(&mut columns[0], |ui| self.code_edit_ui(ui));
                             $graph(&mut columns[1]);
                         });
