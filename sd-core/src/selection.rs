@@ -160,7 +160,7 @@ fn normalise_selection<T: Ctx>(selection: &SelectionMap<T>) -> IndexSet<Node<T>>
 
 fn contains_transitively<T: Ctx>(selection: &IndexSet<Node<T>>, node: &Node<T>) -> bool {
     selection.contains(node)
-        || node.backlink().map_or(false, |thunk| {
-            contains_transitively::<T>(selection, &Node::Thunk(thunk))
-        })
+        || node
+            .backlink()
+            .is_some_and(|thunk| contains_transitively::<T>(selection, &Node::Thunk(thunk)))
 }
