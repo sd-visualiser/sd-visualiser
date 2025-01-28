@@ -480,15 +480,33 @@ impl eframe::App for App {
                     });
                 });
 
-                #[cfg(not(target_arch = "wasm32"))]
-                {
-                    ui.separator();
-                    if button!("Export SVG", enabled = ready) {
-                        if let Some(graph_ui) = finished(&self.graph_ui) {
-                            let svg = graph_ui.export_svg();
-                            if let Some(path) = rfd::FileDialog::new().save_file() {
+                ui.separator();
+                if button!("Export SVG", enabled = ready) {
+                    if let Some(graph_ui) = finished(&self.graph_ui) {
+                        let svg = graph_ui.export_svg();
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .add_filter("svg", &["svg"])
+                                .set_title("Export SVG")
+                                .set_file_name("graph.svg")
+                                .save_file()
+                            {
                                 let _ = std::fs::write(path, svg);
                             }
+                        }
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            let task = rfd::AsyncFileDialog::new()
+                                .add_filter("svg", &["svg"])
+                                .set_title("Export SVG")
+                                .set_file_name("graph.svg")
+                                .save_file();
+                            wasm_bindgen_futures::spawn_local(async move {
+                                if let Some(path) = task.await {
+                                    let _ = path.write(svg.as_bytes()).await;
+                                }
+                            });
                         }
                     }
                 }
