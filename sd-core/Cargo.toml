@@ -36,7 +36,7 @@ good_lp = { version = "1.11.0", default-features = false, features = [ "clarabel
 [dev-dependencies]
 anyhow = "1.0.95"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
-dir-test = "0.1.1"
+dir-test = "0.4.1"
 insta = { version = "1.42.1", features = ["ron", "redactions"] }
 petgraph = { version = "0.7.1", features = ["serde-1"] }
 rstest = "0.24.0"
