@@ -105,7 +105,7 @@ where
     pub fn roots(&self) -> impl DoubleEndedIterator<Item = Node<T>> + '_ {
         self.iter().filter(|node| {
             node.backlink()
-                .map_or(true, |backlink| !self[&Node::Thunk(backlink)])
+                .is_none_or(|backlink| !self[&Node::Thunk(backlink)])
         })
     }
 

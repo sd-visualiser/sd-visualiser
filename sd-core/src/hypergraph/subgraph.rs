@@ -171,7 +171,7 @@ impl<T: Ctx> Graph for Subgraph<T> {
                 if edge
                     .source()
                     .into_node()
-                    .map_or(true, |node| !self.selection[&node])
+                    .is_none_or(|node| !self.selection[&node])
                 {
                     inputs.insert(edge);
                 }
@@ -196,10 +196,7 @@ impl<T: Ctx> Graph for Subgraph<T> {
         for node in self.selection.roots() {
             for edge in node.outputs() {
                 for target in edge.targets() {
-                    if target
-                        .into_node()
-                        .map_or(true, |node| !self.selection[&node])
-                    {
+                    if target.into_node().is_none_or(|node| !self.selection[&node]) {
                         outputs.push(edge.clone());
                     }
                 }
