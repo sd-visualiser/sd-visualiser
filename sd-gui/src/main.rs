@@ -34,6 +34,10 @@ struct Args {
     #[arg(long, value_name = "FILE")]
     spartan: Option<PathBuf>,
 
+    /// Read in an llvm ir file
+    #[arg(long, value_name = "FILE")]
+    llvm_ir: Option<PathBuf>,
+
     /// Read in an mlir file
     #[arg(long, value_name = "FILE")]
     mlir: Option<PathBuf>,
@@ -77,6 +81,9 @@ fn main() -> anyhow::Result<()> {
     } else if let Some(path) = args.spartan {
         let code = std::fs::read_to_string(path)?;
         Some((code, sd_gui::UiLanguage::Spartan))
+    } else if let Some(path) = args.llvm_ir {
+        let code = std::fs::read_to_string(path)?;
+        Some((code, sd_gui::UiLanguage::LlvmIr))
     } else if let Some(path) = args.mlir {
         let code = std::fs::read_to_string(path)?;
         Some((code, sd_gui::UiLanguage::Mlir))

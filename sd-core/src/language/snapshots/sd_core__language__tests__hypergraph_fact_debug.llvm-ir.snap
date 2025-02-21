@@ -1,0 +1,994 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 1,
+    edge_count: 0,
+    node weights: {
+        0: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 12,
+                edge_count: 16,
+                edges: (2, 1), (3, 1), (4, 1), (1, 5), (2, 6), (7, 6), (8, 6), (6, 4), (2, 9), (10, 9), (9, 3), (0, 11), (11, 10), (11, 8), (11, 7), (11, 2),
+                node weights: {
+                    0: Edge(
+                        BoundVar(
+                            Var {
+                                name: Number(
+                                    0,
+                                ),
+                            },
+                        ),
+                    ),
+                    1: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 5,
+                            edge_count: 4,
+                            edges: (2, 1), (1, 3), (0, 4), (4, 2),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                2,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Number(
+                                                            14,
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                14,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        2,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    14,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 0,
+                            },
+                        },
+                    ),
+                    2: Edge(
+                        BoundVar(
+                            Var {
+                                name: Number(
+                                    2,
+                                ),
+                            },
+                        ),
+                    ),
+                    3: Edge(
+                        CF(
+                            Some(
+                                Number(
+                                    13,
+                                ),
+                            ),
+                        ),
+                    ),
+                    4: Edge(
+                        CF(
+                            Some(
+                                Number(
+                                    13,
+                                ),
+                            ),
+                        ),
+                    ),
+                    5: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                    6: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 19,
+                            edge_count: 18,
+                            edges: (2, 3), (0, 4), (5, 4), (7, 6), (8, 6), (6, 5), (10, 9), (11, 9), (9, 8), (12, 10), (14, 13), (15, 13), (13, 11), (16, 15), (1, 17), (17, 14), (1, 18), (18, 7),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                2,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                3,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                2: Operation(
+                                    Terminator(
+                                        Br(
+                                            Br {
+                                                dest: Number(
+                                                    13,
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        Some(
+                                            Number(
+                                                13,
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        2,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        12,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                5: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                12,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                6: Operation(
+                                    Instruction(
+                                        Mul(
+                                            Mul {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        8,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: LocalOperand {
+                                                    name: Number(
+                                                        11,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    12,
+                                                ),
+                                                nuw: false,
+                                                nsw: false,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                7: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                8,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                8: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                11,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                9: Operation(
+                                    Instruction(
+                                        Call(
+                                            Call {
+                                                function: Right(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            GlobalReference {
+                                                                name: Name(
+                                                                    "fact",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    FuncType {
+                                                                        result_type: TypeRef(
+                                                                            IntegerType {
+                                                                                bits: 32,
+                                                                            },
+                                                                        ),
+                                                                        param_types: [
+                                                                            TypeRef(
+                                                                                IntegerType {
+                                                                                    bits: 32,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        is_var_arg: false,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                function_ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                                arguments: [
+                                                    (
+                                                        LocalOperand {
+                                                            name: Number(
+                                                                10,
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        [
+                                                            NoUndef,
+                                                        ],
+                                                    ),
+                                                ],
+                                                return_attributes: [],
+                                                dest: Some(
+                                                    Number(
+                                                        11,
+                                                    ),
+                                                ),
+                                                function_attributes: [],
+                                                is_tail_call: false,
+                                                calling_convention: C,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                10: Edge(
+                                    Nil,
+                                ),
+                                11: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                10,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                12: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "fact",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                13: Operation(
+                                    Instruction(
+                                        Sub(
+                                            Sub {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        9,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    10,
+                                                ),
+                                                nuw: false,
+                                                nsw: false,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                14: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                9,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                15: Edge(
+                                    Nil,
+                                ),
+                                16: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                17: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    9,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                18: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    8,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 1,
+                                3: 0,
+                                4: 1,
+                                5: 0,
+                                6: 0,
+                                7: 1,
+                                8: 0,
+                                9: 0,
+                                10: 0,
+                                11: 1,
+                                12: 0,
+                                13: 0,
+                                14: 0,
+                                15: 0,
+                                16: 0,
+                                17: 0,
+                            },
+                        },
+                    ),
+                    7: Edge(
+                        BoundVar(
+                            Var {
+                                name: Number(
+                                    3,
+                                ),
+                            },
+                        ),
+                    ),
+                    8: Edge(
+                        CF(
+                            Some(
+                                Number(
+                                    7,
+                                ),
+                            ),
+                        ),
+                    ),
+                    9: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 6,
+                            edge_count: 4,
+                            edges: (1, 2), (0, 3), (4, 3), (5, 4),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                2,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Br(
+                                            Br {
+                                                dest: Number(
+                                                    13,
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    CF(
+                                        Some(
+                                            Number(
+                                                13,
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                3: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        2,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                4: Edge(
+                                    Nil,
+                                ),
+                                5: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 1,
+                                3: 0,
+                            },
+                        },
+                    ),
+                    10: Edge(
+                        CF(
+                            Some(
+                                Number(
+                                    6,
+                                ),
+                            ),
+                        ),
+                    ),
+                    11: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 21,
+                            edge_count: 19,
+                            edges: (2, 1), (1, 3), (1, 4), (6, 5), (7, 5), (8, 5), (5, 2), (9, 8), (10, 6), (12, 11), (11, 7), (12, 13), (0, 13), (15, 14), (14, 12), (16, 15), (18, 17), (17, 19), (20, 18),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        CondBr(
+                                            CondBr {
+                                                condition: LocalOperand {
+                                                    name: Number(
+                                                        5,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 1,
+                                                        },
+                                                    ),
+                                                },
+                                                true_dest: Number(
+                                                    6,
+                                                ),
+                                                false_dest: Number(
+                                                    7,
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                5,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        Some(
+                                            Number(
+                                                6,
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                4: Edge(
+                                    CF(
+                                        Some(
+                                            Number(
+                                                7,
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                5: Operation(
+                                    Instruction(
+                                        ICmp(
+                                            ICmp {
+                                                predicate: EQ,
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        4,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 0,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    5,
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                6: Edge(
+                                    Nil,
+                                ),
+                                7: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                4,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                8: Edge(
+                                    Nil,
+                                ),
+                                9: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 0,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                10: Operation(
+                                    IntPredicate(
+                                        EQ,
+                                    ),
+                                ),
+                                11: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    4,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                12: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                3,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                13: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        0,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: false,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                14: Operation(
+                                    Instruction(
+                                        Alloca(
+                                            Alloca {
+                                                allocated_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                num_elements: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    3,
+                                                ),
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                15: Edge(
+                                    Nil,
+                                ),
+                                16: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                17: Operation(
+                                    Instruction(
+                                        Alloca(
+                                            Alloca {
+                                                allocated_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                num_elements: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    2,
+                                                ),
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                18: Edge(
+                                    Nil,
+                                ),
+                                19: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                2,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                20: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 1,
+                                3: 0,
+                                4: 1,
+                                5: 2,
+                                6: 0,
+                                7: 0,
+                                8: 0,
+                                9: 0,
+                                10: 0,
+                                11: 0,
+                                12: 1,
+                                13: 0,
+                                14: 0,
+                                15: 0,
+                                16: 0,
+                                17: 0,
+                                18: 0,
+                            },
+                        },
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 1,
+                    2: 2,
+                    3: 0,
+                    4: 0,
+                    5: 1,
+                    6: 2,
+                    7: 0,
+                    8: 0,
+                    9: 1,
+                    10: 0,
+                    11: 0,
+                    12: 0,
+                    13: 1,
+                    14: 2,
+                    15: 3,
+                },
+            },
+        ),
+    },
+    edge weights: {},
+}

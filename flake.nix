@@ -49,6 +49,7 @@
 
           devShells.default = config.nci.outputs.sd-gui.devShell.overrideAttrs (attrs: {
             LIBCLANG_PATH = "${pkgs.libclang.lib}/lib";
+            LLVM_SYS_191_PREFIX = "${pkgs.llvm_19.dev}";
             packages =
               (attrs.packages or [ ])
               ++ (with pkgs; [
@@ -58,6 +59,10 @@
                 cbc
                 # add for convienience
                 trunk
+                # llvm dependencies
+                libz
+                libtinfo
+                libxml2
               ]);
           });
 
