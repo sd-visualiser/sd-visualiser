@@ -19,7 +19,7 @@ use sd_core::{
         Hypergraph,
     },
     interactive::InteractiveGraph,
-    language::{chil::Chil, mlir::Mlir, spartan::Spartan},
+    language::{chil::Chil, llvm_ir::LlvmIr, mlir::Mlir, spartan::Spartan},
     lp::Solver,
 };
 use sd_graphics::{common::Shapeable, renderable::RenderableGraph};
@@ -28,6 +28,7 @@ use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
 
 pub enum GraphUi {
     Chil(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Chil>>>),
+    LlvmIr(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<LlvmIr>>>),
     Mlir(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Mlir>>>),
     Spartan(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Spartan>>>),
     Dot(GraphUiInternal<InteractiveGraph<Hypergraph<DotWeight>>>),
@@ -36,6 +37,10 @@ pub enum GraphUi {
 impl GraphUi {
     pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>, solver: Solver) -> Self {
         Self::Chil(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
+    }
+
+    pub(crate) fn new_llvm_ir(graph: SyntaxHypergraph<LlvmIr>, solver: Solver) -> Self {
+        Self::LlvmIr(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
     pub(crate) fn new_mlir(graph: SyntaxHypergraph<Mlir>, solver: Solver) -> Self {
@@ -53,6 +58,7 @@ impl GraphUi {
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui,
+            GraphUi::LlvmIr(graph_ui) => graph_ui,
             GraphUi::Mlir(graph_ui) => graph_ui,
             GraphUi::Spartan(graph_ui) => graph_ui,
             GraphUi::Dot(graph_ui) => graph_ui
@@ -70,6 +76,7 @@ impl GraphUi {
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui.graph,
+            GraphUi::LlvmIr(graph_ui) => graph_ui.graph,
             GraphUi::Mlir(graph_ui) => graph_ui.graph,
             GraphUi::Spartan(graph_ui) => graph_ui.graph,
             GraphUi::Dot(graph_ui) => graph_ui.graph

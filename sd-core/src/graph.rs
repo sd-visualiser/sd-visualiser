@@ -130,7 +130,7 @@ struct Environment<F, T: Language> {
     outputs: HashMap<T::Var, OutPort<Syntax<T>>>,
     /// Control flow wires to be connected
     cf_outputs: Vec<(Option<T::BlockAddr>, OutPort<Syntax<T>>)>,
-    /// Whether to link symbols in mlir
+    /// Whether to link symbols in llvm-ir/mlir
     sym_name_link: bool,
 }
 
@@ -209,11 +209,17 @@ where
                 }
             }
             Value::Thunk(thunk) => {
-                let output_weights = if let ProcessInput::Variables(inputs) = &input {
+                let mut output_weights = if let ProcessInput::Variables(inputs) = &input {
                     inputs.iter().map(|x| Name::BoundVar(x.clone())).collect()
                 } else {
                     vec![Name::Nil]
                 };
+                if self.sym_name_link {
+                    let symbol = thunk.addr.clone();
+                    if let Ok(sym) = <T as Language>::Symbol::try_from(symbol) {
+                        output_weights.push(Name::FreeVar(sym.into()))
+                    }
+                }
 
                 let mut cf_free_vars = HashMap::new();
                 thunk.body.cf_free_vars(&mut cf_free_vars);
@@ -308,6 +314,17 @@ where
                                 .is_none()
                                 .then_some(())
                                 .ok_or(ConvertError::Shadowed(var.clone()))?;
+                        }
+                        if self.sym_name_link {
+                            if let Ok(symbol) =
+                                <T as Language>::Symbol::try_from(thunk.addr.clone())
+                            {
+                                self.outputs
+                                    .insert(symbol.clone().into(), out_ports.next().unwrap())
+                                    .is_none()
+                                    .then_some(())
+                                    .ok_or(ConvertError::Shadowed(symbol.into()))?;
+                            }
                         }
                     }
                     ProcessInput::InPort(in_port) => {
@@ -512,8 +529,7 @@ mod tests {
         let (lang, name, expr) = fixture.content();
 
         expr.graph_test(name, lang, false)?;
-
-        if lang == &"mlir" {
+        if *lang == "llvm-ir" || *lang == "mlir" {
             expr.graph_test(name, lang, true)?;
         }
 

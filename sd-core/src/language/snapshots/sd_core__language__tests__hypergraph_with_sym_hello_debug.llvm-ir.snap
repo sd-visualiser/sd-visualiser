@@ -1,0 +1,92 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 2,
+    edge_count: 1,
+    edges: (0, 1),
+    node weights: {
+        0: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 2,
+                edge_count: 1,
+                edges: (0, 1),
+                node weights: {
+                    0: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 4,
+                            edge_count: 3,
+                            edges: (1, 0), (0, 2), (3, 1),
+                            node weights: {
+                                0: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            Int {
+                                                                bits: 32,
+                                                                value: 0,
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                1: Edge(
+                                    Nil,
+                                ),
+                                2: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                3: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 0,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                            },
+                        },
+                    ),
+                    1: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                },
+            },
+        ),
+        1: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "main",
+                },
+            ),
+        ),
+    },
+    edge weights: {
+        0: 0,
+    },
+}

@@ -1,0 +1,159 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 1,
+    edge_count: 0,
+    node weights: {
+        0: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 2,
+                edge_count: 1,
+                edges: (0, 1),
+                node weights: {
+                    0: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 6,
+                            edge_count: 5,
+                            edges: (1, 0), (0, 2), (4, 3), (3, 1), (5, 4),
+                            node weights: {
+                                0: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Name(
+                                                            "tmp1",
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                1: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "tmp1",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                2: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                3: Operation(
+                                    Instruction(
+                                        Call(
+                                            Call {
+                                                function: Right(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            GlobalReference {
+                                                                name: Name(
+                                                                    "diverge",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    FuncType {
+                                                                        result_type: TypeRef(
+                                                                            IntegerType {
+                                                                                bits: 32,
+                                                                            },
+                                                                        ),
+                                                                        param_types: [],
+                                                                        is_var_arg: false,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                function_ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                                arguments: [],
+                                                return_attributes: [],
+                                                dest: Some(
+                                                    Name(
+                                                        "tmp1",
+                                                    ),
+                                                ),
+                                                function_attributes: [],
+                                                is_tail_call: false,
+                                                calling_convention: C,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                4: Edge(
+                                    Nil,
+                                ),
+                                5: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "diverge",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 0,
+                                4: 0,
+                            },
+                        },
+                    ),
+                    1: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                },
+            },
+        ),
+    },
+    edge weights: {},
+}
