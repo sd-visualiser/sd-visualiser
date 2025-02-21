@@ -77,9 +77,7 @@ pub fn normalised_targets<T: Ctx>(
                     outputs.push(Endpoint::Node(node));
                 }
                 Ancestor::Contained(graph) => {
-                    if Some(Node::Thunk(graph.clone())) != source {
-                        non_dupe_outputs.insert(Endpoint::Node(Node::Thunk(graph)));
-                    }
+                    non_dupe_outputs.insert(Endpoint::Node(Node::Thunk(graph)));
                 }
                 Ancestor::NoAncestor => {
                     non_dupe_outputs.insert(Endpoint::Boundary(containing.cloned()));

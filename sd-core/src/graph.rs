@@ -9,7 +9,7 @@ use itertools::Itertools;
 #[cfg(test)]
 use serde::Serialize;
 use thiserror::Error;
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::{
     common::Matchable,
@@ -301,7 +301,7 @@ where
 
                 match input {
                     ProcessInput::Variables(inputs) => {
-                        for (input, out_port) in inputs.into_iter().zip(out_ports) {
+                        for (input, out_port) in inputs.into_iter().zip(out_ports.by_ref()) {
                             let var = input.var();
                             self.outputs
                                 .insert(var.clone(), out_port)
@@ -437,6 +437,7 @@ where
         self.inputs
             .retain(|(in_port, var)| match self.outputs.get(var) {
                 Some(out_port) => {
+                    debug!("linking: {:?} -> {:?}", in_port, out_port);
                     self.fragment
                         .link(out_port.clone(), in_port.clone())
                         .unwrap();
@@ -477,6 +478,7 @@ impl<T: Language + 'static> Expr<T> {
         debug!("Expression processed");
 
         if !env.inputs.is_empty() {
+            error!("Uninitialised inputs: {:?}", env.inputs);
             return Err(ConvertError::UnitialisedInput(
                 env.inputs.into_iter().map(|x| x.1).collect(),
             ));

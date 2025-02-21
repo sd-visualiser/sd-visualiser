@@ -55,7 +55,7 @@ impl<T: Language> Value<T> {
                 vars.insert(v.clone());
             }
             Value::Thunk(thunk) => {
-                thunk.free_vars(vars, sym_name_link);
+                thunk.free_vars(vars, to_remove, sym_name_link);
             }
             Value::Op { op, args } => {
                 for arg in args {
@@ -90,18 +90,22 @@ impl<T: Language> Value<T> {
 }
 
 impl<T: Language> Thunk<T> {
-    pub(crate) fn free_vars(&self, vars: &mut IndexSet<T::Var>, sym_name_link: bool) {
+    pub(crate) fn free_vars(
+        &self,
+        vars: &mut IndexSet<T::Var>,
+        to_remove: &mut IndexSet<T::Var>,
+        sym_name_link: bool,
+    ) {
         let mut new_vars: IndexSet<T::Var> = IndexSet::new();
-        let mut to_remove: IndexSet<T::Var> = IndexSet::new();
         self.body
-            .extend_free_vars(&mut new_vars, &mut to_remove, sym_name_link);
+            .extend_free_vars(&mut new_vars, to_remove, sym_name_link);
         to_remove.extend(self.args.iter().map(|def| def.var().clone()));
         for b in &self.blocks {
             b.expr
-                .extend_free_vars(&mut new_vars, &mut to_remove, sym_name_link);
+                .extend_free_vars(&mut new_vars, to_remove, sym_name_link);
             to_remove.extend(b.args.iter().map(|def| def.var().clone()));
         }
 
-        vars.extend(new_vars.difference(&to_remove).cloned());
+        vars.extend(new_vars.difference(to_remove).cloned());
     }
 }
