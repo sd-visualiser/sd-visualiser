@@ -77,6 +77,18 @@ where
     }
 }
 
+impl Matchable for String {
+    fn is_match(&self, query: &str) -> bool {
+        self == query
+    }
+}
+
+impl Matchable for Box<String> {
+    fn is_match(&self, query: &str) -> bool {
+        self.as_ref() == query
+    }
+}
+
 impl<S: Matchable, T: Matchable> Matchable for Either<S, T> {
     fn is_match(&self, query: &str) -> bool {
         match self {

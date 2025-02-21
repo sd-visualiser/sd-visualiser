@@ -1,0 +1,1476 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 4,
+    edge_count: 2,
+    edges: (1, 0), (2, 1),
+    node weights: {
+        0: Operation(
+            GlobalVariable(
+                GlobalVariable {
+                    name: Name(
+                        "global",
+                    ),
+                    linkage: External,
+                    visibility: Default,
+                    is_constant: false,
+                    ty: TypeRef(
+                        PointerType {
+                            addr_space: 0,
+                        },
+                    ),
+                    addr_space: 0,
+                    dll_storage_class: Default,
+                    thread_local_mode: NotThreadLocal,
+                    unnamed_addr: None,
+                    initializer: Some(
+                        ConstantRef(
+                            Int {
+                                bits: 32,
+                                value: 5,
+                            },
+                        ),
+                    ),
+                    section: None,
+                    comdat: None,
+                    alignment: 4,
+                    debugloc: None,
+                },
+            ),
+        ),
+        1: Edge(
+            Nil,
+        ),
+        2: Operation(
+            Constant(
+                ConstantRef(
+                    Int {
+                        bits: 32,
+                        value: 5,
+                    },
+                ),
+            ),
+        ),
+        3: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 4,
+                edge_count: 3,
+                edges: (1, 2), (0, 2), (2, 3),
+                node weights: {
+                    0: Edge(
+                        BoundVar(
+                            Var {
+                                name: Number(
+                                    0,
+                                ),
+                            },
+                        ),
+                    ),
+                    1: Edge(
+                        BoundVar(
+                            Var {
+                                name: Number(
+                                    1,
+                                ),
+                            },
+                        ),
+                    ),
+                    2: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 71,
+                            edge_count: 69,
+                            edges: (2, 3), (5, 4), (6, 4), (7, 4), (8, 6), (9, 5), (0, 10), (11, 10), (13, 12), (14, 12), (12, 11), (15, 14), (0, 16), (16, 13), (18, 17), (19, 17), (21, 20), (22, 20), (20, 19), (23, 22), (18, 24), (24, 21), (26, 25), (27, 25), (28, 26), (30, 29), (31, 29), (29, 27), (32, 31), (34, 33), (33, 30), (35, 34), (37, 36), (38, 36), (40, 39), (41, 39), (39, 38), (42, 41), (37, 43), (43, 40), (7, 44), (45, 44), (47, 46), (48, 46), (46, 45), (49, 48), (7, 50), (50, 47), (52, 51), (53, 51), (51, 37), (54, 53), (55, 52), (7, 56), (57, 56), (58, 57), (60, 59), (61, 59), (7, 59), (62, 61), (63, 60), (18, 64), (1, 64), (66, 65), (65, 7), (67, 66), (69, 68), (68, 18), (70, 69),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                1,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                0,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                2: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: None,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Call(
+                                            Call {
+                                                function: Right(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            GlobalReference {
+                                                                name: Name(
+                                                                    "llvm.lifetime.end.p0",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    FuncType {
+                                                                        result_type: TypeRef(
+                                                                            VoidType,
+                                                                        ),
+                                                                        param_types: [
+                                                                            TypeRef(
+                                                                                IntegerType {
+                                                                                    bits: 64,
+                                                                                },
+                                                                            ),
+                                                                            TypeRef(
+                                                                                PointerType {
+                                                                                    addr_space: 0,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        is_var_arg: false,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                function_ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            VoidType,
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 64,
+                                                                },
+                                                            ),
+                                                            TypeRef(
+                                                                PointerType {
+                                                                    addr_space: 0,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                                arguments: [
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Int {
+                                                                    bits: 64,
+                                                                    value: 4,
+                                                                },
+                                                            ),
+                                                        ),
+                                                        [],
+                                                    ),
+                                                    (
+                                                        LocalOperand {
+                                                            name: Number(
+                                                                4,
+                                                            ),
+                                                            ty: TypeRef(
+                                                                PointerType {
+                                                                    addr_space: 0,
+                                                                },
+                                                            ),
+                                                        },
+                                                        [
+                                                            NonNull,
+                                                        ],
+                                                    ),
+                                                ],
+                                                return_attributes: [],
+                                                dest: None,
+                                                function_attributes: [],
+                                                is_tail_call: false,
+                                                calling_convention: C,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                5: Edge(
+                                    Nil,
+                                ),
+                                6: Edge(
+                                    Nil,
+                                ),
+                                7: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                4,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                8: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 64,
+                                                value: 4,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                9: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "llvm.lifetime.end.p0",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            VoidType,
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 64,
+                                                                },
+                                                            ),
+                                                            TypeRef(
+                                                                PointerType {
+                                                                    addr_space: 0,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                10: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        1,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        15,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                11: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                15,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                12: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        14,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 5,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    15,
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                13: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                14,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                14: Edge(
+                                    Nil,
+                                ),
+                                15: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 5,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                16: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        1,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    14,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                17: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        13,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                18: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                3,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                19: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                13,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                20: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        12,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 5,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    13,
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                21: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                12,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                22: Edge(
+                                    Nil,
+                                ),
+                                23: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 5,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                24: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    12,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                25: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: ConstantOperand(
+                                                    ConstantRef(
+                                                        GlobalReference {
+                                                            name: Name(
+                                                                "global",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                ),
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        11,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                26: Edge(
+                                    Nil,
+                                ),
+                                27: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                11,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                28: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "global",
+                                                ),
+                                                ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                29: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        10,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 5,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    11,
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                30: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                10,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                31: Edge(
+                                    Nil,
+                                ),
+                                32: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 5,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                33: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: ConstantOperand(
+                                                    ConstantRef(
+                                                        GlobalReference {
+                                                            name: Name(
+                                                                "global",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    10,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                34: Edge(
+                                    Nil,
+                                ),
+                                35: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "global",
+                                                ),
+                                                ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                36: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        5,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        9,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                37: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                5,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                38: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                9,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                39: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        8,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 5,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    9,
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                40: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                8,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                41: Edge(
+                                    Nil,
+                                ),
+                                42: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 5,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                43: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        5,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    8,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                44: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        4,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        7,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                45: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                7,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                46: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Number(
+                                                        6,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 5,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    7,
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                47: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                6,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                48: Edge(
+                                    Nil,
+                                ),
+                                49: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 5,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                50: Operation(
+                                    Instruction(
+                                        Load(
+                                            Load {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        4,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Number(
+                                                    6,
+                                                ),
+                                                loaded_ty: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                51: Operation(
+                                    Instruction(
+                                        Call(
+                                            Call {
+                                                function: Right(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            GlobalReference {
+                                                                name: Name(
+                                                                    "malloc",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    FuncType {
+                                                                        result_type: TypeRef(
+                                                                            PointerType {
+                                                                                addr_space: 0,
+                                                                            },
+                                                                        ),
+                                                                        param_types: [
+                                                                            TypeRef(
+                                                                                IntegerType {
+                                                                                    bits: 64,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        is_var_arg: false,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                function_ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            PointerType {
+                                                                addr_space: 0,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 64,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                                arguments: [
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Int {
+                                                                    bits: 64,
+                                                                    value: 4,
+                                                                },
+                                                            ),
+                                                        ),
+                                                        [
+                                                            NoUndef,
+                                                        ],
+                                                    ),
+                                                ],
+                                                return_attributes: [
+                                                    DereferenceableOrNull(
+                                                        4,
+                                                    ),
+                                                ],
+                                                dest: Some(
+                                                    Number(
+                                                        5,
+                                                    ),
+                                                ),
+                                                function_attributes: [
+                                                    AllocSize {
+                                                        elt_size: 0,
+                                                        num_elts: None,
+                                                    },
+                                                ],
+                                                is_tail_call: true,
+                                                calling_convention: C,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                52: Edge(
+                                    Nil,
+                                ),
+                                53: Edge(
+                                    Nil,
+                                ),
+                                54: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 64,
+                                                value: 4,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                55: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "malloc",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            PointerType {
+                                                                addr_space: 0,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 64,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                56: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        4,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 72,
+                                                        },
+                                                    ),
+                                                ),
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                57: Edge(
+                                    Nil,
+                                ),
+                                58: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 72,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                59: Operation(
+                                    Instruction(
+                                        Call(
+                                            Call {
+                                                function: Right(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            GlobalReference {
+                                                                name: Name(
+                                                                    "llvm.lifetime.start.p0",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    FuncType {
+                                                                        result_type: TypeRef(
+                                                                            VoidType,
+                                                                        ),
+                                                                        param_types: [
+                                                                            TypeRef(
+                                                                                IntegerType {
+                                                                                    bits: 64,
+                                                                                },
+                                                                            ),
+                                                                            TypeRef(
+                                                                                PointerType {
+                                                                                    addr_space: 0,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        is_var_arg: false,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                function_ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            VoidType,
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 64,
+                                                                },
+                                                            ),
+                                                            TypeRef(
+                                                                PointerType {
+                                                                    addr_space: 0,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                                arguments: [
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Int {
+                                                                    bits: 64,
+                                                                    value: 4,
+                                                                },
+                                                            ),
+                                                        ),
+                                                        [],
+                                                    ),
+                                                    (
+                                                        LocalOperand {
+                                                            name: Number(
+                                                                4,
+                                                            ),
+                                                            ty: TypeRef(
+                                                                PointerType {
+                                                                    addr_space: 0,
+                                                                },
+                                                            ),
+                                                        },
+                                                        [
+                                                            NonNull,
+                                                        ],
+                                                    ),
+                                                ],
+                                                return_attributes: [],
+                                                dest: None,
+                                                function_attributes: [],
+                                                is_tail_call: false,
+                                                calling_convention: C,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                60: Edge(
+                                    Nil,
+                                ),
+                                61: Edge(
+                                    Nil,
+                                ),
+                                62: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 64,
+                                                value: 4,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                63: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "llvm.lifetime.start.p0",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            VoidType,
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 64,
+                                                                },
+                                                            ),
+                                                            TypeRef(
+                                                                PointerType {
+                                                                    addr_space: 0,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                64: Operation(
+                                    Instruction(
+                                        Store(
+                                            Store {
+                                                address: LocalOperand {
+                                                    name: Number(
+                                                        3,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        PointerType {
+                                                            addr_space: 0,
+                                                        },
+                                                    ),
+                                                },
+                                                value: LocalOperand {
+                                                    name: Number(
+                                                        0,
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                volatile: true,
+                                                atomicity: None,
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                65: Operation(
+                                    Instruction(
+                                        Alloca(
+                                            Alloca {
+                                                allocated_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                num_elements: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    4,
+                                                ),
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                66: Edge(
+                                    Nil,
+                                ),
+                                67: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                68: Operation(
+                                    Instruction(
+                                        Alloca(
+                                            Alloca {
+                                                allocated_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                num_elements: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Number(
+                                                    3,
+                                                ),
+                                                alignment: 4,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                69: Edge(
+                                    Nil,
+                                ),
+                                70: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 1,
+                                3: 2,
+                                4: 0,
+                                5: 0,
+                                6: 0,
+                                7: 1,
+                                8: 0,
+                                9: 1,
+                                10: 0,
+                                11: 0,
+                                12: 0,
+                                13: 0,
+                                14: 0,
+                                15: 1,
+                                16: 0,
+                                17: 1,
+                                18: 0,
+                                19: 0,
+                                20: 0,
+                                21: 0,
+                                22: 0,
+                                23: 1,
+                                24: 0,
+                                25: 0,
+                                26: 1,
+                                27: 0,
+                                28: 0,
+                                29: 0,
+                                30: 0,
+                                31: 0,
+                                32: 0,
+                                33: 1,
+                                34: 0,
+                                35: 1,
+                                36: 0,
+                                37: 0,
+                                38: 0,
+                                39: 0,
+                                40: 0,
+                                41: 1,
+                                42: 0,
+                                43: 1,
+                                44: 0,
+                                45: 0,
+                                46: 0,
+                                47: 0,
+                                48: 0,
+                                49: 1,
+                                50: 0,
+                                51: 0,
+                                52: 0,
+                                53: 0,
+                                54: 1,
+                                55: 0,
+                                56: 0,
+                                57: 1,
+                                58: 2,
+                                59: 0,
+                                60: 0,
+                                61: 0,
+                                62: 1,
+                                63: 0,
+                                64: 0,
+                                65: 0,
+                                66: 0,
+                                67: 0,
+                                68: 0,
+                            },
+                        },
+                    ),
+                    3: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 1,
+                    2: 0,
+                },
+            },
+        ),
+    },
+    edge weights: {
+        0: 0,
+        1: 0,
+    },
+}

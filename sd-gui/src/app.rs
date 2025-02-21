@@ -17,7 +17,7 @@ use poll_promise::Promise;
 use sd_core::{
     common::Direction,
     dot::{DotSettings, dot_to_graph},
-    language::mlir::MlirSettings,
+    language::{llvm_ir::LlvmIrSettings, mlir::MlirSettings},
     lp::Solver,
 };
 
@@ -49,6 +49,7 @@ pub struct App {
     last_parse_error: Option<ParseError>,
     language: UiLanguage,
     dot_settings: DotSettings,
+    llvm_ir_settings: LlvmIrSettings,
     mlir_settings: MlirSettings,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
@@ -99,6 +100,7 @@ impl App {
             last_parse_error: Option::default(),
             language: UiLanguage::default(),
             dot_settings: DotSettings::default(),
+            llvm_ir_settings: LlvmIrSettings::default(),
             mlir_settings: MlirSettings::default(),
             graph_ui: Option::default(),
             selections: Vec::default(),
@@ -132,7 +134,7 @@ impl App {
                 ParseError::Chil(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Mlir(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Spartan(err) => show_parse_error(ui, err, &text_edit_out),
-                ParseError::Dot(_) | ParseError::Conversion(_) => (),
+                ParseError::LlvmIr(_) | ParseError::Dot(_) | ParseError::Conversion(_) => (),
             }
         }
     }
@@ -179,6 +181,7 @@ impl App {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
             let dot_settings = self.dot_settings;
+            let llvm_ir_settings = self.llvm_ir_settings;
             let mlir_settings = self.mlir_settings;
             let solver = self.solver;
             self.graph_ui.replace(crate::spawn!("compile", {
@@ -191,6 +194,13 @@ impl App {
                     ParseOutput::Chil(expr) => {
                         tracing::debug!("Converting chil to hypergraph...");
                         GraphUi::new_chil(expr.to_graph(false)?, solver)
+                    }
+                    ParseOutput::LlvmIr(expr) => {
+                        tracing::debug!("Converting llvm ir to hypergraph...");
+                        GraphUi::new_llvm_ir(
+                            expr.to_graph(llvm_ir_settings.sym_name_linking)?,
+                            solver,
+                        )
                     }
                     ParseOutput::Mlir(expr) => {
                         tracing::debug!("Converting mlir to hypergraph...");
@@ -294,6 +304,7 @@ impl eframe::App for App {
 
                 ui.menu_button("Language", |ui| {
                     ui.radio_value(&mut self.language, UiLanguage::Chil, "Chil");
+                    ui.radio_value(&mut self.language, UiLanguage::LlvmIr, "LlvmIr");
                     ui.radio_value(&mut self.language, UiLanguage::Mlir, "Mlir");
                     ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
                     ui.radio_value(&mut self.language, UiLanguage::Dot, "Dot");
@@ -316,6 +327,23 @@ impl eframe::App for App {
                                 .clicked()
                             {
                                 self.dot_settings.collect = !self.dot_settings.collect;
+                                self.tx
+                                    .send(Message::Compile)
+                                    .expect("Failed to send message");
+                            }
+                        });
+                    }
+                    UiLanguage::LlvmIr => {
+                        ui.menu_button("Settings", |ui| {
+                            if ui
+                                .selectable_label(
+                                    self.llvm_ir_settings.sym_name_linking,
+                                    "Link symbols",
+                                )
+                                .clicked()
+                            {
+                                self.llvm_ir_settings.sym_name_linking =
+                                    !self.llvm_ir_settings.sym_name_linking;
                                 self.tx
                                     .send(Message::Compile)
                                     .expect("Failed to send message");
@@ -347,6 +375,7 @@ impl eframe::App for App {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
                             Some(ext) if ext == "chil" => Some(UiLanguage::Chil),
+                            Some(ext) if ext == "ll" => Some(UiLanguage::LlvmIr),
                             Some(ext) if ext == "mlir" => Some(UiLanguage::Mlir),
                             Some(ext) if ext == "sd" => Some(UiLanguage::Spartan),
                             Some(ext) if ext == "dot" => Some(UiLanguage::Dot),
@@ -369,6 +398,7 @@ impl eframe::App for App {
                                 tracing::trace!("got file name {:?}", file.file_name());
                                 let language = match file.file_name().split('.').last() {
                                     Some("chil") => Some(UiLanguage::Chil),
+                                    Some("ll") => Some(UiLanguage::LlvmIr),
                                     Some("mlir") => Some(UiLanguage::Mlir),
                                     Some("sd") => Some(UiLanguage::Spartan),
                                     Some("dot") => Some(UiLanguage::Dot),

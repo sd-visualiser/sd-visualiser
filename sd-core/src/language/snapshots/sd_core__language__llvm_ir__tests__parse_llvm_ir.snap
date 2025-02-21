@@ -1,0 +1,130 @@
+---
+source: sd-core/src/language/llvm_ir.rs
+expression: expr
+---
+Expr {
+    binds: [
+        Bind {
+            defs: [
+                Name(
+                    "add1",
+                ),
+            ],
+            value: Thunk(
+                Thunk {
+                    addr: "add1",
+                    args: [
+                        Name(
+                            "a",
+                        ),
+                        Name(
+                            "b",
+                        ),
+                    ],
+                    body: Expr {
+                        binds: [],
+                        values: [],
+                    },
+                    blocks: [
+                        Block {
+                            addr: Name(
+                                "entry",
+                            ),
+                            args: [],
+                            expr: Expr {
+                                binds: [
+                                    Bind {
+                                        defs: [
+                                            Name(
+                                                "tmp1",
+                                            ),
+                                        ],
+                                        value: Op {
+                                            op: Instruction(
+                                                Add(
+                                                    Add {
+                                                        operand0: LocalOperand {
+                                                            name: Name(
+                                                                "a",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        operand1: LocalOperand {
+                                                            name: Name(
+                                                                "b",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        dest: Name(
+                                                            "tmp1",
+                                                        ),
+                                                        nuw: false,
+                                                        nsw: false,
+                                                        debugloc: None,
+                                                    },
+                                                ),
+                                            ),
+                                            args: [
+                                                Variable(
+                                                    Name(
+                                                        "a",
+                                                    ),
+                                                ),
+                                                Variable(
+                                                    Name(
+                                                        "b",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                    Bind {
+                                        defs: [],
+                                        value: Op {
+                                            op: Terminator(
+                                                Ret(
+                                                    Ret {
+                                                        return_operand: Some(
+                                                            LocalOperand {
+                                                                name: Name(
+                                                                    "tmp1",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    IntegerType {
+                                                                        bits: 32,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                        debugloc: None,
+                                                    },
+                                                ),
+                                            ),
+                                            args: [
+                                                Variable(
+                                                    Name(
+                                                        "tmp1",
+                                                    ),
+                                                ),
+                                            ],
+                                        },
+                                    },
+                                ],
+                                values: [],
+                            },
+                        },
+                    ],
+                },
+            ),
+        },
+    ],
+    values: [],
+}

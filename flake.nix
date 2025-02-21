@@ -70,15 +70,27 @@
           nci = {
             projects.sd = {
               path = ./.;
+              depsDrvConfig.mkDerivation = {
+                nativeBuildInputs = with pkgs; [
+                  llvm_19.dev
+                ];
+              };
               profiles.dev = { };
               profiles.release = {
                 runTests = false;
               };
             };
+
             crates = {
               sd-gui = {
                 targets."x86_64-unknown-linux-gnu" = {
                   default = true;
+                  drvConfig.mkDerivation = {
+                    nativeBuildInputs = with pkgs; [
+                      libz
+                      libxml2
+                    ];
+                  };
                 };
 
                 targets."wasm32-unknown-unknown" = {
@@ -106,6 +118,7 @@
                 };
 
                 runtimeLibs = with pkgs; [
+                  stdenv.cc.cc.lib
                   libGL
                   libxkbcommon
                   wayland

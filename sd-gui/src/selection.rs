@@ -5,7 +5,7 @@ use eframe::egui;
 use sd_core::{
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
-    language::{Expr, Language, Thunk, chil::Chil, mlir::Mlir, spartan::Spartan},
+    language::{Expr, Language, Thunk, chil::Chil, llvm_ir::LlvmIr, mlir::Mlir, spartan::Spartan},
     lp::Solver,
     prettyprinter::PrettyPrint,
 };
@@ -19,6 +19,7 @@ use crate::{
 
 pub enum Selection {
     Chil(SelectionInternal<Chil>),
+    LlvmIr(SelectionInternal<LlvmIr>),
     Mlir(SelectionInternal<Mlir>),
     Spartan(SelectionInternal<Spartan>),
 }
@@ -27,6 +28,7 @@ impl Selection {
     delegate! {
         to match self {
             Self::Chil(selection) => selection,
+            Self::LlvmIr(selection) => selection,
             Self::Mlir(selection) => selection,
             Self::Spartan(selection) => selection,
         } {
@@ -39,6 +41,11 @@ impl Selection {
     pub fn from_graph(graph_ui: &GraphUi, name: String, solver: Solver) -> Option<Self> {
         match graph_ui {
             GraphUi::Chil(graph_ui) => Some(Self::Chil(SelectionInternal::new(
+                graph_ui.graph.to_subgraph(),
+                name,
+                solver,
+            ))),
+            GraphUi::LlvmIr(graph_ui) => Some(Self::LlvmIr(SelectionInternal::new(
                 graph_ui.graph.to_subgraph(),
                 name,
                 solver,
