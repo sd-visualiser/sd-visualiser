@@ -55,7 +55,7 @@ impl GraphUi {
             GraphUi::Chil(graph_ui) => graph_ui,
             GraphUi::Mlir(graph_ui) => graph_ui,
             GraphUi::Spartan(graph_ui) => graph_ui,
-        GraphUi::Dot(graph_ui) => graph_ui
+            GraphUi::Dot(graph_ui) => graph_ui
         } {
             pub(crate) fn ui(&mut self, ui: &mut egui::Ui, search: Option<&str>);
             pub(crate) const fn ready(&self) -> bool;
@@ -72,7 +72,7 @@ impl GraphUi {
             GraphUi::Chil(graph_ui) => graph_ui.graph,
             GraphUi::Mlir(graph_ui) => graph_ui.graph,
             GraphUi::Spartan(graph_ui) => graph_ui.graph,
-        GraphUi::Dot(graph_ui) => graph_ui.graph
+            GraphUi::Dot(graph_ui) => graph_ui.graph
         } {
             pub(crate) fn is_empty(&self) -> bool;
             pub(crate) fn clear_selection(&mut self);

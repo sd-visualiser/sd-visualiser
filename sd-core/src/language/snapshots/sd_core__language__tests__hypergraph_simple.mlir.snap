@@ -46,7 +46,7 @@ Graph(
                 Operation(Op(
                   name: "arith.addi",
                   successors: [],
-                  attributes: "",
+                  attributes: "{overflowFlags = #arith.overflow<none>}",
                   sym_name: None,
                   symbols: [],
                 )),
@@ -116,7 +116,7 @@ Graph(
                 Operation(Op(
                   name: "arith.addi",
                   successors: [],
-                  attributes: "",
+                  attributes: "{overflowFlags = #arith.overflow<none>}",
                   sym_name: None,
                   symbols: [],
                 )),

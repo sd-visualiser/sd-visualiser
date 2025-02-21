@@ -1,0 +1,89 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Operation(Op(
+      name: "builtin.module",
+      successors: [],
+      attributes: "",
+      sym_name: None,
+      symbols: [],
+    )),
+    Edge(Nil),
+    Thunk(Graph(
+      nodes: [
+        Operation(Op(
+          name: "func.func",
+          successors: [],
+          attributes: "{function_type = (i64, i64) -> i64, sym_name = \"add1\"}",
+          sym_name: Some("add1"),
+          symbols: [],
+        )),
+        Edge(Nil),
+        Edge(FreeVar(Symbol(Symbol("add1")))),
+        Thunk(Graph(
+          nodes: [
+            Thunk(Graph(
+              nodes: [
+                Edge(BoundVar(Var(
+                  id: "%arg0",
+                ))),
+                Edge(BoundVar(Var(
+                  id: "%arg1",
+                ))),
+                Operation(Op(
+                  name: "func.return",
+                  successors: [],
+                  attributes: "",
+                  sym_name: None,
+                  symbols: [],
+                )),
+                Edge(BoundVar(Var(
+                  id: "%0",
+                ))),
+                Edge(CF(None)),
+                Operation(Op(
+                  name: "arith.addi",
+                  successors: [],
+                  attributes: "{overflowFlags = #arith.overflow<none>}",
+                  sym_name: None,
+                  symbols: [],
+                )),
+              ],
+              node_holes: [],
+              edge_property: directed,
+              edges: [
+                Some((3, 2, 0)),
+                Some((2, 4, 0)),
+                Some((0, 5, 0)),
+                Some((1, 5, 1)),
+                Some((5, 3, 0)),
+              ],
+            )),
+            Edge(CF(None)),
+          ],
+          node_holes: [],
+          edge_property: directed,
+          edges: [
+            Some((0, 1, 0)),
+          ],
+        )),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [
+        Some((1, 0, 0)),
+        Some((0, 2, 0)),
+        Some((3, 1, 0)),
+      ],
+    )),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((1, 0, 0)),
+    Some((2, 1, 0)),
+  ],
+)

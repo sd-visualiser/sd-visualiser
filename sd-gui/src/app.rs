@@ -299,50 +299,57 @@ impl eframe::App for App {
                     ui.radio_value(&mut self.language, UiLanguage::Dot, "Dot");
                 });
 
-                if self.language == UiLanguage::Dot {
-                    ui.menu_button("Settings", |ui| {
-                        if ui
-                            .selectable_label(self.dot_settings.invert, "Invert edges")
-                            .clicked()
-                        {
-                            self.dot_settings.invert = !self.dot_settings.invert;
-                            self.tx
-                                .send(Message::Compile)
-                                .expect("Failed to send message");
-                        }
-                        if ui
-                            .selectable_label(self.dot_settings.collect, "Collect edges")
-                            .clicked()
-                        {
-                            self.dot_settings.collect = !self.dot_settings.collect;
-                            self.tx
-                                .send(Message::Compile)
-                                .expect("Failed to send message");
-                        }
-                    });
-                }
-
-                if self.language == UiLanguage::Mlir {
-                    ui.menu_button("Settings", |ui| {
-                        if ui
-                            .selectable_label(self.mlir_settings.sym_name_linking, "Link symbols")
-                            .clicked()
-                        {
-                            self.mlir_settings.sym_name_linking =
-                                !self.mlir_settings.sym_name_linking;
-                            self.tx
-                                .send(Message::Compile)
-                                .expect("Failed to send message");
-                        }
-                    });
+                match self.language {
+                    UiLanguage::Dot => {
+                        ui.menu_button("Settings", |ui| {
+                            if ui
+                                .selectable_label(self.dot_settings.invert, "Invert edges")
+                                .clicked()
+                            {
+                                self.dot_settings.invert = !self.dot_settings.invert;
+                                self.tx
+                                    .send(Message::Compile)
+                                    .expect("Failed to send message");
+                            }
+                            if ui
+                                .selectable_label(self.dot_settings.collect, "Collect edges")
+                                .clicked()
+                            {
+                                self.dot_settings.collect = !self.dot_settings.collect;
+                                self.tx
+                                    .send(Message::Compile)
+                                    .expect("Failed to send message");
+                            }
+                        });
+                    }
+                    UiLanguage::Mlir => {
+                        ui.menu_button("Settings", |ui| {
+                            if ui
+                                .selectable_label(
+                                    self.mlir_settings.sym_name_linking,
+                                    "Link symbols",
+                                )
+                                .clicked()
+                            {
+                                self.mlir_settings.sym_name_linking =
+                                    !self.mlir_settings.sym_name_linking;
+                                self.tx
+                                    .send(Message::Compile)
+                                    .expect("Failed to send message");
+                            }
+                        });
+                    }
+                    _ => (),
                 }
 
                 if button!("Import file", egui::Modifiers::COMMAND, egui::Key::O) {
                     #[cfg(not(target_arch = "wasm32"))]
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
-                            Some(ext) if ext == "sd" => Some(UiLanguage::Spartan),
                             Some(ext) if ext == "chil" => Some(UiLanguage::Chil),
+                            Some(ext) if ext == "mlir" => Some(UiLanguage::Mlir),
+                            Some(ext) if ext == "sd" => Some(UiLanguage::Spartan),
+                            Some(ext) if ext == "dot" => Some(UiLanguage::Dot),
                             Some(_) | None => None,
                         };
                         self.set_file(
@@ -362,7 +369,9 @@ impl eframe::App for App {
                             tracing::trace!("got file name {:?}", file.file_name());
                             let language = match file.file_name().split('.').last() {
                                 Some("chil") => Some(UiLanguage::Chil),
+                                Some("mlir") => Some(UiLanguage::Mlir),
                                 Some("sd") => Some(UiLanguage::Spartan),
+                                Some("dot") => Some(UiLanguage::Dot),
                                 Some(_) | None => None,
                             };
                             let contents = file.read().await;
