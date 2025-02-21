@@ -10,5 +10,5 @@ version = "1.0.0"
 authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
 edition = "2021"
 license = "BSD-3-Clause"
-repository = "https://github.com/calintat/sd-visualiser"
-homepage = "https://calintat.github.io/sd-visualiser"
+repository = "https://github.com/sd-visualiser/sd-visualiser"
+homepage = "https://sd-visualiser.github.io/sd-visualiser"
