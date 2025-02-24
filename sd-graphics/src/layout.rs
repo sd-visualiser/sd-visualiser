@@ -475,7 +475,7 @@ where
                         extra_size: (addr.weight().to_string().chars().count().saturating_sub(1)
                             as f32
                             / 2.0)
-                            * RADIUS_OPERATION,
+                            * (f32::from(RADIUS_OPERATION) / 20.0),
                         atype: AtomType::Op(addr.clone()),
                     },
                     MonoidalOp::Copy { copies, .. } if *copies != 1 => Node::Atom {

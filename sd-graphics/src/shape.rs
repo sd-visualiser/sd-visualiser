@@ -1,6 +1,6 @@
 use derivative::Derivative;
 use egui::{
-    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
+    Align2, Color32, CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, Vec2,
     emath::RectTransform,
     epaint::{CubicBezierShape, PathShape, RectShape},
     vec2,
@@ -39,13 +39,13 @@ pub enum Shape<T: Ctx> {
     },
     CircleFilled {
         center: Pos2,
-        radius: f32,
+        radius: u8,
         addr: T::Edge,
         coord: [usize; 2],
     },
     Operation {
         center: Pos2,
-        radius: f32,
+        radius: u8,
         addr: T::Operation,
         label: String,
         kind: ShapeKind,
@@ -85,7 +85,7 @@ impl<T: Ctx> Shape<T> {
             Shape::CircleFilled { center, radius, .. }
             | Shape::Operation { center, radius, .. } => {
                 *center = transform.transform_pos(*center);
-                *radius *= transform.scale().min_elem(); // NOTE(calintat): should this be length?
+                *radius = (f32::from(*radius) * transform.scale().min_elem()) as u8 // NOTE(calintat): should this be length?
             }
             Shape::Arrow { center, height, .. } => {
                 *center = transform.transform_pos(*center);
@@ -281,9 +281,10 @@ impl<T: Ctx> Shape<T> {
             }
             Shape::Rectangle { rect, stroke, .. } => egui::Shape::Rect(RectShape::new(
                 rect,
-                Rounding::ZERO,
+                CornerRadius::ZERO,
                 Color32::default(),
                 stroke.unwrap_or(default_stroke),
+                egui::StrokeKind::Outside,
             )),
             Shape::CircleFilled {
                 center,
@@ -292,7 +293,7 @@ impl<T: Ctx> Shape<T> {
                 ..
             } => {
                 let stroke = wire_stroke(highlight_edges.contains(&addr), addr.weight().get_type());
-                egui::Shape::circle_filled(center, radius, stroke.color)
+                egui::Shape::circle_filled(center, f32::from(radius) / 20.0, stroke.color)
             }
             Shape::Operation {
                 center,
@@ -306,11 +307,13 @@ impl<T: Ctx> Shape<T> {
                 let rect = egui::Shape::Rect(RectShape::new(
                     Rect::from_center_size(
                         center,
-                        radius * vec2(label.chars().count().max(1) as f32 + 1.0, 2.0),
+                        (f32::from(radius) / 20.0)
+                            * vec2(label.chars().count().max(1) as f32 + 1.0, 2.0),
                     ),
                     kind.into_rounding(radius),
                     fill.unwrap_or_default(),
                     stroke.unwrap_or(default_stroke),
+                    egui::StrokeKind::Outside,
                 ));
                 let text_size: f32 = TEXT_SIZE * transform.scale().min_elem();
                 if text_size <= 5.0 {
@@ -378,7 +381,7 @@ impl<T: Ctx> Shape<T> {
             Shape::CubicBezier { points, .. } => Rect::from_points(points),
             Shape::Rectangle { rect, .. } => *rect,
             Shape::CircleFilled { center, radius, .. } => {
-                Rect::from_center_size(*center, Vec2::splat(*radius * 2.0))
+                Rect::from_center_size(*center, Vec2::splat(f32::from(*radius) / 10.0))
             }
             Shape::Operation {
                 center,
@@ -387,7 +390,7 @@ impl<T: Ctx> Shape<T> {
                 ..
             } => Rect::from_center_size(
                 *center,
-                *radius * vec2(label.chars().count() as f32 + 1.0, 2.0),
+                (f32::from(*radius) / 20.0) * vec2(label.chars().count() as f32 + 1.0, 2.0),
             ),
             Shape::Arrow { center, height, .. } => {
                 Rect::from_center_size(*center, Vec2::splat(*height * 5.0))

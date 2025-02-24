@@ -16,15 +16,15 @@ impl<T: Ctx> Shape<T> {
                 label,
                 ..
             } => {
-                let x_size = radius * (label.chars().count().max(1) as f32 + 1.0);
+                let x_size = *radius as u16 * (label.chars().count().max(1) as u16 + 1);
                 Box::new(
                     Group::new()
                         .add(
                             Rectangle::new()
-                                .set("x", center.x - x_size / 2.0)
-                                .set("y", center.y - radius)
+                                .set("x", center.x - f32::from(x_size) / 2.0)
+                                .set("y", center.y - f32::from(*radius))
                                 .set("width", x_size)
-                                .set("height", radius * 2.0)
+                                .set("height", radius * 2)
                                 .set("rx", *radius)
                                 .set("ry", *radius)
                                 .set("fill", "white")

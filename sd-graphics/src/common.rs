@@ -1,4 +1,4 @@
-use egui::{Pos2, Rounding};
+use egui::{CornerRadius, Pos2};
 use flo_curves::Coord2;
 use sd_core::hypergraph::{
     self, Weight,
@@ -8,11 +8,11 @@ use sd_core::hypergraph::{
     traits::Graph,
 };
 
-pub const RADIUS_ARG: f32 = 0.05;
-pub const RADIUS_COPY: f32 = 0.1;
+pub const RADIUS_ARG: u8 = 1;
+pub const RADIUS_COPY: u8 = 2;
 pub const TOLERANCE: f32 = 0.3;
 pub const TEXT_SIZE: f32 = 0.28;
-pub const RADIUS_OPERATION: f32 = 0.2;
+pub const RADIUS_OPERATION: u8 = 4;
 
 // pub trait ContainsPoint {
 //     // Check if a point lies on a line or curve (with the given tolerance).
@@ -51,19 +51,19 @@ pub enum ShapeKind {
 
 impl ShapeKind {
     #[must_use]
-    pub fn into_rounding(self, radius: f32) -> Rounding {
+    pub fn into_rounding(self, radius: u8) -> CornerRadius {
         match self {
-            ShapeKind::Square => Rounding::ZERO,
-            ShapeKind::Squircle => Rounding::same(radius),
-            ShapeKind::BulletUp => Rounding {
+            ShapeKind::Square => CornerRadius::ZERO,
+            ShapeKind::Squircle => CornerRadius::same(radius),
+            ShapeKind::BulletUp => CornerRadius {
                 nw: radius,
                 ne: radius,
-                sw: 0.0,
-                se: 0.0,
+                sw: 0,
+                se: 0,
             },
-            ShapeKind::BulletDown => Rounding {
-                nw: 0.0,
-                ne: 0.0,
+            ShapeKind::BulletDown => CornerRadius {
+                nw: 0,
+                ne: 0,
                 sw: radius,
                 se: radius,
             },

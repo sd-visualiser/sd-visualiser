@@ -5,7 +5,7 @@ use std::fmt::Display;
 use delegate::delegate;
 use eframe::{
     egui,
-    epaint::{Rounding, Shape},
+    epaint::{CornerRadius, Shape},
 };
 use sd_core::{
     codeable::Codeable,
@@ -164,7 +164,7 @@ where
             // Background
             painter.add(Shape::rect_filled(
                 response.rect,
-                Rounding::ZERO,
+                CornerRadius::ZERO,
                 ui.visuals().faint_bg_color,
             ));
 
