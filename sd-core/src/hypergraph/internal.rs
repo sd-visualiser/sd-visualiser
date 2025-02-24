@@ -4,7 +4,7 @@ use by_address::ByThinAddress;
 use derivative::Derivative;
 use indexmap::IndexSet;
 
-use super::{weakbyaddress::WeakByAddress, Weight};
+use super::{Weight, weakbyaddress::WeakByAddress};
 
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""))]

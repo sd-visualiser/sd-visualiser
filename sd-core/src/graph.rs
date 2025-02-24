@@ -14,14 +14,14 @@ use tracing::{debug, error};
 use crate::{
     common::Matchable,
     hypergraph::{
+        Hypergraph, Weight,
         builder::{
-            fragment::{Fragment, ThunkCursor},
             HypergraphBuilder, HypergraphError, InPort, OutPort, ThunkBuilder,
+            fragment::{Fragment, ThunkCursor},
         },
         traits::{WireType, WithType},
-        Hypergraph, Weight,
     },
-    language::{Expr, GetVar, Language, OpInfo, Value, CF},
+    language::{CF, Expr, GetVar, Language, OpInfo, Value},
     prettyprinter::PrettyPrint,
 };
 
@@ -491,7 +491,7 @@ impl<T: Language + 'static> Expr<T> {
 #[cfg(test)]
 mod tests {
     use anyhow::Result;
-    use dir_test::{dir_test, Fixture};
+    use dir_test::{Fixture, dir_test};
 
     use crate::language::tests::ExprTest;
 

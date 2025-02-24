@@ -4,8 +4,8 @@ use eframe::{
     egui,
     egui::TextFormat,
     epaint::{
-        text::{LayoutJob, LayoutSection},
         FontId,
+        text::{LayoutJob, LayoutSection},
     },
 };
 use syntect::{

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use egui::{emath::RectTransform, show_tooltip_at_pointer, Id, Pos2, Rect, Response};
+use egui::{Id, Pos2, Rect, Response, emath::RectTransform, show_tooltip_at_pointer};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
@@ -15,7 +15,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{Shapeable, RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION},
+    common::{RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION, Shapeable},
     layout::{AtomType, Layout, NodeOffset},
     renderable::RenderableGraph,
     shape::Shape,

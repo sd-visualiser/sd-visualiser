@@ -1,7 +1,7 @@
 use std::{
     sync::{
-        mpsc::{channel, Receiver, Sender},
         Arc, Mutex,
+        mpsc::{Receiver, Sender, channel},
     },
     task::Poll,
 };
@@ -10,13 +10,13 @@ use anyhow::anyhow;
 use eframe::{
     egui::{self, FontDefinitions},
     emath::{Align, Align2},
-    epaint::{vec2, Vec2},
+    epaint::{Vec2, vec2},
 };
 use egui_notify::Toasts;
 use poll_promise::Promise;
 use sd_core::{
     common::Direction,
-    dot::{dot_to_graph, DotSettings},
+    dot::{DotSettings, dot_to_graph},
     language::mlir::MlirSettings,
     lp::Solver,
 };
@@ -25,7 +25,7 @@ use crate::{
     code_generator::clear_code_cache,
     code_ui::code_ui,
     graph_ui::GraphUi,
-    parser::{parse, ParseError, ParseOutput, UiLanguage},
+    parser::{ParseError, ParseOutput, UiLanguage, parse},
     selection::Selection,
     shape_generator::clear_shape_cache,
     squiggly_line::show_parse_error,

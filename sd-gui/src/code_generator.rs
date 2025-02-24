@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex, OnceLock};
 
-use eframe::egui::{util::IdTypeMap, Id};
+use eframe::egui::{Id, util::IdTypeMap};
 use lru::LruCache;
 use poll_promise::Promise;
 use sd_core::{

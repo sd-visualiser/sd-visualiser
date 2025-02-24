@@ -13,7 +13,7 @@ use crate::{
         traits::{EdgeLike, Graph, NodeLike, WithWeight},
     },
     language::{Bind, Expr, Fresh, Language, Thunk as SThunk, Value},
-    prettyprinter::{paran_list, PrettyPrint},
+    prettyprinter::{PrettyPrint, paran_list},
 };
 
 #[derive(Clone, Debug, Error)]
@@ -110,7 +110,7 @@ impl<T: Language> Expr<T> {
                             node_to_value.insert(node, Value::Thunk(thunk));
                         }
                         Name::FreeVar(_) | Name::BoundVar(_) | Name::CF(_) => {
-                            return Err(DecompileError::Corrupt)
+                            return Err(DecompileError::Corrupt);
                         }
                     }
                 }

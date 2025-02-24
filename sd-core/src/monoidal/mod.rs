@@ -6,7 +6,7 @@ use num::rational::Ratio;
 use crate::{
     common::{Direction, InOut, InOutIter, Link},
     hypergraph::generic::Ctx,
-    monoidal::permutation::{generate_permutation, PermutationOutput},
+    monoidal::permutation::{PermutationOutput, generate_permutation},
 };
 
 pub mod graph;

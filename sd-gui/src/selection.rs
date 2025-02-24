@@ -5,7 +5,7 @@ use eframe::egui;
 use sd_core::{
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
-    language::{chil::Chil, mlir::Mlir, spartan::Spartan, Expr, Language, Thunk},
+    language::{Expr, Language, Thunk, chil::Chil, mlir::Mlir, spartan::Spartan},
     lp::Solver,
     prettyprinter::PrettyPrint,
 };

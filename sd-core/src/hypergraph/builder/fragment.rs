@@ -4,11 +4,11 @@ use by_address::ByThinAddress;
 use tracing::Level;
 
 use crate::hypergraph::{
+    NodeInternal, OperationInternal, ThunkInternal, Weight,
     builder::{
         HypergraphBuilder, HypergraphError, InPort, OperationBuilder, OutPort, Result, ThunkBuilder,
     },
     weakbyaddress::WeakByAddress,
-    NodeInternal, OperationInternal, ThunkInternal, Weight,
 };
 
 pub trait Fragment {
@@ -127,10 +127,10 @@ impl<W: Weight> Fragment for ThunkCursor<W> {
             input_len,
             outputs,
             weight,
-            Some(Arc::downgrade(&self.0 .0 .0)),
+            Some(Arc::downgrade(&self.0.0.0)),
         );
         self.0
-             .0
+            .0
             .nodes
             .try_write()
             .expect("Lock unexpectedly taken")
@@ -152,10 +152,10 @@ impl<W: Weight> Fragment for ThunkCursor<W> {
             bound_inputs,
             bound_outputs_len,
             outputs,
-            Some(Arc::downgrade(&self.0 .0 .0)),
+            Some(Arc::downgrade(&self.0.0.0)),
         );
         self.0
-             .0
+            .0
             .nodes
             .try_write()
             .expect("Lock unexpectedly taken")

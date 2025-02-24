@@ -6,14 +6,14 @@ use indexmap::IndexSet;
 use thiserror::Error;
 
 use super::{
+    Hypergraph, Node, Operation, Thunk, Weight,
     internal::{
         EndPointInternal, InPortInternal, NodeInternal, OperationInternal, OutPortInternal,
         ThunkInternal,
     },
     traits::{EdgeLike, Graph, NodeLike},
-    Hypergraph, Node, Operation, Thunk, Weight,
 };
-use crate::hypergraph::{utils::find_ancestor, EndPoint};
+use crate::hypergraph::{EndPoint, utils::find_ancestor};
 
 pub mod fragment;
 pub use self::fragment::Fragment;
@@ -56,7 +56,7 @@ impl<W: Weight> Debug for InPort<W> {
         let mut x = f.debug_struct("InPort");
         if let Some(out_port) = self
             .0
-             .0
+            .0
             .link
             .try_read()
             .expect("lock unexpectedly taken")

@@ -10,10 +10,9 @@ use serde::Serialize;
 
 use crate::{
     hypergraph::{
-        self,
+        self, Weight,
         generic::{Ctx, Edge},
         traits::{NodeLike, WithWeight},
-        Weight,
     },
     prettyprinter::PrettyPrint,
 };

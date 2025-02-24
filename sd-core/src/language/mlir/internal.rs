@@ -217,7 +217,7 @@ pub struct Region {
 pub(crate) mod tests {
     use std::path::Path;
 
-    use dir_test::{dir_test, Fixture};
+    use dir_test::{Fixture, dir_test};
     use from_pest::FromPest;
     use pest::Parser;
 

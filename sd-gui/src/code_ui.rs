@@ -1,10 +1,10 @@
 use eframe::{
     egui,
-    egui::{text_edit::TextEditOutput, TextBuffer},
+    egui::{TextBuffer, text_edit::TextEditOutput},
 };
 
 use crate::{
-    highlighter::{highlight, CodeTheme},
+    highlighter::{CodeTheme, highlight},
     parser::UiLanguage,
 };
 

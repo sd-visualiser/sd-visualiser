@@ -3,9 +3,9 @@ use itertools::Itertools;
 use tracing::debug;
 
 use super::{
-    permutation::{advance_by, generate_permutation, PermutationOutput},
-    wired_graph::{MonoidalWiredGraph, WiredOp},
     MonoidalTerm, Slice,
+    permutation::{PermutationOutput, advance_by, generate_permutation},
+    wired_graph::{MonoidalWiredGraph, WiredOp},
 };
 use crate::{
     common::{Direction, InOut, InOutIter, Link},

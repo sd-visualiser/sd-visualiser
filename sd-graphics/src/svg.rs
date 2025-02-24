@@ -1,8 +1,8 @@
-use egui::{emath::RectTransform, Pos2, Rect};
+use egui::{Pos2, Rect, emath::RectTransform};
 use sd_core::hypergraph::generic::Ctx;
 use svg::{
-    node::element::{path::Data, Circle, Group, Line, Path, Rectangle, Text},
     Document, Node,
+    node::element::{Circle, Group, Line, Path, Rectangle, Text, path::Data},
 };
 
 use crate::shape::{Shape, Shapes};

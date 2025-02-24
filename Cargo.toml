@@ -8,7 +8,7 @@ resolver = "2"
 [workspace.package]
 version = "1.0.0"
 authors = ["Nick Hu <me@nickhu.co.uk>", "Alex Rice <alexrice999@hotmail.co.uk>", "Calin Tataru <calintat@gmail.com>"]
-edition = "2021"
+edition = "2024"
 license = "BSD-3-Clause"
 repository = "https://github.com/sd-visualiser/sd-visualiser"
 homepage = "https://sd-visualiser.github.io/sd-visualiser"

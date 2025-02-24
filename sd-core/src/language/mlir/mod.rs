@@ -11,7 +11,7 @@ use pretty::RcDoc;
 use serde::Serialize;
 
 use self::internal::Attribute;
-use super::{Fresh, Language, OpInfo, CF};
+use super::{CF, Fresh, Language, OpInfo};
 use crate::{
     common::{Matchable, Unit},
     hypergraph::traits::{WireType, WithType},

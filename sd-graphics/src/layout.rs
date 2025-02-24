@@ -5,7 +5,7 @@ use std::{
 
 use derivative::Derivative;
 use egui::Vec2;
-use good_lp::{variable, Expression, ResolutionError, Solution, Variable};
+use good_lp::{Expression, ResolutionError, Solution, Variable, variable};
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use sd_core::{

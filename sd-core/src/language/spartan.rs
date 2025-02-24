@@ -12,7 +12,7 @@ use pest_derive::Parser;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::{span_into_str, Fresh, OpInfo};
+use super::{Fresh, OpInfo, span_into_str};
 use crate::{
     common::{Empty, Matchable, Unit},
     hypergraph::traits::{WireType, WithType},
@@ -370,7 +370,7 @@ impl<'pest> FromPest<'pest> for Thunk {
 pub(crate) mod tests {
     use std::path::Path;
 
-    use dir_test::{dir_test, Fixture};
+    use dir_test::{Fixture, dir_test};
     use from_pest::FromPest;
     use pest::Parser;
 

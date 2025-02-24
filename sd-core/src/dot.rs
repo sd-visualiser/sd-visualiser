@@ -8,9 +8,9 @@ use crate::{
     codeable::Codeable,
     common::Matchable,
     hypergraph::{
+        Edge, Hypergraph, Operation, Thunk, Weight,
         builder::{Fragment, HypergraphBuilder, HypergraphError, InPort, OutPort},
         traits::{WireType, WithType, WithWeight},
-        Edge, Hypergraph, Operation, Thunk, Weight,
     },
     prettyprinter::PrettyPrint,
 };

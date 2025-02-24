@@ -5,8 +5,8 @@ use crate::{
     },
     language::spartan::Op,
     monoidal::{
-        graph::{MonoidalGraph, MonoidalOp},
         Slice,
+        graph::{MonoidalGraph, MonoidalOp},
     },
 };
 

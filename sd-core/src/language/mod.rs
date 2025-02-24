@@ -234,13 +234,13 @@ pub(crate) mod tests {
     use serde::Serialize;
 
     use super::{
+        Expr, Language,
         chil::tests::parse_chil,
         mlir::{
             self,
-            internal::{tests::parse_mlir, TopLevelItem},
+            internal::{TopLevelItem, tests::parse_mlir},
         },
         spartan::tests::parse_sd,
-        Expr, Language,
     };
     use crate::{graph::SyntaxHypergraph, hypergraph::petgraph::to_pet};
 

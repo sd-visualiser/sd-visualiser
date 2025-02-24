@@ -12,7 +12,7 @@ use pest_derive::Parser;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::{span_into_str, Fresh, GetVar, OpInfo};
+use super::{Fresh, GetVar, OpInfo, span_into_str};
 use crate::{
     common::{Empty, Matchable},
     hypergraph::traits::{WireType, WithType},
@@ -488,7 +488,7 @@ impl From<VariableDef> for super::spartan::Variable {
 pub(crate) mod tests {
     use std::path::Path;
 
-    use dir_test::{dir_test, Fixture};
+    use dir_test::{Fixture, dir_test};
     use from_pest::FromPest;
     use pest::Parser;
 

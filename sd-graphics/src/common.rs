@@ -1,12 +1,11 @@
 use egui::{Pos2, Rounding};
 use flo_curves::Coord2;
 use sd_core::hypergraph::{
-    self,
+    self, Weight,
     adapter::{collapse::CollapseOperation, cut::CutOperation},
     generic::{Ctx, Node, Operation},
     subgraph::SubOperation,
     traits::Graph,
-    Weight,
 };
 
 pub const RADIUS_ARG: f32 = 0.05;

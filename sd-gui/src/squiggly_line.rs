@@ -1,10 +1,10 @@
 use eframe::{
-    egui::{self, show_tooltip_at_pointer, text_edit::TextEditOutput, Id, RichText},
+    egui::{self, Id, RichText, show_tooltip_at_pointer, text_edit::TextEditOutput},
     epaint::{Color32, FontId, Pos2, QuadraticBezierShape, Stroke},
 };
 use pest::{
-    error::{Error, LineColLocation},
     RuleType,
+    error::{Error, LineColLocation},
 };
 
 fn is_in_line(cursor: usize, line_col: &LineColLocation) -> bool {

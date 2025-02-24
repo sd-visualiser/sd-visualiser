@@ -1,6 +1,6 @@
 use pretty::RcDoc;
 
-use super::{paran_list, PrettyPrint};
+use super::{PrettyPrint, paran_list};
 use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
 
 impl PrettyPrint for Expr {
@@ -107,7 +107,7 @@ impl PrettyPrint for Thunk {
 
 #[cfg(test)]
 mod tests {
-    use dir_test::{dir_test, Fixture};
+    use dir_test::{Fixture, dir_test};
     use insta::assert_snapshot;
 
     use crate::{language::spartan::Expr, prettyprinter::PrettyPrint};

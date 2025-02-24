@@ -1,10 +1,11 @@
 use derivative::Derivative;
 use egui::{
+    Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
     emath::RectTransform,
     epaint::{CubicBezierShape, PathShape, RectShape},
-    vec2, Align2, Color32, Id, Pos2, Rect, Response, Rounding, Sense, Stroke, Vec2,
+    vec2,
 };
-use flo_curves::bezier::{solve_curve_for_t_along_axis, Curve};
+use flo_curves::bezier::{Curve, solve_curve_for_t_along_axis};
 use indexmap::IndexSet;
 use sd_core::{
     common::Matchable,
@@ -15,7 +16,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{to_coord2, ShapeKind, TEXT_SIZE, TOLERANCE},
+    common::{ShapeKind, TEXT_SIZE, TOLERANCE, to_coord2},
     renderable::RenderableGraph,
 };
 

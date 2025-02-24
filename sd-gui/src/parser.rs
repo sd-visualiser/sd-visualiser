@@ -1,5 +1,5 @@
 use from_pest::{ConversionError, FromPest, Void};
-use pest::{error, Parser as _};
+use pest::{Parser as _, error};
 use sd_core::language::{
     chil::{self, ChilParser},
     mlir::{

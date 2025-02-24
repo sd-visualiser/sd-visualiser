@@ -1,6 +1,6 @@
 use pretty::RcDoc;
 
-use super::{list, paran_list, PrettyPrint};
+use super::{PrettyPrint, list, paran_list};
 use crate::language::chil::{
     Addr, BaseType, Bind, Expr, FunctionType, GenericType, Identifier, Op, Thunk, TupleType, Type,
     Value, Variable, VariableDef,
@@ -178,7 +178,7 @@ impl PrettyPrint for Identifier {
 
 #[cfg(test)]
 mod tests {
-    use dir_test::{dir_test, Fixture};
+    use dir_test::{Fixture, dir_test};
     use insta::assert_snapshot;
 
     use crate::{language::chil::Expr, prettyprinter::PrettyPrint};

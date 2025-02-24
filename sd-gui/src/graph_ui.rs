@@ -13,10 +13,10 @@ use sd_core::{
     dot::DotWeight,
     graph::SyntaxHypergraph,
     hypergraph::{
+        Hypergraph,
         generic::{Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
         traits::{Graph, WithType},
-        Hypergraph,
     },
     interactive::InteractiveGraph,
     language::{chil::Chil, mlir::Mlir, spartan::Spartan},
@@ -230,7 +230,7 @@ where
     {
         let shapes = generate_shapes(&self.graph, self.solver);
         let guard = shapes.lock().unwrap(); // this would lock the UI, but by the time we get here
-                                            // the shapes have already been computed
+        // the shapes have already been computed
         guard.block_until_ready().to_svg().to_string()
     }
 }

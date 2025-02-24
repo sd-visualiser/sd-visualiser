@@ -1,6 +1,6 @@
 use eframe::{
     emath::RectTransform,
-    epaint::{vec2, Pos2, Rect, Vec2},
+    epaint::{Pos2, Rect, Vec2, vec2},
 };
 
 const PAN_FACTOR: f32 = 10.0;

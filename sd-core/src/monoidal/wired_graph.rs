@@ -1,7 +1,7 @@
 use std::{cmp::Reverse, collections::HashMap};
 
 use derivative::Derivative;
-use good_lp::{variable, Expression, Variable};
+use good_lp::{Expression, Variable, variable};
 use indexmap::IndexMap;
 use itertools::Itertools;
 use tracing::debug;

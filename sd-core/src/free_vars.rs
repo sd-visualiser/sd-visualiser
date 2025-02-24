@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use indexmap::IndexSet;
 
-use crate::language::{Expr, GetVar, Language, OpInfo, Thunk, Value, CF};
+use crate::language::{CF, Expr, GetVar, Language, OpInfo, Thunk, Value};
 
 impl<T: Language> Expr<T> {
     pub(crate) fn free_vars(&self, sym_name_link: bool) -> IndexSet<T::Var> {

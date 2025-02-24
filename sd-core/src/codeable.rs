@@ -1,7 +1,7 @@
 use crate::{
     decompile::{DecompileError, FakeValue},
     graph::{Syntax, SyntaxHypergraph},
-    hypergraph::{subgraph::Subgraph, traits::WithWeight, Edge, Operation, Thunk},
+    hypergraph::{Edge, Operation, Thunk, subgraph::Subgraph, traits::WithWeight},
     language::{Expr, Language, Thunk as SThunk},
     prettyprinter::PrettyPrint,
 };
