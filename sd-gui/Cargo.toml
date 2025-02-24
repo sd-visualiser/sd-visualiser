@@ -9,8 +9,8 @@ repository.workspace = true
 homepage.workspace = true
 
 [dependencies]
-anyhow = "1.0.95"
-clap = { version = "4.5.27", features = ["derive"] }
+anyhow = "1.0.96"
+clap = { version = "4.5.30", features = ["derive"] }
 delegate = "0.13.2"
 derivative = "2.2.0"
 dot-structures = "0.1.1"
@@ -37,7 +37,7 @@ poll-promise = "0.3.0"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-log = "0.4.25"
+log = "0.4.26"
 poll-promise = { version = "0.3.0", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
 getrandom = { version = "*", features = ["js"]} # enable `js` feature on eframe/egui transitive dep

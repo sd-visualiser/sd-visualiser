@@ -9,14 +9,14 @@ homepage.workspace = true
 
 [dependencies]
 by_address = "1.2.1"
-clap = "4.5.27"
-clap_derive = "4.5.24"
+clap = "4.5.30"
+clap_derive = "4.5.28"
 delegate = "0.13.2"
 derivative = "2.2.0"
 dot-structures = "0.1.1"
-either = "1.13.0"
+either = "1.14.0"
 from-pest = "0.3.3"
-good_lp = { version = "1.11.0", default-features = false, features = [ "clarabel" ] }
+good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel" ] }
 indexmap = "2.7.1"
 itertools = "0.14.0"
 num = "0.4.3"
@@ -25,23 +25,23 @@ pest-ast = "0.3.5"
 pest_derive = "2.7.15"
 petgraph = "0.7.1"
 pretty = "0.12.3"
-priority-queue = "2.1.1"
+priority-queue = "2.1.2"
 qcell = "0.5.4"
 thiserror = "2.0.11"
 tracing = "0.1.41"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-good_lp = { version = "1.11.0", default-features = false, features = [ "clarabel-wasm" ] }
+good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel-wasm" ] }
 
 [dev-dependencies]
-anyhow = "1.0.95"
+anyhow = "1.0.96"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 dir-test = "0.4.1"
 insta = { version = "1.42.1", features = ["ron", "redactions"] }
 petgraph = { version = "0.7.1", features = ["serde-1"] }
 rstest = "0.24.0"
 slab = { version = "0.4.9", features = ["serde"] }
-serde = "1.0.217"
+serde = "1.0.218"
 
 [features]
 default = []
