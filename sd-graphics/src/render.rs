@@ -46,12 +46,13 @@ where
     let shapes_vec: Vec<_> = shapes
         .iter()
         .filter(|shape| viewport.intersects(shape.bounding_box()))
-        .map(|shape| {
+        .enumerate()
+        .map(|(i, shape)| {
             let mut s = shape.clone();
             s.apply_transform(&to_screen);
             s.collect_highlights(
                 graph,
-                id,
+                id.with(i),
                 ui,
                 response,
                 &to_screen,
