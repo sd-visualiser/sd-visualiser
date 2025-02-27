@@ -19,17 +19,18 @@ impl<T: Ctx> Shape<T> {
                 label,
                 ..
             } => {
-                let x_size = *radius as u16 * (label.chars().count().max(1) as u16 + 1);
+                let x_size =
+                    f32::from(*radius) / 20.0 * f32::from(label.chars().count().max(1) as u16 + 1);
                 Box::new(
                     Group::new()
                         .add(
                             Rectangle::new()
-                                .set("x", center.x - f32::from(x_size) / 2.0)
-                                .set("y", center.y - f32::from(*radius))
+                                .set("x", center.x - x_size / 2.0)
+                                .set("y", center.y - f32::from(*radius) / 20.0)
                                 .set("width", x_size)
-                                .set("height", radius * 2)
-                                .set("rx", *radius)
-                                .set("ry", *radius)
+                                .set("height", f32::from(*radius) / 10.0)
+                                .set("rx", f32::from(*radius) / 20.0)
+                                .set("ry", f32::from(*radius) / 20.0)
                                 .set("fill", "white")
                                 .set("stroke", "black")
                                 .set("stroke-width", 1),
@@ -49,7 +50,7 @@ impl<T: Ctx> Shape<T> {
                 Circle::new()
                     .set("cx", center.x)
                     .set("cy", center.y)
-                    .set("r", *radius)
+                    .set("r", f32::from(*radius) / 20.0)
                     .set("fill", "black"),
             ),
             Self::Rectangle { rect, .. } => Box::new(
