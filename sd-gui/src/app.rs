@@ -365,23 +365,24 @@ impl eframe::App for App {
                         let tx = self.tx.clone();
                         let code = self.code.clone();
                         wasm_bindgen_futures::spawn_local(async move {
-                            let file = task.await.unwrap();
-                            tracing::trace!("got file name {:?}", file.file_name());
-                            let language = match file.file_name().split('.').last() {
-                                Some("chil") => Some(UiLanguage::Chil),
-                                Some("mlir") => Some(UiLanguage::Mlir),
-                                Some("sd") => Some(UiLanguage::Spartan),
-                                Some("dot") => Some(UiLanguage::Dot),
-                                Some(_) | None => None,
-                            };
-                            let contents = file.read().await;
-                            if let Ok(string) = String::from_utf8(contents) {
-                                *code.lock().unwrap() = string.to_owned();
-                                if let Some(language) = language {
-                                    tx.send(Message::SetLanguage(language))
-                                        .expect("failed to send message");
+                            if let Some(file) = task.await {
+                                tracing::trace!("got file name {:?}", file.file_name());
+                                let language = match file.file_name().split('.').last() {
+                                    Some("chil") => Some(UiLanguage::Chil),
+                                    Some("mlir") => Some(UiLanguage::Mlir),
+                                    Some("sd") => Some(UiLanguage::Spartan),
+                                    Some("dot") => Some(UiLanguage::Dot),
+                                    Some(_) | None => None,
+                                };
+                                let contents = file.read().await;
+                                if let Ok(string) = String::from_utf8(contents) {
+                                    *code.lock().unwrap() = string.to_owned();
+                                    if let Some(language) = language {
+                                        tx.send(Message::SetLanguage(language))
+                                            .expect("failed to send message");
+                                    }
+                                    tx.send(Message::Compile).expect("failed to send message");
                                 }
-                                tx.send(Message::Compile).expect("failed to send message");
                             }
                         });
                     }
