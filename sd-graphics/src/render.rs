@@ -80,7 +80,13 @@ where
             ui.ctx(),
             ui.layer_id(),
             egui::Id::new("hover_tooltip"),
-            |ui| ui.label(label),
+            |ui| {
+                ui.set_style(egui::Style {
+                    wrap_mode: Some(egui::TextWrapMode::Extend),
+                    ..egui::Style::default()
+                });
+                ui.label(label);
+            },
         );
     }
 
