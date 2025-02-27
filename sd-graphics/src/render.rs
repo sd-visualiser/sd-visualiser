@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use egui::{Id, Pos2, Rect, Response, emath::RectTransform, show_tooltip_at_pointer};
+use egui::{Id, Pos2, Rect, Response, emath::TSTransform, show_tooltip_at_pointer};
 use indexmap::IndexSet;
 use itertools::Itertools;
 use sd_core::{
@@ -15,7 +15,7 @@ use sd_core::{
 };
 
 use crate::{
-    common::{RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION, Shapeable},
+    common::{RADIUS_ARG, RADIUS_COPY, RADIUS_OPERATION, SCALE, Shapeable},
     layout::{AtomType, Layout, NodeOffset},
     renderable::RenderableGraph,
     shape::Shape,
@@ -27,7 +27,7 @@ pub fn render<G>(
     ui: &egui::Ui,
     shapes: &[Shape<G::Ctx>],
     response: &Response,
-    to_screen: RectTransform,
+    viewport: &Rect,
     search: Option<&str>,
 ) -> Vec<egui::Shape>
 where
@@ -37,25 +37,25 @@ where
     Thunk<G::Ctx>: Matchable,
     Weight<Edge<G::Ctx>>: WithType,
 {
-    let viewport = *to_screen.from();
-
     let mut highlight_op = None;
     let mut highlight_edges = IndexSet::default();
 
     let id = Id::new(graph.key());
+    let scaling = TSTransform::from_scaling(SCALE);
+    let mapped_viewport = scaling.inverse().mul_rect(*viewport);
     let shapes_vec: Vec<_> = shapes
         .iter()
-        .filter(|shape| viewport.intersects(shape.bounding_box()))
+        .filter(|shape| mapped_viewport.intersects(shape.bounding_box()))
         .enumerate()
         .map(|(i, shape)| {
             let mut s = shape.clone();
-            s.apply_transform(&to_screen);
+            s.apply_tst_transform(&scaling); // NOTE: shapes are unscaled until we get here
             s.collect_highlights(
                 graph,
                 id.with(i),
                 ui,
                 response,
-                &to_screen,
+                viewport,
                 search,
                 &mut highlight_op,
                 &mut highlight_edges,
@@ -86,7 +86,7 @@ where
 
     shapes_vec
         .into_iter()
-        .map(|shape| shape.into_egui_shape(ui, &to_screen, &highlight_edges))
+        .map(|shape| shape.into_egui_shape(ui, &highlight_edges))
         .collect()
 }
 

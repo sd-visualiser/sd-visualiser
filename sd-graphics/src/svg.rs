@@ -1,11 +1,14 @@
-use egui::{Pos2, Rect, emath::RectTransform};
+use egui::emath::TSTransform;
 use sd_core::hypergraph::generic::Ctx;
 use svg::{
     Document, Node,
     node::element::{Circle, Group, Line, Path, Rectangle, Text, path::Data},
 };
 
-use crate::shape::{Shape, Shapes};
+use crate::{
+    common::SCALE,
+    shape::{Shape, Shapes},
+};
 
 impl<T: Ctx> Shape<T> {
     pub(crate) fn to_svg(&self) -> Box<dyn Node> {
@@ -93,22 +96,17 @@ impl<T: Ctx> Shape<T> {
 }
 
 impl<T: Ctx> Shapes<T> {
-    const SCALE: f32 = 50.0;
-
     #[must_use]
     pub fn to_svg(&self) -> Document {
         let mut document = Document::new()
-            .set("width", self.size.x * Self::SCALE)
-            .set("height", self.size.y * Self::SCALE);
+            .set("width", self.size.x * SCALE)
+            .set("height", self.size.y * SCALE);
 
-        let scale = RectTransform::from_to(
-            Rect::from_min_size(Pos2::ZERO, self.size / Self::SCALE),
-            Rect::from_min_size(Pos2::ZERO, self.size),
-        );
+        let scale = TSTransform::from_scaling(SCALE);
 
         for shape in &self.shapes {
             let mut shape = shape.clone();
-            shape.apply_transform(&scale);
+            shape.apply_tst_transform(&scale);
             document = document.add(shape.to_svg());
         }
 

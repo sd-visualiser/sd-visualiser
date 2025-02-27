@@ -1,7 +1,7 @@
 use derivative::Derivative;
 use egui::{
     Align2, Color32, CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, Vec2,
-    emath::RectTransform,
+    emath::TSTransform,
     epaint::{CubicBezierShape, PathShape, RectShape},
     vec2,
 };
@@ -68,28 +68,28 @@ pub struct Shapes<T: Ctx> {
 }
 
 impl<T: Ctx> Shape<T> {
-    pub(crate) fn apply_transform(&mut self, transform: &RectTransform) {
+    pub(crate) fn apply_tst_transform(&mut self, transform: &TSTransform) {
         match self {
             Shape::Line { start, end, .. } => {
-                *start = transform.transform_pos(*start);
-                *end = transform.transform_pos(*end);
+                *start = transform.mul_pos(*start);
+                *end = transform.mul_pos(*end);
             }
             Shape::CubicBezier { points, .. } => {
                 for point in points {
-                    *point = transform.transform_pos(*point);
+                    *point = transform.mul_pos(*point);
                 }
             }
             Shape::Rectangle { rect, .. } => {
-                *rect = transform.transform_rect(*rect);
+                *rect = transform.mul_rect(*rect);
             }
             Shape::CircleFilled { center, radius, .. }
             | Shape::Operation { center, radius, .. } => {
-                *center = transform.transform_pos(*center);
-                *radius = (f32::from(*radius) * transform.scale().min_elem()) as u8 // NOTE(calintat): should this be length?
+                *center = transform.mul_pos(*center);
+                *radius = (f32::from(*radius) * transform.scaling) as u8 // NOTE(calintat): should this be length?
             }
             Shape::Arrow { center, height, .. } => {
-                *center = transform.transform_pos(*center);
-                *height *= transform.scale().min_elem();
+                *center = transform.mul_pos(*center);
+                *height *= transform.scaling;
             }
         }
     }
@@ -102,7 +102,7 @@ impl<T: Ctx> Shape<T> {
         id: Id,
         ui: &egui::Ui,
         response: &Response,
-        transform: &RectTransform,
+        viewport: &Rect,
         search: Option<&str>,
         highlight_op: &mut Option<T::Operation>,
         highlight_edges: &mut IndexSet<T::Edge>,
@@ -111,13 +111,10 @@ impl<T: Ctx> Shape<T> {
         T::Operation: Matchable,
         T::Thunk: Matchable,
     {
-        let bounds = *transform.to();
-        let tolerance = TOLERANCE * transform.scale().min_elem();
-
         let bounding_box = self.bounding_box();
 
         if let Some(hover_pos) = response.hover_pos() {
-            if self.contains_point(hover_pos, tolerance) {
+            if self.contains_point(hover_pos, TOLERANCE) {
                 match self {
                     Shape::Line { addr, .. } | Shape::CubicBezier { addr, .. } => {
                         highlight_edges.insert(addr.clone());
@@ -130,7 +127,7 @@ impl<T: Ctx> Shape<T> {
             Shape::Line { .. } | Shape::CubicBezier { .. } => {}
             Shape::CircleFilled { addr, coord, .. } => {
                 let circle_response = ui.interact(
-                    bounding_box.intersect(bounds),
+                    bounding_box.intersect(*viewport),
                     id.with((addr.key(), coord)),
                     Sense::click(),
                 );
@@ -143,7 +140,7 @@ impl<T: Ctx> Shape<T> {
                 let addr: &_ = addr;
                 let selected = graph.selected(Node::Thunk(addr.clone()));
                 let thunk_response = ui.interact(
-                    bounding_box.intersect(bounds),
+                    bounding_box.intersect(*viewport),
                     id.with(addr.key()),
                     Sense::click(),
                 );
@@ -172,7 +169,7 @@ impl<T: Ctx> Shape<T> {
                 let search_match = search.map(|x| addr.is_match(x)).unwrap_or_default();
                 let selected = graph.selected(Node::Operation(addr.clone()));
                 let op_response = ui.interact(
-                    bounding_box.intersect(bounds),
+                    bounding_box.intersect(*viewport),
                     id.with(addr.key()),
                     Sense::click(),
                 );
@@ -208,7 +205,7 @@ impl<T: Ctx> Shape<T> {
                 ..
             } => {
                 let arrow_response = ui.interact(
-                    bounding_box.intersect(bounds),
+                    bounding_box.intersect(*viewport),
                     id.with(addr.key()),
                     Sense::click(),
                 );
@@ -228,7 +225,6 @@ impl<T: Ctx> Shape<T> {
     pub(crate) fn into_egui_shape(
         self,
         ui: &egui::Ui,
-        transform: &RectTransform,
         highlight_edges: &IndexSet<T::Edge>,
     ) -> egui::Shape
     where
@@ -315,17 +311,13 @@ impl<T: Ctx> Shape<T> {
                     stroke.unwrap_or(default_stroke),
                     egui::StrokeKind::Outside,
                 ));
-                let text_size: f32 = TEXT_SIZE * transform.scale().min_elem();
-                if text_size <= 5.0 {
-                    return rect;
-                }
                 let text = ui.fonts(|fonts| {
                     egui::Shape::text(
                         fonts,
                         center,
                         Align2::CENTER_CENTER,
                         label,
-                        egui::FontId::monospace(text_size),
+                        egui::FontId::monospace(TEXT_SIZE),
                         ui.visuals().strong_text_color(),
                     )
                 });
@@ -375,7 +367,7 @@ impl<T: Ctx> Shape<T> {
         }
     }
 
-    pub(crate) fn bounding_box(&self) -> Rect {
+    pub fn bounding_box(&self) -> Rect {
         match self {
             Shape::Line { start, end, .. } => Rect::from_two_pos(*start, *end),
             Shape::CubicBezier { points, .. } => Rect::from_points(points),

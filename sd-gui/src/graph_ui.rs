@@ -3,10 +3,8 @@
 use std::fmt::Display;
 
 use delegate::delegate;
-use eframe::{
-    egui,
-    epaint::{CornerRadius, Shape},
-};
+use eframe::egui;
+use egui::{CornerRadius, Pos2, Rect, Scene, Vec2};
 use sd_core::{
     codeable::Codeable,
     common::{Direction, Matchable},
@@ -22,9 +20,12 @@ use sd_core::{
     language::{chil::Chil, mlir::Mlir, spartan::Spartan},
     lp::Solver,
 };
-use sd_graphics::{common::Shapeable, renderable::RenderableGraph};
+use sd_graphics::{
+    common::{SCALE, Shapeable},
+    renderable::RenderableGraph,
+};
 
-use crate::{panzoom::Panzoom, shape_generator::generate_shapes};
+use crate::shape_generator::generate_shapes;
 
 pub enum GraphUi {
     Chil(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Chil>>>),
@@ -84,10 +85,17 @@ impl GraphUi {
 
 pub struct GraphUiInternal<G: Graph> {
     pub(crate) graph: G,
-    panzoom: Panzoom,
+    scene_rect: Rect,
     ready: bool,
     reset_requested: bool,
     solver: Solver,
+}
+
+enum PanDirection {
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 impl<G> GraphUiInternal<G>
@@ -97,7 +105,7 @@ where
     pub(crate) fn new(graph: G, solver: Solver) -> Self {
         Self {
             graph,
-            panzoom: Panzoom::default(),
+            scene_rect: Rect::ZERO,
             ready: false,
             reset_requested: true,
             solver,
@@ -120,62 +128,56 @@ where
         let shapes = generate_shapes(&self.graph, self.solver);
         let guard = shapes.lock().unwrap();
         if let Some(shapes) = guard.ready() {
-            let (response, painter) =
-                ui.allocate_painter(ui.available_size_before_wrap(), egui::Sense::drag());
+            let response = Scene::new()
+                .show(ui, &mut self.scene_rect, |ui| {
+                    let painter = ui.painter();
+                    let response = ui.response();
 
-            let to_screen = self.panzoom.transform(response.rect);
+                    // Background
+                    painter.add(egui::Shape::rect_filled(
+                        ui.clip_rect(),
+                        CornerRadius::ZERO,
+                        ui.visuals().faint_bg_color,
+                    ));
+
+                    let shapes = sd_graphics::render::render(
+                        &mut self.graph,
+                        ui,
+                        &shapes.shapes,
+                        &response,
+                        &ui.clip_rect(),
+                        search,
+                    );
+                    painter.extend(shapes);
+                })
+                .response;
 
             if response.contains_pointer() {
-                ui.input(|i| {
-                    if let Some(hover_pos) = i.pointer.hover_pos() {
-                        let anchor = to_screen.inverse().transform_pos(hover_pos);
-                        self.panzoom.zoom(i.zoom_delta(), anchor);
-                    }
-
-                    self.panzoom.pan(i.smooth_scroll_delta);
-                });
-                self.panzoom.pan(response.drag_delta());
-
                 ui.input_mut(|i| {
-                    let mut pan_by_key = |key, pan: fn(&mut Panzoom) -> ()| {
+                    let inv_zoom_factor = self.scene_rect.area() / ui.min_rect().area();
+                    let mut pan_by_key = |key, direction| {
                         if i.consume_shortcut(&egui::KeyboardShortcut::new(
                             egui::Modifiers::NONE,
                             key,
                         )) {
-                            pan(&mut self.panzoom);
+                            self.pan(direction, inv_zoom_factor);
                         }
                     };
-                    pan_by_key(egui::Key::ArrowLeft, Panzoom::pan_left);
-                    pan_by_key(egui::Key::H, Panzoom::pan_left);
-                    pan_by_key(egui::Key::ArrowRight, Panzoom::pan_right);
-                    pan_by_key(egui::Key::L, Panzoom::pan_right);
-                    pan_by_key(egui::Key::ArrowUp, Panzoom::pan_up);
-                    pan_by_key(egui::Key::K, Panzoom::pan_up);
-                    pan_by_key(egui::Key::ArrowDown, Panzoom::pan_down);
-                    pan_by_key(egui::Key::J, Panzoom::pan_down);
+                    pan_by_key(egui::Key::ArrowLeft, PanDirection::Left);
+                    pan_by_key(egui::Key::H, PanDirection::Left);
+                    pan_by_key(egui::Key::ArrowRight, PanDirection::Right);
+                    pan_by_key(egui::Key::L, PanDirection::Right);
+                    pan_by_key(egui::Key::ArrowUp, PanDirection::Up);
+                    pan_by_key(egui::Key::K, PanDirection::Up);
+                    pan_by_key(egui::Key::ArrowDown, PanDirection::Down);
+                    pan_by_key(egui::Key::J, PanDirection::Down);
                 });
             }
 
             if self.reset_requested {
-                self.panzoom
-                    .reset(shapes.size, response.rect.max - response.rect.min);
+                self.scene_rect = Rect::from_min_max(Pos2::ZERO, Pos2::ZERO + SCALE * shapes.size);
                 self.reset_requested = false;
             }
-            // Background
-            painter.add(Shape::rect_filled(
-                response.rect,
-                CornerRadius::ZERO,
-                ui.visuals().faint_bg_color,
-            ));
-
-            painter.extend(sd_graphics::render::render(
-                &mut self.graph,
-                ui,
-                &shapes.shapes,
-                &response,
-                to_screen,
-                search,
-            ));
             self.ready = true;
         } else {
             ui.centered_and_justified(eframe::egui::Ui::spinner);
@@ -189,6 +191,31 @@ where
 
     pub(crate) fn reset(&mut self) {
         self.reset_requested = true;
+    }
+
+    const ZOOM_FACTOR: f32 = 1.25;
+
+    pub(crate) fn zoom_in(&mut self) {
+        self.scene_rect = self.scene_rect.scale_from_center(Self::ZOOM_FACTOR.recip());
+    }
+
+    pub(crate) fn zoom_out(&mut self) {
+        self.scene_rect = self.scene_rect.scale_from_center(Self::ZOOM_FACTOR);
+    }
+
+    const PAN_FACTOR: f32 = 10.0;
+
+    fn pan(&mut self, direction: PanDirection, scale: f32) {
+        self.scene_rect = self.scene_rect.translate(
+            scale
+                * Self::PAN_FACTOR
+                * match direction {
+                    PanDirection::Up => Vec2::UP,
+                    PanDirection::Down => Vec2::DOWN,
+                    PanDirection::Left => Vec2::LEFT,
+                    PanDirection::Right => Vec2::RIGHT,
+                },
+        );
     }
 
     /// Searches through the shapes and pans to the one which matches the query
@@ -210,15 +237,8 @@ where
                 .collect::<Vec<_>>();
             if !matches.is_empty() {
                 let shape = matches[offset % matches.len()];
-                self.panzoom.set_pan(shape.center());
+                self.scene_rect = SCALE * shape.bounding_box();
             }
-        }
-    }
-
-    delegate! {
-        to self.panzoom {
-            pub(crate) fn zoom_in(&mut self);
-            pub(crate) fn zoom_out(&mut self);
         }
     }
 

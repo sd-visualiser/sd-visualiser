@@ -10,9 +10,10 @@ use sd_core::hypergraph::{
 
 pub const RADIUS_ARG: u8 = 1;
 pub const RADIUS_COPY: u8 = 2;
-pub const TOLERANCE: f32 = 0.3;
-pub const TEXT_SIZE: f32 = 0.28;
+pub const TOLERANCE: f32 = 6.0;
+pub const TEXT_SIZE: f32 = 14.0;
 pub const RADIUS_OPERATION: u8 = 4;
+pub const SCALE: f32 = 50.0;
 
 // pub trait ContainsPoint {
 //     // Check if a point lies on a line or curve (with the given tolerance).
