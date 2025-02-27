@@ -1,8 +1,9 @@
 use from_pest::{ConversionError, FromPest, Void};
 use pest::{Parser as _, error};
+#[cfg(not(target_arch = "wasm32"))]
+use sd_core::language::llvm_ir;
 use sd_core::language::{
     chil::{self, ChilParser},
-    llvm_ir,
     mlir::{
         self,
         internal::{MlirParser, TopLevelItem},
@@ -37,6 +38,7 @@ impl UiLanguage {
 pub enum ParseOutput {
     Chil(chil::Expr),
     Spartan(spartan::Expr),
+    #[cfg(not(target_arch = "wasm32"))]
     LlvmIr(llvm_ir::Expr),
     Mlir(mlir::Expr),
     Dot(dot_structures::Graph),
@@ -50,6 +52,7 @@ pub enum ParseError {
     #[error("Spartan parsing error:\n{0}")]
     Spartan(#[from] Box<error::Error<spartan::Rule>>),
 
+    #[cfg(not(target_arch = "wasm32"))]
     #[error("LlvmIr parsing error:\n{0}")]
     LlvmIr(String),
 
@@ -76,9 +79,12 @@ pub fn parse(source: &str, language: UiLanguage) -> Result<ParseOutput, ParseErr
             let expr = spartan::Expr::from_pest(&mut pairs)?;
             Ok(ParseOutput::Spartan(expr))
         }
+        #[cfg(not(target_arch = "wasm32"))]
         UiLanguage::LlvmIr => Ok(ParseOutput::LlvmIr(
             llvm_ir::parse(source).map_err(ParseError::LlvmIr)?,
         )),
+        #[cfg(target_arch = "wasm32")]
+        UiLanguage::LlvmIr => unreachable!(),
         UiLanguage::Mlir => {
             let mut pairs =
                 MlirParser::parse(mlir::internal::Rule::toplevel, source).map_err(Box::new)?;

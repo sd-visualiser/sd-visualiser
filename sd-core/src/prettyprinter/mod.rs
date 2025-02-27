@@ -4,6 +4,7 @@ use itertools::Either;
 use pretty::RcDoc;
 
 pub mod chil;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod llvm_ir;
 pub mod mlir;
 pub mod spartan;

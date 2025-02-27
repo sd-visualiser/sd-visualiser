@@ -23,7 +23,7 @@ sd-visualiser also supports LLVM MLIR [4], and can be used to visualise MLIR pro
 ### Web
 
 Please go to <https://sd-visualiser.github.io/sd-visualiser/> to use the web version of the visualiser.
-Minor features such as faster layout are not available in the web version.
+Support for LLVM IR, along with other minor features, such as faster layout, are not available in the web version.
 
 ### Linux (Ubuntu)
 

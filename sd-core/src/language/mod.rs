@@ -8,6 +8,7 @@ use derivative::Derivative;
 use crate::{common::Matchable, hypergraph::traits::WithType, prettyprinter::PrettyPrint};
 
 pub mod chil;
+#[cfg(not(target_arch = "wasm32"))]
 pub mod llvm_ir;
 pub mod mlir;
 pub mod spartan;

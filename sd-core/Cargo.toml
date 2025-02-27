@@ -20,7 +20,6 @@ from-pest = "0.3.3"
 good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel" ] }
 indexmap = "2.7.1"
 itertools = "0.14.0"
-llvm-ir = { version = "0.11.2", features = ["llvm-19"] }
 num = "0.4.3"
 pest = "2.7.15"
 pest-ast = "0.3.5"
@@ -31,6 +30,9 @@ priority-queue = "2.1.2"
 qcell = "0.5.4"
 thiserror = "2.0.11"
 tracing = "0.1.41"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+llvm-ir = { version = "0.11.2", features = ["llvm-19"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel-wasm" ] }
