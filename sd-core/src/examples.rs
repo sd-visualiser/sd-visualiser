@@ -3,7 +3,7 @@ use crate::{
         generic::{Ctx, Endpoint, Node},
         traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     },
-    language::spartan::Op,
+    language::sd_lang::Op,
     monoidal::{
         Slice,
         graph::{MonoidalGraph, MonoidalOp},

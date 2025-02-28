@@ -11,7 +11,7 @@ pub mod chil;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod llvm_ir;
 pub mod mlir;
-pub mod spartan;
+pub mod sd_lang;
 
 pub(crate) fn span_into_str(span: pest::Span) -> &str {
     span.as_str()
@@ -243,7 +243,7 @@ pub(crate) mod tests {
             self,
             internal::{TopLevelItem, tests::parse_mlir},
         },
-        spartan::tests::parse_sd,
+        sd_lang::tests::parse_sd_lang,
     };
     use crate::{graph::SyntaxHypergraph, hypergraph::petgraph::to_pet, language::llvm_ir::LlvmIr};
 
@@ -297,7 +297,7 @@ pub(crate) mod tests {
         let path = Path::new(raw_path);
         match path.extension() {
             Some(ext) if ext == OsStr::new("sd") => {
-                let (name, expr) = parse_sd(raw_path);
+                let (name, expr) = parse_sd_lang(raw_path);
                 ("sd", name, Box::new(expr))
             }
             Some(ext) if ext == OsStr::new("chil") => {

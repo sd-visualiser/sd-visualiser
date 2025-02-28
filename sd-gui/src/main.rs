@@ -30,9 +30,9 @@ struct Args {
     #[arg(long, value_name = "FILE")]
     chil: Option<PathBuf>,
 
-    /// Read in a spartan file
+    /// Read in a sd-lang file
     #[arg(long, value_name = "FILE")]
-    spartan: Option<PathBuf>,
+    sd_lang: Option<PathBuf>,
 
     /// Read in an llvm ir file
     #[arg(long, value_name = "FILE")]
@@ -78,9 +78,9 @@ fn main() -> anyhow::Result<()> {
     let file = if let Some(path) = args.chil {
         let code = std::fs::read_to_string(path)?;
         Some((code, sd_gui::UiLanguage::Chil))
-    } else if let Some(path) = args.spartan {
+    } else if let Some(path) = args.sd_lang {
         let code = std::fs::read_to_string(path)?;
-        Some((code, sd_gui::UiLanguage::Spartan))
+        Some((code, sd_gui::UiLanguage::SdLang))
     } else if let Some(path) = args.llvm_ir {
         let code = std::fs::read_to_string(path)?;
         Some((code, sd_gui::UiLanguage::LlvmIr))

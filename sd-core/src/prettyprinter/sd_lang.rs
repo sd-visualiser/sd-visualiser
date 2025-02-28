@@ -1,7 +1,7 @@
 use pretty::RcDoc;
 
 use super::{PrettyPrint, paran_list};
-use crate::language::spartan::{Bind, Expr, Op, Thunk, Value, Variable};
+use crate::language::sd_lang::{Bind, Expr, Op, Thunk, Value, Variable};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -110,10 +110,10 @@ mod tests {
     use dir_test::{Fixture, dir_test};
     use insta::assert_snapshot;
 
-    use crate::{language::spartan::Expr, prettyprinter::PrettyPrint};
+    use crate::{language::sd_lang::Expr, prettyprinter::PrettyPrint};
 
     #[allow(clippy::needless_pass_by_value)]
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::spartan::tests::parse_sd, postfix: "pretty_print")]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::sd_lang::tests::parse_sd_lang, postfix: "pretty_print")]
     fn pretty_print(fixture: Fixture<(&str, Expr)>) {
         let (name, expr) = fixture.content();
         assert_snapshot!(format!("pretty_print_{name}"), expr.to_pretty());

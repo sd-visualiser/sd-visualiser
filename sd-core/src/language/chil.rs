@@ -432,10 +432,10 @@ impl<'pest> FromPest<'pest> for Thunk {
     }
 }
 
-// Conversion to spartan
+// Conversion to sd-lang
 
 #[cfg(test)]
-impl From<Op> for super::spartan::Op {
+impl From<Op> for super::sd_lang::Op {
     fn from(op: Op) -> Self {
         match op.0.as_str() {
             "+" | "throwing+" => Self::Plus,
@@ -472,7 +472,7 @@ impl From<Op> for super::spartan::Op {
 }
 
 #[cfg(test)]
-impl From<Variable> for super::spartan::Variable {
+impl From<Variable> for super::sd_lang::Variable {
     fn from(var: Variable) -> Self {
         Self(format!("var_{}", var.addr.1))
     }
@@ -486,7 +486,7 @@ impl From<Addr> for crate::common::Unit {
 }
 
 #[cfg(test)]
-impl From<VariableDef> for super::spartan::Variable {
+impl From<VariableDef> for super::sd_lang::Variable {
     fn from(def: VariableDef) -> Self {
         def.var.into()
     }

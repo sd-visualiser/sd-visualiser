@@ -19,7 +19,7 @@ use sd_core::{
         traits::{Graph, WithType},
     },
     interactive::InteractiveGraph,
-    language::{chil::Chil, mlir::Mlir, spartan::Spartan},
+    language::{chil::Chil, mlir::Mlir, sd_lang::SdLang},
     lp::Solver,
 };
 use sd_graphics::{
@@ -34,7 +34,7 @@ pub enum GraphUi {
     #[cfg(not(target_arch = "wasm32"))]
     LlvmIr(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<LlvmIr>>>),
     Mlir(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Mlir>>>),
-    Spartan(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Spartan>>>),
+    SdLang(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<SdLang>>>),
     Dot(GraphUiInternal<InteractiveGraph<Hypergraph<DotWeight>>>),
 }
 
@@ -52,8 +52,8 @@ impl GraphUi {
         Self::Mlir(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
-    pub(crate) fn new_spartan(graph: SyntaxHypergraph<Spartan>, solver: Solver) -> Self {
-        Self::Spartan(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
+    pub(crate) fn new_sd_lang(graph: SyntaxHypergraph<SdLang>, solver: Solver) -> Self {
+        Self::SdLang(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
     pub(crate) fn new_dot(graph: Hypergraph<DotWeight>, solver: Solver) -> Self {
@@ -66,7 +66,7 @@ impl GraphUi {
             #[cfg(not(target_arch = "wasm32"))]
             GraphUi::LlvmIr(graph_ui) => graph_ui,
             GraphUi::Mlir(graph_ui) => graph_ui,
-            GraphUi::Spartan(graph_ui) => graph_ui,
+            GraphUi::SdLang(graph_ui) => graph_ui,
             GraphUi::Dot(graph_ui) => graph_ui
         } {
             pub(crate) fn ui(&mut self, ui: &mut egui::Ui, search: Option<&str>);
@@ -85,7 +85,7 @@ impl GraphUi {
             #[cfg(not(target_arch = "wasm32"))]
             GraphUi::LlvmIr(graph_ui) => graph_ui.graph,
             GraphUi::Mlir(graph_ui) => graph_ui.graph,
-            GraphUi::Spartan(graph_ui) => graph_ui.graph,
+            GraphUi::SdLang(graph_ui) => graph_ui.graph,
             GraphUi::Dot(graph_ui) => graph_ui.graph
         } {
             pub(crate) fn is_empty(&self) -> bool;
