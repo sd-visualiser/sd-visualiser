@@ -143,7 +143,7 @@ impl App {
             match error {
                 ParseError::Chil(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Mlir(err) => show_parse_error(ui, err, &text_edit_out),
-                ParseError::Spartan(err) => show_parse_error(ui, err, &text_edit_out),
+                ParseError::SdLang(err) => show_parse_error(ui, err, &text_edit_out),
                 #[cfg(not(target_arch = "wasm32"))]
                 ParseError::LlvmIr(_) => (),
                 ParseError::Dot(_) | ParseError::Conversion(_) => (),
@@ -220,9 +220,9 @@ impl App {
                         tracing::debug!("Converting mlir to hypergraph...");
                         GraphUi::new_mlir(expr.to_graph(mlir_settings.sym_name_linking)?, solver)
                     }
-                    ParseOutput::Spartan(expr) => {
-                        tracing::debug!("Converting spartan to hypergraph...");
-                        GraphUi::new_spartan(expr.to_graph(false)?, solver)
+                    ParseOutput::SdLang(expr) => {
+                        tracing::debug!("Converting sd-lang to hypergraph...");
+                        GraphUi::new_sd_lang(expr.to_graph(false)?, solver)
                     }
                     ParseOutput::Dot(graph) => {
                         tracing::debug!("Converting dot to hypergraph...");
@@ -329,7 +329,7 @@ impl eframe::App for App {
                         ui.radio_value(&mut self.language, UiLanguage::LlvmIr, "LlvmIr (unsupported on web)");
                     });
                     ui.radio_value(&mut self.language, UiLanguage::Mlir, "Mlir");
-                    ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
+                    ui.radio_value(&mut self.language, UiLanguage::SdLang, "sd-lang");
                     ui.radio_value(&mut self.language, UiLanguage::Dot, "Dot");
                 });
 
@@ -401,7 +401,7 @@ impl eframe::App for App {
                             Some(ext) if ext == "chil" => Some(UiLanguage::Chil),
                             Some(ext) if ext == "ll" => Some(UiLanguage::LlvmIr),
                             Some(ext) if ext == "mlir" => Some(UiLanguage::Mlir),
-                            Some(ext) if ext == "sd" => Some(UiLanguage::Spartan),
+                            Some(ext) if ext == "sd" => Some(UiLanguage::SdLang),
                             Some(ext) if ext == "dot" => Some(UiLanguage::Dot),
                             Some(_) | None => None,
                         };
@@ -432,7 +432,7 @@ impl eframe::App for App {
                                     Some("chil") => Some(UiLanguage::Chil),
                                     Some("ll") => Some(UiLanguage::LlvmIr),
                                     Some("mlir") => Some(UiLanguage::Mlir),
-                                    Some("sd") => Some(UiLanguage::Spartan),
+                                    Some("sd") => Some(UiLanguage::SdLang),
                                     Some("dot") => Some(UiLanguage::Dot),
                                     Some(_) | None => None,
                                 };

@@ -7,7 +7,7 @@ pub mod chil;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod llvm_ir;
 pub mod mlir;
-pub mod spartan;
+pub mod sd_lang;
 
 pub trait PrettyPrint {
     fn to_doc(&self) -> RcDoc<'_, ()>;

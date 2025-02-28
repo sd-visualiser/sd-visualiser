@@ -7,7 +7,7 @@ use sd_core::language::llvm_ir::LlvmIr;
 use sd_core::{
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
-    language::{Expr, Language, Thunk, chil::Chil, mlir::Mlir, spartan::Spartan},
+    language::{Expr, Language, Thunk, chil::Chil, mlir::Mlir, sd_lang::SdLang},
     lp::Solver,
     prettyprinter::PrettyPrint,
 };
@@ -24,7 +24,7 @@ pub enum Selection {
     #[cfg(not(target_arch = "wasm32"))]
     LlvmIr(SelectionInternal<LlvmIr>),
     Mlir(SelectionInternal<Mlir>),
-    Spartan(SelectionInternal<Spartan>),
+    SdLang(SelectionInternal<SdLang>),
 }
 
 impl Selection {
@@ -34,7 +34,7 @@ impl Selection {
             #[cfg(not(target_arch = "wasm32"))]
             Self::LlvmIr(selection) => selection,
             Self::Mlir(selection) => selection,
-            Self::Spartan(selection) => selection,
+            Self::SdLang(selection) => selection,
         } {
             pub(crate) fn ui(&mut self, ctx: &egui::Context);
             pub(crate) fn name(&self) -> &str;
@@ -60,7 +60,7 @@ impl Selection {
                 name,
                 solver,
             ))),
-            GraphUi::Spartan(graph_ui) => Some(Self::Spartan(SelectionInternal::new(
+            GraphUi::SdLang(graph_ui) => Some(Self::SdLang(SelectionInternal::new(
                 graph_ui.graph.to_subgraph(),
                 name,
                 solver,
@@ -111,7 +111,7 @@ impl<T: 'static + Language> SelectionInternal<T> {
                     let code = generate_code(&self.graph_ui.graph);
                     let guard = code.lock().unwrap();
                     if let Some(code) = guard.ready() {
-                        code_ui(&mut columns[0], &mut code.as_str(), UiLanguage::Spartan);
+                        code_ui(&mut columns[0], &mut code.as_str(), UiLanguage::SdLang);
                     }
                     self.graph_ui.ui(&mut columns[1], None);
                 });

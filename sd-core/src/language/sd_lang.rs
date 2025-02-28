@@ -18,9 +18,9 @@ use crate::{
     hypergraph::traits::{WireType, WithType},
 };
 
-pub struct Spartan;
+pub struct SdLang;
 
-impl super::Language for Spartan {
+impl super::Language for SdLang {
     type Op = Op;
     type Var = Variable;
     type Addr = Unit;
@@ -29,22 +29,22 @@ impl super::Language for Spartan {
     type Symbol = Empty;
 }
 
-impl TryFrom<<Spartan as super::Language>::Addr> for <Spartan as super::Language>::Symbol {
+impl TryFrom<<SdLang as super::Language>::Addr> for <SdLang as super::Language>::Symbol {
     type Error = &'static str;
 
-    fn try_from(_: <Spartan as super::Language>::Addr) -> Result<Self, Self::Error> {
+    fn try_from(_: <SdLang as super::Language>::Addr) -> Result<Self, Self::Error> {
         Err("no symbols in sd-lang")
     }
 }
 
-pub type Expr = super::Expr<Spartan>;
-pub type Bind = super::Bind<Spartan>;
-pub type Value = super::Value<Spartan>;
-pub type Thunk = super::Thunk<Spartan>;
+pub type Expr = super::Expr<SdLang>;
+pub type Bind = super::Bind<SdLang>;
+pub type Value = super::Value<SdLang>;
+pub type Thunk = super::Thunk<SdLang>;
 
 #[derive(Parser)]
-#[grammar = "language/spartan.pest"]
-pub struct SpartanParser;
+#[grammar = "language/sd-lang.pest"]
+pub struct SdLangParser;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(test, derive(Serialize))]
@@ -192,7 +192,7 @@ impl<'pest> FromPest<'pest> for Op {
     }
 }
 
-impl OpInfo<Spartan> for Op {}
+impl OpInfo<SdLang> for Op {}
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
 #[cfg_attr(test, derive(Serialize))]
@@ -382,12 +382,12 @@ pub(crate) mod tests {
     use from_pest::FromPest;
     use pest::Parser;
 
-    use super::{Expr, Rule, SpartanParser};
+    use super::{Expr, Rule, SdLangParser};
 
-    pub fn parse_sd(raw_path: &str) -> (&str, Expr) {
+    pub fn parse_sd_lang(raw_path: &str) -> (&str, Expr) {
         let path = Path::new(raw_path);
         let program = std::fs::read_to_string(path).unwrap();
-        let mut pairs = SpartanParser::parse(Rule::program, &program).unwrap_or_else(|err| {
+        let mut pairs = SdLangParser::parse(Rule::program, &program).unwrap_or_else(|err| {
             panic!(
                 "could not parse program {:?}\n{err:?}",
                 path.file_stem().unwrap()
@@ -399,7 +399,7 @@ pub(crate) mod tests {
     }
 
     #[allow(clippy::needless_pass_by_value)]
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::spartan::tests::parse_sd, postfix: "check_parse")]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::sd_lang::tests::parse_sd_lang, postfix: "check_parse")]
     fn check_parse(fixture: Fixture<(&str, Expr)>) {
         let (_name, _expr) = fixture.content();
     }

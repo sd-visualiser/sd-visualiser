@@ -2,8 +2,8 @@
 
 SD Visualiser is an interactive tool to visualise string diagrams, based on idea that string diagrams as hypergraphs provide a foundation for building programming languages, building on the work of [1].
 
-A toy language, `sd` language, is defined in a similar vein to the `spartan` language [2], and is used to define programs which can be represented as string diagrams.
-SD Visualiser provides a playground to experiment with the `sd` language, and to visualise and interact with the corresponding string diagram.
+A toy language, `sd-lang`, is defined in a similar vein to the `spartan` language [2], and is used to define programs which can be represented as string diagrams.
+SD Visualiser provides a playground to experiment with `sd-lang`, and to visualise and interact with the corresponding string diagram.
 
 The main binary is called `sd-gui`.
 

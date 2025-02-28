@@ -5,8 +5,8 @@ String diagram visualiser for programs with semantics in closed monoidal categor
 
 sd-visualiser is an interactive tool to visualise string diagrams, based on idea that string diagrams encoded as hierarchical hypergraphs, representing terms in a closed monoidal category, provide a foundation for building programming languages, building on the work of [1] [2].
 
-A toy language, `sd` language, is defined in a similar vein to the `spartan` language [3], and is used to define programs which can be represented as string diagrams.
-sd-visualiser provides a playground to experiment with the `sd` language, and to visualise and interact with the corresponding string diagram.
+A toy language, `sd-lang`, is defined in a similar vein to the `spartan` language [3], and is used to define programs which can be represented as string diagrams.
+sd-visualiser provides a playground to experiment with `sd-lang`, and to visualise and interact with the corresponding string diagram.
 
 sd-visualiser also supports LLVM MLIR [4], and can be used to visualise MLIR programs as string diagrams.
 

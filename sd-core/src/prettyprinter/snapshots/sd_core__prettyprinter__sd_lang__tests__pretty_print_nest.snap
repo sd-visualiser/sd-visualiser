@@ -1,5 +1,5 @@
 ---
-source: sd-core/src/prettyprinter/spartan.rs
+source: sd-core/src/prettyprinter/sd_lang.rs
 expression: expr.to_pretty()
 ---
 lambda(x . lambda(y . x))
