@@ -13,6 +13,7 @@ clap = "4.5.30"
 clap_derive = "4.5.28"
 delegate = "0.13.2"
 derivative = "2.2.0"
+derive_more = { version = "2.0.1", features = ["display", "from"] }
 dot-structures = "0.1.1"
 either = "1.14.0"
 from-pest = "0.3.3"
@@ -29,6 +30,9 @@ priority-queue = "2.1.2"
 qcell = "0.5.4"
 thiserror = "2.0.11"
 tracing = "0.1.41"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+llvm-ir = { version = "0.11.2", features = ["llvm-19"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel-wasm" ] }
@@ -49,3 +53,4 @@ microlp = ["good_lp/minilp"]
 cbc = ["good_lp/coin_cbc"]
 highs = ["good_lp/highs"]
 gurobi = ["good_lp/lp-solvers"]
+

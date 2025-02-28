@@ -4,6 +4,8 @@ use itertools::Either;
 use pretty::RcDoc;
 
 pub mod chil;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod llvm_ir;
 pub mod mlir;
 pub mod spartan;
 
@@ -28,6 +30,18 @@ pub fn list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) -> RcD
 /// Comma-separated list with parentheses around it.
 pub fn paran_list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) -> RcDoc<'a, ()> {
     RcDoc::text("(").append(list(ts)).append(RcDoc::text(")"))
+}
+
+impl PrettyPrint for String {
+    fn to_doc(&self) -> pretty::RcDoc<()> {
+        pretty::RcDoc::text(self)
+    }
+}
+
+impl PrettyPrint for Box<String> {
+    fn to_doc(&self) -> pretty::RcDoc<()> {
+        pretty::RcDoc::text(self.as_ref())
+    }
 }
 
 impl<T: PrettyPrint> PrettyPrint for Vec<T> {

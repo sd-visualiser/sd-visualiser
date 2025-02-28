@@ -97,6 +97,11 @@ impl<T: Language> Thunk<T> {
         sym_name_link: bool,
     ) {
         let mut new_vars: IndexSet<T::Var> = IndexSet::new();
+        if sym_name_link {
+            if let Ok(sym) = <T as Language>::Symbol::try_from(self.addr.clone()) {
+                to_remove.insert(sym.into());
+            }
+        }
         self.body
             .extend_free_vars(&mut new_vars, to_remove, sym_name_link);
         to_remove.extend(self.args.iter().map(|def| def.var().clone()));

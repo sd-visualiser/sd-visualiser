@@ -14,6 +14,8 @@ use eframe::{
 };
 use egui_notify::Toasts;
 use poll_promise::Promise;
+#[cfg(not(target_arch = "wasm32"))]
+use sd_core::language::llvm_ir::LlvmIrSettings;
 use sd_core::{
     common::Direction,
     dot::{DotSettings, dot_to_graph},
@@ -36,6 +38,8 @@ enum Message {
     Compile,
     SetLanguage(UiLanguage),
     ParseError(ParseError),
+    #[cfg(target_arch = "wasm32")]
+    Unsupported,
 }
 
 pub struct App {
@@ -44,11 +48,15 @@ pub struct App {
     rx: Receiver<Message>,
     about: bool,
     editor: bool,
+    #[cfg(target_arch = "wasm32")]
+    unsupported: bool,
     code: Arc<Mutex<String>>,
     last_parse: Option<Arc<Mutex<Promise<Option<ParseOutput>>>>>,
     last_parse_error: Option<ParseError>,
     language: UiLanguage,
     dot_settings: DotSettings,
+    #[cfg(not(target_arch = "wasm32"))]
+    llvm_ir_settings: LlvmIrSettings,
     mlir_settings: MlirSettings,
     graph_ui: Option<Promise<anyhow::Result<GraphUi>>>,
     selections: Vec<Selection>,
@@ -94,11 +102,15 @@ impl App {
             rx,
             about: Default::default(),
             editor: Default::default(),
+            #[cfg(target_arch = "wasm32")]
+            unsupported: Default::default(),
             code: Arc::default(),
             last_parse: Option::default(),
             last_parse_error: Option::default(),
             language: UiLanguage::default(),
             dot_settings: DotSettings::default(),
+            #[cfg(not(target_arch = "wasm32"))]
+            llvm_ir_settings: LlvmIrSettings::default(),
             mlir_settings: MlirSettings::default(),
             graph_ui: Option::default(),
             selections: Vec::default(),
@@ -132,6 +144,8 @@ impl App {
                 ParseError::Chil(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Mlir(err) => show_parse_error(ui, err, &text_edit_out),
                 ParseError::Spartan(err) => show_parse_error(ui, err, &text_edit_out),
+                #[cfg(not(target_arch = "wasm32"))]
+                ParseError::LlvmIr(_) => (),
                 ParseError::Dot(_) | ParseError::Conversion(_) => (),
             }
         }
@@ -179,6 +193,8 @@ impl App {
             let parse = self.last_parse.as_ref().unwrap().clone();
             let ctx = ctx.clone();
             let dot_settings = self.dot_settings;
+            #[cfg(not(target_arch = "wasm32"))]
+            let llvm_ir_settings = self.llvm_ir_settings;
             let mlir_settings = self.mlir_settings;
             let solver = self.solver;
             self.graph_ui.replace(crate::spawn!("compile", {
@@ -191,6 +207,14 @@ impl App {
                     ParseOutput::Chil(expr) => {
                         tracing::debug!("Converting chil to hypergraph...");
                         GraphUi::new_chil(expr.to_graph(false)?, solver)
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    ParseOutput::LlvmIr(expr) => {
+                        tracing::debug!("Converting llvm ir to hypergraph...");
+                        GraphUi::new_llvm_ir(
+                            expr.to_graph(llvm_ir_settings.sym_name_linking)?,
+                            solver,
+                        )
                     }
                     ParseOutput::Mlir(expr) => {
                         tracing::debug!("Converting mlir to hypergraph...");
@@ -230,6 +254,10 @@ impl eframe::App for App {
                     self.toasts.error(err.to_string());
                     tracing::debug!("{}", err);
                     self.last_parse_error.replace(err);
+                }
+                #[cfg(target_arch = "wasm32")]
+                Message::Unsupported => {
+                    self.unsupported = true;
                 }
             }
         }
@@ -294,6 +322,12 @@ impl eframe::App for App {
 
                 ui.menu_button("Language", |ui| {
                     ui.radio_value(&mut self.language, UiLanguage::Chil, "Chil");
+                    #[cfg(not(target_arch = "wasm32"))]
+                    ui.radio_value(&mut self.language, UiLanguage::LlvmIr, "LlvmIr");
+                    #[cfg(target_arch = "wasm32")]
+                    ui.add_enabled_ui(false, |ui| {
+                        ui.radio_value(&mut self.language, UiLanguage::LlvmIr, "LlvmIr (unsupported on web)");
+                    });
                     ui.radio_value(&mut self.language, UiLanguage::Mlir, "Mlir");
                     ui.radio_value(&mut self.language, UiLanguage::Spartan, "Spartan");
                     ui.radio_value(&mut self.language, UiLanguage::Dot, "Dot");
@@ -316,6 +350,24 @@ impl eframe::App for App {
                                 .clicked()
                             {
                                 self.dot_settings.collect = !self.dot_settings.collect;
+                                self.tx
+                                    .send(Message::Compile)
+                                    .expect("Failed to send message");
+                            }
+                        });
+                    }
+                    #[cfg(not(target_arch = "wasm32"))]
+                    UiLanguage::LlvmIr => {
+                        ui.menu_button("Settings", |ui| {
+                            if ui
+                                .selectable_label(
+                                    self.llvm_ir_settings.sym_name_linking,
+                                    "Link symbols",
+                                )
+                                .clicked()
+                            {
+                                self.llvm_ir_settings.sym_name_linking =
+                                    !self.llvm_ir_settings.sym_name_linking;
                                 self.tx
                                     .send(Message::Compile)
                                     .expect("Failed to send message");
@@ -347,6 +399,7 @@ impl eframe::App for App {
                     if let Some(path) = rfd::FileDialog::new().pick_file() {
                         let language = match path.extension() {
                             Some(ext) if ext == "chil" => Some(UiLanguage::Chil),
+                            Some(ext) if ext == "ll" => Some(UiLanguage::LlvmIr),
                             Some(ext) if ext == "mlir" => Some(UiLanguage::Mlir),
                             Some(ext) if ext == "sd" => Some(UiLanguage::Spartan),
                             Some(ext) if ext == "dot" => Some(UiLanguage::Dot),
@@ -367,8 +420,17 @@ impl eframe::App for App {
                         wasm_bindgen_futures::spawn_local(async move {
                             if let Some(file) = task.await {
                                 tracing::trace!("got file name {:?}", file.file_name());
-                                let language = match file.file_name().split('.').last() {
+                                let name = file.file_name();
+                                let ext = name.split('.').last();
+                                if let Some("ll") = ext {
+                                    tracing::error!("LLVM IR is not supported in the web version");
+                                    tx.send(Message::Unsupported)
+                                        .expect("failed to send message");
+                                    return;
+                                }
+                                let language = match ext {
                                     Some("chil") => Some(UiLanguage::Chil),
+                                    Some("ll") => Some(UiLanguage::LlvmIr),
                                     Some("mlir") => Some(UiLanguage::Mlir),
                                     Some("sd") => Some(UiLanguage::Spartan),
                                     Some("dot") => Some(UiLanguage::Dot),
@@ -625,6 +687,31 @@ impl eframe::App for App {
                         ui.label(include_str!("../../LICENSE"));
                     });
                 });
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        if self.unsupported {
+            let modal = egui::Modal::new(egui::Id::new("unsupported")).show(ctx, |ui| {
+                ui.heading("Unsupported");
+                ui.label("LLVM IR is not supported in the web version.");
+                ui.horizontal(|ui| {
+                    ui.label("Please download the desktop version from:");
+                    ui.hyperlink(env!("CARGO_PKG_REPOSITORY"));
+                });
+                ui.separator();
+                egui::Sides::new().show(
+                    ui,
+                    |_ui| {},
+                    |ui| {
+                        if ui.button("OK").clicked() {
+                            self.unsupported = false;
+                        }
+                    },
+                );
+            });
+            if modal.should_close() {
+                self.unsupported = false;
+            }
         }
 
         self.toasts.show(ctx);

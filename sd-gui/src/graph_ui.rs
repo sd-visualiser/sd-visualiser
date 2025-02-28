@@ -5,6 +5,8 @@ use std::fmt::Display;
 use delegate::delegate;
 use eframe::egui;
 use egui::{CornerRadius, Pos2, Rect, Scene, Vec2};
+#[cfg(not(target_arch = "wasm32"))]
+use sd_core::language::llvm_ir::LlvmIr;
 use sd_core::{
     codeable::Codeable,
     common::{Direction, Matchable},
@@ -29,6 +31,8 @@ use crate::shape_generator::generate_shapes;
 
 pub enum GraphUi {
     Chil(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Chil>>>),
+    #[cfg(not(target_arch = "wasm32"))]
+    LlvmIr(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<LlvmIr>>>),
     Mlir(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Mlir>>>),
     Spartan(GraphUiInternal<InteractiveGraph<SyntaxHypergraph<Spartan>>>),
     Dot(GraphUiInternal<InteractiveGraph<Hypergraph<DotWeight>>>),
@@ -37,6 +41,11 @@ pub enum GraphUi {
 impl GraphUi {
     pub(crate) fn new_chil(graph: SyntaxHypergraph<Chil>, solver: Solver) -> Self {
         Self::Chil(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn new_llvm_ir(graph: SyntaxHypergraph<LlvmIr>, solver: Solver) -> Self {
+        Self::LlvmIr(GraphUiInternal::new(InteractiveGraph::new(graph), solver))
     }
 
     pub(crate) fn new_mlir(graph: SyntaxHypergraph<Mlir>, solver: Solver) -> Self {
@@ -54,6 +63,8 @@ impl GraphUi {
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui,
+            #[cfg(not(target_arch = "wasm32"))]
+            GraphUi::LlvmIr(graph_ui) => graph_ui,
             GraphUi::Mlir(graph_ui) => graph_ui,
             GraphUi::Spartan(graph_ui) => graph_ui,
             GraphUi::Dot(graph_ui) => graph_ui
@@ -71,6 +82,8 @@ impl GraphUi {
     delegate! {
         to match self {
             GraphUi::Chil(graph_ui) => graph_ui.graph,
+            #[cfg(not(target_arch = "wasm32"))]
+            GraphUi::LlvmIr(graph_ui) => graph_ui.graph,
             GraphUi::Mlir(graph_ui) => graph_ui.graph,
             GraphUi::Spartan(graph_ui) => graph_ui.graph,
             GraphUi::Dot(graph_ui) => graph_ui.graph

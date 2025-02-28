@@ -29,6 +29,14 @@ impl super::Language for Spartan {
     type Symbol = Empty;
 }
 
+impl TryFrom<<Spartan as super::Language>::Addr> for <Spartan as super::Language>::Symbol {
+    type Error = &'static str;
+
+    fn try_from(_: <Spartan as super::Language>::Addr) -> Result<Self, Self::Error> {
+        Err("no symbols in sd-lang")
+    }
+}
+
 pub type Expr = super::Expr<Spartan>;
 pub type Bind = super::Bind<Spartan>;
 pub type Value = super::Value<Spartan>;

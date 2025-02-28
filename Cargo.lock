@@ -704,9 +704,9 @@ checksum = "8f1fe948ff07f4bd06c30984e69f5b4899c516a3ef74f34df92a2df2ab535495"
 
 [[package]]
 name = "bytes"
-version = "1.9.0"
+version = "1.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "325918d6fe32f23b19878fe4b34794ae41fc19ddbe53b10571a4874d44ffd39b"
+checksum = "f61dac84819c6588b558454b194026eb1f09c293b9036ae9b159e74e73ab6cf9"
 
 [[package]]
 name = "calloop"
@@ -1125,6 +1125,27 @@ checksum = "8f0314b72bed045f3a68671b3c86328386762c93f82d98c65c3cb5e5f573dd68"
 dependencies = [
  "derive_builder_core",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "derive_more"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "093242cf7570c207c83073cf82f79706fe7b8317e98620a47d5be7c3d8497678"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bda628edc44c4bb645fbe0f758797143e4e07926f7ebf4e9bdfbd3d2ce621df3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.98",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -2348,6 +2369,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4ce301924b7887e9d637144fdade93f9dfff9b60981d4ac161db09720d39aa5"
 
 [[package]]
+name = "llvm-ir"
+version = "0.11.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa7c7f889914dd7f097b2b917cc2a31b2e40cf9eb1af9d56b0cf1ba1fad37b48"
+dependencies = [
+ "either",
+ "llvm-sys",
+ "log",
+ "ordered-float 4.6.0",
+]
+
+[[package]]
+name = "llvm-sys"
+version = "191.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "893cddf1adf0354b93411e413553dd4daf5c43195d73f1acfa1e394bdd371456"
+dependencies = [
+ "anyhow",
+ "cc",
+ "lazy_static",
+ "libc",
+ "regex-lite",
+ "semver",
+]
+
+[[package]]
 name = "lock_api"
 version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2464,9 +2511,9 @@ dependencies = [
 
 [[package]]
 name = "microlp"
-version = "0.2.9"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54df3293c9060b47f9953c8785e5c96e3d3c29e48afaf215f3f335ffc7007304"
+checksum = "edaa5264bc1f7668bc12e10757f8f529a526656c796cc2106cf2be10c5b8d483"
 dependencies = [
  "log",
  "sprs",
@@ -3417,6 +3464,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "regex-lite"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53a49587ad06b26609c52e423de037e7f57f20d53535d66e08c695f347df952a"
+
+[[package]]
 name = "regex-syntax"
 version = "0.6.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3596,6 +3649,7 @@ dependencies = [
  "clap_derive",
  "delegate",
  "derivative",
+ "derive_more",
  "dir-test",
  "dot-structures",
  "either",
@@ -3604,6 +3658,7 @@ dependencies = [
  "indexmap",
  "insta",
  "itertools 0.14.0",
+ "llvm-ir",
  "num",
  "pest",
  "pest-ast",

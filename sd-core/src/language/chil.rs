@@ -29,6 +29,14 @@ impl super::Language for Chil {
     type Symbol = Empty;
 }
 
+impl TryFrom<<Chil as super::Language>::Addr> for <Chil as super::Language>::Symbol {
+    type Error = &'static str;
+
+    fn try_from(_: <Chil as super::Language>::Addr) -> Result<Self, Self::Error> {
+        Err("no symbols in chil")
+    }
+}
+
 pub type Expr = super::Expr<Chil>;
 pub type Bind = super::Bind<Chil>;
 pub type Value = super::Value<Chil>;

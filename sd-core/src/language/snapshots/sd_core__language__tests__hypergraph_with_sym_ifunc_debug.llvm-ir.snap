@@ -1,0 +1,917 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 12,
+    edge_count: 11,
+    edges: (1, 0), (0, 2), (4, 3), (3, 1), (6, 5), (5, 4), (8, 7), (9, 7), (7, 6), (10, 8), (11, 9),
+    node weights: {
+        0: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 3,
+                edge_count: 2,
+                edges: (0, 1), (1, 2),
+                node weights: {
+                    0: Edge(
+                        FreeVar(
+                            Symbol {
+                                symbol: "indirect_func",
+                            },
+                        ),
+                    ),
+                    1: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 9,
+                            edge_count: 8,
+                            edges: (2, 1), (1, 3), (5, 4), (6, 4), (4, 2), (7, 6), (0, 8), (8, 5),
+                            node weights: {
+                                0: Edge(
+                                    FreeVar(
+                                        Symbol {
+                                            symbol: "indirect_func",
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Name(
+                                                            "result",
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "result",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Call(
+                                            Call {
+                                                function: Right(
+                                                    ConstantOperand(
+                                                        ConstantRef(
+                                                            GlobalReference {
+                                                                name: Name(
+                                                                    "indirect_func",
+                                                                ),
+                                                                ty: TypeRef(
+                                                                    FuncType {
+                                                                        result_type: TypeRef(
+                                                                            IntegerType {
+                                                                                bits: 32,
+                                                                            },
+                                                                        ),
+                                                                        param_types: [
+                                                                            TypeRef(
+                                                                                IntegerType {
+                                                                                    bits: 32,
+                                                                                },
+                                                                            ),
+                                                                        ],
+                                                                        is_var_arg: false,
+                                                                    },
+                                                                ),
+                                                            },
+                                                        ),
+                                                    ),
+                                                ),
+                                                function_ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                                arguments: [
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Int {
+                                                                    bits: 32,
+                                                                    value: 5,
+                                                                },
+                                                            ),
+                                                        ),
+                                                        [],
+                                                    ),
+                                                ],
+                                                return_attributes: [],
+                                                dest: Some(
+                                                    Name(
+                                                        "result",
+                                                    ),
+                                                ),
+                                                function_attributes: [],
+                                                is_tail_call: false,
+                                                calling_convention: C,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                5: Edge(
+                                    Nil,
+                                ),
+                                6: Edge(
+                                    Nil,
+                                ),
+                                7: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 5,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                8: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "indirect_func",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 1,
+                                4: 0,
+                                5: 0,
+                                6: 0,
+                                7: 0,
+                            },
+                        },
+                    ),
+                    2: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 0,
+                },
+            },
+        ),
+        1: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "indirect_func",
+                },
+            ),
+        ),
+        2: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "main",
+                },
+            ),
+        ),
+        3: Operation(
+            GlobalIFunc(
+                GlobalIFunc {
+                    name: Name(
+                        "indirect_func",
+                    ),
+                    linkage: External,
+                    visibility: Default,
+                    ty: TypeRef(
+                        PointerType {
+                            addr_space: 0,
+                        },
+                    ),
+                    resolver_fn: ConstantRef(
+                        GlobalReference {
+                            name: Name(
+                                "resolver",
+                            ),
+                            ty: TypeRef(
+                                FuncType {
+                                    result_type: TypeRef(
+                                        PointerType {
+                                            addr_space: 0,
+                                        },
+                                    ),
+                                    param_types: [],
+                                    is_var_arg: false,
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        ),
+        4: Edge(
+            Nil,
+        ),
+        5: Operation(
+            Constant(
+                ConstantRef(
+                    GlobalReference {
+                        name: Name(
+                            "resolver",
+                        ),
+                        ty: TypeRef(
+                            FuncType {
+                                result_type: TypeRef(
+                                    PointerType {
+                                        addr_space: 0,
+                                    },
+                                ),
+                                param_types: [],
+                                is_var_arg: false,
+                            },
+                        ),
+                    },
+                ),
+            ),
+        ),
+        6: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "resolver",
+                },
+            ),
+        ),
+        7: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 4,
+                edge_count: 3,
+                edges: (0, 2), (1, 2), (2, 3),
+                node weights: {
+                    0: Edge(
+                        FreeVar(
+                            Symbol {
+                                symbol: "impl_slow",
+                            },
+                        ),
+                    ),
+                    1: Edge(
+                        FreeVar(
+                            Symbol {
+                                symbol: "impl_fast",
+                            },
+                        ),
+                    ),
+                    2: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 18,
+                            edge_count: 17,
+                            edges: (3, 2), (2, 4), (6, 5), (7, 5), (8, 5), (5, 3), (0, 9), (9, 8), (1, 10), (10, 7), (12, 11), (13, 11), (14, 11), (11, 6), (15, 14), (16, 13), (17, 12),
+                            node weights: {
+                                0: Edge(
+                                    FreeVar(
+                                        Symbol {
+                                            symbol: "impl_slow",
+                                        },
+                                    ),
+                                ),
+                                1: Edge(
+                                    FreeVar(
+                                        Symbol {
+                                            symbol: "impl_fast",
+                                        },
+                                    ),
+                                ),
+                                2: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Name(
+                                                            "func",
+                                                        ),
+                                                        ty: TypeRef(
+                                                            PointerType {
+                                                                addr_space: 0,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                3: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "func",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                4: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                5: Operation(
+                                    Instruction(
+                                        Select(
+                                            Select {
+                                                condition: LocalOperand {
+                                                    name: Name(
+                                                        "cond",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 1,
+                                                        },
+                                                    ),
+                                                },
+                                                true_value: ConstantOperand(
+                                                    ConstantRef(
+                                                        GlobalReference {
+                                                            name: Name(
+                                                                "impl_fast",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                FuncType {
+                                                                    result_type: TypeRef(
+                                                                        IntegerType {
+                                                                            bits: 32,
+                                                                        },
+                                                                    ),
+                                                                    param_types: [
+                                                                        TypeRef(
+                                                                            IntegerType {
+                                                                                bits: 32,
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                    is_var_arg: false,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                ),
+                                                false_value: ConstantOperand(
+                                                    ConstantRef(
+                                                        GlobalReference {
+                                                            name: Name(
+                                                                "impl_slow",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                FuncType {
+                                                                    result_type: TypeRef(
+                                                                        IntegerType {
+                                                                            bits: 32,
+                                                                        },
+                                                                    ),
+                                                                    param_types: [
+                                                                        TypeRef(
+                                                                            IntegerType {
+                                                                                bits: 32,
+                                                                            },
+                                                                        ),
+                                                                    ],
+                                                                    is_var_arg: false,
+                                                                },
+                                                            ),
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "func",
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                6: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "cond",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                7: Edge(
+                                    Nil,
+                                ),
+                                8: Edge(
+                                    Nil,
+                                ),
+                                9: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "impl_slow",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                10: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            GlobalReference {
+                                                name: Name(
+                                                    "impl_fast",
+                                                ),
+                                                ty: TypeRef(
+                                                    FuncType {
+                                                        result_type: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                        param_types: [
+                                                            TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        ],
+                                                        is_var_arg: false,
+                                                    },
+                                                ),
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                11: Operation(
+                                    Instruction(
+                                        ICmp(
+                                            ICmp {
+                                                predicate: EQ,
+                                                operand0: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "cond",
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                12: Edge(
+                                    Nil,
+                                ),
+                                13: Edge(
+                                    Nil,
+                                ),
+                                14: Edge(
+                                    Nil,
+                                ),
+                                15: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                16: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                17: Operation(
+                                    IntPredicate(
+                                        EQ,
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 1,
+                                4: 2,
+                                5: 0,
+                                6: 0,
+                                7: 0,
+                                8: 0,
+                                9: 0,
+                                10: 0,
+                                11: 1,
+                                12: 2,
+                                13: 0,
+                                14: 0,
+                                15: 0,
+                                16: 0,
+                            },
+                        },
+                    ),
+                    3: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 1,
+                    2: 0,
+                },
+            },
+        ),
+        8: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "impl_slow",
+                },
+            ),
+        ),
+        9: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "impl_fast",
+                },
+            ),
+        ),
+        10: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 3,
+                edge_count: 2,
+                edges: (0, 1), (1, 2),
+                node weights: {
+                    0: Edge(
+                        BoundVar(
+                            Var {
+                                name: Name(
+                                    "x",
+                                ),
+                            },
+                        ),
+                    ),
+                    1: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 7,
+                            edge_count: 6,
+                            edges: (2, 1), (1, 3), (0, 4), (5, 4), (4, 2), (6, 5),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "x",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Name(
+                                                            "result",
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "result",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Mul(
+                                            Mul {
+                                                operand0: LocalOperand {
+                                                    name: Name(
+                                                        "x",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 2,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "result",
+                                                ),
+                                                nuw: false,
+                                                nsw: false,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                5: Edge(
+                                    Nil,
+                                ),
+                                6: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 2,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 1,
+                                4: 0,
+                                5: 0,
+                            },
+                        },
+                    ),
+                    2: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 0,
+                },
+            },
+        ),
+        11: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 3,
+                edge_count: 2,
+                edges: (0, 1), (1, 2),
+                node weights: {
+                    0: Edge(
+                        BoundVar(
+                            Var {
+                                name: Name(
+                                    "x",
+                                ),
+                            },
+                        ),
+                    ),
+                    1: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 7,
+                            edge_count: 6,
+                            edges: (2, 1), (1, 3), (0, 4), (5, 4), (4, 2), (6, 5),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "x",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Name(
+                                                            "result",
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "result",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Shl(
+                                            Shl {
+                                                operand0: LocalOperand {
+                                                    name: Name(
+                                                        "x",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "result",
+                                                ),
+                                                nuw: false,
+                                                nsw: false,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                5: Edge(
+                                    Nil,
+                                ),
+                                6: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 1,
+                                4: 0,
+                                5: 0,
+                            },
+                        },
+                    ),
+                    2: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 0,
+                },
+            },
+        ),
+    },
+    edge weights: {
+        0: 0,
+        1: 0,
+        2: 0,
+        3: 0,
+        4: 0,
+        5: 0,
+        6: 0,
+        7: 1,
+        8: 0,
+        9: 0,
+        10: 0,
+    },
+}

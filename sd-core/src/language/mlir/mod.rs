@@ -34,6 +34,14 @@ impl Language for Mlir {
     type Symbol = Symbol;
 }
 
+impl TryFrom<<Mlir as super::Language>::Addr> for <Mlir as super::Language>::Symbol {
+    type Error = &'static str;
+
+    fn try_from(_: <Mlir as super::Language>::Addr) -> Result<Self, Self::Error> {
+        Err("no function addresses in mlir")
+    }
+}
+
 pub type Expr = super::Expr<Mlir>;
 pub type Bind = super::Bind<Mlir>;
 pub type Value = super::Value<Mlir>;

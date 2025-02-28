@@ -2,6 +2,8 @@
 
 use delegate::delegate;
 use eframe::egui;
+#[cfg(not(target_arch = "wasm32"))]
+use sd_core::language::llvm_ir::LlvmIr;
 use sd_core::{
     graph::SyntaxHypergraph,
     interactive::InteractiveSubgraph,
@@ -19,6 +21,8 @@ use crate::{
 
 pub enum Selection {
     Chil(SelectionInternal<Chil>),
+    #[cfg(not(target_arch = "wasm32"))]
+    LlvmIr(SelectionInternal<LlvmIr>),
     Mlir(SelectionInternal<Mlir>),
     Spartan(SelectionInternal<Spartan>),
 }
@@ -27,6 +31,8 @@ impl Selection {
     delegate! {
         to match self {
             Self::Chil(selection) => selection,
+            #[cfg(not(target_arch = "wasm32"))]
+            Self::LlvmIr(selection) => selection,
             Self::Mlir(selection) => selection,
             Self::Spartan(selection) => selection,
         } {
@@ -39,6 +45,12 @@ impl Selection {
     pub fn from_graph(graph_ui: &GraphUi, name: String, solver: Solver) -> Option<Self> {
         match graph_ui {
             GraphUi::Chil(graph_ui) => Some(Self::Chil(SelectionInternal::new(
+                graph_ui.graph.to_subgraph(),
+                name,
+                solver,
+            ))),
+            #[cfg(not(target_arch = "wasm32"))]
+            GraphUi::LlvmIr(graph_ui) => Some(Self::LlvmIr(SelectionInternal::new(
                 graph_ui.graph.to_subgraph(),
                 name,
                 solver,

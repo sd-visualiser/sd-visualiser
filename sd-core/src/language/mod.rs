@@ -8,6 +8,8 @@ use derivative::Derivative;
 use crate::{common::Matchable, hypergraph::traits::WithType, prettyprinter::PrettyPrint};
 
 pub mod chil;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod llvm_ir;
 pub mod mlir;
 pub mod spartan;
 
@@ -65,7 +67,7 @@ pub trait Language {
     type Addr: Syntax;
     type BlockAddr: Syntax;
     type VarDef: Syntax + GetVar<Self::Var>;
-    type Symbol: Syntax;
+    type Symbol: Syntax + TryFrom<Self::Addr, Error: Debug>;
 }
 
 #[derive(Derivative)]
@@ -236,13 +238,14 @@ pub(crate) mod tests {
     use super::{
         Expr, Language,
         chil::tests::parse_chil,
+        llvm_ir::tests::parse_llvm_ir,
         mlir::{
             self,
             internal::{TopLevelItem, tests::parse_mlir},
         },
         spartan::tests::parse_sd,
     };
-    use crate::{graph::SyntaxHypergraph, hypergraph::petgraph::to_pet};
+    use crate::{graph::SyntaxHypergraph, hypergraph::petgraph::to_pet, language::llvm_ir::LlvmIr};
 
     pub trait ExprTest {
         fn free_var_test(&self) -> Box<dyn std::fmt::Debug>;
@@ -272,6 +275,24 @@ pub(crate) mod tests {
         }
     }
 
+    impl ExprTest for crate::language::llvm_ir::Expr {
+        fn free_var_test(&self) -> Box<dyn std::fmt::Debug> {
+            Box::new(self.free_vars(false))
+        }
+
+        fn graph_test(&self, name: &str, lang: &str, sym_name_link: bool) -> anyhow::Result<()> {
+            let graph: SyntaxHypergraph<LlvmIr> = self.to_graph(sym_name_link)?;
+            let name = if sym_name_link {
+                format!("hypergraph_with_sym_{name}_debug.{lang}")
+            } else {
+                format!("hypergraph_{name}_debug.{lang}")
+            };
+            // cannot serialise LLVM IR expressions, so use Debug instead
+            insta::assert_debug_snapshot!(name, to_pet(&graph));
+            Ok(())
+        }
+    }
+
     pub fn parse(raw_path: &str) -> (&str, &str, Box<dyn ExprTest>) {
         let path = Path::new(raw_path);
         match path.extension() {
@@ -282,6 +303,10 @@ pub(crate) mod tests {
             Some(ext) if ext == OsStr::new("chil") => {
                 let (name, expr) = parse_chil(raw_path);
                 ("chil", name, Box::new(expr))
+            }
+            Some(ext) if ext == OsStr::new("ll") => {
+                let (name, expr) = parse_llvm_ir(raw_path);
+                ("llvm-ir", name, Box::new(expr))
             }
             Some(ext) if ext == OsStr::new("mlir") => {
                 let (name, items) = parse_mlir(raw_path);

@@ -11,7 +11,7 @@ use super::{
 
 pub type PetGraph<V, E> = petgraph::Graph<PetNode<V, E>, usize>;
 
-#[cfg_attr(test, derive(Serialize))]
+#[cfg_attr(test, derive(Debug, Serialize))]
 pub enum PetNode<V, E> {
     Edge(E),
     Operation(V),
