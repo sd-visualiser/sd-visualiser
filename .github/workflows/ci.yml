@@ -17,8 +17,6 @@ jobs:
       checks: write
     runs-on: ubuntu-latest
     steps:
-      - name: Install gtk
-        run: sudo apt-get -y install libgtk-3-dev
       - name: Install Nix
         uses: cachix/install-nix-action@v27
         with:
@@ -31,14 +29,9 @@ jobs:
           authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Spawn development shell
-        run: |
-          nix develop $FLAKE
       - name: Run clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features -- -D warnings
+        run: |
+          nix develop $FLAKE --command cargo clippy --all-targets --all-features -- -D warnings
 
   build:
     name: Build
