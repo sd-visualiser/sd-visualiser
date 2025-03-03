@@ -419,8 +419,9 @@ impl<'pest> FromPest<'pest> for Thunk {
         let thunk = Thunk {
             addr: FromPest::from_pest(&mut inner)?,
             args: FromPest::from_pest(&mut inner)?,
+            reqs: Vec::default(),
             body: FromPest::from_pest(&mut inner)?,
-            blocks: vec![],
+            blocks: Vec::default(),
         };
         if inner.next().is_some() {
             return Err(ConversionError::Extraneous {

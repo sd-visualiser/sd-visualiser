@@ -266,6 +266,7 @@ impl From<Function> for Thunk {
                 .into_iter()
                 .map(|parameter| parameter.name.into())
                 .collect(),
+            reqs: Vec::default(),
             body: Expr::default(),
             blocks: function.basic_blocks.into_iter().map_into().collect(),
         }

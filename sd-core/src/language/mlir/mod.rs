@@ -253,7 +253,8 @@ impl From<internal::Region> for Thunk {
     fn from(region: internal::Region) -> Self {
         Thunk {
             addr: Unit,
-            args: vec![],
+            args: Vec::default(),
+            reqs: Vec::default(),
             body: region
                 .entry_block
                 .map(|block| block.operations.into())

@@ -358,11 +358,21 @@ impl<'pest> FromPest<'pest> for Thunk {
             return Err(ConversionError::NoMatch);
         }
         let mut inner = pair.into_inner();
+        let addr = FromPest::from_pest(&mut inner)?;
+        let args = FromPest::from_pest(&mut inner)?;
+        let body = FromPest::from_pest(&mut inner)?;
+        let reqs = match inner.next() {
+            Some(with) if with.as_rule() == Rule::with => {
+                FromPest::from_pest(&mut with.into_inner())?
+            }
+            _ => Vec::default(),
+        };
         let thunk = Thunk {
-            addr: FromPest::from_pest(&mut inner)?,
-            args: FromPest::from_pest(&mut inner)?,
-            body: FromPest::from_pest(&mut inner)?,
-            blocks: vec![],
+            addr,
+            args,
+            reqs,
+            body,
+            blocks: Vec::default(),
         };
         if inner.next().is_some() {
             return Err(ConversionError::Extraneous {

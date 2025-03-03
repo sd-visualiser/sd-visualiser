@@ -105,6 +105,7 @@ impl<T: Language> Thunk<T> {
         self.body
             .extend_free_vars(&mut new_vars, to_remove, sym_name_link);
         to_remove.extend(self.args.iter().map(|def| def.var().clone()));
+        vars.extend(self.reqs.iter().cloned());
         for b in &self.blocks {
             b.expr
                 .extend_free_vars(&mut new_vars, to_remove, sym_name_link);

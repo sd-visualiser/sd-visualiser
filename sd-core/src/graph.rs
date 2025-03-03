@@ -228,12 +228,17 @@ where
                 }
 
                 let thunk_node = self.fragment.add_thunk(
-                    0,
+                    thunk.reqs.len(),
                     thunk.args.iter().cloned().map(Name::BoundVar),
                     thunk.body.values.len() + cf_free_vars.get(&None).copied().unwrap_or_default(),
                     output_weights,
                     Left(thunk.addr.clone()),
                 );
+
+                let mut in_ports = thunk_node.inputs();
+                for r in &thunk.reqs {
+                    self.inputs.push((in_ports.next().unwrap(), r.clone()));
+                }
 
                 self.fragment
                     .in_thunk(thunk_node.clone(), |inner_fragment| {

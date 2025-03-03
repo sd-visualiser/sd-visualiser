@@ -122,6 +122,7 @@ pub enum Value<T: Language + ?Sized> {
 pub struct Thunk<T: Language + ?Sized> {
     pub addr: T::Addr,
     pub args: Vec<T::VarDef>,
+    pub reqs: Vec<T::Var>,
     pub body: Expr<T>,
     pub blocks: Vec<Block<T>>,
 }
@@ -206,6 +207,7 @@ impl<T: Language> Thunk<T> {
         Thunk {
             addr: self.addr.into(),
             args: self.args.into_iter().map(Into::into).collect(),
+            reqs: self.reqs.into_iter().map(Into::into).collect(),
             body: self.body.into(),
             blocks: self.blocks.into_iter().map(Block::into).collect(),
         }

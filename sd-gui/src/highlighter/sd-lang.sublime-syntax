@@ -11,7 +11,7 @@ contexts:
   main:
     - match: '#.*$'
       scope: comment
-    - match: '\b(bind|in)\b'
+    - match: '\b(bind|in|with)\b'
       scope: keyword
     - match: '(=)'
       scope: keyword.operator
