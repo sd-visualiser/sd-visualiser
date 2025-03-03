@@ -155,8 +155,15 @@ impl<T: Language> SThunk<T> {
                     _ => Err(DecompileError::Corrupt),
                 })
                 .collect::<Result<Vec<_>, _>>()?,
+            reqs: thunk
+                .graph_inputs()
+                .filter_map(|edge| match edge.weight() {
+                    Name::FreeVar(var) => Some(var),
+                    _ => None,
+                })
+                .collect(),
             body: Expr::decompile(thunk)?,
-            blocks: vec![],
+            blocks: Vec::default(),
         })
     }
 }

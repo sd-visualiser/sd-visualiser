@@ -102,6 +102,18 @@ impl PrettyPrint for Thunk {
                     .nest(4)
                     .append(RcDoc::line())
             })
+            .append(if !self.reqs.is_empty() {
+                RcDoc::space()
+                    .append(RcDoc::text("with"))
+                    .append(RcDoc::space())
+                    .append(if self.reqs.len() > 1 {
+                        paran_list(&self.reqs)
+                    } else {
+                        self.reqs.to_doc()
+                    })
+            } else {
+                RcDoc::nil()
+            })
     }
 }
 
