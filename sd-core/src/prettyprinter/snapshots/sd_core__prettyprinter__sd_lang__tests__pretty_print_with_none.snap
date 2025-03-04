@@ -1,0 +1,6 @@
+---
+source: sd-core/src/prettyprinter/sd_lang.rs
+expression: expr.to_pretty()
+---
+bind () = x . x in
+()

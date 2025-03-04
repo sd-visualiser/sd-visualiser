@@ -245,7 +245,7 @@ pub(crate) mod tests {
             self,
             internal::{TopLevelItem, tests::parse_mlir},
         },
-        sd_lang::tests::parse_sd_lang,
+        sd_lang::parse_sd_lang,
     };
     use crate::{graph::SyntaxHypergraph, hypergraph::petgraph::to_pet, language::llvm_ir::LlvmIr};
 

@@ -384,32 +384,30 @@ impl<'pest> FromPest<'pest> for Thunk {
     }
 }
 
-#[cfg(test)]
-pub(crate) mod tests {
-    use std::path::Path;
-
-    use dir_test::{Fixture, dir_test};
-    use from_pest::FromPest;
-    use pest::Parser;
-
-    use super::{Expr, Rule, SdLangParser};
-
-    pub fn parse_sd_lang(raw_path: &str) -> (&str, Expr) {
-        let path = Path::new(raw_path);
-        let program = std::fs::read_to_string(path).unwrap();
-        let mut pairs = SdLangParser::parse(Rule::program, &program).unwrap_or_else(|err| {
+pub fn parse_sd_lang(raw_path: &str) -> (&str, Expr) {
+    let path = std::path::Path::new(raw_path);
+    let program = std::fs::read_to_string(path).unwrap();
+    let mut pairs = <SdLangParser as pest::Parser<_>>::parse(Rule::program, &program)
+        .unwrap_or_else(|err| {
             panic!(
                 "could not parse program {:?}\n{err:?}",
                 path.file_stem().unwrap()
             )
         });
-        let name = path.file_stem().unwrap().to_str().unwrap();
-        let expr = Expr::from_pest(&mut pairs).unwrap();
-        (name, expr)
-    }
+    let name = path.file_stem().unwrap().to_str().unwrap();
+    let expr = Expr::from_pest(&mut pairs).unwrap();
+    (name, expr)
+}
+
+#[cfg(test)]
+pub(crate) mod tests {
+
+    use dir_test::{Fixture, dir_test};
+
+    use super::Expr;
 
     #[allow(clippy::needless_pass_by_value)]
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::sd_lang::tests::parse_sd_lang, postfix: "check_parse")]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::sd_lang::parse_sd_lang, postfix: "check_parse")]
     fn check_parse(fixture: Fixture<(&str, Expr)>) {
         let (_name, _expr) = fixture.content();
     }

@@ -25,6 +25,7 @@ web-time = "1.1.0"
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
+dir-test = "0.4.1"
 insta = { version = "1.42.1", features = ["ron"] }
 serde = "1.0.218"
 
