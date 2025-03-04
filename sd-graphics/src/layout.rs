@@ -601,10 +601,12 @@ where
                     outputs,
                 } => {
                     // Distance constraints for the ports.
-                    for x in inputs.iter().chain(outputs) {
-                        problem.add_constraint((*x - layout.h_min).geq(0.5));
-                        problem.add_constraint((layout.h_max - *x).geq(0.5));
-                    }
+                    add_constraints_wires(
+                        problem,
+                        &inputs.iter().chain(outputs).copied().collect(),
+                        layout.h_min,
+                        layout.h_max,
+                    );
 
                     // Align inner wires with ports.
                     for (&inner, &port) in layout
@@ -622,6 +624,18 @@ where
                         problem.add_constraint(Expression::eq(inner.into(), port));
                     }
 
+                    if addr.number_of_inputs() > addr.number_of_free_graph_inputs() {
+                        // Have at least one external input
+                        // invariant: all free inputs come before external inputs
+
+                        // De-align last external port with first bound port
+                        if let (Some(&x), Some(&y)) = (
+                            inputs.last(),
+                            layout.inputs().nth(addr.number_of_free_graph_inputs()),
+                        ) {
+                            problem.add_constraint((y - x).geq(1.0))
+                        }
+                    }
                     // Align outer wires with ports.
                     for (outer, &port) in ins.iter().zip(inputs) {
                         let distance = problem.add_variable(variable().min(0.0));
