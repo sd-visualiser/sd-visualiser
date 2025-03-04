@@ -125,7 +125,7 @@ mod tests {
     use crate::{language::sd_lang::Expr, prettyprinter::PrettyPrint};
 
     #[allow(clippy::needless_pass_by_value)]
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::sd_lang::tests::parse_sd_lang, postfix: "pretty_print")]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.sd", loader: crate::language::sd_lang::parse_sd_lang, postfix: "pretty_print")]
     fn pretty_print(fixture: Fixture<(&str, Expr)>) {
         let (name, expr) = fixture.content();
         assert_snapshot!(format!("pretty_print_{name}"), expr.to_pretty());

@@ -1,0 +1,24 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Edge(FreeVar(Variable("y"))),
+    Edge(FreeVar(Variable("z"))),
+    Thunk(Graph(
+      nodes: [
+        Edge(BoundVar(Variable("x"))),
+      ],
+      node_holes: [],
+      edge_property: directed,
+      edges: [],
+    )),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((0, 2, 0)),
+    Some((1, 2, 1)),
+  ],
+)
