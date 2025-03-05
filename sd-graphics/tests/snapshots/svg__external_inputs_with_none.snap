@@ -1,6 +1,6 @@
 ---
 source: sd-graphics/tests/svg.rs
-expression: "<svg height=\"150\" width=\"100\" xmlns=\"http://www.w3.org/2000/svg\">\n<rect fill=\"none\" height=\"100\" stroke=\"gray\" stroke-width=\"1\" width=\"50\" x=\"25\" y=\"25\"/>\n<circle cx=\"50\" cy=\"25\" fill=\"black\" r=\"2.5\"/>\n<circle cx=\"50\" cy=\"125\" fill=\"black\" r=\"2.5\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"50\" x2=\"50\" y1=\"25\" y2=\"50\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"50\" x2=\"50\" y1=\"100\" y2=\"125\"/>\n<path d=\"M50,50 C50,70.00001,50,75,50,75\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n<path d=\"M50,75 C50,75,50,80,50,100\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n</svg>"
+expression: "<svg height=\"150\" width=\"100\" xmlns=\"http://www.w3.org/2000/svg\">\n<rect fill=\"none\" height=\"100\" stroke=\"gray\" stroke-width=\"1\" width=\"50\" x=\"25\" y=\"25\"/>\n<circle cx=\"50\" cy=\"25\" fill=\"#000000ff\" r=\"2.5\"/>\n<circle cx=\"50\" cy=\"125\" fill=\"#000000ff\" r=\"2.5\"/>\n<line stroke=\"#000000ff\" stroke-width=\"1\" x1=\"50\" x2=\"50\" y1=\"25\" y2=\"50\"/>\n<line stroke=\"#000000ff\" stroke-width=\"1\" x1=\"50\" x2=\"50\" y1=\"100\" y2=\"125\"/>\n<path d=\"M50,50 C50,70.00001,50,75,50,75\" fill=\"none\" stroke=\"#000000ff\" stroke-width=\"1\"/>\n<path d=\"M50,75 C50,75,50,80,50,100\" fill=\"none\" stroke=\"#000000ff\" stroke-width=\"1\"/>\n</svg>"
 extension: svg
 snapshot_kind: binary
 ---
