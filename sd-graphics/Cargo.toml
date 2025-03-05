@@ -9,7 +9,7 @@ homepage.workspace = true
 
 [dependencies]
 derivative = "2.2.0"
-egui = "0.31.0"
+egui = "0.31.1"
 flo_curves = "0.7.3"
 good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel" ] }
 html-escape = "0.2.13"
@@ -19,14 +19,14 @@ ordered-float = "5.0.0"
 pretty = "0.12.3"
 sd-core = { path = "../sd-core" }
 svg = "0.18.0"
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 tracing = "0.1.41"
 web-time = "1.1.0"
 
 [dev-dependencies]
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 dir-test = "0.4.1"
-insta = { version = "1.42.1", features = ["ron"] }
+insta = { version = "1.42.2", features = ["ron"] }
 serde = "1.0.218"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

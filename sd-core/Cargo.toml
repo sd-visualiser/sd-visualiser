@@ -9,7 +9,7 @@ homepage.workspace = true
 
 [dependencies]
 by_address = "1.2.1"
-clap = "4.5.30"
+clap = "4.5.31"
 clap_derive = "4.5.28"
 delegate = "0.13.2"
 derivative = "2.2.0"
@@ -28,22 +28,22 @@ petgraph = "0.7.1"
 pretty = "0.12.3"
 priority-queue = "2.1.2"
 qcell = "0.5.4"
-thiserror = "2.0.11"
+thiserror = "2.0.12"
 tracing = "0.1.41"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-llvm-ir = { version = "0.11.2", features = ["llvm-19"] }
+llvm-ir = { version = "0.11.3", features = ["llvm-19"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 good_lp = { version = "1.12.0", default-features = false, features = [ "clarabel-wasm" ] }
 
 [dev-dependencies]
-anyhow = "1.0.96"
+anyhow = "1.0.97"
 cargo-husky = { version = "1.5.0", features = ["precommit-hook", "run-cargo-check", "run-cargo-clippy", "run-cargo-fmt"] }
 dir-test = "0.4.1"
-insta = { version = "1.42.1", features = ["ron", "redactions"] }
+insta = { version = "1.42.2", features = ["ron", "redactions"] }
 petgraph = { version = "0.7.1", features = ["serde-1"] }
-rstest = "0.24.0"
+rstest = "0.25.0"
 slab = { version = "0.4.9", features = ["serde"] }
 serde = "1.0.218"
 
