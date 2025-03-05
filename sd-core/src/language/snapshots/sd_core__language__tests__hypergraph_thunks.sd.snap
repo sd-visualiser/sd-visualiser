@@ -9,21 +9,48 @@ Graph(
     Edge(Nil),
     Edge(Nil),
     Edge(Nil),
-    Edge(BoundVar(Variable("a"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("x"))),
-        Edge(BoundVar(Variable("y"))),
-        Edge(BoundVar(Variable("z"))),
-        Edge(BoundVar(Variable("u"))),
-        Edge(BoundVar(Variable("v"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("z"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("u"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("v"),
+          meta: None,
+        ))),
         Operation(Plus),
-        Edge(BoundVar(Variable("c"))),
-        Edge(BoundVar(Variable("d"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("c"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("d"),
+          meta: None,
+        ))),
         Operation(Plus),
-        Edge(BoundVar(Variable("b"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("b"),
+          meta: None,
+        ))),
         Operation(Plus),
-        Edge(BoundVar(Variable("a"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("a"),
+          meta: None,
+        ))),
         Operation(Plus),
       ],
       node_holes: [],
@@ -46,14 +73,32 @@ Graph(
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("x"))),
-        Edge(BoundVar(Variable("y"))),
-        Edge(BoundVar(Variable("z"))),
-        Edge(BoundVar(Variable("u"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("z"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("u"),
+          meta: None,
+        ))),
         Operation(Plus),
-        Edge(BoundVar(Variable("b"))),
-        Edge(BoundVar(Variable("c"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("b"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("c"),
+          meta: None,
+        ))),
         Operation(Plus),
-        Edge(BoundVar(Variable("a"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("a"),
+          meta: None,
+        ))),
         Operation(Plus),
       ],
       node_holes: [],
@@ -73,11 +118,23 @@ Graph(
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("x"))),
-        Edge(BoundVar(Variable("y"))),
-        Edge(BoundVar(Variable("z"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("z"),
+          meta: None,
+        ))),
         Operation(Plus),
-        Edge(BoundVar(Variable("a"))),
-        Edge(BoundVar(Variable("b"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("a"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("b"),
+          meta: None,
+        ))),
         Operation(Plus),
       ],
       node_holes: [],

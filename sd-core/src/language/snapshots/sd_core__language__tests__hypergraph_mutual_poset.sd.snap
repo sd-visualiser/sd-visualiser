@@ -5,9 +5,18 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Operation(Plus),
-    Edge(BoundVar(Variable("b"))),
-    Edge(BoundVar(Variable("c"))),
-    Edge(BoundVar(Variable("a"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("b"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("c"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
     Operation(Minus),
     Operation(Times),
   ],

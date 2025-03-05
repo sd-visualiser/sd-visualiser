@@ -61,7 +61,7 @@ impl<T: Language> WithType for Name<T> {
             Name::CF(_) => WireType::ControlFlow,
             Name::Nil => WireType::Data,
             Name::FreeVar(v) => v.get_type(),
-            Name::BoundVar(v) => v.var().get_type(),
+            Name::BoundVar(v) => v.get_type(),
         }
     }
 }

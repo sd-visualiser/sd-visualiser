@@ -277,6 +277,13 @@ impl<T: Ctx> Shape<T> {
                         stroke.color = Color32::DARK_GREEN;
                     }
                 }
+                WireType::Colour(colour) => {
+                    if highlighted {
+                        stroke.color = colour.gamma_multiply_u8(u8::MAX);
+                    } else {
+                        stroke.color = colour;
+                    }
+                }
             }
             stroke
         };

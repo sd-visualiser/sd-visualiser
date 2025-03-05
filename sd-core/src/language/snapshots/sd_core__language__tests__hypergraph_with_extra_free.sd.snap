@@ -9,7 +9,10 @@ Graph(
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("a"))),
-        Edge(BoundVar(Variable("x"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("x"),
+          meta: None,
+        ))),
       ],
       node_holes: [],
       edge_property: directed,

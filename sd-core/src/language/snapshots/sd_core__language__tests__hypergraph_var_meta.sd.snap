@@ -1,0 +1,36 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph(
+  nodes: [
+    Operation(Number(3)),
+    Edge(BoundVar(VariableDef(
+      var: Variable("z"),
+      meta: Some({
+        "colour": "#0000ff55",
+      }),
+    ))),
+    Operation(Number(2)),
+    Edge(BoundVar(VariableDef(
+      var: Variable("y"),
+      meta: Some({
+        "colour": "#0000ff",
+      }),
+    ))),
+    Operation(Number(1)),
+    Edge(BoundVar(VariableDef(
+      var: Variable("x"),
+      meta: Some({
+        "colour": "red",
+      }),
+    ))),
+  ],
+  node_holes: [],
+  edge_property: directed,
+  edges: [
+    Some((0, 1, 0)),
+    Some((2, 3, 0)),
+    Some((4, 5, 0)),
+  ],
+)

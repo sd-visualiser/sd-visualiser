@@ -9,13 +9,19 @@ Graph(
     Edge(Nil),
     Thunk(Graph(
       nodes: [
-        Edge(BoundVar(Variable("y"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y"),
+          meta: None,
+        ))),
         Operation(Lambda),
         Edge(Nil),
         Edge(Nil),
         Thunk(Graph(
           nodes: [
-            Edge(BoundVar(Variable("y"))),
+            Edge(BoundVar(VariableDef(
+              var: Variable("y"),
+              meta: None,
+            ))),
             Operation(Plus),
             Edge(Nil),
           ],

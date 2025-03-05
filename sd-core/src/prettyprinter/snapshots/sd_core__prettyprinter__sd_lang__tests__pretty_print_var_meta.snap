@@ -1,0 +1,8 @@
+---
+source: sd-core/src/prettyprinter/sd_lang.rs
+expression: expr.to_pretty()
+---
+bind x <{colour = red}> = 1 in
+bind y <{colour = #0000ff}> = 2 in
+bind z <{colour = #0000ff55}> = 3 in
+(x, y, z)

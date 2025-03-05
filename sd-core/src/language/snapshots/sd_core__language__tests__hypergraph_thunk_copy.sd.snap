@@ -7,7 +7,10 @@ Graph(
     Edge(FreeVar(Variable("y"))),
     Operation(Lambda),
     Edge(Nil),
-    Edge(BoundVar(Variable("x"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("x"),
+      meta: None,
+    ))),
     Thunk(Graph(
       nodes: [
         Edge(FreeVar(Variable("y"))),
