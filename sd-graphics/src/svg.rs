@@ -1,4 +1,4 @@
-use egui::emath::TSTransform;
+use egui::{ecolor::linear_f32_from_linear_u8, emath::TSTransform};
 use sd_core::hypergraph::{
     generic::Ctx,
     traits::{WireType, WithType, WithWeight},
@@ -136,5 +136,12 @@ fn wire_type_to_svg_colour(wire_type: WireType) -> String {
         WireType::Data => "black".to_string(),
         WireType::ControlFlow => "gold".to_string(),
         WireType::SymName => "dark green".to_string(),
+        WireType::Colour(colour) => format!(
+            "rgba({}, {}, {}, {})",
+            colour.r(),
+            colour.g(),
+            colour.b(),
+            linear_f32_from_linear_u8(colour.a())
+        ),
     }
 }

@@ -17,6 +17,7 @@ pub enum WireType {
     Data,
     ControlFlow,
     SymName,
+    Colour(ecolor::Color32),
 }
 
 pub trait WithType {

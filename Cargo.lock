@@ -3652,6 +3652,7 @@ dependencies = [
  "derive_more",
  "dir-test",
  "dot-structures",
+ "ecolor",
  "either",
  "from-pest",
  "good_lp",

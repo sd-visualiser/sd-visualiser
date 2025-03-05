@@ -6,15 +6,33 @@ Graph(
   nodes: [
     Edge(FreeVar(Variable("x"))),
     Operation(Plus),
-    Edge(BoundVar(Variable("d"))),
-    Edge(BoundVar(Variable("f"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("d"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("f"),
+      meta: None,
+    ))),
     Operation(Plus),
-    Edge(BoundVar(Variable("a"))),
-    Edge(BoundVar(Variable("e"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("e"),
+      meta: None,
+    ))),
     Operation(Plus),
     Operation(Plus),
-    Edge(BoundVar(Variable("b"))),
-    Edge(BoundVar(Variable("c"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("b"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("c"),
+      meta: None,
+    ))),
     Operation(Plus),
     Operation(Plus),
   ],

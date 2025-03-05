@@ -1,7 +1,7 @@
 use pretty::RcDoc;
 
 use super::{PrettyPrint, paran_list};
-use crate::language::sd_lang::{Bind, Expr, Op, Thunk, Value, Variable};
+use crate::language::sd_lang::{Bind, Expr, Op, Thunk, Value, Variable, VariableDef};
 
 impl PrettyPrint for Expr {
     fn to_doc(&self) -> RcDoc<'_, ()> {
@@ -39,6 +39,28 @@ impl PrettyPrint for Bind {
 impl PrettyPrint for Variable {
     fn to_doc(&self) -> RcDoc<'_, ()> {
         RcDoc::text(&self.0)
+    }
+}
+
+impl PrettyPrint for VariableDef {
+    fn to_doc(&self) -> RcDoc<'_, ()> {
+        self.var.to_doc().append(if let Some(attrs) = &self.meta {
+            RcDoc::space()
+                .append(RcDoc::text("<{"))
+                .append(RcDoc::intersperse(
+                    attrs.iter().map(|(k, v)| {
+                        RcDoc::text(k)
+                            .append(RcDoc::space())
+                            .append(RcDoc::text("="))
+                            .append(RcDoc::space())
+                            .append(RcDoc::text(v))
+                    }),
+                    RcDoc::text(",").append(RcDoc::space()),
+                ))
+                .append(RcDoc::text("}>"))
+        } else {
+            RcDoc::nil()
+        })
     }
 }
 

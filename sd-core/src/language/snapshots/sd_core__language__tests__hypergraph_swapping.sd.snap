@@ -9,10 +9,22 @@ Graph(
     Edge(Nil),
     Thunk(Graph(
       nodes: [
-        Edge(BoundVar(Variable("a"))),
-        Edge(BoundVar(Variable("b"))),
-        Edge(BoundVar(Variable("d"))),
-        Edge(BoundVar(Variable("c"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("a"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("b"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("d"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("c"),
+          meta: None,
+        ))),
         Operation(Plus),
         Edge(Nil),
       ],
