@@ -143,6 +143,10 @@ where
         if let Some(shapes) = guard.ready() {
             let response = Scene::new()
                 .show(ui, &mut self.scene_rect, |ui| {
+                    ui.ctx().tessellation_options_mut(|opts| {
+                        opts.feathering_size_in_pixels = 2.0;
+                        opts.round_line_segments_to_pixels = false;
+                    });
                     let painter = ui.painter();
                     let response = ui.response();
 

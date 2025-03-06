@@ -60,6 +60,7 @@ where
                 &mut highlight_op,
                 &mut highlight_edges,
             );
+            s.align_to_pixel_grid(ui.pixels_per_point());
             s
         })
         .collect();

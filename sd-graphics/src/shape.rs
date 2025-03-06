@@ -1,7 +1,7 @@
 use derivative::Derivative;
 use egui::{
     Align2, Color32, CornerRadius, Id, Pos2, Rect, Response, Sense, Stroke, Vec2,
-    emath::TSTransform,
+    emath::{GuiRounding, TSTransform},
     epaint::{CubicBezierShape, PathShape, RectShape},
     vec2,
 };
@@ -90,6 +90,28 @@ impl<T: Ctx> Shape<T> {
             Shape::Arrow { center, height, .. } => {
                 *center = transform.mul_pos(*center);
                 *height *= transform.scaling;
+            }
+        }
+    }
+
+    pub(crate) fn align_to_pixel_grid(&mut self, pixels_per_point: f32) {
+        match self {
+            Shape::Line { start, end, .. } => {
+                *start = start.round_to_pixel_center(pixels_per_point);
+                *end = end.round_to_pixel_center(pixels_per_point);
+            }
+            Shape::CubicBezier { points, .. } => {
+                for point in points {
+                    *point = point.round_to_pixel_center(pixels_per_point);
+                }
+            }
+            Shape::Rectangle { rect, .. } => {
+                *rect = rect.round_to_pixel_center(pixels_per_point);
+            }
+            Shape::CircleFilled { center, .. }
+            | Shape::Operation { center, .. }
+            | Shape::Arrow { center, .. } => {
+                *center = center.round_to_pixel_center(pixels_per_point);
             }
         }
     }
