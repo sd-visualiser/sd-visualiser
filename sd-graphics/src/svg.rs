@@ -1,5 +1,8 @@
-use egui::emath::TSTransform;
-use sd_core::hypergraph::generic::Ctx;
+use egui::{Color32, emath::TSTransform};
+use sd_core::hypergraph::{
+    generic::Ctx,
+    traits::{WireType, WithType, WithWeight},
+};
 use svg::{
     Document, Node,
     node::element::{Circle, Group, Line, Path, Rectangle, Text, path::Data},
@@ -10,7 +13,10 @@ use crate::{
     shape::{Shape, Shapes},
 };
 
-impl<T: Ctx> Shape<T> {
+impl<T: Ctx> Shape<T>
+where
+    <<T as Ctx>::Edge as WithWeight>::Weight: WithType,
+{
     pub(crate) fn to_svg(&self) -> Box<dyn Node> {
         match self {
             Self::Operation {
@@ -46,12 +52,20 @@ impl<T: Ctx> Shape<T> {
                         ),
                 )
             }
-            Self::CircleFilled { center, radius, .. } => Box::new(
+            Self::CircleFilled {
+                center,
+                radius,
+                addr,
+                ..
+            } => Box::new(
                 Circle::new()
                     .set("cx", center.x)
                     .set("cy", center.y)
                     .set("r", f32::from(*radius) / 20.0)
-                    .set("fill", "black"),
+                    .set(
+                        "fill",
+                        wire_type_to_svg_colour(addr.weight().get_type()).to_hex(),
+                    ),
             ),
             Self::Rectangle { rect, .. } => Box::new(
                 Rectangle::new()
@@ -63,16 +77,21 @@ impl<T: Ctx> Shape<T> {
                     .set("stroke", "gray")
                     .set("stroke-width", 1),
             ),
-            Self::Line { start, end, .. } => Box::new(
+            Self::Line {
+                start, end, addr, ..
+            } => Box::new({
                 Line::new()
                     .set("x1", start.x)
                     .set("y1", start.y)
                     .set("x2", end.x)
                     .set("y2", end.y)
-                    .set("stroke", "black")
-                    .set("stroke-width", "1"),
-            ),
-            Self::CubicBezier { points, .. } => Box::new({
+                    .set(
+                        "stroke",
+                        wire_type_to_svg_colour(addr.weight().get_type()).to_hex(),
+                    )
+                    .set("stroke-width", "1")
+            }),
+            Self::CubicBezier { points, addr, .. } => Box::new({
                 let data = Data::new()
                     .move_to((points[0].x, points[0].y))
                     .cubic_curve_to((
@@ -86,7 +105,10 @@ impl<T: Ctx> Shape<T> {
                 Path::new()
                     .set("d", data)
                     .set("fill", "none")
-                    .set("stroke", "black")
+                    .set(
+                        "stroke",
+                        wire_type_to_svg_colour(addr.weight().get_type()).to_hex(),
+                    )
                     .set("stroke-width", 1)
             }),
             Self::Arrow { .. } => {
@@ -96,7 +118,10 @@ impl<T: Ctx> Shape<T> {
     }
 }
 
-impl<T: Ctx> Shapes<T> {
+impl<T: Ctx> Shapes<T>
+where
+    <<T as Ctx>::Edge as WithWeight>::Weight: WithType,
+{
     #[must_use]
     pub fn to_svg(&self) -> Document {
         let mut document = Document::new()
@@ -112,5 +137,14 @@ impl<T: Ctx> Shapes<T> {
         }
 
         document
+    }
+}
+
+fn wire_type_to_svg_colour(wire_type: WireType) -> Color32 {
+    match wire_type {
+        WireType::Data => Color32::BLACK,
+        WireType::ControlFlow => Color32::GOLD,
+        WireType::SymName => Color32::DARK_GREEN,
+        WireType::Colour(colour) => colour,
     }
 }

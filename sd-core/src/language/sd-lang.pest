@@ -2,21 +2,28 @@ program = _{ SOI ~ expr ~ EOI }
 
 keyword = { "bind" | "in" | "with" }
 
-expr     =  { bind* ~ output }
-bind     =  { "bind" ~ var_list ~ "=" ~ value ~ "in" }
-output   = _{ value | "(" ~ (value ~ ("," ~ value)+)? ~ ")" }
-var_list = _{ variable | "(" ~ (variable ~ ("," ~ variable)*)? ~ ")" }
+expr         =  { bind* ~ output }
+bind         =  { "bind" ~ var_def_list ~ "=" ~ value ~ "in" }
+output       = _{ value | "(" ~ (value ~ ("," ~ value)+)? ~ ")" }
+var_def_list = _{ variable_def | "(" ~ (variable_def ~ ("," ~ variable_def)*)? ~ ")" }
 
-thunk = { variable* ~ "." ~ expr ~ with? }
-with  = { "with" ~ var_list }
+thunk    =  { variable_def* ~ "." ~ expr ~ with? }
+with     =  { "with" ~ var_list }
+var_list = _{ variable | "(" ~ (variable ~ ("," ~ variable)*)? ~ ")" }
 
 value = { thunk | variable | op ~ ("(" ~ value ~ ("," ~ value)* ~ ")")? }
 
 op     =  { "plus" | "minus" | "times" | "div" | "rem" | "and" | "or" | "not" | "if" | "eq" | "neq" | "lt" | "leq" | "gt" | "geq" | "app" | "lambda" | "atom" | "deref" | "assign" | "tuple" | "detuple" | "true" | "false" | number }
 number = @{ ASCII_DIGIT+ }
 
-variable = @{ !(keyword | op) ~ "_"* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+variable     = @{ id }
+variable_def =  { variable ~ var_meta? }
+var_meta     =  { "<{" ~ (attribute_entry ~ ("," ~ attribute_entry)*)? ~ "}>" }
 
-COMMENT    = _{ "#" ~ (!"\n" ~ ANY)* }
-newline    = _{ "\n" | "\r\n" }
-WHITESPACE = _{ " " | "\t" | newline }
+attribute_entry = { id ~ "=" ~ string_literal }
+
+id             = @{ !(keyword | op) ~ "_"* ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+string_literal = @{ "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+COMMENT        = _{ "#" ~ (!"\n" ~ ANY)* }
+newline        = _{ "\n" | "\r\n" }
+WHITESPACE     = _{ " " | "\t" | newline }

@@ -6,20 +6,38 @@ Graph(
   nodes: [
     Operation(Lambda),
     Edge(Nil),
-    Edge(BoundVar(Variable("f"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("f"),
+      meta: None,
+    ))),
     Thunk(Graph(
       nodes: [
-        Edge(BoundVar(Variable("f"))),
-        Edge(BoundVar(Variable("x"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("f"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("x"),
+          meta: None,
+        ))),
         Operation(App),
-        Edge(BoundVar(Variable("g"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("g"),
+          meta: None,
+        ))),
         Edge(Nil),
         Operation(Lambda),
         Edge(Nil),
         Thunk(Graph(
           nodes: [
-            Edge(BoundVar(Variable("f"))),
-            Edge(BoundVar(Variable("y"))),
+            Edge(BoundVar(VariableDef(
+              var: Variable("f"),
+              meta: None,
+            ))),
+            Edge(BoundVar(VariableDef(
+              var: Variable("y"),
+              meta: None,
+            ))),
             Operation(App),
             Edge(Nil),
           ],

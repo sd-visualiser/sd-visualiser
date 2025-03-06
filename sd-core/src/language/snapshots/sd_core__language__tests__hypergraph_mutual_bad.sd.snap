@@ -5,12 +5,24 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Operation(Not),
-    Edge(BoundVar(Variable("a"))),
-    Edge(BoundVar(Variable("d"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("d"),
+      meta: None,
+    ))),
     Operation(Times),
-    Edge(BoundVar(Variable("b"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("b"),
+      meta: None,
+    ))),
     Operation(Minus),
-    Edge(BoundVar(Variable("c"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("c"),
+      meta: None,
+    ))),
     Operation(Plus),
   ],
   node_holes: [],

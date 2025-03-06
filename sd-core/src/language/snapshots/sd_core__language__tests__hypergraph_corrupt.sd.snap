@@ -5,12 +5,21 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Operation(Plus),
-    Edge(BoundVar(Variable("x"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("x"),
+      meta: None,
+    ))),
     Edge(Nil),
-    Edge(BoundVar(Variable("y"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("y"),
+      meta: None,
+    ))),
     Thunk(Graph(
       nodes: [
-        Edge(BoundVar(Variable("x"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("x"),
+          meta: None,
+        ))),
         Operation(Minus),
         Edge(Nil),
       ],

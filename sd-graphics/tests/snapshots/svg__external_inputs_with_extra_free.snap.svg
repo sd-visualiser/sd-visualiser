@@ -1,18 +1,18 @@
 <svg height="175" width="200" xmlns="http://www.w3.org/2000/svg">
-<line stroke="black" stroke-width="1" x1="50" x2="50" y1="0.000000014835791" y2="25"/>
-<line stroke="black" stroke-width="1" x1="100" x2="100" y1="0.000000014835791" y2="25"/>
-<path d="M50,25 C50,37.5,50,37.5,50,50" fill="none" stroke="black" stroke-width="1"/>
-<path d="M100,25 C100,37.5,100,37.5,100,50" fill="none" stroke="black" stroke-width="1"/>
+<line stroke="#000000ff" stroke-width="1" x1="50" x2="50" y1="0.000000014835791" y2="25"/>
+<line stroke="#000000ff" stroke-width="1" x1="100" x2="100" y1="0.000000014835791" y2="25"/>
+<path d="M50,25 C50,37.5,50,37.5,50,50" fill="none" stroke="#000000ff" stroke-width="1"/>
+<path d="M100,25 C100,37.5,100,37.5,100,50" fill="none" stroke="#000000ff" stroke-width="1"/>
 <rect fill="none" height="100" stroke="gray" stroke-width="1" width="150" x="25" y="50"/>
-<circle cx="150" cy="50" fill="black" r="2.5"/>
-<circle cx="150" cy="150" fill="black" r="2.5"/>
-<circle cx="50" cy="150" fill="black" r="2.5"/>
-<line stroke="black" stroke-width="1" x1="50" x2="50" y1="50" y2="75"/>
-<line stroke="black" stroke-width="1" x1="150" x2="150" y1="50" y2="75"/>
-<line stroke="black" stroke-width="1" x1="50" x2="50" y1="125" y2="150"/>
-<line stroke="black" stroke-width="1" x1="150" x2="150" y1="125" y2="150"/>
-<path d="M50,75 C50,95.00001,50,100,50,100" fill="none" stroke="black" stroke-width="1"/>
-<path d="M50,100 C50,100,50,104.99999,50,125" fill="none" stroke="black" stroke-width="1"/>
-<path d="M150,75 C150,95.00001,150,100,150,100" fill="none" stroke="black" stroke-width="1"/>
-<path d="M150,100 C150,100,150,104.99999,150,125" fill="none" stroke="black" stroke-width="1"/>
+<circle cx="150" cy="50" fill="#000000ff" r="2.5"/>
+<circle cx="150" cy="150" fill="#000000ff" r="2.5"/>
+<circle cx="50" cy="150" fill="#000000ff" r="2.5"/>
+<line stroke="#000000ff" stroke-width="1" x1="50" x2="50" y1="50" y2="75"/>
+<line stroke="#000000ff" stroke-width="1" x1="150" x2="150" y1="50" y2="75"/>
+<line stroke="#000000ff" stroke-width="1" x1="50" x2="50" y1="125" y2="150"/>
+<line stroke="#000000ff" stroke-width="1" x1="150" x2="150" y1="125" y2="150"/>
+<path d="M50,75 C50,95.00001,50,100,50,100" fill="none" stroke="#000000ff" stroke-width="1"/>
+<path d="M50,100 C50,100,50,104.99999,50,125" fill="none" stroke="#000000ff" stroke-width="1"/>
+<path d="M150,75 C150,95.00001,150,100,150,100" fill="none" stroke="#000000ff" stroke-width="1"/>
+<path d="M150,100 C150,100,150,104.99999,150,125" fill="none" stroke="#000000ff" stroke-width="1"/>
 </svg>

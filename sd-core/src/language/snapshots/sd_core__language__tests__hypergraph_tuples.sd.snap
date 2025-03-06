@@ -7,12 +7,24 @@ Graph(
     Edge(FreeVar(Variable("x"))),
     Edge(FreeVar(Variable("y"))),
     Operation(Tuple),
-    Edge(BoundVar(Variable("a"))),
-    Edge(BoundVar(Variable("d"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("d"),
+      meta: None,
+    ))),
     Edge(Nil),
     Operation(Tuple),
-    Edge(BoundVar(Variable("b"))),
-    Edge(BoundVar(Variable("c"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("b"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("c"),
+      meta: None,
+    ))),
     Edge(Nil),
     Operation(Detuple),
     Operation(Detuple),

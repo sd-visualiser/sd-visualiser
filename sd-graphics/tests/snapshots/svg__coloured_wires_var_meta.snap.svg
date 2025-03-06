@@ -1,0 +1,26 @@
+<svg height="75" width="150" xmlns="http://www.w3.org/2000/svg">
+<line stroke="#ff0000ff" stroke-width="1" x1="25" x2="25" y1="50" y2="75"/>
+<line stroke="#0000ffff" stroke-width="1" x1="75" x2="75" y1="50" y2="75"/>
+<line stroke="#0000ff55" stroke-width="1" x1="125" x2="125" y1="50" y2="75"/>
+<path d="M25,25 C25,25,25,30.000002,25,50" fill="none" stroke="#ff0000ff" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="20" x="15" y="15"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="25" y="25">
+1
+</text>
+</g>
+<path d="M75,25 C75,25,75,30.000002,75,50" fill="none" stroke="#0000ffff" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="20" x="65" y="15"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="75" y="25">
+2
+</text>
+</g>
+<path d="M125,25 C125,25,125,30.000002,125,50" fill="none" stroke="#0000ff55" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="20" x="115" y="15"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="125" y="25">
+3
+</text>
+</g>
+</svg>

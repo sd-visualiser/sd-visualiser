@@ -1,10 +1,13 @@
 #![allow(clippy::clone_on_copy)]
 
 use std::{
-    fmt::{Display, Write},
+    collections::BTreeMap,
+    fmt::{Debug, Display, Write},
     str::FromStr,
 };
 
+use derive_more::Display;
+use ecolor::Color32;
 use from_pest::{ConversionError, FromPest, Void};
 use pest::iterators::Pairs;
 use pest_ast::FromPest;
@@ -12,7 +15,7 @@ use pest_derive::Parser;
 #[cfg(test)]
 use serde::Serialize;
 
-use super::{Fresh, OpInfo, span_into_str};
+use super::{Fresh, GetVar, OpInfo, span_into_str};
 use crate::{
     common::{Empty, Matchable, Unit},
     hypergraph::traits::{WireType, WithType},
@@ -24,7 +27,7 @@ impl super::Language for SdLang {
     type Op = Op;
     type Var = Variable;
     type Addr = Unit;
-    type VarDef = Variable;
+    type VarDef = VariableDef;
     type BlockAddr = Empty;
     type Symbol = Empty;
 }
@@ -194,7 +197,7 @@ impl<'pest> FromPest<'pest> for Op {
 
 impl OpInfo<SdLang> for Op {}
 
-#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, FromPest, Display)]
 #[cfg_attr(test, derive(Serialize))]
 #[pest_ast(rule(Rule::variable))]
 pub struct Variable(#[pest_ast(outer(with(span_into_str), with(str::to_string)))] pub String);
@@ -217,15 +220,76 @@ impl Matchable for Variable {
     }
 }
 
-impl Display for Variable {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
 impl Fresh for Variable {
     fn fresh(number: usize) -> Self {
         Self(format!("?{number}"))
+    }
+}
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Display)]
+#[cfg_attr(test, derive(Serialize))]
+#[display("{var}")]
+pub struct VariableDef {
+    pub var: Variable,
+    pub meta: Option<BTreeMap<String, String>>,
+}
+
+impl Matchable for VariableDef {
+    fn is_match(&self, query: &str) -> bool {
+        self.var.is_match(query)
+    }
+}
+
+impl GetVar<Variable> for VariableDef {
+    fn var(&self) -> &Variable {
+        &self.var
+    }
+
+    fn into_var(self) -> Variable {
+        self.var
+    }
+}
+
+impl WithType for VariableDef {
+    fn get_type(&self) -> WireType {
+        match &self.meta {
+            Some(attrs) if attrs.contains_key("colour") || attrs.contains_key("color") => {
+                let colour_str = attrs.get("colour").or_else(|| attrs.get("color")).unwrap();
+                match colour_str.to_uppercase().as_str() {
+                    "TRANSPARENT" | "INVISIBLE" => WireType::Colour(Color32::TRANSPARENT),
+                    "BLACK" => WireType::Colour(Color32::BLACK),
+                    "DARK_GRAY" => WireType::Colour(Color32::DARK_GRAY),
+                    "GRAY" => WireType::Colour(Color32::GRAY),
+                    "LIGHT_GRAY" => WireType::Colour(Color32::LIGHT_GRAY),
+                    "WHITE" => WireType::Colour(Color32::WHITE),
+                    "BROWN" => WireType::Colour(Color32::BROWN),
+                    "DARK_RED" => WireType::Colour(Color32::DARK_RED),
+                    "RED" => WireType::Colour(Color32::RED),
+                    "LIGHT_RED" => WireType::Colour(Color32::LIGHT_RED),
+                    "CYAN" => WireType::Colour(Color32::CYAN),
+                    "MAGENTA" => WireType::Colour(Color32::MAGENTA),
+                    "YELLOW" => WireType::Colour(Color32::YELLOW),
+                    "ORANGE" => WireType::Colour(Color32::ORANGE),
+                    "LIGHT_YELLOW" => WireType::Colour(Color32::LIGHT_YELLOW),
+                    "KHAKI" => WireType::Colour(Color32::KHAKI),
+                    "DARK_GREEN" => WireType::Colour(Color32::DARK_GREEN),
+                    "GREEN" => WireType::Colour(Color32::GREEN),
+                    "LIGHT_GREEN" => WireType::Colour(Color32::LIGHT_GREEN),
+                    "DARK_BLUE" => WireType::Colour(Color32::DARK_BLUE),
+                    "BLUE" => WireType::Colour(Color32::BLUE),
+                    "LIGHT_BLUE" => WireType::Colour(Color32::LIGHT_BLUE),
+                    "PURPLE" => WireType::Colour(Color32::PURPLE),
+                    "GOLD" => WireType::Colour(Color32::GOLD),
+                    str => Color32::from_hex(str)
+                        .map(WireType::Colour)
+                        .unwrap_or_else(|_| {
+                            tracing::error!("invalid colour {:?}", colour_str);
+                            WireType::Data
+                        }),
+                }
+            }
+            _ => WireType::Data,
+        }
     }
 }
 
@@ -239,6 +303,52 @@ impl<'pest> FromPest<'pest> for Unit {
 }
 
 // Conversions from pest parse trees
+
+impl<'pest> FromPest<'pest> for VariableDef {
+    type Rule = Rule;
+    type FatalError = Void;
+
+    fn from_pest(
+        pest: &mut Pairs<'pest, Self::Rule>,
+    ) -> Result<Self, ConversionError<Self::FatalError>> {
+        let mut clone = pest.clone();
+        let pair = clone.next().ok_or(ConversionError::NoMatch)?;
+        if pair.as_rule() != Rule::variable_def {
+            return Err(ConversionError::NoMatch);
+        }
+        let mut inner = pair.into_inner();
+        let var = FromPest::from_pest(&mut inner)?;
+        let meta = match inner.next() {
+            Some(meta) if meta.as_rule() == Rule::var_meta => Some(
+                meta.into_inner()
+                    .filter_map(|attr| {
+                        if attr.as_rule() != Rule::attribute_entry {
+                            tracing::error!("unexpected rule {:?}", attr.as_rule());
+                            return None;
+                        }
+                        let mut inner = attr.into_inner();
+                        let key = inner.next().unwrap().as_str().to_owned();
+                        let quoted = inner.next().unwrap().as_str();
+                        if quoted[0..1] != *"\"" || quoted[quoted.len() - 1..] != *"\"" {
+                            return None;
+                        }
+                        let unquoted = quoted[1..quoted.len() - 1].to_owned();
+                        Some((key, unquoted))
+                    })
+                    .collect(),
+            ),
+            _ => None,
+        };
+        let vardef = VariableDef { var, meta };
+        if inner.clone().next().is_some() {
+            return Err(ConversionError::Extraneous {
+                current_node: stringify!(VariableDef),
+            });
+        }
+        *pest = clone;
+        Ok(vardef)
+    }
+}
 
 impl<'pest> FromPest<'pest> for Expr {
     type Rule = Rule;

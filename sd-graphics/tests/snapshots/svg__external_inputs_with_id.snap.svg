@@ -1,11 +1,11 @@
 <svg height="175" width="150" xmlns="http://www.w3.org/2000/svg">
-<line stroke="black" stroke-width="1" x1="50" x2="50" y1="0.000000052063797" y2="25"/>
-<path d="M50,25 C50,37.5,50,37.5,50,50" fill="none" stroke="black" stroke-width="1"/>
+<line stroke="#000000ff" stroke-width="1" x1="50" x2="50" y1="0.000000052063797" y2="25"/>
+<path d="M50,25 C50,37.5,50,37.5,50,50" fill="none" stroke="#000000ff" stroke-width="1"/>
 <rect fill="none" height="100" stroke="gray" stroke-width="1" width="100" x="25" y="50"/>
-<circle cx="100" cy="50" fill="black" r="2.5"/>
-<circle cx="100" cy="150" fill="black" r="2.5"/>
-<line stroke="black" stroke-width="1" x1="100" x2="100" y1="50" y2="75"/>
-<line stroke="black" stroke-width="1" x1="100" x2="100" y1="125" y2="150"/>
-<path d="M100,75 C100,95.00001,100,100,100,100" fill="none" stroke="black" stroke-width="1"/>
-<path d="M100,100 C100,100,100,104.99999,100,125" fill="none" stroke="black" stroke-width="1"/>
+<circle cx="100" cy="50" fill="#000000ff" r="2.5"/>
+<circle cx="100" cy="150" fill="#000000ff" r="2.5"/>
+<line stroke="#000000ff" stroke-width="1" x1="100" x2="100" y1="50" y2="75"/>
+<line stroke="#000000ff" stroke-width="1" x1="100" x2="100" y1="125" y2="150"/>
+<path d="M100,75 C100,95.00001,100,100,100,100" fill="none" stroke="#000000ff" stroke-width="1"/>
+<path d="M100,100 C100,100,100,104.99999,100,125" fill="none" stroke="#000000ff" stroke-width="1"/>
 </svg>

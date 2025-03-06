@@ -16,7 +16,7 @@ use sd_core::{
         Hypergraph,
         generic::{Edge, Operation, Thunk, Weight},
         subgraph::ExtensibleEdge,
-        traits::{Graph, WithType},
+        traits::{Graph, WithType, WithWeight},
     },
     interactive::InteractiveGraph,
     language::{chil::Chil, mlir::Mlir, sd_lang::SdLang},
@@ -262,6 +262,7 @@ where
     pub(crate) fn export_svg(&self) -> String
     where
         Edge<G::Ctx>: ExtensibleEdge,
+        <Edge<G::Ctx> as WithWeight>::Weight: WithType,
         Operation<G::Ctx>: Shapeable,
         Weight<Operation<G::Ctx>>: Display,
     {

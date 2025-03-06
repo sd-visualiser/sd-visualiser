@@ -5,26 +5,53 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Operation(App),
-    Edge(BoundVar(Variable("fact"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("fact"),
+      meta: None,
+    ))),
     Edge(Nil),
-    Edge(BoundVar(Variable("a"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
     Operation(Number(5)),
     Operation(Lambda),
     Edge(Nil),
     Thunk(Graph(
       nodes: [
-        Edge(BoundVar(Variable("fact"))),
-        Edge(BoundVar(Variable("x"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("fact"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("x"),
+          meta: None,
+        ))),
         Operation(If),
-        Edge(BoundVar(Variable("y1"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y1"),
+          meta: None,
+        ))),
         Edge(Nil),
-        Edge(BoundVar(Variable("y4"))),
-        Edge(BoundVar(Variable("y5"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y4"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y5"),
+          meta: None,
+        ))),
         Operation(Number(1)),
         Operation(Times),
-        Edge(BoundVar(Variable("y3"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y3"),
+          meta: None,
+        ))),
         Operation(App),
-        Edge(BoundVar(Variable("y2"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("y2"),
+          meta: None,
+        ))),
         Operation(Minus),
         Edge(Nil),
         Operation(Number(1)),

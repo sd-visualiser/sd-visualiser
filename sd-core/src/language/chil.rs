@@ -266,6 +266,12 @@ impl GetVar<Variable> for VariableDef {
     }
 }
 
+impl WithType for VariableDef {
+    fn get_type(&self) -> WireType {
+        self.var.get_type()
+    }
+}
+
 #[derive(Clone, Eq, PartialEq, Hash, Debug, FromPest)]
 #[pest_ast(rule(Rule::ty))]
 #[cfg_attr(test, derive(Serialize))]

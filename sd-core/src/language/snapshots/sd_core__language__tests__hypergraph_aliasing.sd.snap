@@ -5,8 +5,14 @@ expression: to_pet(&graph)
 Graph(
   nodes: [
     Operation(Not),
-    Edge(BoundVar(Variable("a"))),
-    Edge(BoundVar(Variable("b"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("a"),
+      meta: None,
+    ))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("b"),
+      meta: None,
+    ))),
     Operation(Not),
   ],
   node_holes: [],
