@@ -1,0 +1,6 @@
+---
+source: sd-graphics/tests/svg.rs
+expression: "<svg height=\"150\" width=\"100\" xmlns=\"http://www.w3.org/2000/svg\">\n<line stroke=\"black\" stroke-width=\"1\" x1=\"25\" x2=\"25\" y1=\"0.000000002130454\" y2=\"25\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"75\" x2=\"75\" y1=\"0.000000002130454\" y2=\"25\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"25\" x2=\"25\" y1=\"75\" y2=\"75\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"75\" x2=\"75\" y1=\"75\" y2=\"75\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"25\" x2=\"25\" y1=\"125\" y2=\"150\"/>\n<line stroke=\"black\" stroke-width=\"1\" x1=\"75\" x2=\"75\" y1=\"125\" y2=\"150\"/>\n<path d=\"M75,25 C75,50,25,50,25,75\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n<path d=\"M25,25 C25,50,75,50,75,75\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n<path d=\"M75,75 C75,100,25,100,25,125\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n<path d=\"M25,75 C25,100,75,100,75,125\" fill=\"none\" stroke=\"black\" stroke-width=\"1\"/>\n</svg>"
+extension: svg
+snapshot_kind: binary
+---

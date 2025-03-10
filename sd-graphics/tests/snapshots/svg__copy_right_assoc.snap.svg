@@ -1,0 +1,18 @@
+<svg height="155.61862" width="150" xmlns="http://www.w3.org/2000/svg">
+<line stroke="black" stroke-width="1" x1="62.5" x2="62.5" y1="0.000000010351564" y2="25"/>
+<line stroke="black" stroke-width="1" x1="25" x2="25" y1="80.61863" y2="80.61863"/>
+<line stroke="black" stroke-width="1" x1="100" x2="100" y1="80.61863" y2="80.61863"/>
+<line stroke="black" stroke-width="1" x1="25" x2="25" y1="130.61862" y2="155.61862"/>
+<line stroke="black" stroke-width="1" x1="75" x2="75" y1="130.61862" y2="155.61862"/>
+<line stroke="black" stroke-width="1" x1="125" x2="125" y1="130.61862" y2="155.61862"/>
+<path d="M62.5,25 C62.5,45,62.5,50,62.5,50" fill="none" stroke="black" stroke-width="1"/>
+<path d="M62.5,50 C40,50,25,56.123726,25,80.61863" fill="none" stroke="black" stroke-width="1"/>
+<path d="M62.5,50 C85,50,100,56.123726,100,80.61863" fill="none" stroke="black" stroke-width="1"/>
+<circle cx="62.5" cy="50" fill="black" r="5"/>
+<path d="M25,80.61863 C25,100.61862,25,105.61862,25,105.61862" fill="none" stroke="black" stroke-width="1"/>
+<path d="M25,105.61862 C25,105.61862,25,110.618614,25,130.61862" fill="none" stroke="black" stroke-width="1"/>
+<path d="M100,80.61863 C100,100.61862,100,105.61862,100,105.61862" fill="none" stroke="black" stroke-width="1"/>
+<path d="M100,105.61862 C85,105.61862,75,110.618614,75,130.61862" fill="none" stroke="black" stroke-width="1"/>
+<path d="M100,105.61862 C115,105.61862,125,110.618614,125,130.61862" fill="none" stroke="black" stroke-width="1"/>
+<circle cx="100" cy="105.61862" fill="black" r="5"/>
+</svg>

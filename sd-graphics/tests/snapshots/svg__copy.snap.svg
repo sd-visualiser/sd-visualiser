@@ -1,0 +1,9 @@
+<svg height="100" width="100" xmlns="http://www.w3.org/2000/svg">
+<line stroke="black" stroke-width="1" x1="50" x2="50" y1="-0.000000029873227" y2="25"/>
+<line stroke="black" stroke-width="1" x1="25" x2="25" y1="75" y2="100"/>
+<line stroke="black" stroke-width="1" x1="75" x2="75" y1="75" y2="100"/>
+<path d="M50,25 C50,45,50,50,50,50" fill="none" stroke="black" stroke-width="1"/>
+<path d="M50,50 C35.000004,50,25,55,25,75" fill="none" stroke="black" stroke-width="1"/>
+<path d="M50,50 C65,50,75,55,75,75" fill="none" stroke="black" stroke-width="1"/>
+<circle cx="50" cy="50" fill="black" r="5"/>
+</svg>

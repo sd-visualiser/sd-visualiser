@@ -1,6 +1,7 @@
 use crate::{
     hypergraph::{
         generic::{Ctx, Endpoint, Node},
+        subgraph::ExtensibleEdge,
         traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
     },
     language::sd_lang::Op,
@@ -45,6 +46,16 @@ impl WithWeight for DummyEdge {
     type Weight = ();
 
     fn weight(&self) -> Self::Weight {}
+}
+
+impl ExtensibleEdge for DummyEdge {
+    fn extend_source(&self) -> Option<Node<Self::Ctx>> {
+        None
+    }
+
+    fn extend_targets(&self) -> Box<dyn DoubleEndedIterator<Item = Node<Self::Ctx>> + '_> {
+        Box::new(std::iter::empty())
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]

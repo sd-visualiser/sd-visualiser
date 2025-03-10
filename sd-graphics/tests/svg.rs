@@ -1,8 +1,16 @@
+use std::collections::HashMap;
+
 use dir_test::{Fixture, dir_test};
 use sd_core::{
+    common::Direction,
+    examples::{self, DummyCtx, DummyEdge},
     language::sd_lang::Expr,
     lp::Solver,
-    monoidal::{graph::MonoidalGraph, wired_graph::from_graph},
+    monoidal::{
+        MonoidalTerm, Slice,
+        graph::{MonoidalGraph, MonoidalOp},
+        wired_graph::from_graph,
+    },
 };
 use sd_graphics::{layout::layout, render::generate_shapes, shape::Shapes};
 use svg::Document;
@@ -31,4 +39,214 @@ fn external_inputs(fixture: Fixture<(&str, Expr)>) {
         svg.to_string().into(),
         &svg.to_string()
     );
+}
+
+#[test]
+fn examples() {
+    let terms: HashMap<&str, MonoidalTerm<DummyCtx, _>> = [
+        (
+            "id",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge],
+                slices: vec![],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge],
+            },
+        ),
+        (
+            "double_id",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge; 2],
+                slices: vec![],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 2],
+            },
+        ),
+        (
+            "copy",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge],
+                slices: vec![Slice {
+                    ops: vec![MonoidalOp::Copy {
+                        addr: DummyEdge,
+                        copies: 2,
+                    }],
+                }],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 2],
+            },
+        ),
+        (
+            "delete",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge],
+                slices: vec![Slice {
+                    ops: vec![MonoidalOp::Copy {
+                        addr: DummyEdge,
+                        copies: 0,
+                    }],
+                }],
+                free_outputs: vec![],
+                bound_outputs: vec![],
+            },
+        ),
+        (
+            "swap",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge; 2],
+                slices: vec![Slice {
+                    ops: vec![MonoidalOp::Swap {
+                        addrs: vec![
+                            (DummyEdge, Direction::Forward),
+                            (DummyEdge, Direction::Forward),
+                        ],
+                        out_to_in: vec![1, 0],
+                    }],
+                }],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 2],
+            },
+        ),
+        (
+            "double_swap",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge; 2],
+                slices: vec![
+                    Slice {
+                        ops: vec![MonoidalOp::Swap {
+                            addrs: vec![
+                                (DummyEdge, Direction::Forward),
+                                (DummyEdge, Direction::Forward),
+                            ],
+                            out_to_in: vec![1, 0],
+                        }],
+                    },
+                    Slice {
+                        ops: vec![MonoidalOp::Swap {
+                            addrs: vec![
+                                (DummyEdge, Direction::Forward),
+                                (DummyEdge, Direction::Forward),
+                            ],
+                            out_to_in: vec![1, 0],
+                        }],
+                    },
+                ],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 2],
+            },
+        ),
+        ("int", examples::int()),
+        ("copy_left_assoc", examples::copy()),
+        (
+            "copy_right_assoc",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge],
+                slices: vec![
+                    Slice {
+                        ops: vec![MonoidalOp::Copy {
+                            addr: DummyEdge,
+                            copies: 2,
+                        }],
+                    },
+                    Slice {
+                        ops: vec![
+                            MonoidalOp::Copy {
+                                addr: DummyEdge,
+                                copies: 1,
+                            },
+                            MonoidalOp::Copy {
+                                addr: DummyEdge,
+                                copies: 2,
+                            },
+                        ],
+                    },
+                ],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 3],
+            },
+        ),
+        (
+            "copy_left_unit",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge],
+                slices: vec![
+                    Slice {
+                        ops: vec![MonoidalOp::Copy {
+                            addr: DummyEdge,
+                            copies: 2,
+                        }],
+                    },
+                    Slice {
+                        ops: vec![
+                            MonoidalOp::Copy {
+                                addr: DummyEdge,
+                                copies: 0,
+                            },
+                            MonoidalOp::Copy {
+                                addr: DummyEdge,
+                                copies: 1,
+                            },
+                        ],
+                    },
+                ],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 1],
+            },
+        ),
+        (
+            "copy_right_unit",
+            MonoidalGraph {
+                free_inputs: vec![],
+                bound_inputs: vec![DummyEdge],
+                slices: vec![
+                    Slice {
+                        ops: vec![MonoidalOp::Copy {
+                            addr: DummyEdge,
+                            copies: 2,
+                        }],
+                    },
+                    Slice {
+                        ops: vec![
+                            MonoidalOp::Copy {
+                                addr: DummyEdge,
+                                copies: 1,
+                            },
+                            MonoidalOp::Copy {
+                                addr: DummyEdge,
+                                copies: 0,
+                            },
+                        ],
+                    },
+                ],
+                free_outputs: vec![],
+                bound_outputs: vec![DummyEdge; 1],
+            },
+        ),
+        ("thunk", examples::thunk()),
+    ]
+    .into_iter()
+    .collect();
+    for (name, term) in &terms {
+        let layout = layout(term, Solver::default()).unwrap();
+        let mut shapes = Vec::new();
+        generate_shapes(&mut shapes, &layout, true);
+        let shapes = Shapes {
+            shapes,
+            size: layout.size(),
+        };
+        let svg = shapes.to_svg();
+        insta::assert_binary_snapshot!(
+            &format!("{name}.svg"),
+            svg.to_string().into(),
+            &svg.to_string()
+        );
+    }
 }

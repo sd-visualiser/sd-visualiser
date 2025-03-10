@@ -115,3 +115,11 @@ impl<W: Weight> Shapeable for hypergraph::Operation<W> {
         ShapeKind::Squircle
     }
 }
+
+impl Shapeable for sd_core::examples::DummyOperation {
+    // ideally this would be in sd-core/src/examples.rs but that would require a circular
+    // dependency
+    fn to_shape(&self) -> ShapeKind {
+        ShapeKind::Squircle
+    }
+}

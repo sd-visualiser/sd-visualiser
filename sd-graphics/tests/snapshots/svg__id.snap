@@ -1,0 +1,6 @@
+---
+source: sd-graphics/tests/svg.rs
+expression: "<svg height=\"50\" width=\"50\" xmlns=\"http://www.w3.org/2000/svg\">\n<line stroke=\"black\" stroke-width=\"1\" x1=\"25\" x2=\"25\" y1=\"0.0000000088209\" y2=\"50\"/>\n</svg>"
+extension: svg
+snapshot_kind: binary
+---

@@ -1,0 +1,10 @@
+<svg height="75" width="50" xmlns="http://www.w3.org/2000/svg">
+<line stroke="black" stroke-width="1" x1="25" x2="25" y1="50" y2="75"/>
+<path d="M25,25 C25,25,25,30.000002,25,50" fill="none" stroke="black" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="20" x="15" y="15"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="25" y="25">
+1
+</text>
+</g>
+</svg>
