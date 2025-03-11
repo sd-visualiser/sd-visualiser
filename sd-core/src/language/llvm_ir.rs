@@ -643,28 +643,26 @@ pub fn parse(input: &str) -> Result<Expr, String> {
     Ok(module.into())
 }
 
+pub fn parse_llvm_ir(raw_path: &str) -> (&str, Expr) {
+    let path = std::path::Path::new(raw_path);
+    let program = std::fs::read_to_string(path).unwrap();
+    let expr = parse(&program).unwrap_or_else(|err| {
+        panic!(
+            "could not parse program {:?}\n{err:?}",
+            path.file_stem().unwrap()
+        )
+    });
+    let name = path.file_stem().unwrap().to_str().unwrap();
+    (name, expr)
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::path::Path;
-
     use dir_test::{Fixture, dir_test};
 
-    use super::{Expr, parse};
+    use super::Expr;
 
-    pub fn parse_llvm_ir(raw_path: &str) -> (&str, Expr) {
-        let path = Path::new(raw_path);
-        let program = std::fs::read_to_string(path).unwrap();
-        let expr = parse(&program).unwrap_or_else(|err| {
-            panic!(
-                "could not parse program {:?}\n{err:?}",
-                path.file_stem().unwrap()
-            )
-        });
-        let name = path.file_stem().unwrap().to_str().unwrap();
-        (name, expr)
-    }
-
-    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.ll", loader: crate::language::llvm_ir::tests::parse_llvm_ir, postfix: "check_parse")]
+    #[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/*.ll", loader: crate::language::llvm_ir::parse_llvm_ir, postfix: "check_parse")]
     fn check_parse(fixture: Fixture<(&str, Expr)>) {
         let (_name, _expr) = fixture.content();
     }
