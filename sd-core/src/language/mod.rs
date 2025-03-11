@@ -240,7 +240,7 @@ pub(crate) mod tests {
     use super::{
         Expr, Language,
         chil::tests::parse_chil,
-        llvm_ir::tests::parse_llvm_ir,
+        llvm_ir::parse_llvm_ir,
         mlir::{
             self,
             internal::{TopLevelItem, tests::parse_mlir},
