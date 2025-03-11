@@ -601,12 +601,8 @@ where
                     outputs,
                 } => {
                     // Distance constraints for the ports.
-                    add_constraints_wires(
-                        problem,
-                        &inputs.iter().chain(outputs).copied().collect(),
-                        layout.h_min,
-                        layout.h_max,
-                    );
+                    add_constraints_wires(problem, inputs, layout.h_min, layout.h_max);
+                    add_constraints_wires(problem, outputs, layout.h_min, layout.h_max);
 
                     // Align inner wires with ports.
                     for (&inner, &port) in layout
