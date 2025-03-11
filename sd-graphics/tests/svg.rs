@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use dir_test::{Fixture, dir_test};
 use sd_core::{
     common::Direction,
-    examples::{self, DummyCtx, DummyEdge},
-    language::sd_lang::Expr,
+    examples::{self, DummyCtx, DummyEdge, DummyOperation},
+    language::{Expr, Language, llvm_ir::parse_llvm_ir, sd_lang::parse_sd_lang},
     lp::Solver,
     monoidal::{
         MonoidalTerm, Slice,
@@ -15,7 +15,7 @@ use sd_core::{
 use sd_graphics::{layout::layout, render::generate_shapes, shape::Shapes};
 use svg::Document;
 
-fn to_svg(expr: &Expr) -> Document {
+fn to_svg<T: Language + 'static>(expr: &Expr<T>) -> Document {
     let solver = Solver::default();
     let graph = expr.to_graph(false).unwrap();
     let monoidal_term = from_graph(&graph, solver);
@@ -30,12 +30,13 @@ fn to_svg(expr: &Expr) -> Document {
     shapes.to_svg()
 }
 
-#[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/with*.sd", loader: sd_core::language::sd_lang::parse_sd_lang, postfix: "external_inputs")]
-fn external_inputs(fixture: Fixture<(&str, Expr)>) {
+#[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/with*.sd", loader: parse_sd_lang, postfix: "external_inputs")]
+#[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "llvm-ir/bug-97.ll", loader: parse_llvm_ir)]
+fn svg_test<T: Language + 'static>(fixture: Fixture<(&str, Expr<T>)>) {
     let (name, expr) = fixture.content();
     let svg = to_svg(expr);
     insta::assert_binary_snapshot!(
-        &format!("external_inputs_{name}.svg"),
+        &format!("{name}.svg"),
         svg.to_string().into(),
         &svg.to_string()
     );

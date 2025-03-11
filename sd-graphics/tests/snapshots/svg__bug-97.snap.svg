@@ -1,0 +1,62 @@
+<svg height="513.72986" width="370" xmlns="http://www.w3.org/2000/svg">
+<rect fill="none" height="463.72986" stroke="gray" stroke-width="1" width="320" x="25" y="25"/>
+<circle cx="245" cy="488.72986" fill="black" r="2.5"/>
+<circle cx="125" cy="488.72986" fill="black" r="2.5"/>
+<line stroke="black" stroke-width="1" x1="125" x2="125" y1="313.72983" y2="349.18887"/>
+<line stroke="black" stroke-width="1" x1="245" x2="245" y1="313.72983" y2="313.72983"/>
+<line stroke="black" stroke-width="1" x1="125" x2="125" y1="399.18887" y2="488.72986"/>
+<line stroke="black" stroke-width="1" x1="245" x2="245" y1="463.72986" y2="488.72986"/>
+<path d="M125,288.72983 C125,301.22983,125,301.22983,125,313.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M245,288.72983 C245,301.22983,245,301.22983,245,313.72983" fill="none" stroke="black" stroke-width="1"/>
+<rect fill="none" height="238.72983" stroke="gray" stroke-width="1" width="270" x="50" y="50"/>
+<line stroke="black" stroke-width="1" x1="185" x2="185" y1="100" y2="100"/>
+<line stroke="black" stroke-width="1" x1="185" x2="185" y1="150" y2="150"/>
+<line stroke="black" stroke-width="1" x1="125" x2="125" y1="213.72983" y2="213.72983"/>
+<line stroke="black" stroke-width="1" x1="245" x2="245" y1="213.72983" y2="213.72983"/>
+<line stroke="black" stroke-width="1" x1="125" x2="125" y1="263.72983" y2="288.72983"/>
+<line stroke="black" stroke-width="1" x1="245" x2="245" y1="263.72983" y2="288.72983"/>
+<path d="M185,75 C185,75,185,80,185,100" fill="none" stroke="black" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="60" x="155" y="65"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="185" y="75">
+i64 1
+</text>
+</g>
+<path d="M185,100 C185,120.00001,185,125,185,125" fill="none" stroke="black" stroke-width="1"/>
+<path d="M185,125 C185,125,185,130,185,150" fill="none" stroke="black" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="240" x="65" y="115"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="185" y="125">
+%1 = trunc i64 1 to i32
+</text>
+</g>
+<path d="M185,150 C185,170,185,175,185,175" fill="none" stroke="black" stroke-width="1"/>
+<path d="M185,175 C149,175,125,182.74597,125,213.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M185,175 C221,175,245,182.74597,245,213.72983" fill="none" stroke="black" stroke-width="1"/>
+<circle cx="185" cy="175" fill="black" r="5"/>
+<path d="M125,213.72983 C125,233.72984,125,238.72983,125,238.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M125,238.72983 C125,238.72983,125,243.72983,125,263.72983" fill="none" stroke="black" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="110" x="70" y="228.72983"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="125" y="238.72983">
+ret i32 %1
+</text>
+</g>
+<path d="M245,213.72983 C245,233.72984,245,238.72983,245,238.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M245,238.72983 C245,238.72983,245,243.72983,245,263.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M125,349.18887 C125,369.18887,125,374.18887,125,374.18887" fill="none" stroke="black" stroke-width="1"/>
+<path d="M125,374.18887 C125,374.18887,125,379.18887,125,399.18887" fill="none" stroke="black" stroke-width="1"/>
+<path d="M245,313.72983 C245,326.22983,245,326.22983,245,338.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M245,438.72986 C245,451.22986,245,451.22986,245,463.72986" fill="none" stroke="black" stroke-width="1"/>
+<rect fill="none" height="100.00003" stroke="gray" stroke-width="1" width="140" x="175" y="338.72983"/>
+<line stroke="black" stroke-width="1" x1="245" x2="245" y1="338.72983" y2="363.72983"/>
+<line stroke="black" stroke-width="1" x1="245" x2="245" y1="413.72986" y2="438.72986"/>
+<path d="M245,363.72983 C245,383.72983,245,388.72983,245,388.72983" fill="none" stroke="black" stroke-width="1"/>
+<path d="M245,388.72983 C245,388.72983,245,393.72986,245,413.72986" fill="none" stroke="black" stroke-width="1"/>
+<g>
+<rect fill="white" height="20" rx="10" ry="10" stroke="black" stroke-width="1" width="110" x="190" y="378.72983"/>
+<text dominant-baseline="middle" font-family="monospace" font-size="16" text-anchor="middle" x="245" y="388.72983">
+ret i32 %1
+</text>
+</g>
+</svg>

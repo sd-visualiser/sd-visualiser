@@ -1,0 +1,196 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 2,
+    edge_count: 1,
+    edges: (0, 1),
+    node weights: {
+        0: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 5,
+                edge_count: 4,
+                edges: (1, 0), (0, 2), (3, 4), (3, 1),
+                node weights: {
+                    0: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 3,
+                            edge_count: 2,
+                            edges: (0, 1), (1, 2),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                1,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Number(
+                                                            1,
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                            },
+                        },
+                    ),
+                    1: Edge(
+                        BoundVar(
+                            Var {
+                                name: Number(
+                                    1,
+                                ),
+                            },
+                        ),
+                    ),
+                    2: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                    3: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 6,
+                            edge_count: 5,
+                            edges: (1, 0), (0, 2), (4, 3), (3, 1), (5, 4),
+                            node weights: {
+                                0: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Number(
+                                                            1,
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                1: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Number(
+                                                1,
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                2: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                3: Operation(
+                                    Instruction(
+                                        Trunc(
+                                            Trunc {
+                                                operand: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 64,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                to_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                dest: Number(
+                                                    1,
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                4: Edge(
+                                    Nil,
+                                ),
+                                5: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 64,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 0,
+                                4: 0,
+                            },
+                        },
+                    ),
+                    4: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 0,
+                    2: 0,
+                    3: 1,
+                },
+            },
+        ),
+        1: Edge(
+            FreeVar(
+                Symbol {
+                    symbol: "bug",
+                },
+            ),
+        ),
+    },
+    edge weights: {
+        0: 0,
+    },
+}
