@@ -53,18 +53,16 @@ pub fn normalised_targets<T: Ctx>(
     let mut non_dupe_outputs = HashSet::new();
     let mut outputs = Vec::new();
 
-    let source: Option<Node<T>> = match edge.source() {
+    let source_contained_in: Option<T::Thunk> = match edge.source() {
         Endpoint::Node(n) => match find_ancestor(containing, &n) {
-            Ancestor::OriginalNode => Some(n),
-            Ancestor::Contained(g) => Some(Node::Thunk(g)),
-            Ancestor::NoAncestor => None,
+            Ancestor::Contained(g) => Some(g),
+            _ => None,
         },
         Endpoint::Boundary(Some(thunk)) => {
             let x = Node::Thunk(thunk);
             match find_ancestor::<T>(containing, &x) {
-                Ancestor::OriginalNode => Some(x),
-                Ancestor::Contained(g) => Some(Node::Thunk(g)),
-                Ancestor::NoAncestor => None,
+                Ancestor::Contained(g) => Some(g),
+                _ => None,
             }
         }
         Endpoint::Boundary(_) => None,
@@ -77,7 +75,7 @@ pub fn normalised_targets<T: Ctx>(
                     outputs.push(Endpoint::Node(node));
                 }
                 Ancestor::Contained(graph) => {
-                    if Some(&Node::Thunk(graph.clone())) != source.as_ref() {
+                    if Some(&graph) != source_contained_in.as_ref() {
                         non_dupe_outputs.insert(Endpoint::Node(Node::Thunk(graph)));
                     }
                 }
@@ -98,7 +96,7 @@ pub fn normalised_targets<T: Ctx>(
                     }
                     Ancestor::Contained(graph) => {
                         if graph.free_graph_inputs().any(|e| &e == edge)
-                            && Some(&x) != source.as_ref()
+                            && Some(&graph) != source_contained_in.as_ref()
                         {
                             non_dupe_outputs.insert(Endpoint::Node(Node::Thunk(graph)));
                         }
