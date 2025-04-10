@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use dir_test::{Fixture, dir_test};
 use sd_core::{
     common::Direction,
-    examples::{self, DummyCtx, DummyEdge, DummyOperation},
+    examples::{self, DummyCtx, DummyEdge},
     language::{Expr, Language, llvm_ir::parse_llvm_ir, sd_lang::parse_sd_lang},
     lp::Solver,
     monoidal::{
