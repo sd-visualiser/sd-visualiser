@@ -1,0 +1,803 @@
+---
+source: sd-core/src/language/mod.rs
+expression: to_pet(&graph)
+---
+Graph {
+    Ty: "Directed",
+    node_count: 1,
+    edge_count: 0,
+    node weights: {
+        0: Thunk(
+            Graph {
+                Ty: "Directed",
+                node_count: 10,
+                edge_count: 13,
+                edges: (2, 1), (3, 1), (4, 1), (1, 5), (0, 6), (7, 6), (8, 6), (6, 8), (6, 4), (6, 2), (0, 9), (9, 7), (9, 3),
+                node weights: {
+                    0: Edge(
+                        BoundVar(
+                            Var {
+                                name: Name(
+                                    "n",
+                                ),
+                            },
+                        ),
+                    ),
+                    1: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 7,
+                            edge_count: 6,
+                            edges: (2, 1), (1, 3), (5, 4), (0, 4), (4, 2), (6, 5),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "loop.f",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        Ret(
+                                            Ret {
+                                                return_operand: Some(
+                                                    LocalOperand {
+                                                        name: Name(
+                                                            "f",
+                                                        ),
+                                                        ty: TypeRef(
+                                                            IntegerType {
+                                                                bits: 32,
+                                                            },
+                                                        ),
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "f",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        None,
+                                    ),
+                                ),
+                                4: Operation(
+                                    Instruction(
+                                        Phi(
+                                            Phi {
+                                                incoming_values: [
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Undef(
+                                                                    TypeRef(
+                                                                        IntegerType {
+                                                                            bits: 32,
+                                                                        },
+                                                                    ),
+                                                                ),
+                                                            ),
+                                                        ),
+                                                        Name(
+                                                            "entry",
+                                                        ),
+                                                    ),
+                                                    (
+                                                        LocalOperand {
+                                                            name: Name(
+                                                                "loop.f",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        Name(
+                                                            "loop",
+                                                        ),
+                                                    ),
+                                                ],
+                                                dest: Name(
+                                                    "f",
+                                                ),
+                                                to_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                5: Edge(
+                                    Nil,
+                                ),
+                                6: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Undef(
+                                                TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 0,
+                                3: 1,
+                                4: 0,
+                                5: 0,
+                            },
+                        },
+                    ),
+                    2: Edge(
+                        BoundVar(
+                            Var {
+                                name: Name(
+                                    "loop.f",
+                                ),
+                            },
+                        ),
+                    ),
+                    3: Edge(
+                        CF(
+                            Some(
+                                Name(
+                                    "end",
+                                ),
+                            ),
+                        ),
+                    ),
+                    4: Edge(
+                        CF(
+                            Some(
+                                Name(
+                                    "end",
+                                ),
+                            ),
+                        ),
+                    ),
+                    5: Edge(
+                        CF(
+                            None,
+                        ),
+                    ),
+                    6: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 26,
+                            edge_count: 27,
+                            edges: (2, 1), (1, 3), (1, 4), (6, 5), (7, 5), (8, 5), (5, 2), (9, 8), (10, 6), (12, 11), (13, 11), (11, 14), (12, 15), (16, 15), (15, 13), (14, 17), (18, 17), (17, 12), (7, 19), (20, 19), (19, 21), (21, 22), (0, 22), (22, 7), (23, 20), (24, 16), (25, 18),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "n",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        CondBr(
+                                            CondBr {
+                                                condition: LocalOperand {
+                                                    name: Name(
+                                                        "guard.next",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 1,
+                                                        },
+                                                    ),
+                                                },
+                                                true_dest: Name(
+                                                    "loop",
+                                                ),
+                                                false_dest: Name(
+                                                    "end",
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "guard.next",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        Some(
+                                            Name(
+                                                "loop",
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                4: Edge(
+                                    CF(
+                                        Some(
+                                            Name(
+                                                "end",
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                5: Operation(
+                                    Instruction(
+                                        ICmp(
+                                            ICmp {
+                                                predicate: SGT,
+                                                operand0: LocalOperand {
+                                                    name: Name(
+                                                        "loop.n.init",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 2,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "guard.next",
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                6: Edge(
+                                    Nil,
+                                ),
+                                7: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "loop.n.init",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                8: Edge(
+                                    Nil,
+                                ),
+                                9: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 2,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                10: Operation(
+                                    IntPredicate(
+                                        SGT,
+                                    ),
+                                ),
+                                11: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Name(
+                                                        "loop.f0",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: LocalOperand {
+                                                    name: Name(
+                                                        "loop.f1",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                dest: Name(
+                                                    "loop.f",
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                12: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "loop.f0",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                13: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "loop.f1",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                14: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "loop.f",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                15: Operation(
+                                    Instruction(
+                                        Phi(
+                                            Phi {
+                                                incoming_values: [
+                                                    (
+                                                        LocalOperand {
+                                                            name: Name(
+                                                                "loop.f0",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        Name(
+                                                            "loop",
+                                                        ),
+                                                    ),
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Int {
+                                                                    bits: 32,
+                                                                    value: 1,
+                                                                },
+                                                            ),
+                                                        ),
+                                                        Name(
+                                                            "entry",
+                                                        ),
+                                                    ),
+                                                ],
+                                                dest: Name(
+                                                    "loop.f1",
+                                                ),
+                                                to_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                16: Edge(
+                                    Nil,
+                                ),
+                                17: Operation(
+                                    Instruction(
+                                        Phi(
+                                            Phi {
+                                                incoming_values: [
+                                                    (
+                                                        LocalOperand {
+                                                            name: Name(
+                                                                "loop.f",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        Name(
+                                                            "loop",
+                                                        ),
+                                                    ),
+                                                    (
+                                                        ConstantOperand(
+                                                            ConstantRef(
+                                                                Int {
+                                                                    bits: 32,
+                                                                    value: 1,
+                                                                },
+                                                            ),
+                                                        ),
+                                                        Name(
+                                                            "entry",
+                                                        ),
+                                                    ),
+                                                ],
+                                                dest: Name(
+                                                    "loop.f0",
+                                                ),
+                                                to_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                18: Edge(
+                                    Nil,
+                                ),
+                                19: Operation(
+                                    Instruction(
+                                        Add(
+                                            Add {
+                                                operand0: LocalOperand {
+                                                    name: Name(
+                                                        "loop.n.init",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 4294967295,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "loop.n.next",
+                                                ),
+                                                nuw: false,
+                                                nsw: true,
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                20: Edge(
+                                    Nil,
+                                ),
+                                21: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "loop.n.next",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                22: Operation(
+                                    Instruction(
+                                        Phi(
+                                            Phi {
+                                                incoming_values: [
+                                                    (
+                                                        LocalOperand {
+                                                            name: Name(
+                                                                "loop.n.next",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        Name(
+                                                            "loop",
+                                                        ),
+                                                    ),
+                                                    (
+                                                        LocalOperand {
+                                                            name: Name(
+                                                                "n",
+                                                            ),
+                                                            ty: TypeRef(
+                                                                IntegerType {
+                                                                    bits: 32,
+                                                                },
+                                                            ),
+                                                        },
+                                                        Name(
+                                                            "entry",
+                                                        ),
+                                                    ),
+                                                ],
+                                                dest: Name(
+                                                    "loop.n.init",
+                                                ),
+                                                to_type: TypeRef(
+                                                    IntegerType {
+                                                        bits: 32,
+                                                    },
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                23: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 4294967295,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                24: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                25: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 1,
+                                3: 0,
+                                4: 1,
+                                5: 2,
+                                6: 0,
+                                7: 0,
+                                8: 0,
+                                9: 0,
+                                10: 1,
+                                11: 0,
+                                12: 0,
+                                13: 1,
+                                14: 0,
+                                15: 0,
+                                16: 1,
+                                17: 0,
+                                18: 0,
+                                19: 1,
+                                20: 0,
+                                21: 0,
+                                22: 1,
+                                23: 0,
+                                24: 0,
+                                25: 0,
+                                26: 0,
+                            },
+                        },
+                    ),
+                    7: Edge(
+                        CF(
+                            Some(
+                                Name(
+                                    "loop",
+                                ),
+                            ),
+                        ),
+                    ),
+                    8: Edge(
+                        CF(
+                            Some(
+                                Name(
+                                    "loop",
+                                ),
+                            ),
+                        ),
+                    ),
+                    9: Thunk(
+                        Graph {
+                            Ty: "Directed",
+                            node_count: 10,
+                            edge_count: 9,
+                            edges: (2, 1), (1, 3), (1, 4), (6, 5), (0, 5), (7, 5), (5, 2), (8, 7), (9, 6),
+                            node weights: {
+                                0: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "n",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                1: Operation(
+                                    Terminator(
+                                        CondBr(
+                                            CondBr {
+                                                condition: LocalOperand {
+                                                    name: Name(
+                                                        "guard",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 1,
+                                                        },
+                                                    ),
+                                                },
+                                                true_dest: Name(
+                                                    "loop",
+                                                ),
+                                                false_dest: Name(
+                                                    "end",
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                2: Edge(
+                                    BoundVar(
+                                        Var {
+                                            name: Name(
+                                                "guard",
+                                            ),
+                                        },
+                                    ),
+                                ),
+                                3: Edge(
+                                    CF(
+                                        Some(
+                                            Name(
+                                                "loop",
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                4: Edge(
+                                    CF(
+                                        Some(
+                                            Name(
+                                                "end",
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                                5: Operation(
+                                    Instruction(
+                                        ICmp(
+                                            ICmp {
+                                                predicate: SGT,
+                                                operand0: LocalOperand {
+                                                    name: Name(
+                                                        "n",
+                                                    ),
+                                                    ty: TypeRef(
+                                                        IntegerType {
+                                                            bits: 32,
+                                                        },
+                                                    ),
+                                                },
+                                                operand1: ConstantOperand(
+                                                    ConstantRef(
+                                                        Int {
+                                                            bits: 32,
+                                                            value: 1,
+                                                        },
+                                                    ),
+                                                ),
+                                                dest: Name(
+                                                    "guard",
+                                                ),
+                                                debugloc: None,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                6: Edge(
+                                    Nil,
+                                ),
+                                7: Edge(
+                                    Nil,
+                                ),
+                                8: Operation(
+                                    Constant(
+                                        ConstantRef(
+                                            Int {
+                                                bits: 32,
+                                                value: 1,
+                                            },
+                                        ),
+                                    ),
+                                ),
+                                9: Operation(
+                                    IntPredicate(
+                                        SGT,
+                                    ),
+                                ),
+                            },
+                            edge weights: {
+                                0: 0,
+                                1: 0,
+                                2: 1,
+                                3: 0,
+                                4: 1,
+                                5: 2,
+                                6: 0,
+                                7: 0,
+                                8: 0,
+                            },
+                        },
+                    ),
+                },
+                edge weights: {
+                    0: 0,
+                    1: 1,
+                    2: 2,
+                    3: 0,
+                    4: 0,
+                    5: 1,
+                    6: 2,
+                    7: 0,
+                    8: 1,
+                    9: 2,
+                    10: 0,
+                    11: 0,
+                    12: 1,
+                },
+            },
+        ),
+    },
+    edge weights: {},
+}
