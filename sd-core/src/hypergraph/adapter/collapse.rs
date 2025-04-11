@@ -286,18 +286,21 @@ impl<G: Graph> EdgeLike for CollapseEdge<G> {
 
     fn targets(&self) -> Box<dyn DoubleEndedIterator<Item = Endpoint<Self::Ctx>> + '_> {
         let mut encountered = HashSet::new();
+        let source = self.source();
+        if source.into_inner() != self.edge.source() {
+            encountered.insert(source);
+        }
         Box::new(
             self.edge
                 .targets()
                 .filter_map(|endpoint| {
                     let col_endpoint =
                         CollapseEndpoint::new(endpoint.clone(), self.expanded.clone());
-                    if encountered.contains(&col_endpoint) {
+                    if col_endpoint.into_inner() != endpoint
+                        && !encountered.insert(col_endpoint.clone())
+                    {
                         None
                     } else {
-                        if col_endpoint.into_inner() != endpoint {
-                            encountered.insert(col_endpoint.clone());
-                        }
                         Some(col_endpoint)
                     }
                 })
