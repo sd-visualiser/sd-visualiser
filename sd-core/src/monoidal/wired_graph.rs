@@ -95,9 +95,10 @@ impl<T: Ctx> InOutIter for WiredOp<T> {
 
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
-            WiredOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
-            }
+            WiredOp::Copy { addr, copies } => Box::new(std::iter::repeat_n(
+                (addr.clone(), Direction::Forward),
+                *copies,
+            )),
             WiredOp::Operation { addr } => {
                 Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }

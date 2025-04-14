@@ -283,9 +283,10 @@ impl<T: Ctx> InOutIter for MonoidalOp<T> {
 
     fn output_links<'a>(&'a self) -> Box<dyn Iterator<Item = Link<T>> + 'a> {
         match self {
-            MonoidalOp::Copy { addr, copies } => {
-                Box::new(std::iter::repeat((addr.clone(), Direction::Forward)).take(*copies))
-            }
+            MonoidalOp::Copy { addr, copies } => Box::new(std::iter::repeat_n(
+                (addr.clone(), Direction::Forward),
+                *copies,
+            )),
             MonoidalOp::Operation { addr, .. } => {
                 Box::new(addr.outputs().map(|edge| (edge, Direction::Forward)))
             }
