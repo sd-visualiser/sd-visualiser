@@ -33,13 +33,13 @@ pub fn paran_list<'a, T: 'a + PrettyPrint>(ts: impl IntoIterator<Item = &'a T>) 
 }
 
 impl PrettyPrint for String {
-    fn to_doc(&self) -> pretty::RcDoc<()> {
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
         pretty::RcDoc::text(self)
     }
 }
 
 impl PrettyPrint for Box<String> {
-    fn to_doc(&self) -> pretty::RcDoc<()> {
+    fn to_doc(&self) -> pretty::RcDoc<'_, ()> {
         pretty::RcDoc::text(self.as_ref())
     }
 }

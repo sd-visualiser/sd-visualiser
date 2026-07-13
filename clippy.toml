@@ -1,0 +1,1 @@
+ignore-interior-mutability = ["by_address::ByThinAddress", ".."]

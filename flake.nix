@@ -99,7 +99,7 @@
                   drvConfig.mkDerivation = {
                     nativeBuildInputs = with pkgs; [
                       trunk
-                      wasm-bindgen-cli
+                      wasm-bindgen-cli_0_2_126
                       binaryen
                     ];
 

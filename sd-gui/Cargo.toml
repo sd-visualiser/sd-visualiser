@@ -40,7 +40,7 @@ tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 log = "0.4.26"
 poll-promise = { version = "0.3.0", features = ["web"] } # release mode panics without https://github.com/EmbarkStudios/poll-promise/pull/14
 tracing-wasm = "0.2.1"
-getrandom = { version = "*", features = ["js"]} # enable `js` feature on eframe/egui transitive dep
+getrandom = { version = "0.3.4", features = ["wasm_js"]} # enable `wasm_js` feature on eframe/egui transitive dep
 wasm-bindgen-futures = "0.4.50"
 
 [features]

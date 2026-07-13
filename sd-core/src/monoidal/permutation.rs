@@ -57,26 +57,26 @@ pub(crate) fn generate_permutation<'a, T: Ctx>(
     // Pair up edges that need pairing
     for i in 0..out.len() {
         let k @ (x, dir) = &out[i].0;
-        if *dir == Direction::Backward && !end_map.contains_key(k) {
-            if let Some(j) = out
+        if *dir == Direction::Backward
+            && !end_map.contains_key(k)
+            && let Some(j) = out
                 .iter()
                 .enumerate()
                 .filter(|(_, ((y, dir), _))| y == x && *dir == Direction::Forward)
                 .map(|(a, _)| a)
                 .min_by_key(|a| a.abs_diff(i))
-            {
-                out[j].1 = PermutationOutput::Paired(i);
-                out[i].1 = PermutationOutput::Paired(j);
-            }
+        {
+            out[j].1 = PermutationOutput::Paired(i);
+            out[i].1 = PermutationOutput::Paired(j);
         }
     }
 
     // Don't delete edges that appear in the outputs
     for (k, output) in &mut out {
-        if *output == PermutationOutput::Deleted {
-            if let Some(u) = end_map.get_mut(k).and_then(VecDeque::pop_front) {
-                *output = PermutationOutput::Output(u);
-            }
+        if *output == PermutationOutput::Deleted
+            && let Some(u) = end_map.get_mut(k).and_then(VecDeque::pop_front)
+        {
+            *output = PermutationOutput::Output(u);
         }
     }
 
