@@ -1,4 +1,7 @@
-use egui::{ecolor::linear_f32_from_linear_u8, emath::TSTransform};
+use egui::{
+    ecolor::{HexColor, linear_f32_from_linear_u8},
+    emath::TSTransform,
+};
 use sd_core::hypergraph::{
     generic::Ctx,
     traits::{WireType, WithType, WithWeight},
@@ -57,13 +60,18 @@ where
                 radius,
                 addr,
                 ..
-            } => Box::new(
-                Circle::new()
+            } => Box::new({
+                let c = Circle::new()
                     .set("cx", center.x)
                     .set("cy", center.y)
                     .set("r", f32::from(*radius) / 20.0)
-                    .set("fill", wire_type_to_svg_colour(addr.weight().get_type())),
-            ),
+                    .set("fill", wire_type_to_svg_colour(addr.weight().get_type()));
+                if let Some(opacity) = wire_type_to_opacity(addr.weight().get_type()) {
+                    c.set("fill-opacity", opacity)
+                } else {
+                    c
+                }
+            }),
             Self::Rectangle { rect, .. } => Box::new(
                 Rectangle::new()
                     .set("x", rect.min.x)
@@ -76,15 +84,20 @@ where
             ),
             Self::Line {
                 start, end, addr, ..
-            } => Box::new(
-                Line::new()
+            } => Box::new({
+                let l = Line::new()
                     .set("x1", start.x)
                     .set("y1", start.y)
                     .set("x2", end.x)
                     .set("y2", end.y)
                     .set("stroke", wire_type_to_svg_colour(addr.weight().get_type()))
-                    .set("stroke-width", "1"),
-            ),
+                    .set("stroke-width", "1");
+                if let Some(opacity) = wire_type_to_opacity(addr.weight().get_type()) {
+                    l.set("stroke-opacity", opacity)
+                } else {
+                    l
+                }
+            }),
             Self::CubicBezier { points, addr, .. } => Box::new({
                 let data = Data::new()
                     .move_to((points[0].x, points[0].y))
@@ -96,11 +109,16 @@ where
                         points[3].x,
                         points[3].y,
                     ));
-                Path::new()
+                let p = Path::new()
                     .set("d", data)
                     .set("fill", "none")
                     .set("stroke", wire_type_to_svg_colour(addr.weight().get_type()))
-                    .set("stroke-width", 1)
+                    .set("stroke-width", 1);
+                if let Some(opacity) = wire_type_to_opacity(addr.weight().get_type()) {
+                    p.set("stroke-opacity", opacity)
+                } else {
+                    p
+                }
             }),
             Self::Arrow { .. } => {
                 panic!("Arrows should not be in svgs")
@@ -136,12 +154,14 @@ fn wire_type_to_svg_colour(wire_type: WireType) -> String {
         WireType::Data => "black".to_string(),
         WireType::ControlFlow => "gold".to_string(),
         WireType::SymName => "dark green".to_string(),
-        WireType::Colour(colour) => format!(
-            "rgba({}, {}, {}, {})",
-            colour.r(),
-            colour.g(),
-            colour.b(),
-            linear_f32_from_linear_u8(colour.a())
-        ),
+        WireType::Colour(colour) => HexColor::Hex6(colour).to_string(),
+    }
+}
+
+fn wire_type_to_opacity(wire_type: WireType) -> Option<f32> {
+    if let WireType::Colour(colour) = wire_type {
+        Some(linear_f32_from_linear_u8(colour.a()))
+    } else {
+        None
     }
 }
