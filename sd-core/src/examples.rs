@@ -2,7 +2,7 @@ use crate::{
     hypergraph::{
         generic::{Ctx, Endpoint, Node},
         subgraph::ExtensibleEdge,
-        traits::{EdgeLike, Graph, Keyable, NodeLike, WithWeight},
+        traits::{EdgeLike, Graph, Keyable, NodeLike, WireType, WithType, WithWeight},
     },
     language::sd_lang::Op,
     monoidal::{
@@ -42,10 +42,20 @@ impl Keyable for DummyEdge {
     }
 }
 
-impl WithWeight for DummyEdge {
-    type Weight = ();
+pub struct DummyWeight;
 
-    fn weight(&self) -> Self::Weight {}
+impl WithWeight for DummyEdge {
+    type Weight = DummyWeight;
+
+    fn weight(&self) -> Self::Weight {
+        DummyWeight
+    }
+}
+
+impl WithType for DummyWeight {
+    fn get_type(&self) -> WireType {
+        WireType::Data
+    }
 }
 
 impl ExtensibleEdge for DummyEdge {
