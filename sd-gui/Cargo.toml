@@ -20,7 +20,7 @@ egui-notify = "0.19.0"
 from-pest = "0.3.3"
 graphviz-rust = "0.9.3"
 indexmap = "2.7.1"
-lru = "0.13.0"
+lru = "0.16.3"
 pest = "2.7.15"
 rfd = "0.15.2"
 sd-core = { path = "../sd-core" }
