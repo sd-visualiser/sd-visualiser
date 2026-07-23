@@ -464,21 +464,18 @@ impl eframe::App for App {
                     egui::Modifiers::COMMAND,
                     egui::Key::Num0,
                     enabled = ready
-                ) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                )
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.reset();
                     }
-                }
-                if button!("Zoom In", egui::Key::Plus, enabled = ready) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                if button!("Zoom In", egui::Key::Plus, enabled = ready)
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_in();
                     }
-                }
-                if button!("Zoom Out", egui::Key::Minus, enabled = ready) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                if button!("Zoom Out", egui::Key::Minus, enabled = ready)
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.zoom_out();
                     }
-                }
 
                 if button!(
                     "Find",
@@ -490,19 +487,17 @@ impl eframe::App for App {
                     find_request_focus = true;
                 }
 
-                if button!("Expand all", enabled = ready) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                if button!("Expand all", enabled = ready)
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.set_expanded_all(true);
                         graph_ui.reset();
                     }
-                }
 
-                if button!("Collapse all", enabled = ready) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                if button!("Collapse all", enabled = ready)
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         graph_ui.set_expanded_all(false);
                         graph_ui.reset();
                     }
-                }
 
                 ui.separator();
 
@@ -517,8 +512,8 @@ impl eframe::App for App {
                     egui::Modifiers::COMMAND,
                     egui::Key::S,
                     enabled = ready && has_selections
-                ) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                )
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         if let Some(sel) = Selection::from_graph(
                             graph_ui,
                             format!("Selection {}", self.selections.len()),
@@ -528,13 +523,11 @@ impl eframe::App for App {
                         }
                         graph_ui.clear_selection();
                     }
-                }
-                if button!("Clear selection", enabled = ready && has_selections) {
-                    if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                if button!("Clear selection", enabled = ready && has_selections)
+                    && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                         clear_code_cache();
                         graph_ui.clear_selection();
                     }
-                }
                 ui.add_enabled_ui(ready && has_selections, |ui| {
                     ui.menu_button("Extend selection", |ui| {
                         for (label, direction) in [
@@ -544,18 +537,17 @@ impl eframe::App for App {
                             ("Backward (1)", Some((Direction::Backward, 1))),
                             ("Backward", Some((Direction::Backward, usize::MAX))),
                         ] {
-                            if ui.button(label).clicked() {
-                                if let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
+                            if ui.button(label).clicked()
+                                && let Some(graph_ui) = finished_mut(&mut self.graph_ui) {
                                     graph_ui.extend_selection(direction);
                                 }
-                            }
                         }
                     });
                 });
 
                 ui.separator();
-                if button!("Export SVG", enabled = ready) {
-                    if let Some(graph_ui) = finished(&self.graph_ui) {
+                if button!("Export SVG", enabled = ready)
+                    && let Some(graph_ui) = finished(&self.graph_ui) {
                         let svg = graph_ui.export_svg();
                         #[cfg(not(target_arch = "wasm32"))]
                         {
@@ -582,7 +574,6 @@ impl eframe::App for App {
                             });
                         }
                     }
-                }
 
                 ui.separator();
                 if ui.selectable_label(self.about, "About").clicked() {

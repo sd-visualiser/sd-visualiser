@@ -71,7 +71,6 @@ impl<T: Ctx> NodeLike for Node<T> {
         }
     }
 
-    #[must_use]
     fn number_of_inputs(&self) -> usize {
         match self {
             Node::Operation(op) => op.number_of_inputs(),
@@ -79,7 +78,6 @@ impl<T: Ctx> NodeLike for Node<T> {
         }
     }
 
-    #[must_use]
     fn number_of_outputs(&self) -> usize {
         match self {
             Node::Operation(op) => op.number_of_outputs(),

@@ -375,12 +375,10 @@ impl<W: Weight> NodeLike for Operation<W> {
             .map(|thunk_internal| Thunk(ByThinAddress(thunk_internal)))
     }
 
-    #[must_use]
     fn number_of_inputs(&self) -> usize {
         self.0.inputs.len()
     }
 
-    #[must_use]
     fn number_of_outputs(&self) -> usize {
         self.0.outputs.len()
     }
@@ -428,12 +426,10 @@ impl<W: Weight> NodeLike for Thunk<W> {
             .map(|thunk_internal| Thunk(ByThinAddress(thunk_internal)))
     }
 
-    #[must_use]
     fn number_of_inputs(&self) -> usize {
         self.0.free_inputs.get().expect("Failed to unlock").len() + self.0.inputs.len()
     }
 
-    #[must_use]
     fn number_of_outputs(&self) -> usize {
         self.0.free_outputs.get().expect("Failed to unlock").len() + self.0.outputs.len()
     }

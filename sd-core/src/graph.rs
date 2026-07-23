@@ -320,16 +320,15 @@ where
                                 .then_some(())
                                 .ok_or(ConvertError::Shadowed(var.clone()))?;
                         }
-                        if self.sym_name_link {
-                            if let Ok(symbol) =
+                        if self.sym_name_link
+                            && let Ok(symbol) =
                                 <T as Language>::Symbol::try_from(thunk.addr.clone())
-                            {
-                                self.outputs
-                                    .insert(symbol.clone().into(), out_ports.next().unwrap())
-                                    .is_none()
-                                    .then_some(())
-                                    .ok_or(ConvertError::Shadowed(symbol.into()))?;
-                            }
+                        {
+                            self.outputs
+                                .insert(symbol.clone().into(), out_ports.next().unwrap())
+                                .is_none()
+                                .then_some(())
+                                .ok_or(ConvertError::Shadowed(symbol.into()))?;
                         }
                     }
                     ProcessInput::InPort(in_port) => {
@@ -346,10 +345,10 @@ where
                     }
                     ProcessInput::InPort(_) => vec![Name::Nil],
                 };
-                if self.sym_name_link {
-                    if let Some(symbol) = op.sym_name() {
-                        output_weights.push(Name::FreeVar(symbol.into()))
-                    }
+                if self.sym_name_link
+                    && let Some(symbol) = op.sym_name()
+                {
+                    output_weights.push(Name::FreeVar(symbol.into()))
                 }
 
                 let cf = op.get_cf();
@@ -409,14 +408,14 @@ where
                                 .then_some(())
                                 .ok_or(ConvertError::Shadowed(var.clone()))?;
                         }
-                        if self.sym_name_link {
-                            if let Some(symbol) = op.sym_name() {
-                                self.outputs
-                                    .insert(symbol.clone().into(), out_ports.next().unwrap())
-                                    .is_none()
-                                    .then_some(())
-                                    .ok_or(ConvertError::Shadowed(symbol.into()))?;
-                            }
+                        if self.sym_name_link
+                            && let Some(symbol) = op.sym_name()
+                        {
+                            self.outputs
+                                .insert(symbol.clone().into(), out_ports.next().unwrap())
+                                .is_none()
+                                .then_some(())
+                                .ok_or(ConvertError::Shadowed(symbol.into()))?;
                         }
                     }
                     ProcessInput::InPort(in_port) => {

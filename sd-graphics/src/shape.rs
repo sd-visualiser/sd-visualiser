@@ -135,14 +135,14 @@ impl<T: Ctx> Shape<T> {
     {
         let bounding_box = self.bounding_box();
 
-        if let Some(hover_pos) = response.hover_pos() {
-            if self.contains_point(hover_pos, TOLERANCE) {
-                match self {
-                    Shape::Line { addr, .. } | Shape::CubicBezier { addr, .. } => {
-                        highlight_edges.insert(addr.clone());
-                    }
-                    _ => {}
+        if let Some(hover_pos) = response.hover_pos()
+            && self.contains_point(hover_pos, TOLERANCE)
+        {
+            match self {
+                Shape::Line { addr, .. } | Shape::CubicBezier { addr, .. } => {
+                    highlight_edges.insert(addr.clone());
                 }
+                _ => {}
             }
         }
         match self {

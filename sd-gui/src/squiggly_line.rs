@@ -52,7 +52,7 @@ pub fn show_parse_error(ui: &egui::Ui, err: &Error<impl RuleType>, text_edit_out
                     points: [start, control, end],
                     closed: false,
                     fill: Color32::TRANSPARENT,
-                    stroke: Stroke::new(1.0, ui.style().visuals.error_fg_color).into(),
+                    stroke: Stroke::new(1.0_f32, ui.style().visuals.error_fg_color).into(),
                 });
             }
         }

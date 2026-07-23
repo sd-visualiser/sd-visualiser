@@ -13,7 +13,7 @@ pub mod llvm_ir;
 pub mod mlir;
 pub mod sd_lang;
 
-pub(crate) fn span_into_str(span: pest::Span) -> &str {
+pub(crate) fn span_into_str(span: pest::Span<'_>) -> &str {
     span.as_str()
 }
 
