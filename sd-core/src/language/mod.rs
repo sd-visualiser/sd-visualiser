@@ -66,7 +66,7 @@ pub trait Language {
     type Var: Syntax + Fresh + From<Self::Symbol> + WithType;
     type Addr: Syntax;
     type BlockAddr: Syntax;
-    type VarDef: Syntax + GetVar<Self::Var>;
+    type VarDef: Syntax + GetVar<Self::Var> + WithType;
     type Symbol: Syntax + TryFrom<Self::Addr, Error: Debug>;
 }
 

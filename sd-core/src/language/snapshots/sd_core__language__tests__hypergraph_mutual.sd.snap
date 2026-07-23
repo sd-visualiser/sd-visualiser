@@ -6,17 +6,29 @@ Graph(
   nodes: [
     Operation(Lambda),
     Edge(Nil),
-    Edge(BoundVar(Variable("y"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("y"),
+      meta: None,
+    ))),
     Thunk(Graph(
       nodes: [
-        Edge(BoundVar(Variable("x"))),
-        Edge(BoundVar(Variable("z"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("x"),
+          meta: None,
+        ))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("z"),
+          meta: None,
+        ))),
       ],
       node_holes: [],
       edge_property: directed,
       edges: [],
     )),
-    Edge(BoundVar(Variable("x"))),
+    Edge(BoundVar(VariableDef(
+      var: Variable("x"),
+      meta: None,
+    ))),
     Operation(Plus),
   ],
   node_holes: [],

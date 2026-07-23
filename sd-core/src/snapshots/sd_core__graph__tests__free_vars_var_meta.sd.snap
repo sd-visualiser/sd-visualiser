@@ -2,8 +2,4 @@
 source: sd-core/src/graph.rs
 expression: expr.free_var_test()
 ---
-{
-    Variable(
-        "x",
-    ),
-}
+{}

@@ -42,6 +42,17 @@ fn svg_test<T: Language + 'static>(fixture: Fixture<(&str, Expr<T>)>) {
     );
 }
 
+#[dir_test(dir: "$CARGO_MANIFEST_DIR/../examples", glob: "**/var_meta.sd", loader: sd_core::language::sd_lang::parse_sd_lang, postfix: "coloured_wires")]
+fn coloured_wires<T: Language + 'static>(fixture: Fixture<(&str, Expr<T>)>) {
+    let (name, expr) = fixture.content();
+    let svg = to_svg(expr);
+    insta::assert_binary_snapshot!(
+        &format!("coloured_wires_{name}.svg"),
+        svg.to_string().into(),
+        &svg.to_string()
+    );
+}
+
 #[test]
 fn examples() {
     let terms: HashMap<&str, MonoidalTerm<DummyCtx, _>> = [

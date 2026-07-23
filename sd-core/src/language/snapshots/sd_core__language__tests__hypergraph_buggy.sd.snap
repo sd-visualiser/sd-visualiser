@@ -13,14 +13,20 @@ Graph(
       nodes: [
         Edge(FreeVar(Variable("a"))),
         Edge(FreeVar(Variable("b"))),
-        Edge(BoundVar(Variable("x"))),
+        Edge(BoundVar(VariableDef(
+          var: Variable("x"),
+          meta: None,
+        ))),
         Operation(Lambda),
         Edge(Nil),
         Edge(Nil),
         Thunk(Graph(
           nodes: [
             Edge(FreeVar(Variable("b"))),
-            Edge(BoundVar(Variable("y"))),
+            Edge(BoundVar(VariableDef(
+              var: Variable("y"),
+              meta: None,
+            ))),
             Operation(Not),
             Edge(Nil),
           ],
