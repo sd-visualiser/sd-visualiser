@@ -3,6 +3,7 @@ members = [
   "sd-core",
   "sd-graphics",
   "sd-gui",
+  "sd-experiment",
 ]
 resolver = "2"
 [workspace.package]

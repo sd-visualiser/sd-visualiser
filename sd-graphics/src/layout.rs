@@ -38,7 +38,7 @@ pub enum LayoutError {
 #[derivative(Debug(bound = "T::Operation: Debug, T::Thunk: Debug, H: Debug, V: Debug"))]
 #[cfg_attr(test, derive(Serialize), serde(bound = "H: Serialize, V: Serialize"))]
 pub struct NodeOffset<T: Ctx, H, V> {
-    pub(crate) node: Node<T, H, V>,
+    pub node: Node<T, H, V>,
     pub(crate) inputs: Range<usize>,
     pub(crate) outputs: Range<usize>,
 }
