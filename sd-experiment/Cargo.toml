@@ -10,6 +10,7 @@ homepage.workspace = true
 [dependencies]
 anyhow = "1.0.104"
 csv = "1.4.0"
+itertools = "0.14.0"
 sd-core = { path = "../sd-core" }
 sd-graphics = { path = "../sd-graphics" }
 

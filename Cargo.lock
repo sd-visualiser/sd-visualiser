@@ -3947,6 +3947,7 @@ dependencies = [
  "csv",
  "dir-test",
  "insta",
+ "itertools 0.14.0",
  "sd-core",
  "sd-graphics",
  "serde",
