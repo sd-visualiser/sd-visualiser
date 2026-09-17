@@ -169,7 +169,10 @@ fn main() -> anyhow::Result<()> {
     for (i, thunk) in base_graph.expanded().keys().enumerate() {
         println!("Collapsing thunk {}/{thunk_count}", i + 1);
         let mut new_graph = base_graph.clone();
-        let thunk_size = thunk.nodes().count();
+        let thunk_size = all_nodes(thunk)
+            .into_iter()
+            .filter(|node| matches!(node, Node::Operation(_)))
+            .count();
         let edge_cut_size =
             thunk.number_of_free_graph_inputs() + thunk.number_of_free_graph_outputs();
 
