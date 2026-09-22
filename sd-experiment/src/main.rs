@@ -162,6 +162,17 @@ fn main() -> anyhow::Result<()> {
 
     let node_map = calc_node_map(&base_graph);
 
+    let mut positions_wtr = Writer::from_path("positions.csv")?;
+    positions_wtr.write_record(["node", "x", "y"])?;
+    for (name, (x, y)) in node_map
+        .iter()
+        .filter_map(|(op, &pos)| op_names.get(op).map(|name| (name.clone(), pos)))
+        .sorted_by(|a, b| a.0.cmp(&b.0))
+    {
+        positions_wtr.write_record([name, format!("{x:.3}"), format!("{y:.3}")])?;
+    }
+    positions_wtr.flush()?;
+
     let thunk_count = base_graph.expanded().keys().count();
     let mut membership_wtr = Writer::from_path("membership.csv")?;
     membership_wtr.write_record(["event", "node"])?;
