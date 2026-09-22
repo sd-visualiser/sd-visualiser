@@ -165,6 +165,8 @@ fn main() -> anyhow::Result<()> {
     let thunk_count = base_graph.expanded().keys().count();
     let mut membership_wtr = Writer::from_path("membership.csv")?;
     membership_wtr.write_record(["event", "node"])?;
+    let mut blocks_wtr = Writer::from_path("blocks.csv")?;
+    blocks_wtr.write_record(["event", "block"])?;
 
     for (i, thunk) in base_graph.expanded().keys().enumerate() {
         println!("Collapsing thunk {}/{thunk_count}", i + 1);
@@ -178,6 +180,8 @@ fn main() -> anyhow::Result<()> {
 
         new_graph.toggle(thunk);
         let new_node_map = calc_node_map(&new_graph);
+
+        blocks_wtr.write_record([i.to_string(), format!("{:?}", thunk.weight())])?;
 
         for member in all_nodes(thunk)
             .into_iter()
